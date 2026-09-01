@@ -1,0 +1,407 @@
+CREATE FILES NAMES AS SEEN IN THE FOLDER STRUCTURE
+
+Button IS NOT THE SAME AS buttons
+when you pull run npm install 
+
+
+
+
+
+
+
+
+professional-network/
+│
+├── public/
+│   ├── favicon.svg
+│   └── robots.txt
+│
+├── src/
+│   │
+│   ├── App.tsx
+│   ├── main.tsx
+│   │
+│   ├── assets/
+│   │   ├── images/
+│   │   ├── illustrations/
+│   │   ├── logos/
+│   │   └── icons/
+│   │
+│   ├── components/
+│   │   │
+│   │   ├── ui/
+│   │   │   ├── Button/
+│   │   │   ├── Input/
+│   │   │   ├── Textarea/
+│   │   │   ├── Select/
+│   │   │   ├── Checkbox/
+│   │   │   ├── Switch/
+│   │   │   ├── Card/
+│   │   │   ├── Modal/
+│   │   │   ├── Dropdown/
+│   │   │   ├── Tabs/
+│   │   │   ├── Tooltip/
+│   │   │   ├── Avatar/
+│   │   │   ├── Badge/
+│   │   │   ├── Spinner/
+│   │   │   ├── Skeleton/
+│   │   │   ├── Pagination/
+│   │   │   └── ConfirmDialog/
+│   │   │
+│   │   ├── common/
+│   │   │   ├── SearchBar/
+│   │   │   ├── PageHeader/
+│   │   │   ├── EmptyState/
+│   │   │   ├── ErrorState/
+│   │   │   ├── LoadingState/
+│   │   │   ├── ImageUploader/
+│   │   │   └── LocationPicker/
+│   │   │
+│   │   └── layout/
+│   │       ├── AppLayout/
+│   │       ├── Header/
+│   │       ├── Sidebar/
+│   │       ├── MobileNavigation/
+│   │       └── PageContainer/
+│   │
+│   ├── features/
+│   │   │
+│   │   ├── auth/
+│   │   │   ├── components/
+│   │   │   │   ├── LoginForm.tsx
+│   │   │   │   ├── RegisterForm.tsx
+│   │   │   │   ├── ForgotPasswordForm.tsx
+│   │   │   │   └── ResetPasswordForm.tsx
+│   │   │   ├── pages/
+│   │   │   │   ├── LoginPage.tsx
+│   │   │   │   ├── RegisterPage.tsx
+│   │   │   │   ├── ForgotPasswordPage.tsx
+│   │   │   │   └── ResetPasswordPage.tsx
+│   │   │   ├── hooks/
+│   │   │   │   └── useAuth.ts
+│   │   │   ├── services/
+│   │   │   │   └── authService.ts
+│   │   │   ├── types/
+│   │   │   │   └── auth.types.ts
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── home/
+│   │   │   ├── components/
+│   │   │   │   ├── ProfileSummaryCard.tsx
+│   │   │   │   ├── HomeLeftSidebar.tsx
+│   │   │   │   ├── HomeRightSidebar.tsx
+│   │   │   │   ├── RecommendedProfessionals.tsx
+│   │   │   │   ├── TrendingServices.tsx
+│   │   │   │   └── JobsNearYou.tsx
+│   │   │   ├── pages/
+│   │   │   │   └── HomePage.tsx
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── feed/
+│   │   │   ├── components/
+│   │   │   │   ├── Feed.tsx
+│   │   │   │   ├── FeedList.tsx
+│   │   │   │   ├── FeedItem.tsx
+│   │   │   │   ├── FeedTabs.tsx
+│   │   │   │   ├── FeedFilters.tsx
+│   │   │   │   ├── RecommendedFeed.tsx
+│   │   │   │   ├── FollowingFeed.tsx
+│   │   │   │   ├── LocalFeed.tsx
+│   │   │   │   ├── TrendingFeed.tsx
+│   │   │   │   └── FeedSkeleton.tsx
+│   │   │   ├── hooks/
+│   │   │   │   ├── useFeed.ts
+│   │   │   │   ├── useInfiniteFeed.ts
+│   │   │   │   └── useFeedFilters.ts
+│   │   │   ├── services/
+│   │   │   │   └── feedService.ts
+│   │   │   ├── types/
+│   │   │   │   └── feed.types.ts
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── posts/
+│   │   │   ├── components/
+│   │   │   │   ├── PostCard.tsx
+│   │   │   │   ├── PostComposer.tsx
+│   │   │   │   ├── PostHeader.tsx
+│   │   │   │   ├── PostContent.tsx
+│   │   │   │   ├── PostMedia.tsx
+│   │   │   │   ├── PostActions.tsx
+│   │   │   │   ├── LikeButton.tsx
+│   │   │   │   ├── CommentSection.tsx
+│   │   │   │   ├── CommentList.tsx
+│   │   │   │   └── ShareModal.tsx
+│   │   │   ├── hooks/
+│   │   │   │   ├── usePosts.ts
+│   │   │   │   └── useComments.ts
+│   │   │   ├── services/
+│   │   │   │   └── postService.ts
+│   │   │   ├── types/
+│   │   │   │   ├── post.types.ts
+│   │   │   │   └── comment.types.ts
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── users/
+│   │   │   ├── components/
+│   │   │   │   ├── UserCard.tsx
+│   │   │   │   └── FollowButton.tsx
+│   │   │   ├── hooks/
+│   │   │   │   └── useUsers.ts
+│   │   │   ├── services/
+│   │   │   │   └── userService.ts
+│   │   │   ├── types/
+│   │   │   │   └── user.types.ts
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── profile/
+│   │   │   ├── components/
+│   │   │   │   ├── ProfileHeader.tsx
+│   │   │   │   ├── ProfileAbout.tsx
+│   │   │   │   ├── ProfileSkills.tsx
+│   │   │   │   ├── ProfileExperience.tsx
+│   │   │   │   ├── ProfileTabs.tsx
+│   │   │   │   └── EditProfileForm.tsx
+│   │   │   ├── pages/
+│   │   │   │   ├── ProfilePage.tsx
+│   │   │   │   └── EditProfilePage.tsx
+│   │   │   ├── hooks/
+│   │   │   │   └── useProfile.ts
+│   │   │   ├── services/
+│   │   │   │   └── profileService.ts
+│   │   │   ├── types/
+│   │   │   │   └── profile.types.ts
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── professionals/
+│   │   │   ├── components/
+│   │   │   │   ├── ProfessionalCard.tsx
+│   │   │   │   ├── ProfessionalGrid.tsx
+│   │   │   │   ├── ProfessionalSearch.tsx
+│   │   │   │   ├── ProfessionalFilters.tsx
+│   │   │   │   ├── AvailabilityBadge.tsx
+│   │   │   │   └── ProfessionalStats.tsx
+│   │   │   ├── pages/
+│   │   │   │   ├── ProfessionalsPage.tsx
+│   │   │   │   └── ProfessionalDetailsPage.tsx
+│   │   │   ├── hooks/
+│   │   │   │   └── useProfessionals.ts
+│   │   │   ├── services/
+│   │   │   │   └── professionalService.ts
+│   │   │   ├── types/
+│   │   │   │   └── professional.types.ts
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── portfolio/
+│   │   │   ├── components/
+│   │   │   │   ├── PortfolioGrid.tsx
+│   │   │   │   ├── ProjectCard.tsx
+│   │   │   │   ├── ProjectGallery.tsx
+│   │   │   │   ├── BeforeAfter.tsx
+│   │   │   │   └── ProjectForm.tsx
+│   │   │   ├── pages/
+│   │   │   │   ├── PortfolioPage.tsx
+│   │   │   │   ├── ProjectDetailsPage.tsx
+│   │   │   │   └── CreateProjectPage.tsx
+│   │   │   ├── hooks/
+│   │   │   │   └── usePortfolio.ts
+│   │   │   ├── services/
+│   │   │   │   └── portfolioService.ts
+│   │   │   ├── types/
+│   │   │   │   └── portfolio.types.ts
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── marketplace/
+│   │   │   ├── components/
+│   │   │   │   ├── ServiceCard.tsx
+│   │   │   │   ├── ServiceGrid.tsx
+│   │   │   │   ├── ServiceSearch.tsx
+│   │   │   │   ├── ServiceFilters.tsx
+│   │   │   │   ├── ServiceRequestForm.tsx
+│   │   │   │   └── ServiceRequestStatus.tsx
+│   │   │   ├── pages/
+│   │   │   │   ├── MarketplacePage.tsx
+│   │   │   │   ├── ServiceDetailsPage.tsx
+│   │   │   │   └── RequestServicePage.tsx
+│   │   │   ├── hooks/
+│   │   │   │   └── useMarketplace.ts
+│   │   │   ├── services/
+│   │   │   │   └── marketplaceService.ts
+│   │   │   ├── types/
+│   │   │   │   └── marketplace.types.ts
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── jobs/
+│   │   │   ├── components/
+│   │   │   │   ├── JobCard.tsx
+│   │   │   │   ├── JobGrid.tsx
+│   │   │   │   ├── JobSearch.tsx
+│   │   │   │   ├── JobFilters.tsx
+│   │   │   │   ├── JobApplicationForm.tsx
+│   │   │   │   └── MatchScore.tsx
+│   │   │   ├── pages/
+│   │   │   │   ├── JobsPage.tsx
+│   │   │   │   ├── JobDetailsPage.tsx
+│   │   │   │   ├── CreateJobPage.tsx
+│   │   │   │   └── MyApplicationsPage.tsx
+│   │   │   ├── hooks/
+│   │   │   │   └── useJobs.ts
+│   │   │   ├── services/
+│   │   │   │   └── jobService.ts
+│   │   │   ├── types/
+│   │   │   │   └── job.types.ts
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── messages/
+│   │   │   ├── components/
+│   │   │   │   ├── ConversationList.tsx
+│   │   │   │   ├── ConversationItem.tsx
+│   │   │   │   ├── ChatWindow.tsx
+│   │   │   │   ├── ChatHeader.tsx
+│   │   │   │   ├── MessageBubble.tsx
+│   │   │   │   └── MessageInput.tsx
+│   │   │   ├── pages/
+│   │   │   │   └── MessagesPage.tsx
+│   │   │   ├── hooks/
+│   │   │   │   └── useMessages.ts
+│   │   │   ├── services/
+│   │   │   │   └── messageService.ts
+│   │   │   ├── types/
+│   │   │   │   └── message.types.ts
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── notifications/
+│   │   │   ├── components/
+│   │   │   │   ├── NotificationItem.tsx
+│   │   │   │   └── NotificationList.tsx
+│   │   │   ├── pages/
+│   │   │   │   └── NotificationsPage.tsx
+│   │   │   ├── hooks/
+│   │   │   │   └── useNotifications.ts
+│   │   │   ├── services/
+│   │   │   │   └── notificationService.ts
+│   │   │   ├── types/
+│   │   │   │   └── notification.types.ts
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── verification/
+│   │   │   ├── components/
+│   │   │   │   ├── VerificationForm.tsx
+│   │   │   │   ├── DocumentUpload.tsx
+│   │   │   │   └── VerificationStatus.tsx
+│   │   │   ├── pages/
+│   │   │   │   └── VerificationPage.tsx
+│   │   │   ├── hooks/
+│   │   │   │   └── useVerification.ts
+│   │   │   ├── services/
+│   │   │   │   └── verificationService.ts
+│   │   │   ├── types/
+│   │   │   │   └── verification.types.ts
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── ai/
+│   │   │   ├── components/
+│   │   │   │   ├── AIAssistant.tsx
+│   │   │   │   ├── AIChat.tsx
+│   │   │   │   ├── AIMessage.tsx
+│   │   │   │   ├── AIActionCard.tsx
+│   │   │   │   └── AIRecommendationCard.tsx
+│   │   │   ├── modules/
+│   │   │   │   ├── profile-assistant/
+│   │   │   │   ├── smart-search/
+│   │   │   │   ├── job-matching/
+│   │   │   │   └── portfolio-assistant/
+│   │   │   ├── pages/
+│   │   │   │   └── AIAssistantPage.tsx
+│   │   │   ├── hooks/
+│   │   │   │   ├── useAI.ts
+│   │   │   │   └── useAIChat.ts
+│   │   │   ├── services/
+│   │   │   │   └── aiService.ts
+│   │   │   ├── types/
+│   │   │   │   └── ai.types.ts
+│   │   │   └── index.ts
+│   │   │
+│   │   └── dashboard/
+│   │       ├── components/
+│   │       │   ├── StatsCard.tsx
+│   │       │   ├── AnalyticsChart.tsx
+│   │       │   ├── RecentRequests.tsx
+│   │       │   ├── RecentActivity.tsx
+│   │       │   ├── AIInsights.tsx
+│   │       │   └── DashboardOverview.tsx
+│   │       ├── pages/
+│   │       │   └── DashboardPage.tsx
+│   │       ├── hooks/
+│   │       │   └── useDashboard.ts
+│   │       ├── services/
+│   │       │   └── dashboardService.ts
+│   │       ├── types/
+│   │       │   └── dashboard.types.ts
+│   │       └── index.ts
+│   │
+│   ├── routes/
+│   │   ├── AppRoutes.tsx
+│   │   ├── ProtectedRoute.tsx
+│   │   ├── PublicRoute.tsx
+│   │   └── routeConfig.ts
+│   │
+│   ├── providers/
+│   │   ├── AppProviders.tsx
+│   │   ├── AuthProvider.tsx
+│   │   └── QueryProvider.tsx
+│   │
+│   ├── hooks/
+│   │   ├── useDebounce.ts
+│   │   ├── useLocalStorage.ts
+│   │   ├── useClickOutside.ts
+│   │   ├── useMediaQuery.ts
+│   │   └── usePagination.ts
+│   │
+│   ├── services/
+│   │   ├── api/
+│   │   │   ├── axios.ts
+│   │   │   ├── apiClient.ts
+│   │   │   └── endpoints.ts
+│   │   └── storage/
+│   │       └── tokenStorage.ts
+│   │
+│   ├── types/
+│   │   ├── api.types.ts
+│   │   ├── common.types.ts
+│   │   ├── pagination.types.ts
+│   │   └── location.types.ts
+│   │
+│   ├── utils/
+│   │   ├── cn.ts
+│   │   ├── formatDate.ts
+│   │   ├── formatNumber.ts
+│   │   ├── formatCurrency.ts
+│   │   ├── validators.ts
+│   │   └── constants.ts
+│   │
+│   ├── data/
+│   │   ├── professions.ts
+│   │   ├── categories.ts
+│   │   └── mockData.ts
+│   │
+│   ├── animations/
+│   │   ├── fadeVariants.ts
+│   │   ├── pageVariants.ts
+│   │   ├── cardVariants.ts
+│   │   └── modalVariants.ts
+│   │
+│   └── styles/
+│       ├── globals.css
+│       ├── animations.css
+│       └── utilities.css
+│
+├── .env
+├── .env.example
+├── .gitignore
+├── eslint.config.js
+├── index.html
+├── package.json
+├── tsconfig.json
+├── vite.config.ts
+├── tailwind.config.js
+└── README.md
