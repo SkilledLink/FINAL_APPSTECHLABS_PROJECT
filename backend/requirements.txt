@@ -1,81 +1,75 @@
 # ==============================
-
 # CORE API
-
 # ==============================
 
 fastapi
 uvicorn[standard]
 
+
 # ==============================
-
 # CONFIGURATION
-
 # ==============================
 
 pydantic-settings
 python-dotenv
 
+
 # ==============================
-
 # DATABASE
-
 # ==============================
 
 sqlmodel
 psycopg[binary]
 alembic
 
+
 # ==============================
-
 # SECURITY & AUTHENTICATION
-
 # ==============================
 
 pwdlib[argon2]
 PyJWT
 
+
+# ==============================
+# VALIDATION
 # ==============================
 
-# EMAIL
+email-validator
 
+
+# ==============================
+# EMAIL
 # ==============================
 
 resend
 
+
 # ==============================
-
 # HTTP CLIENT
-
 # ==============================
 
 httpx
 
+
 # ==============================
-
-# FILE VALIDATION
-
+# FILE VALIDATION / UPLOADS
 # ==============================
 
 python-multipart
 
+
 # ==============================
-
 # REALTIME
-
 # ==============================
 
 websockets
 
-# ==============================
 
+# ==============================
 # SOCKET.IO
-
-# Install only when we decide
-
-# to implement Socket.IO
-
 # ==============================
+# Keep only if we decide to use it.
+# Otherwise remove it to avoid unnecessary dependencies.
 
 python-socketio
-psycopg2
