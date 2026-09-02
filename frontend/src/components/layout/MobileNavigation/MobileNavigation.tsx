@@ -1,14 +1,13 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
-import { Home, Compass, PlusSquare, Briefcase, User } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { NavLink } from "react-router-dom";
+import { Home, Compass, PlusSquare, Briefcase, User } from "lucide-react";
+import { motion } from "framer-motion";
 
 const mobileNavItems = [
-  { icon: Home, label: 'Home', path: '/' },
-  { icon: Compass, label: 'Discover', path: '/discover' },
-  { icon: PlusSquare, label: 'Post', path: '/create', special: true },
-  { icon: Briefcase, label: 'Jobs', path: '/jobs' },
-  { icon: User, label: 'Profile', path: '/profile' },
+  { icon: Home, label: "Home", path: "/" },
+  { icon: Compass, label: "Discover", path: "/discover" },
+  { icon: PlusSquare, label: "Post", path: "/create", special: true },
+  { icon: Briefcase, label: "Jobs", path: "/jobs" },
+  { icon: User, label: "Profile", path: "/profile" },
 ];
 
 export default function MobileNavigation() {
@@ -24,7 +23,7 @@ export default function MobileNavigation() {
               to={item.path}
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center w-full h-full space-y-1 ${
-                  isActive ? 'text-purple-400' : 'text-purple-300/60'
+                  isActive ? "text-purple-400" : "text-purple-300/60"
                 }`
               }
             >
@@ -33,7 +32,7 @@ export default function MobileNavigation() {
                   return (
                     <motion.div
                       whileTap={{ scale: 0.9 }}
-                      className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-3 rounded-2xl shadow-lg shadow-purple-900/50 -mt-5 border-4 border-[#1e1035]"
+                      className="bg-linear-to-r from-purple-600 to-indigo-600 text-white p-3 rounded-2xl shadow-lg shadow-purple-900/50 -mt-5 border-4 border-[#1e1035]"
                     >
                       <Icon size={22} />
                     </motion.div>
@@ -45,7 +44,9 @@ export default function MobileNavigation() {
                     <motion.div whileTap={{ scale: 0.9 }}>
                       <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
                     </motion.div>
-                    <span className="text-[10px] font-medium">{item.label}</span>
+                    <span className="text-[10px] font-medium">
+                      {item.label}
+                    </span>
                   </div>
                 );
               }}
@@ -53,6 +54,6 @@ export default function MobileNavigation() {
           );
         })}
       </div>
-    </nav> 
+    </nav>
   );
 }

@@ -3,7 +3,7 @@ export type FeedType = 'recommended' | 'following' | 'local' | 'trending';
 export interface FeedUser {
   id: string;
   name: string;
-  handle: string;
+  handle?: string;
   avatar: string;
   badge?: string;
   isVerified?: boolean;
@@ -29,12 +29,16 @@ export interface FeedMetadata {
 
 export interface FeedItemData {
   id: string;
-  user: FeedUser;
+  author: FeedUser & { profession?: string; title?: string };
   title?: string;
   content: string;
   createdAt: string;
   images?: FeedImage[];
-  metadata: FeedMetadata;
+  mediaUrl?: string;
+  tags?: string[];
+  likesCount: number;
+  commentsCount: number;
+  ctaText?: string;
 }
 
 export interface FeedFiltersState {
@@ -49,11 +53,12 @@ export interface PaginationMeta {
   page: number;
   limit: number;
   hasMore: boolean;
+  cursor?: string;
   totalItems?: number;
 }
 
 export interface FeedResponse {
-  data: FeedItemData[];
+  items: FeedItemData[];
   pagination: PaginationMeta;
 }
 

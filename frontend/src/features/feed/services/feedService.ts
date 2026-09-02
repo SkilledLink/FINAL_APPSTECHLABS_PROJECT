@@ -1,11 +1,19 @@
-import type { FeedType, FeedFiltersState, FeedResponse } from '../types/feed.types';
-import { MOCK_FEED_ITEMS } from './feed.mock';
+import type {
+  FeedType,
+  FeedFiltersState,
+  FeedResponse,
+} from "../types/feed.types";
+import { MOCK_FEED_ITEMS } from "./feed.mock";
 
 // Uses process.env.BASE_API or import.meta.env.VITE_BASE_API depending on build setup
-const BASE_API = import.meta.env.BASE_API || '';
+const BASE_API = import.meta.env.BASE_API || "";
 
 export const feedService = {
-  async getFeed(type: FeedType, filters?: FeedFiltersState, cursor?: string): Promise<FeedResponse> {
+  async getFeed(
+    type: FeedType,
+    filters?: FeedFiltersState,
+    cursor?: string,
+  ): Promise<FeedResponse> {
     if (BASE_API) {
       const params = new URLSearchParams({
         type,
@@ -28,8 +36,17 @@ export const feedService = {
     const mockItems = MOCK_FEED_ITEMS[type] || [];
     return {
       items: mockItems,
-      nextCursor: undefined,
-      hasMore: false,
+      pagination: {
+        page: 1,
+        limit: mockItems.length,
+        hasMore: false,
+      },
     };
+  },
+  async likePost(_id: string): Promise<void> {
+    return Promise.resolve();
+  },
+  async requestService(_id: string): Promise<void> {
+    return Promise.resolve();
   },
 };

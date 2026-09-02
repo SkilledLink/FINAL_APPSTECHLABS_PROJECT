@@ -1,4 +1,3 @@
-import React from "react";
 import { NavLink } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -34,7 +33,7 @@ export default function Sidebar({ isCollapsed, toggleSidebar }: SidebarProps) {
     >
       <div className="h-16 flex items-center justify-between px-6 border-b border-purple-900/50">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white font-bold shadow-lg shadow-purple-900/50 shrink-0">
+          <div className="w-8 h-8 rounded-xl bg-linear-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white font-bold shadow-lg shadow-purple-900/50 shrink-0">
             N
           </div>
         </div>
