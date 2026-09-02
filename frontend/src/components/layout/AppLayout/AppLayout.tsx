@@ -1,21 +1,21 @@
-import React, { useState } from 'react';
-import { Outlet } from 'react-router-dom';
-import Header from '../Header/Header';
-import Sidebar from '../Sidebar/Sidebar';
-import MobileNavigation from '../MobileNavigation/MobileNavigation';
+import { useState } from "react";
+import { Outlet } from "react-router-dom";
+import Header from "../Header/Header";
+import Sidebar from "../Sidebar/Sidebar";
+import MobileNavigation from "../MobileNavigation/MobileNavigation";
 
 export default function AppLayout() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const toggleSidebar = () => setIsSidebarCollapsed(!isSidebarCollapsed);
 
   return (
-    <div className="flex h-[100dvh] w-full bg-slate-50/50 overflow-hidden font-sans text-slate-900">
+    <div className="flex h-dvh w-full bg-slate-50/50 overflow-hidden font-sans text-slate-900">
       <Sidebar isCollapsed={isSidebarCollapsed} toggleSidebar={toggleSidebar} />
 
       <div className="flex flex-col flex-1 w-full overflow-hidden relative">
-        <Header 
-          isCollapsed={isSidebarCollapsed} 
-          toggleSidebar={toggleSidebar} 
+        <Header
+          isCollapsed={isSidebarCollapsed}
+          toggleSidebar={toggleSidebar}
         />
 
         <main className="flex-1 overflow-y-auto p-4 pb-28 md:p-8 md:pb-8 w-full">
@@ -28,4 +28,4 @@ export default function AppLayout() {
       <MobileNavigation />
     </div>
   );
-}       
+}
