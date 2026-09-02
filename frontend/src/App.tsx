@@ -1,10 +1,8 @@
-// App.tsx
-import HomePage from './features/home/pages/HomePage';
-
+import Feed from "./features/feed";
 function App() {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <HomePage />
+    <div className="App">
+      <Feed />
     </div>
   );
 }
