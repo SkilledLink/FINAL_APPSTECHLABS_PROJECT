@@ -1,0 +1,121 @@
+Backend/
+│
+├── app/
+│   │
+│   ├── __init__.py
+│   ├── main.py
+│   │
+│   ├── api/
+│   │   ├── __init__.py
+│   │   ├── v1/
+│   │   │   ├── __init__.py
+│   │   │   ├── auth.py
+│   │   │   ├── users.py
+│   │   │   ├── professionals.py
+│   │   │   ├── businesses.py
+│   │   │   ├── posts.py
+│   │   │   ├── comments.py
+│   │   │   ├── services.py
+│   │   │   ├── service_requests.py
+│   │   │   ├── quotes.py
+│   │   │   ├── bookings.py
+│   │   │   ├── jobs.py
+│   │   │   ├── applications.py
+│   │   │   ├── conversations.py
+│   │   │   ├── messages.py
+│   │   │   ├── notifications.py
+│   │   │   ├── reviews.py
+│   │   │   ├── verification.py
+│   │   │   └── admin.py
+│   │
+│   ├── core/
+│   │   ├── __init__.py
+│   │   ├── config.py
+│   │   ├── security.py
+│   │   └── constants.py
+│   │
+│   ├── database/
+│   │   ├── __init__.py
+│   │   ├── session.py
+│   │   └── base.py
+│   │
+│   ├── models/
+│   │   ├── __init__.py
+│   │   ├── user.py
+│   │   ├── profile.py
+│   │   ├── professional.py
+│   │   ├── business.py
+│   │   ├── post.py
+│   │   ├── comment.py
+│   │   ├── service.py
+│   │   ├── service_request.py
+│   │   ├── quote.py
+│   │   ├── booking.py
+│   │   ├── job.py
+│   │   ├── application.py
+│   │   ├── conversation.py
+│   │   ├── message.py
+│   │   ├── notification.py
+│   │   ├── review.py
+│   │   └── verification.py
+│   │
+│   ├── schemas/
+│   │   ├── __init__.py
+│   │   ├── auth.py
+│   │   ├── user.py
+│   │   ├── professional.py
+│   │   ├── business.py
+│   │   ├── post.py
+│   │   ├── service.py
+│   │   ├── service_request.py
+│   │   ├── quote.py
+│   │   ├── booking.py
+│   │   ├── job.py
+│   │   ├── application.py
+│   │   ├── message.py
+│   │   └── review.py
+│   │
+│   ├── services/
+│   │   ├── __init__.py
+│   │   ├── auth_service.py
+│   │   ├── email_service.py
+│   │   ├── user_service.py
+│   │   ├── post_service.py
+│   │   ├── service_request_service.py
+│   │   ├── quote_service.py
+│   │   ├── booking_service.py
+│   │   ├── job_service.py
+│   │   ├── message_service.py
+│   │   └── notification_service.py
+│   │
+│   ├── dependencies/
+│   │   ├── __init__.py
+│   │   ├── auth.py
+│   │   ├── permissions.py
+│   │   └── current_user.py
+│   │
+│   ├── websocket/
+│   │   ├── __init__.py
+│   │   ├── manager.py
+│   │   ├── chat.py
+│   │   └── notifications.py
+│   │
+│   └── utils/
+│       ├── __init__.py
+│       └── helpers.py
+│
+├── alembic/
+│   └── versions/
+│
+├── tests/
+│   ├── __init__.py
+│   ├── test_auth.py
+│   ├── test_users.py
+│   └── test_services.py
+│
+├── .env
+├── .env.example
+├── .gitignore
+├── alembic.ini
+├── requirements.txt
+└── venv/
