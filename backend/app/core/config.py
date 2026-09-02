@@ -2,16 +2,17 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    app_name: str = "Professional Network API"
-    environment: str = "development"
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
-    database_url: str
+    DATABASE_URL: str
+    SECRET_KEY: str
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 30
+    VERIFICATION_TOKEN_EXPIRE_MINUTES: int = 10
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore",
-    )
+    RESEND_API_KEY: str
+    FROM_EMAIL: str
 
 
 settings = Settings()
