@@ -405,3 +405,34 @@ professional-network/
 ├── vite.config.ts
 ├── tailwind.config.js
 └── README.md
+
+
+
+
+Frontend/
+│
+├── src/
+│   ├── pages/
+│   │   └── HomePage.tsx
+│   │
+│   ├── components/
+│   │   ├── ProjectHighlights.tsx
+│   │   ├── CompletedProject.tsx
+│   │   ├── CreatePost.tsx
+│   │   ├── FeedPost.tsx
+│   │   ├── CommunityQuestion.tsx
+│   │   ├── SuggestedProfessionals.tsx
+│   │   └── RecentActivity.tsx
+│   │
+│   ├── services/
+│   │   ├── api.ts
+│   │   ├── posts.ts
+│   │   ├── projects.ts
+│   │   ├── questions.ts
+│   │   └── professionals.ts
+│   │
+│   ├── types/
+│   │   └── home.ts
+│   │
+│   └── data/
+│       └── mockHomeData.ts
