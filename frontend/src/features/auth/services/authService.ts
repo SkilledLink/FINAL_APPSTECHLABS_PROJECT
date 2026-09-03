@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import type {
   LoginCredentials,
   RegisterData,
@@ -56,7 +55,6 @@ export const authService = {
     localStorage.removeItem("auth_token");
   },
 };
-=======
 import type { AuthResponse } from '../types/auth.types';
 
 export const authService = {
@@ -72,4 +70,3 @@ export const authService = {
     );
   },
 };
->>>>>>> 068172ec0a0ac18df41f431507b0fe7a6030a66c

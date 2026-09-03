@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
@@ -111,7 +110,6 @@ export function ForgotPasswordForm() {
     </div>
   );
 }
-=======
 import React, { useState } from 'react';
 import type { AuthView } from '../types/auth.types';
 
@@ -161,4 +159,3 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onNaviga
     </div>
   );
 };
->>>>>>> 068172ec0a0ac18df41f431507b0fe7a6030a66c

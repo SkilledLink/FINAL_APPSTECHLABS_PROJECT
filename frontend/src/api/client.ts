@@ -1,16 +1,16 @@
 // src/api/client.ts
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export const apiClient = axios.create({
-  baseURL: API_URL,
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Add a request interceptor to attach the JWT token
+// Request interceptor: attach JWT token
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('access_token');
@@ -22,11 +22,17 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor to handle token refresh (optional)
+// Response interceptor: handle 401 (token expired)
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    // If 401, you could attempt refresh token logic
+    if (error.response?.status === 401) {
+      // Optionally try to refresh token, or just logout
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
     return Promise.reject(error);
   }
 );
