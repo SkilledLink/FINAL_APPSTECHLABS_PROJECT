@@ -1,6 +1,6 @@
 // features/home/pages/HomePage.tsx
 import { useEffect, useState } from "react";
-import { 
+import type{ 
   TrendingUp, 
   Users, 
   Clock, 

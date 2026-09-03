@@ -3,7 +3,7 @@ import PostComposer from '../../posts/components/PostComposer';
 import PostCard from '../../posts/components/PostCard';
 import Highlights from '../../home/components/Highlights';
 import { mockHighlights, mockPosts } from '../../../data/mockData';
-import { Post } from '../../posts/types/post.types';
+import type { Post } from '../../posts/types/post.types';
 
 const Feed: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>(mockPosts);

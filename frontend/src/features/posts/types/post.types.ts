@@ -12,10 +12,11 @@ export interface Post {
   title: string;
   content: string;
   hashtags: string[];
-  imageUrl?: string;
-  createdAt: string;
+  imageUrl?: string; // The image of the electrical panel
+  createdAt: string; // "2h"
   initialLikes: number;
   initialComments: number;
+  // UI State specific to the frontend
   isLiked?: boolean;
   isAppreciated?: boolean;
   isRequested?: boolean;
