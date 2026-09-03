@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
@@ -403,7 +402,6 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
     </div>
   );
 }
-=======
 import React, { useState } from 'react';
 import type { AccountType, AuthView } from '../types/auth.types';
 
@@ -476,4 +474,3 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onNavigate }) => {
     </div>
   );
 };
->>>>>>> 068172ec0a0ac18df41f431507b0fe7a6030a66c

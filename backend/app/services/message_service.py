@@ -2,6 +2,7 @@ from uuid import UUID
 from datetime import datetime
 from fastapi import HTTPException, status
 from sqlmodel import Session
+from sqlalchemy import text   # <-- ADD THIS IMPORT
 from app.repositories.conversation_repository import ConversationRepository
 from app.repositories.message_repository import MessageRepository
 from app.schemas.message import MessageCreate
@@ -24,8 +25,9 @@ class MessageService:
 
         message = self.msg_repo.insert_message(msg_dict)
 
+        # ✅ FIX: Wrap raw SQL with text()
         self.session.execute(
-            "UPDATE conversations SET updated_at = now() WHERE id = :id",
+            text("UPDATE conversations SET updated_at = now() WHERE id = :id"),
             {"id": conversation_id}
         )
         self.session.commit()

@@ -1,26 +1,28 @@
-<<<<<<< HEAD
-export type AccountType = "client" | "professional" | "business";
+// src/features/auth/types/auth.types.ts
+
+export type AccountType = "user" | "professional" | "business";
 
 export interface AuthUser {
   id: string;
-  name: string;
   email: string;
-  accountType: AccountType;
+  first_name: string;
+  last_name: string;
+  account_type: AccountType;
+  is_admin: boolean;
+  is_moderator: boolean;
 }
 
 export interface LoginCredentials {
   email: string;
   password: string;
-  accountType: "client" | "professional";
 }
 
 export interface RegisterData {
-  firstName: string;
-  lastName: string;
+  first_name: string;
+  last_name: string;
   email: string;
   password: string;
-  confirmPassword: string;
-  accountType: AccountType;
+  account_type?: AccountType; // optional, defaults to "user" on backend
 }
 
 export interface ForgotPasswordData {
@@ -28,42 +30,28 @@ export interface ForgotPasswordData {
 }
 
 export interface ResetPasswordData {
-  token: string;
-  password: string;
+  email?: string;   // optional – some flows pass it from URL
+  code: string;
+  new_password: string;
+}
+
+export interface VerifyCodeData {
+  code: string;
 }
 
 export interface AuthResponse {
-  user: AuthUser;
-  token: string;
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  account_type: string;
+  is_admin: boolean;
+  is_moderator: boolean;
 }
 
 export interface MessageResponse {
   message: string;
 }
-=======
-export type AuthView = 'login' | 'register';
-export type AccountType = 'CLIENT' | 'INDIVIDUAL' | 'BUSINESS';
-
-export interface User {
-  id: string;
-  email: string;
-}
-
-export interface LoginPayload {
-  email: string;
-  password: string;
-  role: 'CLIENT' | 'PROFESSIONAL';
-}
-
-export interface RegisterPayload {
-  accountType: AccountType;
-  fullName?: string;
-  email?: string;
-  password?: string;
-}
-
-export interface AuthResponse {
-  user: User;
-  token: string;
-}
->>>>>>> 068172ec0a0ac18df41f431507b0fe7a6030a66c

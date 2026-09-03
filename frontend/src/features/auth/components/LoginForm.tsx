@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
@@ -158,7 +157,6 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           >
             Forgot password?
           </Link>
-=======
 import React, { useState } from "react";
 
 export const LoginForm: React.FC = () => {
@@ -230,12 +228,10 @@ export const LoginForm: React.FC = () => {
             required
             className="w-full px-3.5 py-2.5 bg-white border border-gray-400 rounded-md text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#0d1b2a]"
           />
->>>>>>> 068172ec0a0ac18df41f431507b0fe7a6030a66c
         </div>
 
         <button
           type="submit"
-<<<<<<< HEAD
           disabled={loading}
           className="group w-full bg-[#4F46E5] hover:bg-[#4338CA] active:scale-[0.98] text-white font-semibold text-[15px] py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-70"
         >
@@ -259,28 +255,3 @@ export const LoginForm: React.FC = () => {
     </div>
   );
 }
-=======
-          className="w-full py-2.5 bg-[#0d1b2a] text-white font-semibold text-sm rounded-md hover:bg-[#1b2a3a] transition-colors mt-2"
-        >
-          Sign In
-        </button>
-      </form>
-
-      {/* Links */}
-      <div className="mt-6 text-center text-xs space-y-3 text-gray-700">
-        <div>
-          <a href="/forgot-password" className="underline font-medium hover:text-black">
-            Forgot Password?
-          </a>
-        </div>
-        <div>
-          <span>Don't have an account? </span>
-          <a href="/register" className="underline font-semibold text-[#0d1b2a]">
-            Create an Account
-          </a>
-        </div>
-      </div>
-    </div>
-  );
-};
->>>>>>> 068172ec0a0ac18df41f431507b0fe7a6030a66c
