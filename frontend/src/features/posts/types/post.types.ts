@@ -11,12 +11,14 @@ export interface Post {
   author: PostAuthor;
   title: string;
   content: string;
+  location?: string; // NEW: Add this field
   hashtags: string[];
-  imageUrl?: string; // The image of the electrical panel
-  createdAt: string; // "2h"
+  imageUrl?: string;
+  mediaType?: 'image' | 'video';
+  thumbnailUrl?: string;
+  createdAt: string;
   initialLikes: number;
   initialComments: number;
-  // UI State specific to the frontend
   isLiked?: boolean;
   isAppreciated?: boolean;
   isRequested?: boolean;

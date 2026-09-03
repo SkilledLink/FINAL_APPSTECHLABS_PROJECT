@@ -20,6 +20,7 @@ export const mockPosts: Post[] = [
     content: 'Just wrapped up a full residential panel upgrade. Clean lines, proper labeling, and ready for the next 30 years.',
     hashtags: ['#Electrician'],
     imageUrl: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80', // Mock electrical panel
+    location: 'Austin, TX', // 👈 ADD THIS
     createdAt: '2h',
     initialLikes: 124,
     initialComments: 18,
@@ -29,3 +30,4 @@ export const mockPosts: Post[] = [
   },
   // Add more mock posts here if needed
 ];
+

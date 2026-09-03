@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import PostComposer from '../../posts/components/PostComposer';
 import PostCard from '../../posts/components/PostCard';
+import PostCreationModal from '../../posts/components/PostCreationModal';
 import Highlights from '../../home/components/Highlights';
 import { mockHighlights, mockPosts } from '../../../data/mockData';
 import type { Post } from '../../posts/types/post.types';
@@ -8,8 +9,20 @@ import type { Post } from '../../posts/types/post.types';
 const Feed: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>(mockPosts);
 
-  // Actions
-  const handlePost = (content: string) => {
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [initialMediaType, setInitialMediaType] = useState<'image' | 'video' | null>(null);
+
+  // Handle post from composer (text only) or modal (with media)
+  const handlePost = (data: { 
+    title: string; 
+    content: string; 
+    hashtags: string[]; 
+    mediaUrl?: string; 
+    mediaType?: 'image' | 'video'; 
+    thumbnailUrl?: string;
+    location?: string; 
+  }) => {
     const newPost: Post = {
       id: `post-${Date.now()}`,
       author: {
@@ -19,19 +32,29 @@ const Feed: React.FC = () => {
         avatarUrl: 'https://i.pravatar.cc/150?img=12',
         isVerified: false,
       },
-      title: 'New Post',
-      content: content,
-      hashtags: [],
+      title: data.title,
+      content: data.content,
+      hashtags: data.hashtags,
+      location: data.location, // 👈 THIS IS CRITICAL
       createdAt: 'Now',
       initialLikes: 0,
       initialComments: 0,
       isLiked: false,
       isAppreciated: false,
       isRequested: false,
+      imageUrl: data.mediaUrl,
+      mediaType: data.mediaType,
+      thumbnailUrl: data.thumbnailUrl,
     };
     setPosts([newPost, ...posts]);
   };
 
+  const handleOpenModal = (type: 'image' | 'video') => {
+    setInitialMediaType(type);
+    setIsModalOpen(true);
+  };
+
+  // ... (Rest of handlers like Like, Appreciate, etc.)
   const handleLike = (id: string) => {
     setPosts(posts.map(p => p.id === id ? { ...p, isLiked: !p.isLiked } : p));
   };
@@ -42,8 +65,11 @@ const Feed: React.FC = () => {
 
   const handleRequestService = (id: string) => {
     setPosts(posts.map(p => p.id === id ? { ...p, isRequested: !p.isRequested } : p));
-    // Mock alert for frontend-only action
     alert('Service request sent (Mock)');
+  };
+
+  const handleVideoClick = () => {
+    // Video playback is handled by PostCard.
   };
 
   const handleAddHighlight = () => {
@@ -53,7 +79,7 @@ const Feed: React.FC = () => {
   return (
     <div className="max-w-xl mx-auto p-4">
       <Highlights highlights={mockHighlights} onAddHighlight={handleAddHighlight} />
-      <PostComposer onPost={handlePost} />
+      <PostComposer onPost={handlePost} onOpenModal={handleOpenModal} />
       
       {posts.map(post => (
         <PostCard 
@@ -62,8 +88,16 @@ const Feed: React.FC = () => {
           onLike={handleLike}
           onAppreciate={handleAppreciate}
           onRequestService={handleRequestService}
+          onVideoClick={handleVideoClick}
         />
       ))}
+
+      <PostCreationModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onPublish={handlePost}
+        initialMediaType={initialMediaType}
+      />
     </div>
   );
 };

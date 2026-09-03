@@ -5,16 +5,18 @@ interface PostActionsProps {
   post: Post;
   onLike: (id: string) => void;
   onRequestService: (id: string) => void;
+  onShare: (id: string) => void; // 👈 ADDED
 }
 
 const PostActions: React.FC<PostActionsProps> = ({
   post,
   onLike,
   onRequestService,
+  onShare, // 👈 DESTRUCTURED
 }) => {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-gray-100 pt-3 mt-3 w-full">
-      {/* Left Side: Like & Comment */}
+      {/* Left Side: Like, Comment & Share */}
       <div className="flex items-center gap-4 sm:gap-6 min-w-0">
         <button
           type="button"
@@ -70,6 +72,29 @@ const PostActions: React.FC<PostActionsProps> = ({
           </svg>
 
           {post.initialComments}
+        </button>
+
+        {/* 👇 NEW SHARE BUTTON */}
+        <button
+          type="button"
+          onClick={() => onShare(post.id)}
+          className="flex items-center gap-2 text-sm font-medium hover:text-blue-600 transition-colors whitespace-nowrap"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            className="w-5 h-5 flex-shrink-0"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z"
+            />
+          </svg>
+          Share
         </button>
       </div>
 
