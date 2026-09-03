@@ -3,9 +3,10 @@ from pydantic import BaseModel, EmailStr, Field
 
 class UserCreate(BaseModel):
     email: EmailStr
-    username: str = Field(min_length=3, max_length=50)
+    first_name: str = Field(min_length=1, max_length=50)
+    last_name: str = Field(min_length=1, max_length=50)
     password: str = Field(min_length=8)
-    account_type: str  # "user", "professional", "business"
+    account_type: str = "user"
 
 
 class UserLogin(BaseModel):
@@ -25,9 +26,19 @@ class RefreshTokenRequest(BaseModel):
 
 class VerificationRequest(BaseModel):
     email: EmailStr
-    code: str  # or token
+    code: str
 
 
 class VerificationResponse(BaseModel):
     message: str
     verified: bool
+
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetConfirm(BaseModel):
+    email: EmailStr
+    code: str
+    new_password: str = Field(min_length=8)

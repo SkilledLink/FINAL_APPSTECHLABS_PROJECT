@@ -2,12 +2,11 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import jwt
-from passlib.context import CryptContext
 from pwdlib import PasswordHash
 
 from app.core.config import settings
 
-pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
+pwd_context = PasswordHash.recommended()
 
 
 def hash_password(password: str) -> str:
@@ -33,4 +32,9 @@ def create_refresh_token(data: dict[str, Any]) -> str:
 
 
 def decode_token(token: str) -> dict[str, Any]:
-    return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    try:
+        return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    except jwt.ExpiredSignatureError:
+        raise ValueError("Token has expired")
+    except jwt.InvalidTokenError:
+        raise ValueError("Invalid token")
