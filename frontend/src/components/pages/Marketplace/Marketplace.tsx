@@ -1,45 +1,94 @@
-import { useMarketplace } from '../../services/hooks/useMarketplace';
-import ServiceGrid from '../../services/ServiceGrid';
-import ServiceSearch from '../../services/ServiceSearch';
-import ServiceFilters from '../../services/Servicefilter';
-import { Sparkles } from 'lucide-react';
+import { useMarketplace } from "../../services/hooks/useMarketplace";
+import ServiceGrid from "../../services/ServiceGrid";
+import ServiceSearch from "../../services/ServiceSearch";
+import ServiceFilters from "../../services/Servicefilter";
 
 interface MarketplacePageProps {
-  onSelectService: (id: string) => void;
+  onViewProfile: (id: string) => void;
+  onContact: (id: string) => void;
 }
 
-export default function MarketplacePage({ onSelectService }: MarketplacePageProps) {
-  const { services, filters, setFilters, loading } = useMarketplace();
+export default function MarketplacePage({
+  onViewProfile,
+  onContact,
+}: MarketplacePageProps) {
+  const {
+    professionals,
+    totalCount,
+    loading,
+    filters,
+    setFilters,
+    clearFilters,
+  } = useMarketplace();
 
   if (loading) {
-    return <div className="text-center py-20 text-slate-500">Loading marketplace...</div>;
+    return (
+      <div className="text-center py-20 text-gray-500 text-sm">
+        Loading marketplace...
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-8 pb-12">
-      <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-blue-900 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
-        <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="max-w-xl relative z-10 space-y-3">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/10 backdrop-blur-md text-purple-200">
-            <Sparkles size={14} className="text-blue-400" /> Professional Marketplace
-          </span>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">Discover Expert Services</h1>
-          <p className="text-purple-200 text-sm leading-relaxed">
-            Hire verified professionals for full-stack development, design systems, and advanced digital solutions.
-          </p>
+    <div className="min-h-screen bg-gray-50 text-black p-6">
+      <div className="flex items-center justify-between bg-white border border-gray-200 rounded-2xl px-6 py-4 mb-6 shadow-sm">
+        <div className="flex items-center gap-2 font-black text-black">
+          <span className="w-3 h-3 bg-blue-600 rounded-full"></span>
+          <span>Explore Marketplace v2</span>
         </div>
+        
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="w-full md:w-96">
-          <ServiceSearch value={filters.search} onChange={(search: string) => setFilters({ ...filters, search })} />
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-1">
+          <ServiceFilters
+            filters={filters}
+            onChange={setFilters}
+            onClear={clearFilters}
+          />
         </div>
-        <div className="w-full md:w-auto">
-          <ServiceFilters filters={filters} onChange={setFilters} />
+
+        <div className="lg:col-span-3 space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+            <ServiceSearch
+              value={filters.search}
+              onChange={(search: string) => setFilters({ ...filters, search })}
+            />
+
+            <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+              <div className="flex items-center gap-2 bg-white border border-gray-300 rounded-xl px-3 py-2.5 text-xs text-black">
+                <span className="text-gray-500">Sort by</span>
+                <select
+                  value={filters.sortBy}
+                  onChange={(e) =>
+                    setFilters({
+                      ...filters,
+                      sortBy: e.target.value as typeof filters.sortBy,
+                    })
+                  }
+                  className="bg-transparent font-semibold text-black focus:outline-none cursor-pointer"
+                >
+                  <option value="relevance">Relevance</option>
+                  <option value="rating-high">Rating: High to Low</option>
+                  <option value="years-high">
+                    Years in Trade: High to Low
+                  </option>
+                </select>
+              </div>
+
+              <span className="text-xs font-semibold text-gray-600 whitespace-nowrap">
+                Showing {totalCount} results
+              </span>
+            </div>
+          </div>
+
+          <ServiceGrid
+            professionals={professionals}
+            onViewProfile={onViewProfile}
+            onContact={onContact}
+          />
         </div>
       </div>
-
-      <ServiceGrid services={services} onSelectService={onSelectService} />
     </div>
   );
 }

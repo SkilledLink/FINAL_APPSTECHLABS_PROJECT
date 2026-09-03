@@ -1,8 +1,17 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 import AppLayout from "./components/layout/AppLayout/AppLayout";
+import {
+  MarketplacePage,
+  RequestServicePage,
+  ServiceDetailsPage,
+} from "./components/index";
+// import { VerificationPage } from "./verification";
+// import Header from "./components/Header";
+// import Sidebar from "./components/Sidebar";
+// import MobileNavigation from "./components/MobileNavigation";
 
 const PlaceholderPage = ({ title }: { title: string }) => (
-  <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 flex items-center justify-center h-96">
+  <div className="flex h-96 items-center justify-center rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
     <h1 className="text-2xl font-semibold text-slate-800">{title}</h1>
   </div>
 );
@@ -38,10 +47,37 @@ function App() {
             path="create"
             element={<PlaceholderPage title="Create Post" />}
           />
+          
+          <Route
+            path="marketplace"
+            element={
+              <MarketplacePage
+                onViewProfile={() => undefined}
+                onContact={() => undefined}
+              />
+            }
+          />
+          <Route
+            path="marketplace/service/:professionalId"
+            element={
+              <ServiceDetailsPage
+                professionalId="1"
+                onBack={() => undefined}
+                onContact={() => undefined}
+              />
+            }
+          />
+          <Route
+            path="marketplace/request"
+            element={
+              <RequestServicePage professionalId="1" onBack={() => undefined} />
+            }
+          />
           <Route
             path="*"
             element={<PlaceholderPage title="404 - Not Found" />}
           />
+          
         </Route>
       </Routes>
     </BrowserRouter>
