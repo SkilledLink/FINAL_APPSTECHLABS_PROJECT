@@ -10,7 +10,7 @@ export { default as ServiceFilters } from "../services/Servicefilter";
 export { default as ServiceRequestForm } from "../services/ServiceRequestform";
 export { default as ServiceRequestStatus } from "../services/ServiceRequeststatus";
 export type {
-  ServiceItem,
+  ProfessionalItem,
   MarketplaceFilters,
   ServiceRequest,
 } from "../Types/marketplace.types";

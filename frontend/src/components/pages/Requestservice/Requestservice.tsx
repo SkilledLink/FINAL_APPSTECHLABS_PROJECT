@@ -1,38 +1,35 @@
 import { useState, useEffect } from "react";
+import type { ServiceRequest } from "../../Types/marketplace.types";
 import { marketplaceService } from "../../Servicesmarket/marketplaceService";
 import ServiceRequestForm from "../../services/ServiceRequestform";
 import ServiceRequestStatus from "../../services/ServiceRequeststatus";
 import { ArrowLeft } from "lucide-react";
 
 interface RequestServicePageProps {
-  serviceId: string;
+  professionalId: string;
   onBack: () => void;
 }
 
 export default function RequestServicePage({
-  serviceId,
+  professionalId,
   onBack,
 }: RequestServicePageProps) {
-  const [serviceTitle, setServiceTitle] = useState("");
+  const [professionalName, setProfessionalName] = useState("");
   const [submittedRequestId, setSubmittedRequestId] = useState<string | null>(
     null,
   );
 
   useEffect(() => {
-    marketplaceService.getServiceById(serviceId).then((data) => {
-      if (data) setServiceTitle(data.title);
+    marketplaceService.getProfessionalById(professionalId).then((data) => {
+      if (data) setProfessionalName(data.name);
     });
-  }, [serviceId]);
+  }, [professionalId]);
 
-  const handleSubmitRequest = async (formData: {
-    clientName: string;
-    clientEmail: string;
-    projectDetails: string;
-    budget: number;
-    deadline: string;
-  }) => {
+  const handleSubmitRequest = async (
+    formData: Omit<ServiceRequest, "professionalId">,
+  ) => {
     const res = await marketplaceService.submitRequest({
-      serviceId,
+      professionalId,
       ...formData,
     });
     if (res.success) {
@@ -41,10 +38,10 @@ export default function RequestServicePage({
   };
 
   return (
-    <div className="space-y-6 pb-12 max-w-2xl mx-auto">
+    <div className="w-full max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 text-black bg-gray-50 min-h-screen">
       <button
         onClick={onBack}
-        className="inline-flex items-center gap-2 text-slate-600 hover:text-blue-600 font-semibold text-xs transition-colors"
+        className="inline-flex items-center gap-2 text-gray-600 hover:text-black font-semibold text-xs transition-colors"
       >
         <ArrowLeft size={16} /> Back
       </button>
@@ -53,7 +50,7 @@ export default function RequestServicePage({
         <ServiceRequestStatus requestId={submittedRequestId} onBack={onBack} />
       ) : (
         <ServiceRequestForm
-          serviceTitle={serviceTitle}
+          professionalName={professionalName}
           onSubmit={handleSubmitRequest}
         />
       )}

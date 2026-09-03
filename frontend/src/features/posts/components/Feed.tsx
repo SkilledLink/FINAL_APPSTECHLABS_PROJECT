@@ -6,7 +6,7 @@ import Highlights from '../../home/components/Highlights';
 import { mockHighlights, mockPosts } from '../../../data/mockData';
 import type { Post } from '../../posts/types/post.types';
 
-const Feed: React.FC = () => {
+const Feed: FC = () => {
   const [posts, setPosts] = useState<Post[]>(mockPosts);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -24,10 +24,10 @@ const Feed: React.FC = () => {
     const newPost: Post = {
       id: `post-${Date.now()}`,
       author: {
-        id: 'user-me',
-        name: 'John Doe',
-        title: 'Plumber',
-        avatarUrl: 'https://i.pravatar.cc/150?img=12',
+        id: "user-me",
+        name: "John Doe",
+        title: "Plumber",
+        avatarUrl: "https://i.pravatar.cc/150?img=12",
         isVerified: false,
       },
       title: data.title,
@@ -55,8 +55,12 @@ const Feed: React.FC = () => {
   const handleLike = (id: string) => setPosts(posts.map(p => p.id === id ? { ...p, isLiked: !p.isLiked } : p));
   const handleAppreciate = (id: string) => setPosts(posts.map(p => p.id === id ? { ...p, isAppreciated: !p.isAppreciated } : p));
   const handleRequestService = (id: string) => {
-    setPosts(posts.map(p => p.id === id ? { ...p, isRequested: !p.isRequested } : p));
-    alert('Service request sent (Mock)');
+    setPosts(
+      posts.map((p) =>
+        p.id === id ? { ...p, isRequested: !p.isRequested } : p,
+      ),
+    );
+    alert("Service request sent (Mock)");
   };
 
   const handleAddHighlight = () => alert('Open Image Uploader Modal (Mock)');

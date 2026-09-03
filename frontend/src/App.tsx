@@ -10,6 +10,23 @@ import RegisterPage from './features/auth/pages/RegisterPage';
 import ForgotPasswordPage from './features/auth/pages/ForgotPasswordPage';
 import ResetPasswordPage from './features/auth/pages/ResetPasswordPage';
 import VerifyEmailPage from './features/auth/pages/VerifyEmailPage'; // <-- added
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import AppLayout from "./components/layout/AppLayout/AppLayout";
+import {
+  MarketplacePage,
+  RequestServicePage,
+  ServiceDetailsPage,
+} from "./components/index";
+// import { VerificationPage } from "./verification";
+// import Header from "./components/Header";
+// import Sidebar from "./components/Sidebar";
+// import MobileNavigation from "./components/MobileNavigation";
+
+const PlaceholderPage = ({ title }: { title: string }) => (
+  <div className="flex h-96 items-center justify-center rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+    <h1 className="text-2xl font-semibold text-slate-800">{title}</h1>
+  </div>
+);
 
 function App() {
   return (

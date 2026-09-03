@@ -1,7 +1,7 @@
 // components/CommunityQuestion.tsx
-import React from 'react';
-import { MessageCircle, Tag, Users } from 'lucide-react';
-import type { Question } from '../../types/home';
+import React from "react";
+import { MessageCircle, Tag } from "lucide-react";
+import type { Question } from "../../types/home";
 
 interface CommunityQuestionProps {
   question: Question;
@@ -11,14 +11,16 @@ const CommunityQuestion: React.FC<CommunityQuestionProps> = ({ question }) => {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
       <div className="flex items-start gap-3">
-        <img 
-          src={question.avatar} 
+        <img
+          src={question.avatar}
           alt={question.author}
           className="w-10 h-10 rounded-full object-cover"
         />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-gray-900 text-sm">{question.author}</span>
+            <span className="font-semibold text-gray-900 text-sm">
+              {question.author}
+            </span>
             <span className="text-xs text-gray-400">•</span>
             <span className="text-xs text-gray-400">{question.createdAt}</span>
           </div>
@@ -27,7 +29,7 @@ const CommunityQuestion: React.FC<CommunityQuestionProps> = ({ question }) => {
           </p>
           <div className="flex flex-wrap gap-2 mt-2">
             {question.categories.map((category, index) => (
-              <span 
+              <span
                 key={index}
                 className="bg-gray-100 text-gray-700 text-xs px-2.5 py-0.5 rounded-full flex items-center gap-1"
               >

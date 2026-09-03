@@ -31,7 +31,6 @@ const Highlights: React.FC<HighlightsProps> = ({
             alt="User"
             className="w-full h-full rounded-full object-cover opacity-50"
           />
-
           <div className="absolute bottom-0 right-0 bg-blue-600 text-white rounded-full p-1 border-2 border-white">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -39,7 +38,7 @@ const Highlights: React.FC<HighlightsProps> = ({
               viewBox="0 0 24 24"
               strokeWidth={2}
               stroke="currentColor"
-              className="w-3 h-3"
+              className="w-3 h-3 sm:w-4 sm:h-4"
             >
               <path
                 strokeLinecap="round"
@@ -49,8 +48,7 @@ const Highlights: React.FC<HighlightsProps> = ({
             </svg>
           </div>
         </div>
-
-        <span className="text-xs font-medium mt-1 whitespace-nowrap">
+        <span className="text-[10px] sm:text-xs font-medium mt-1">
           Add Highlight
         </span>
       </button>

@@ -1,28 +1,32 @@
-export interface ServiceItem {
+export interface ProfessionalItem {
   id: string;
+  name: string;
   title: string;
-  description: string;
-  category: string;
-  price: number;
+  trade: string;
   rating: number;
-  provider: {
-    name: string;
-    avatar: string;
-    verified: boolean;
-  };
-  image: string;
+  reviewCount: number;
+  yearsInTrade: number;
+  avatar: string;
+  verified: boolean;
+  radius: number;
+  licenseTier: string;
+  insuranceStatus: string;
+  images: string[];
+  description: string;
+  hourlyRate: number;
 }
 
 export interface MarketplaceFilters {
   search: string;
-  category: string;
-  minPrice: number;
-  maxPrice: number;
-  sortBy: "popular" | "price-low" | "price-high" | "newest";
+  trades: string[];
+  radius: number;
+  licenseTiers: string[];
+  insuranceStatuses: string[];
+  sortBy: "relevance" | "rating-high" | "years-high";
 }
 
 export interface ServiceRequest {
-  serviceId: string;
+  professionalId: string;
   clientName: string;
   clientEmail: string;
   projectDetails: string;
