@@ -11,8 +11,11 @@ export interface Post {
   author: PostAuthor;
   title: string;
   content: string;
+  location?: string; // NEW: Add this field
   hashtags: string[];
   imageUrl?: string;
+  mediaType?: 'image' | 'video';
+  thumbnailUrl?: string;
   createdAt: string;
   initialLikes: number;
   initialComments: number;
