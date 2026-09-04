@@ -11,7 +11,7 @@ export default function VerifyEmailPage() {
   const { verifyEmail, loading, error, clearError } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const email = searchParams.get("email") || "";   // ✅ get email from URL
+  const email = searchParams.get("email") || "";
 
   const [code, setCode] = useState("");
   const [verified, setVerified] = useState(false);
@@ -19,7 +19,7 @@ export default function VerifyEmailPage() {
   const handleCodeComplete = async (value: string) => {
     setCode(value);
     if (value.length === 6) {
-      const success = await verifyEmail(email, value);   // ✅ pass email + code
+      const success = await verifyEmail(email, value);
       if (success) {
         setVerified(true);
         setTimeout(() => navigate("/login"), 2000);

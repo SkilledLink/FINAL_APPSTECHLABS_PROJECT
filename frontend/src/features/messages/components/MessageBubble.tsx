@@ -1,3 +1,4 @@
+// src/features/messages/components/MessageBubble.tsx
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
@@ -9,6 +10,10 @@ import {
   Reply,
   Smile,
   Copy,
+  File,
+  FileImage,
+  FileText,
+  Download,
 } from 'lucide-react';
 import type { Message } from '../types/message.types';
 
@@ -18,6 +23,18 @@ interface MessageBubbleProps {
   onReply?: (message: Message) => void;
   onReact?: (messageId: string, emoji: string) => void;
 }
+
+const fileIcons: Record<string, React.ReactNode> = {
+  'file-image': <FileImage className="w-5 h-5" />,
+  'file-text': <FileText className="w-5 h-5" />,
+};
+
+const getIcon = (type?: string, icon?: string) => {
+  if (icon && fileIcons[icon]) return fileIcons[icon];
+  if (type?.startsWith('image/')) return <FileImage className="w-5 h-5" />;
+  if (type === 'application/pdf') return <FileText className="w-5 h-5" />;
+  return <File className="w-5 h-5" />;
+};
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
   message,
@@ -45,27 +62,41 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     }
   };
 
+  const getFileUrl = (path?: string) => {
+    if (!path) return '';
+    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/messages/${path}`;
+  };
+
+  // Determine status label for sender messages
+  const getStatusLabel = () => {
+    if (!isSender) return null;
+    if (message.status === 'sending') return 'Sending...';
+    if (message.status === 'failed') return 'Failed';
+    // If status is 'sent' or undefined, we show 'Sent'
+    return 'Sent';
+  };
+
+  const statusLabel = getStatusLabel();
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12, scale: 0.97 }}
+      initial={{ opacity: 0, y: 15, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ type: 'spring', stiffness: 400, damping: 28 }}
-      className={`group relative flex flex-col ${
-        isSender ? 'items-end' : 'items-start'
-      } my-2.5 px-2`}
+      transition={{ type: 'spring', stiffness: 450, damping: 30 }}
+      className={`group relative flex flex-col ${isSender ? 'items-end' : 'items-start'} my-2 px-2`}
     >
-      {/* Floating Action Menu on Hover */}
+      {/* Floating action menu */}
       <div
-        className={`absolute z-20 -top-3.5 ${
-          isSender ? 'right-4' : 'left-4'
-        } opacity-0 group-hover:opacity-100 transition-all duration-200 ease-out transform group-hover:translate-y-0 translate-y-1 pointer-events-none group-hover:pointer-events-auto`}
+        className={`absolute z-20 -top-3.5 ${isSender ? 'right-4' : 'left-4'} 
+          opacity-0 group-hover:opacity-100 transition-all duration-200 ease-out 
+          transform group-hover:translate-y-0 translate-y-1 pointer-events-none group-hover:pointer-events-auto`}
       >
-        <div className="flex items-center gap-0.5 p-1 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border border-slate-200/80 dark:border-slate-700/80 rounded-full shadow-lg shadow-slate-900/10 text-slate-500 dark:text-slate-400">
+        <div className="flex items-center gap-0.5 p-1 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border border-slate-200/60 dark:border-slate-700/60 rounded-full shadow-lg shadow-black/5 text-slate-500 dark:text-slate-400">
           {onReply && (
             <button
               type="button"
               onClick={() => onReply(message)}
-              className="p-1.5 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition"
+              className="p-1.5 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-full transition"
               title="Reply"
             >
               <Reply className="w-3.5 h-3.5" />
@@ -75,8 +106,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             <button
               type="button"
               onClick={handleCopyText}
-              className="p-1.5 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition"
-              title="Copy Text"
+              className="p-1.5 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-full transition"
+              title="Copy"
             >
               <Copy className="w-3.5 h-3.5" />
             </button>
@@ -85,7 +116,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             <button
               type="button"
               onClick={() => onReact(message.id, '❤️')}
-              className="p-1.5 hover:text-rose-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition"
+              className="p-1.5 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-full transition"
               title="React"
             >
               <Smile className="w-3.5 h-3.5" />
@@ -94,72 +125,113 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         </div>
       </div>
 
-      {/* Main Message Bubble */}
+      {/* Main bubble */}
       <div
-        className={`relative max-w-[85%] sm:max-w-[70%] p-4 text-sm transition-all duration-200 ${
+        className={`relative max-w-[85%] sm:max-w-[70%] px-5 py-3.5 text-[15px] leading-relaxed transition-all duration-200 ${
           isSender
-            ? 'bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-600 text-white rounded-3xl rounded-tr-md shadow-md shadow-indigo-500/15 ring-1 ring-white/20'
-            : 'bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl text-slate-800 dark:text-slate-100 border border-slate-200/80 dark:border-slate-800 rounded-3xl rounded-tl-md shadow-sm shadow-slate-900/5'
+            ? 'bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 text-white rounded-2xl rounded-tr-sm shadow-md shadow-blue-500/20'
+            : 'bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm text-slate-800 dark:text-slate-100 border border-slate-200/70 dark:border-slate-700/70 rounded-2xl rounded-tl-sm shadow-sm shadow-slate-200/50 dark:shadow-slate-900/30'
         }`}
       >
-        {message.type === 'audio' && message.audioDetails ? (
-          <div className="flex items-center gap-3.5 min-w-[250px] sm:min-w-[290px]">
-            {/* Play/Pause Button with Pulsing Glow Ring */}
+        {/* IMAGE */}
+        {message.type === 'image' && message.attachment_path && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="rounded-lg overflow-hidden max-w-[300px] cursor-pointer"
+            onClick={() => {
+              const url = getFileUrl(message.attachment_path);
+              if (url) window.open(url, '_blank');
+            }}
+          >
+            <img
+              src={getFileUrl(message.attachment_path)}
+              alt={message.fileDetails?.name || 'Image'}
+              className="w-full h-auto object-cover rounded-lg hover:scale-[1.02] transition-transform duration-200"
+              loading="lazy"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+                const parent = (e.target as HTMLImageElement).parentElement;
+                if (parent) {
+                  const fallback = document.createElement('div');
+                  fallback.textContent = 'Image failed to load';
+                  fallback.className = 'p-4 text-sm text-slate-500';
+                  parent.appendChild(fallback);
+                }
+              }}
+            />
+          </motion.div>
+        )}
+
+        {/* FILE (non-image) */}
+        {message.type === 'file' && message.attachment_path && (
+          <div className="flex items-center gap-3 p-2 min-w-[180px]">
+            <div className={`p-2 rounded-lg ${isSender ? 'bg-white/20' : 'bg-slate-100 dark:bg-slate-700'}`}>
+              {getIcon(message.attachment_type, message.fileDetails?.icon)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className={`text-sm font-semibold truncate ${isSender ? 'text-white' : 'text-slate-800 dark:text-slate-200'}`}>
+                {message.fileDetails?.name || message.attachment_name || 'File'}
+              </p>
+              <p className={`text-xs ${isSender ? 'text-white/70' : 'text-slate-500 dark:text-slate-400'}`}>
+                {message.fileDetails?.size || (message.attachment_size ? `${(message.attachment_size / 1024).toFixed(1)} KB` : 'Unknown size')}
+              </p>
+            </div>
+            <a
+              href={getFileUrl(message.attachment_path)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`p-2 rounded-full transition ${
+                isSender
+                  ? 'hover:bg-white/20 text-white/80 hover:text-white'
+                  : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+              }`}
+              title="Download"
+            >
+              <Download className="w-4 h-4" />
+            </a>
+          </div>
+        )}
+
+        {/* VOICE NOTE */}
+        {message.type === 'audio' && message.audioDetails && (
+          <div className="flex items-center gap-4 min-w-[220px] sm:min-w-[260px]">
             <div className="relative">
               {isPlaying && (
                 <motion.span
-                  animate={{ scale: [1, 1.45, 1], opacity: [0.6, 0, 0.6] }}
-                  transition={{ repeat: Infinity, duration: 1.4, ease: 'easeInOut' }}
-                  className={`absolute inset-0 rounded-full ${
-                    isSender ? 'bg-white/40' : 'bg-indigo-500/40'
-                  }`}
+                  animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }}
+                  transition={{ repeat: Infinity, duration: 1.2, ease: 'easeInOut' }}
+                  className={`absolute inset-0 rounded-full ${isSender ? 'bg-white/30' : 'bg-blue-500/30'}`}
                 />
               )}
               <motion.button
-                whileHover={{ scale: 1.05 }}
+                whileHover={{ scale: 1.08 }}
                 whileTap={{ scale: 0.92 }}
                 type="button"
                 onClick={() => setIsPlaying(!isPlaying)}
-                className={`relative z-10 p-3 rounded-full shrink-0 transition-shadow shadow-md ${
+                className={`relative z-10 p-2.5 rounded-full shrink-0 transition-shadow shadow-md ${
                   isSender
-                    ? 'bg-white text-indigo-600 hover:bg-indigo-50 shadow-black/10'
-                    : 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white hover:opacity-95 shadow-indigo-500/20'
+                    ? 'bg-white text-blue-600 hover:bg-blue-50 shadow-white/20'
+                    : 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white hover:opacity-90 shadow-indigo-500/30'
                 }`}
               >
-                {isPlaying ? (
-                  <Pause className="w-4 h-4 fill-current" />
-                ) : (
-                  <Play className="w-4 h-4 fill-current ml-0.5" />
-                )}
+                {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
               </motion.button>
             </div>
-
-            {/* Audio Info & Interactive Waveform */}
-            <div className="flex-1 space-y-1.5">
-              <div className="flex items-center justify-between text-[11px] font-semibold tracking-wide">
-                <span
-                  className={`inline-flex items-center gap-1.5 ${
-                    isSender ? 'text-indigo-100' : 'text-slate-500 dark:text-slate-400'
-                  }`}
-                >
-                  <Mic className={`w-3.5 h-3.5 ${isSender ? 'text-indigo-200' : 'text-indigo-500'}`} />
+            <div className="flex-1 space-y-1">
+              <div className="flex items-center justify-between text-[11px] font-semibold">
+                <span className={`flex items-center gap-1.5 ${isSender ? 'text-blue-100' : 'text-slate-500 dark:text-slate-400'}`}>
+                  <Mic className={`w-3.5 h-3.5 ${isSender ? 'text-blue-200' : 'text-blue-500'}`} />
                   Voice Note
                 </span>
-                <span
-                  className={`font-mono text-[10px] ${
-                    isSender ? 'text-indigo-200' : 'text-slate-400'
-                  }`}
-                >
+                <span className={`font-mono text-[10px] ${isSender ? 'text-blue-200' : 'text-slate-400'}`}>
                   {message.audioDetails.duration}
                 </span>
               </div>
-
-              {/* Scrubbable Waveform Bars with Progress Indicator */}
-              <div className="flex items-center gap-1 h-7 pt-1 cursor-pointer">
+              <div className="flex items-center gap-1 h-6 pt-1 cursor-pointer">
                 {message.audioDetails.waveform.map((height, i) => {
                   const barPercentage = ((i + 1) / message.audioDetails.waveform.length) * 100;
                   const isPassed = barPercentage <= playbackProgress;
-
                   return (
                     <motion.button
                       key={i}
@@ -172,7 +244,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                           ? {
                               height: [
                                 `${height}%`,
-                                `${Math.max(25, (height + 40) % 100)}%`,
+                                `${Math.max(20, (height + 50) % 100)}%`,
                                 `${height}%`,
                               ],
                             }
@@ -180,21 +252,21 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                       }
                       transition={{
                         repeat: isPlaying ? Infinity : 0,
-                        duration: 0.5,
-                        delay: i * 0.03,
+                        duration: 0.6,
+                        delay: i * 0.04,
                       }}
                       className={`w-1 rounded-full transition-colors ${
                         hoveredBar === i
                           ? isSender
                             ? 'bg-white'
-                            : 'bg-indigo-600 dark:bg-indigo-400'
+                            : 'bg-blue-600 dark:bg-blue-400'
                           : isPassed
                           ? isSender
                             ? 'bg-white'
-                            : 'bg-indigo-600 dark:bg-indigo-400'
+                            : 'bg-blue-600 dark:bg-blue-400'
                           : isSender
                           ? 'bg-white/40'
-                          : 'bg-slate-300 dark:bg-slate-700'
+                          : 'bg-slate-300 dark:bg-slate-600'
                       }`}
                     />
                   );
@@ -202,27 +274,41 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               </div>
             </div>
           </div>
-        ) : (
-          <p className="leading-relaxed break-words text-[14.5px] font-normal tracking-wide">
-            {message.text}
+        )}
+
+        {/* TEXT */}
+        {message.type === 'text' && (
+          <p className="break-words font-medium leading-relaxed">
+            {message.text || message.content}
           </p>
         )}
 
-        {/* Timestamp & Delivery Status Indicator */}
+        {/* Timestamp & delivery status */}
         <div
-          className={`flex items-center justify-end gap-1 text-[10px] font-medium mt-1.5 ${
-            isSender ? 'text-indigo-100/90' : 'text-slate-400 dark:text-slate-500'
+          className={`flex items-center justify-end gap-1.5 mt-1.5 text-[10px] font-medium ${
+            isSender ? 'text-blue-100/80' : 'text-slate-400 dark:text-slate-500'
           }`}
         >
-          <span>{message.createdAt}</span>
+          <span className="font-mono tracking-wide">{message.createdAt}</span>
           {isSender && (
             <CheckCheck
-              className={`w-3.5 h-3.5 ${
-                message.isRead ? 'text-sky-300' : 'text-indigo-200/60'
-              }`}
+              className={`w-3.5 h-3.5 ${message.isRead ? 'text-blue-300' : 'text-blue-200/60'}`}
             />
           )}
         </div>
+
+        {/* Status label for sender messages */}
+        {isSender && statusLabel && (
+          <div className={`mt-1 text-right text-[10px] font-medium ${
+            statusLabel === 'Failed'
+              ? 'text-red-300'
+              : statusLabel === 'Sending...'
+              ? 'text-blue-200/70'
+              : 'text-blue-200/80'
+          }`}>
+            {statusLabel}
+          </div>
+        )}
       </div>
     </motion.div>
   );

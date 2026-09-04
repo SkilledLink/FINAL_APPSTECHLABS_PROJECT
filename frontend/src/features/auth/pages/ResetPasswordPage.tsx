@@ -22,9 +22,10 @@ export default function ResetPasswordPage() {
   const [mismatch, setMismatch] = useState(false);
   const [done, setDone] = useState(false);
 
-  const handleCodeComplete = (value: string) => {
+  const handleCodeComplete = async (value: string) => {
     setCode(value);
     if (value.length === 6) {
+      // Auto-advance to password step
       setTimeout(() => setStep("password"), 400);
     }
   };
@@ -93,12 +94,21 @@ export default function ResetPasswordPage() {
       {step === "code" ? (
         <>
           <div className="flex justify-center py-2">
-            <OTPInput length={6} value={code} onChange={setCode} onComplete={handleCodeComplete} />
+            <OTPInput
+              length={6}
+              value={code}
+              onChange={setCode}
+              onComplete={handleCodeComplete}
+              disabled={loading}
+            />
           </div>
           <p className="text-center text-xs text-slate-400 mt-4">
             Didn't receive the code?{" "}
             <button
               type="button"
+              onClick={() => {
+                // Optional: implement resend
+              }}
               className="text-slate-900 font-bold hover:underline transition ml-0.5"
             >
               Resend
@@ -119,11 +129,11 @@ export default function ResetPasswordPage() {
               <input
                 type={showPassword ? "text" : "password"}
                 required
-                minLength={6}
+                minLength={8}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onFocus={() => clearError()}
-                placeholder="At least 6 characters"
+                placeholder="At least 8 characters"
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-3.5 pr-10 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-400 focus:bg-white transition"
               />
               <button
@@ -143,7 +153,7 @@ export default function ResetPasswordPage() {
               <input
                 type={showPassword ? "text" : "password"}
                 required
-                minLength={6}
+                minLength={8}
                 value={confirmPassword}
                 onChange={(e) => {
                   setConfirmPassword(e.target.value);

@@ -1,5 +1,6 @@
+// src/hooks/useVoiceUpload.ts
 import { useState } from 'react';
-import { uploadsApi } from '../../../api/uploads';
+import { uploadsApi } from '../api/uploads';
 
 export function useVoiceUpload() {
   const [uploading, setUploading] = useState(false);

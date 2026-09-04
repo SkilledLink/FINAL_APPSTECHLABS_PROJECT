@@ -1,10 +1,12 @@
+// src/hooks/useConversations.ts
 import { useState, useEffect, useCallback } from 'react';
-import { conversationsApi } from '../../../api/conversations';
-import type { Conversation } from '../types/message.types';
+import { conversationsApi } from '../api/conversations';
+import type { Conversation, Message } from '../types/message.types';
 
-// Map backend conversation to frontend Conversation
-const mapBackendConversation = (backendConv: any): Conversation => {
-  const participant = backendConv.participant || {
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+
+function mapBackendConversation(backend: any): Conversation {
+  const participant = backend.participant || {
     id: 'unknown',
     name: 'User',
     avatar: 'https://ui-avatars.com/api/?name=User',
@@ -12,37 +14,45 @@ const mapBackendConversation = (backendConv: any): Conversation => {
     isOnline: false,
   };
 
+  let lastMessage: Message | undefined;
+  if (backend.last_message) {
+    const lm = backend.last_message;
+    const isVoice = lm.type === 'voice';
+    lastMessage = {
+      id: lm.id,
+      conversation_id: backend.id,
+      sender_id: lm.sender_id,
+      client_message_id: lm.client_message_id,
+      type: isVoice ? 'audio' : lm.type,
+      content: lm.content,
+      text: lm.content,
+      attachment_path: lm.attachment_path,
+      duration_seconds: lm.duration_seconds,
+      created_at: lm.created_at,
+      edited_at: lm.edited_at,
+      deleted_at: lm.deleted_at,
+      audioDetails: isVoice ? {
+        url: lm.attachment_path
+          ? `${SUPABASE_URL}/storage/v1/object/public/messages/${lm.attachment_path}`
+          : '',
+        duration: lm.duration_seconds ? `${Math.floor(lm.duration_seconds)}s` : '0s',
+        waveform: Array.from({ length: 15 }, () => Math.floor(Math.random() * 75 + 25)),
+      } : undefined,
+    };
+  }
+
   return {
-    id: backendConv.id,
+    id: backend.id,
+    type: backend.type,
+    title: backend.title,
+    created_by: backend.created_by,
+    created_at: backend.created_at,
+    updated_at: backend.updated_at,
+    unreadCount: backend.unread_count || 0,
     participant,
-    lastMessage: backendConv.last_message
-      ? {
-          id: backendConv.last_message.id,
-          conversationId: backendConv.id,
-          senderId: backendConv.last_message.sender_id,
-          type: backendConv.last_message.type === 'voice' ? 'audio' : 'text',
-          text: backendConv.last_message.content,
-          audioDetails: backendConv.last_message.duration_seconds
-            ? {
-                url: '',
-                duration: `${Math.floor(backendConv.last_message.duration_seconds)}s`,
-                waveform: [40, 60, 80, 50, 90, 70, 30, 85, 100, 45, 65, 75, 55, 95, 35],
-              }
-            : undefined,
-          createdAt: new Date(backendConv.last_message.created_at).toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-          }),
-          isRead: true,
-        }
-      : undefined,
-    unreadCount: backendConv.unread_count || 0,
-    updatedAt: new Date(backendConv.updated_at).toLocaleDateString([], {
-      month: 'short',
-      day: 'numeric',
-    }),
+    lastMessage,
   };
-};
+}
 
 export function useConversations() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -67,9 +77,9 @@ export function useConversations() {
     fetchConversations();
   }, [fetchConversations]);
 
-  const updateConversation = useCallback((conversationId: string, updates: Partial<Conversation>) => {
-    setConversations(prev =>
-      prev.map(c => (c.id === conversationId ? { ...c, ...updates } : c))
+  const updateConversation = useCallback((id: string, updates: Partial<Conversation>) => {
+    setConversations((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, ...updates } : c))
     );
   }, []);
 
