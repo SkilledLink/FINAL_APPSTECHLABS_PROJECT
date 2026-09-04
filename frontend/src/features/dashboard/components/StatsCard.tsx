@@ -1,88 +1,218 @@
 import React from 'react';
 import type { DashboardStats } from '../types/dashboard.types';
-import { TrendingUp, TrendingDown, Users, ClipboardList, Briefcase, Star, Clock, Wallet } from 'lucide-react';
+import {
+  TrendingUp,
+  TrendingDown,
+  Users,
+  ClipboardList,
+  Briefcase,
+  Star,
+  Clock,
+  Wallet,
+} from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface StatsCardProps {
   stats: DashboardStats;
 }
 
-const StatItem: React.FC<{
+interface StatItemProps {
   label: string;
   value: string | number;
   change?: number;
   icon: React.ReactNode;
-  color?: string;
-}> = ({ label, value, change, icon, color = 'text-blue-600' }) => (
-  <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow duration-300">
-    <div className="flex items-center justify-between">
-      <div className={`p-3 rounded-lg bg-opacity-10 ${color} bg-current`}>
-        {icon}
-      </div>
-      {change !== undefined && (
-        <span className={`text-sm font-medium ${change >= 0 ? 'text-green-600' : 'text-red-600'} flex items-center gap-1`}>
-          {change >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-          {Math.abs(change)}%
-        </span>
-      )}
-    </div>
-    <div className="mt-4">
-      <p className="text-2xl font-bold text-gray-900">{value}</p>
-      <p className="text-sm text-gray-600 mt-1">{label}</p>
-    </div>
-  </div>
-);
+}
 
-export const StatsCard: React.FC<StatsCardProps> = ({ stats }) => {
-  const items = [
+const containerVariants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.07,
+    },
+  },
+};
+
+const cardVariants = {
+  hidden: {
+    opacity: 0,
+    y: 14,
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.4,
+      ease: 'easeOut',
+    },
+  },
+};
+
+const StatItem: React.FC<StatItemProps> = ({
+  label,
+  value,
+  change,
+  icon,
+}) => {
+  const isPositive =
+    change !== undefined && change >= 0;
+
+  return (
+    <motion.div
+      variants={cardVariants}
+      whileHover={{
+        y: -4,
+        transition: {
+          duration: 0.2,
+        },
+      }}
+      className="group relative min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow duration-200 hover:shadow-lg sm:p-5"
+    >
+      {/* Subtle top accent */}
+      <div className="absolute inset-x-0 top-0 h-px bg-slate-100" />
+
+      <div className="flex items-start justify-between gap-3">
+        {/* Icon */}
+        <motion.div
+          whileHover={{
+            scale: 1.08,
+            rotate: 3,
+          }}
+          transition={{
+            duration: 0.2,
+          }}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-700"
+        >
+          {icon}
+        </motion.div>
+
+        {/* Change */}
+        {change !== undefined && (
+          <span
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold ${
+              isPositive
+                ? 'bg-emerald-50 text-emerald-600'
+                : 'bg-red-50 text-red-600'
+            }`}
+          >
+            {isPositive ? (
+              <TrendingUp className="h-3 w-3" />
+            ) : (
+              <TrendingDown className="h-3 w-3" />
+            )}
+
+            {Math.abs(change)}%
+          </span>
+        )}
+      </div>
+
+      {/* Value */}
+      <div className="mt-5 min-w-0">
+        <p className="truncate text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+          {value}
+        </p>
+
+        <p className="mt-1.5 truncate text-xs font-medium text-slate-500 sm:text-sm">
+          {label}
+        </p>
+      </div>
+
+      {/* Bottom detail */}
+      {change !== undefined && (
+        <div className="mt-4 flex min-w-0 items-center gap-1.5">
+          <span
+            className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+              isPositive
+                ? 'bg-emerald-500'
+                : 'bg-red-500'
+            }`}
+          />
+
+          <span className="truncate text-[11px] text-slate-400 sm:text-xs">
+            {isPositive
+              ? 'Up from previous period'
+              : 'Down from previous period'}
+          </span>
+        </div>
+      )}
+    </motion.div>
+  );
+};
+
+export const StatsCard: React.FC<StatsCardProps> = ({
+  stats,
+}) => {
+  const items: StatItemProps[] = [
     {
       label: 'Profile Views',
       value: stats.profileViews.toLocaleString(),
       change: stats.profileViewsChange,
-      icon: <Users className="w-5 h-5 text-blue-600" />,
-      color: 'text-blue-600'
+      icon: (
+        <Users className="h-5 w-5 text-slate-700" />
+      ),
     },
+
     {
       label: 'Service Requests',
       value: stats.serviceRequests,
       change: stats.serviceRequestsChange,
-      icon: <ClipboardList className="w-5 h-5 text-purple-600" />,
-      color: 'text-purple-600'
+      icon: (
+        <ClipboardList className="h-5 w-5 text-slate-700" />
+      ),
     },
+
     {
       label: 'Jobs Completed',
       value: stats.jobsCompleted,
       change: stats.jobsCompletedChange,
-      icon: <Briefcase className="w-5 h-5 text-green-600" />,
-      color: 'text-green-600'
+      icon: (
+        <Briefcase className="h-5 w-5 text-slate-700" />
+      ),
     },
+
     {
       label: 'Average Rating',
-      value: `${stats.averageRating} ★`,
+      value: stats.averageRating,
       change: stats.averageRatingChange,
-      icon: <Star className="w-5 h-5 text-yellow-600" />,
-      color: 'text-yellow-600'
+      icon: (
+        <Star
+          className="h-5 w-5 text-slate-700"
+          fill="currentColor"
+        />
+      ),
     },
+
     {
       label: 'Response Rate',
       value: `${stats.responseRate}%`,
       change: stats.responseRateChange,
-      icon: <Clock className="w-5 h-5 text-indigo-600" />,
-      color: 'text-indigo-600'
+      icon: (
+        <Clock className="h-5 w-5 text-slate-700" />
+      ),
     },
+
     {
       label: 'Total Earnings',
       value: `CFA ${(stats.totalEarnings * 1000).toLocaleString()}`,
       change: stats.totalEarningsChange,
-      icon: <Wallet className="w-5 h-5 text-emerald-600" />,
-      color: 'text-emerald-600'
-    }
+      icon: (
+        <Wallet className="h-5 w-5 text-slate-700" />
+      ),
+    },
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {items.map((item, index) => (
-        <StatItem key={index} {...item} />
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="grid w-full min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3"
+    >
+      {items.map((item) => (
+        <StatItem
+          key={item.label}
+          {...item}
+        />
       ))}
-    </div>
+    </motion.div>
   );
 };

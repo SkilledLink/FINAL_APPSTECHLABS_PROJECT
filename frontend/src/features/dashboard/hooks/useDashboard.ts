@@ -36,7 +36,7 @@ export const useDashboard = () => {
         setData({
           ...data,
           recentRequests: data.recentRequests.map(req =>
-            req.id === requestId ? { ...req, status: status as any } : req
+            req.id === requestId ? { ...req, status: status as typeof req.status } : req
           )
         });
       }
