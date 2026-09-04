@@ -1,5 +1,4 @@
-import React, { useRef, useState, ClipboardEvent } from "react";
-import { motion } from "framer-motion";
+import React, { useRef } from "react";
 
 interface OTPInputProps {
   length?: number;
@@ -11,88 +10,87 @@ interface OTPInputProps {
 
 export const OTPInput: React.FC<OTPInputProps> = ({
   length = 6,
-  value,
+  value = "",
   onChange,
   onComplete,
   disabled = false,
 }) => {
-  const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  const digits = value.split("").slice(0, length);
-  const paddedDigits = [...digits, ...Array(length - digits.length).fill("")];
-
-  const handleChange = (index: number, val: string) => {
-    const newValue = [...digits];
-    newValue[index] = val.slice(-1);
-    const result = newValue.join("");
-    onChange(result);
-    if (val && index < length - 1) {
-      inputRefs.current[index + 1]?.focus();
-    }
-    if (result.length === length && onComplete) {
-      onComplete(result);
-    }
-  };
-
-  const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === "Backspace" && !digits[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
-    if (e.key === "ArrowLeft" && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
-    if (e.key === "ArrowRight" && index < length - 1) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handlePaste = (e: ClipboardEvent) => {
+  // Handles pasting alphanumeric strings (letters + digits)
+  const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
     e.preventDefault();
-    const pasted = e.clipboardData.getData("text").slice(0, length);
-    if (/^\d+$/.test(pasted)) {
-      onChange(pasted);
-      if (pasted.length === length && onComplete) {
-        onComplete(pasted);
+    if (disabled) return;
+
+    const pastedData = e.clipboardData.getData("text");
+    // Extract letters and digits, preserving case and trimming to length
+    const validChars = pastedData.replace(/[^a-zA-Z0-9]/g, "").slice(0, length);
+
+    if (validChars.length > 0) {
+      onChange(validChars);
+
+      const targetIndex = Math.min(validChars.length - 1, length - 1);
+      inputRefs.current[targetIndex]?.focus();
+
+      if (validChars.length === length) {
+        onComplete?.(validChars);
       }
     }
   };
 
+  const handleChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawVal = e.target.value;
+    const char = rawVal.slice(-1);
+
+    // Allow single alphanumeric character (letters & digits)
+    if (char && !/^[a-zA-Z0-9]$/.test(char)) return;
+
+    const valArray = value.split("");
+    valArray[index] = char;
+    const combinedValue = valArray.join("").slice(0, length);
+
+    onChange(combinedValue);
+
+    // Auto-advance focus to next input
+    if (char && index < length - 1) {
+      inputRefs.current[index + 1]?.focus();
+    }
+
+    if (combinedValue.length === length) {
+      onComplete?.(combinedValue);
+    }
+  };
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace") {
+      if (!value[index] && index > 0) {
+        inputRefs.current[index - 1]?.focus();
+      }
+    } else if (e.key === "ArrowLeft" && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    } else if (e.key === "ArrowRight" && index < length - 1) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
   return (
-    <div className="flex items-center gap-2 sm:gap-2.5 justify-center" onPaste={handlePaste}>
-      {paddedDigits.map((digit, index) => (
-        <motion.div
+    <div className="flex gap-2 sm:gap-3" onPaste={handlePaste}>
+      {Array.from({ length }).map((_, index) => (
+        <input
           key={index}
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.15, delay: index * 0.03 }}
-        >
-          <input
-            ref={(el) => (inputRefs.current[index] = el)}
-            type="text"
-            inputMode="numeric"
-            maxLength={1}
-            value={digit}
-            onChange={(e) => handleChange(index, e.target.value)}
-            onKeyDown={(e) => handleKeyDown(index, e)}
-            onFocus={() => setFocusedIndex(index)}
-            onBlur={() => setFocusedIndex(null)}
-            disabled={disabled}
-            className={`
-              w-10 h-12 sm:w-12 sm:h-14 text-center text-lg sm:text-xl font-extrabold rounded-xl border
-              transition-all duration-200 bg-slate-50 text-slate-900
-              ${focusedIndex === index
-                ? "border-[#122E21] bg-white ring-4 ring-[#122E21]/10 shadow-xs"
-                : digit
-                ? "border-[#122E21] bg-emerald-50/50 text-[#122E21]"
-                : "border-slate-200 hover:border-slate-300"
-              }
-              ${disabled ? "opacity-50 cursor-not-allowed" : ""}
-              focus:outline-none
-            `}
-            style={{ fontFamily: "'JetBrains Mono', monospace" }}
-          />
-        </motion.div>
+          ref={(el) => (inputRefs.current[index] = el)}
+          type="text"
+          inputMode="text"
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
+          maxLength={1}
+          value={value[index] || ""}
+          onChange={(e) => handleChange(index, e)}
+          onKeyDown={(e) => handleKeyDown(index, e)}
+          disabled={disabled}
+          className="w-10 h-12 sm:w-11 sm:h-12 text-center text-base font-bold bg-white/60 dark:bg-slate-950/50 border border-slate-300/80 dark:border-slate-800 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-600 dark:focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all disabled:opacity-50"
+        />
       ))}
     </div>
   );
