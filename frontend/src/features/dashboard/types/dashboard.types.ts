@@ -1,67 +1,82 @@
-export interface DashboardStats {
-  profileViews: number;
-  profileViewsChange: number;
-  serviceRequests: number;
-  serviceRequestsChange: number;
-  jobsCompleted: number;
-  jobsCompletedChange: number;
-  averageRating: number;
-  averageRatingChange: number;
-  responseRate: number;
-  responseRateChange: number;
-  profileCompletion: number;
-  totalEarnings: number;
-  totalEarningsChange: number;
+export interface Professional {
+  id: string;
+  name: string;
+  profession: string;
+  location: string;
+  rating: number;
+  totalClients: number;
+  activeRequests: number;
+  completedJobs: number;
+  available: boolean;
+  avatar: string;
+  joinedDate: string;
+  phone: string;
+  email: string;
+  description: string;
 }
 
-export interface ServiceRequest {
+export interface Service {
   id: string;
-  client: {
-    id: string;
-    name: string;
-    avatar?: string;
-    location: string;
-  };
+  name: string;
+  description: string;
+  price: number;
+  duration: string;
+  category: string;
+  available: boolean;
+  image?: string;
+}
+
+export interface Request {
+  id: string;
+  clientName: string;
+  clientAvatar: string;
   service: string;
   description: string;
   date: string;
-  status: 'pending' | 'in-progress' | 'completed' | 'declined';
-  price?: number;
-  urgency?: 'low' | 'medium' | 'high';
-  category: string;
+  status: 'pending' | 'accepted' | 'completed' | 'declined';
+  location: string;
+  budget: number;
 }
 
-export interface Activity {
+export interface PortfolioItem {
   id: string;
-  type: 'post' | 'comment' | 'like' | 'follow' | 'profile_update' | 'verification' | 'review' | 'request';
-  description: string;
-  timestamp: string;
-  metadata?: Record<string, unknown>;
-  icon?: string;
-}
-
-export interface AIInsight {
-  id: string;
-  type: 'profile' | 'services' | 'pricing' | 'content' | 'timing' | 'growth';
   title: string;
   description: string;
-  priority: 'high' | 'medium' | 'low';
-  action?: string;
-  actionLink?: string;
   category: string;
+  images: string[];
+  date: string;
+  clientName: string;
+  clientFeedback?: string;
+  rating?: number;
+}
+
+export interface Job {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  postedDate: string;
+  status: 'applied' | 'shortlisted' | 'rejected' | 'interviewing';
+  salary: string;
+  type: 'full-time' | 'part-time' | 'contract';
+  description: string;
+}
+
+export interface DashboardStats {
+  totalClients: number;
+  activeRequests: number;
+  completedJobs: number;
+  rating: number;
+  profileViews: number;
+  responseRate: number;
+  earnings: number;
+  completionRate: number;
 }
 
 export interface AnalyticsData {
-  viewsData: { date: string; count: number }[];
-  requestsData: { date: string; count: number }[];
-  jobsData: { date: string; count: number }[];
-  earningsData: { date: string; amount: number }[];
-}
-
-export interface DashboardData {
-  stats: DashboardStats;
-  analytics: AnalyticsData;
-  recentRequests: ServiceRequest[];
-  recentActivities: Activity[];
-  aiInsights: AIInsight[];
+  views: { date: string; count: number }[];
+  requests: { date: string; count: number }[];
+  earnings: { date: string; amount: number }[];
+  topServices: { name: string; count: number }[];
+  ratings: { rating: number; count: number }[];
 }

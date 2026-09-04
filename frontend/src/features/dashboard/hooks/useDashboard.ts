@@ -1,66 +1,115 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { DashboardData } from '../types/dashboard.types';
+import type {
+  Professional,
+  Service,
+  Request,
+  PortfolioItem,
+  Job,
+  DashboardStats,
+  AnalyticsData,
+} from '../types/dashboard.types';
 import { dashboardService } from '../services/dashboardService';
 
 export const useDashboard = () => {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const fetchDashboardData = useCallback(async (professionalId?: string) => {
+  const [professional, setProfessional] = useState<Professional | null>(null);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [services, setServices] = useState<Service[]>([]);
+  const [requests, setRequests] = useState<Request[]>([]);
+  const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+
+  const [activeTab, setActiveTab] = useState('overview');
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setIsLoading(true);
-      setError(null);
-      const result = await dashboardService.getDashboardData(professionalId);
-      setData(result);
+      const [
+        profData,
+        statsData,
+        servicesData,
+        requestsData,
+        portfolioData,
+        jobsData,
+        analyticsData,
+      ] = await Promise.all([
+        dashboardService.getProfessional(),
+        dashboardService.getStats(),
+        dashboardService.getServices(),
+        dashboardService.getRequests(),
+        dashboardService.getPortfolio(),
+        dashboardService.getJobs(),
+        dashboardService.getAnalytics(),
+      ]);
+
+      setProfessional(profData);
+      setStats(statsData);
+      setServices(servicesData);
+      setRequests(requestsData);
+      setPortfolio(portfolioData);
+      setJobs(jobsData);
+      setAnalytics(analyticsData);
     } catch (err) {
-      setError('Failed to load dashboard data. Please try again.');
-      console.error('Dashboard fetch error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   }, []);
 
-  const refreshData = useCallback(async () => {
-    setIsRefreshing(true);
-    await fetchDashboardData();
-    setIsRefreshing(false);
-  }, [fetchDashboardData]);
-
-  const updateRequestStatus = useCallback(async (requestId: string, status: string) => {
+  const updateAvailability = useCallback(async (available: boolean) => {
     try {
-      const result = await dashboardService.updateRequestStatus(requestId, status);
-      // Update local state
-      if (data) {
-        setData({
-          ...data,
-          recentRequests: data.recentRequests.map(req =>
-            req.id === requestId ? { ...req, status: status as typeof req.status } : req
-          )
-        });
-      }
-      return result;
+      const updated = await dashboardService.updateAvailability(available);
+      setProfessional(updated);
+      return updated;
     } catch (err) {
-      console.error('Failed to update request status:', err);
+      setError(err instanceof Error ? err.message : 'Failed to update availability');
       throw err;
     }
-  }, [data]);
+  }, []);
+
+  const updateRequestStatus = useCallback(
+    async (requestId: string, status: Request['status']) => {
+      try {
+        const updated = await dashboardService.updateRequestStatus(requestId, status);
+        setRequests((prev) => prev.map((r) => (r.id === requestId ? updated : r)));
+        return updated;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to update request status');
+        throw err;
+      }
+    },
+    []
+  );
+
+  const refresh = useCallback(async () => {
+    await loadData();
+  }, [loadData]);
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      void fetchDashboardData();
-    }, 0);
-
-    return () => clearTimeout(timeoutId);
-  }, [fetchDashboardData]);
+    loadData();
+  }, [loadData]);
 
   return {
-    data,
-    isLoading,
+    // State
+    loading,
     error,
-    isRefreshing,
-    refreshData,
-    updateRequestStatus
+    professional,
+    stats,
+    services,
+    requests,
+    portfolio,
+    jobs,
+    analytics,
+    activeTab,
+
+    // Actions
+    setActiveTab,
+    updateAvailability,
+    updateRequestStatus,
+    refresh,
   };
 };
