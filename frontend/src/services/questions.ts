@@ -1,21 +1,27 @@
 import { apiRequest } from "./api";
-import type {
-  CommunityQuestion,
-  CreateAnswerData,
-} from "../types/home";
 
-export async function getQuestions(): Promise<
-  CommunityQuestion[]
-> {
+export interface CommunityQuestion {
+  id: number;
+  author: string;
+  avatar: string;
+  question: string;
+  categories: string[];
+  createdAt: string;
+  answers: number;
+}
+
+export interface CreateAnswerData {
+  answer: string;
+}
+
+export async function getQuestions(): Promise<CommunityQuestion[]> {
   return apiRequest<CommunityQuestion[]>("/questions");
 }
 
 export async function getQuestion(
-  questionId: number
+  questionId: number,
 ): Promise<CommunityQuestion> {
-  return apiRequest<CommunityQuestion>(
-    `/questions/${questionId}`
-  );
+  return apiRequest<CommunityQuestion>(`/questions/${questionId}`);
 }
 
 export async function createQuestion(data: {
@@ -30,21 +36,14 @@ export async function createQuestion(data: {
 
 export async function answerQuestion(
   questionId: number,
-  data: CreateAnswerData
+  data: CreateAnswerData,
 ) {
-  return apiRequest(
-    `/questions/${questionId}/answers`,
-    {
-      method: "POST",
-      body: JSON.stringify(data),
-    }
-  );
+  return apiRequest(`/questions/${questionId}/answers`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
 }
 
-export async function getQuestionAnswers(
-  questionId: number
-) {
-  return apiRequest(
-    `/questions/${questionId}/answers`
-  );
+export async function getQuestionAnswers(questionId: number) {
+  return apiRequest(`/questions/${questionId}/answers`);
 }

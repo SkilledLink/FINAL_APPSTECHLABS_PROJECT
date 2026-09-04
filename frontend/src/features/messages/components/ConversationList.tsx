@@ -1,8 +1,14 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Search, SlidersHorizontal, X, MessageSquare, Plus, Check } from 'lucide-react';
-import type { Conversation } from '../types/message.types';
-import { ConversationItem } from './ConversationItem';
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Search,
+  SlidersHorizontal,
+  X,
+  MessageSquare,
+  Plus,
+} from "lucide-react";
+import type { Conversation } from "../types/message.types";
+import { ConversationItem } from "./ConversationItem";
 
 interface ConversationListProps {
   conversations: Conversation[];
@@ -17,25 +23,25 @@ export const ConversationList: React.FC<ConversationListProps> = ({
   onSelectConversation,
   onNewChat,
 }) => {
-  const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<"all" | "unread">("all");
 
   const totalUnread = conversations.reduce(
     (acc, item) => acc + (item.unreadCount || 0),
-    0
+    0,
   );
 
   const filteredConversations = conversations.filter((item) => {
     const matchesSearch =
       item.participant.name.toLowerCase().includes(search.toLowerCase()) ||
       item.lastMessage?.text?.toLowerCase().includes(search.toLowerCase());
-    const matchesFilter = filter === 'unread' ? item.unreadCount > 0 : true;
+    const matchesFilter = filter === "unread" ? item.unreadCount > 0 : true;
     return matchesSearch && matchesFilter;
   });
 
   const filterTabs = [
-    { id: 'all' as const, label: 'All', count: conversations.length },
-    { id: 'unread' as const, label: 'Unread', count: totalUnread },
+    { id: "all" as const, label: "All", count: conversations.length },
+    { id: "unread" as const, label: "Unread", count: totalUnread },
   ];
 
   return (
@@ -90,7 +96,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
           {search && (
             <button
               type="button"
-              onClick={() => setSearch('')}
+              onClick={() => setSearch("")}
               className="absolute right-3 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-slate-100 dark:bg-slate-800 rounded-full transition"
             >
               <X className="w-3 h-3" />
@@ -109,15 +115,15 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                 onClick={() => setFilter(tab.id)}
                 className={`relative flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold transition-colors duration-200 ${
                   isActive
-                    ? 'text-slate-900 dark:text-slate-100'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+                    ? "text-slate-900 dark:text-slate-100"
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
                 }`}
               >
                 {isActive && (
                   <motion.div
                     layoutId="activeTabIndicator"
                     className="absolute inset-0 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200/60 dark:border-slate-700/60"
-                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
                   />
                 )}
                 <span className="relative z-10">{tab.label}</span>
@@ -125,8 +131,8 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                   <span
                     className={`relative z-10 font-mono text-[10px] px-1.5 py-0.2 rounded-full ${
                       isActive
-                        ? 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200'
-                        : 'bg-slate-300/50 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                        ? "bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200"
+                        : "bg-slate-300/50 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
                     }`}
                   >
                     {tab.count}
@@ -149,7 +155,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                 initial={{ opacity: 0, y: 8, scale: 0.98 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.96 }}
-                transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+                transition={{ type: "spring", stiffness: 350, damping: 25 }}
               >
                 <ConversationItem
                   conversation={item}
@@ -174,12 +180,12 @@ export const ConversationList: React.FC<ConversationListProps> = ({
               <p className="text-xs text-slate-400 dark:text-slate-500 max-w-[200px] mt-1">
                 {search
                   ? `No results matching "${search}"`
-                  : 'You have no unread messages right now.'}
+                  : "You have no unread messages right now."}
               </p>
               {search && (
                 <button
                   type="button"
-                  onClick={() => setSearch('')}
+                  onClick={() => setSearch("")}
                   className="mt-3 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
                 >
                   Clear Search

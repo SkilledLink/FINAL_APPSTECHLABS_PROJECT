@@ -1,4 +1,17 @@
-export type VerificationStatusType = 'pending' | 'approved' | 'requires_action' | 'unsubmitted';
+export type VerificationStatusType =
+  | "pending"
+  | "approved"
+  | "requires_action"
+  | "unsubmitted";
+
+export interface CredentialItem {
+  id: string;
+  title: string;
+  description: string;
+  status: VerificationStatusType;
+  fileName: string | null;
+  actionRequired?: boolean;
+}
 
 export interface VerificationDocument {
   id: string;

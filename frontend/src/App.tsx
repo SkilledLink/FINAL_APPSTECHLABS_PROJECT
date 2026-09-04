@@ -11,19 +11,13 @@ import ForgotPasswordPage from './features/auth/pages/ForgotPasswordPage';
 import ResetPasswordPage from './features/auth/pages/ResetPasswordPage';
 import VerifyEmailPage from './features/auth/pages/VerifyEmailPage'; // <-- added
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import AppLayout from "./components/layout/AppLayout/AppLayout";
-import {
-  MarketplacePage,
-  RequestServicePage,
-  ServiceDetailsPage,
-} from "./components/index";
-// import { VerificationPage } from "./verification";
-// import Header from "./components/Header";
-// import Sidebar from "./components/Sidebar";
-// import MobileNavigation from "./components/MobileNavigation";
+import { VerificationPage } from "./verification/pages/VerificationPage";
+
 
 const PlaceholderPage = ({ title }: { title: string }) => (
-  <div className="flex h-96 items-center justify-center rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+  <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 flex items-center justify-center h-96">
     <h1 className="text-2xl font-semibold text-slate-800">{title}</h1>
   </div>
 );
@@ -60,6 +54,46 @@ function App() {
         {/* Messages Route */}
         <Route path="/messages" element={<MessagesPage />} />
       </Routes>
+     <AppLayout />
+      <Routes>
+          <Route index element={<PlaceholderPage title="Home Feed" />} />
+          <Route
+            path="discover"
+            element={<PlaceholderPage title="Discover & Search" />}
+          />
+          <Route path="/verification" element={<VerificationPage />} />
+          <Route path="jobs" element={<PlaceholderPage title="Job Board" />} />
+          <Route
+            path="portfolio"
+            element={<PlaceholderPage title="Portfolio Grid" />}
+          />
+          <Route
+            path="professionals"
+            element={<PlaceholderPage title="Professional Network" />}
+          />
+          <Route
+            path="profile"
+            element={<PlaceholderPage title="User Profile" />}
+          />
+          <Route
+            path="settings"
+            element={<PlaceholderPage title="Settings" />}
+          />
+          <Route
+            path="create"
+            element={<PlaceholderPage title="Create Post" />}
+          />
+          <Route
+            path="*"
+            element={<PlaceholderPage title="404 - Not Found" />}
+          />
+            {/* Other application routes can go here */}
+            <Route path="/verification" element={<VerificationPage />} />
+            <Route
+              path="/"
+              element={<div className="p-8">Dashboard Home</div>}
+            />
+          </Routes>
     </BrowserRouter>
   );
 }

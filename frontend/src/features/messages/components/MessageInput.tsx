@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Paperclip, Send, Mic, Square, Trash2, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Paperclip, Send, Mic, Square, Trash2 } from "lucide-react";
 
 interface MessageInputProps {
   onSendMessage: (text: string) => void;
@@ -11,37 +11,39 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   onSendMessage,
   onSendVoiceNote,
 }) => {
-  const [text, setText] = useState('');
+  const [text, setText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval> | undefined;
     if (isRecording) {
       interval = setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
     } else {
       setRecordingSeconds(0);
     }
-    return () => clearInterval(interval);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [isRecording]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!text.trim()) return;
     onSendMessage(text);
-    setText('');
+    setText("");
   };
 
   const stopAndSendRecording = () => {
     setIsRecording(false);
-    const durationStr = `0:${recordingSeconds < 10 ? '0' : ''}${recordingSeconds}`;
-    onSendVoiceNote(durationStr || '0:05');
+    const durationStr = `0:${recordingSeconds < 10 ? "0" : ""}${recordingSeconds}`;
+    onSendVoiceNote(durationStr || "0:05");
   };
 
   const formatTimer = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
   };
 
   return (
@@ -54,7 +56,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
               initial={{ opacity: 0, scale: 0.96, y: 8 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+              transition={{ type: "spring", stiffness: 400, damping: 28 }}
               className="flex items-center justify-between gap-4 p-2.5 pl-5 bg-gradient-to-r from-rose-500/10 via-red-500/10 to-amber-500/10 dark:from-rose-950/40 dark:via-red-950/40 dark:to-amber-950/30 border border-red-500/30 rounded-3xl backdrop-blur-xl shadow-lg shadow-red-500/5 ring-1 ring-red-500/20"
             >
               {/* Recording Indicator & Animated Soundwave Visualizer */}
@@ -62,7 +64,11 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                 <div className="relative flex items-center justify-center">
                   <motion.span
                     animate={{ scale: [1, 1.8, 1], opacity: [0.7, 0, 0.7] }}
-                    transition={{ repeat: Infinity, duration: 1.2, ease: 'easeInOut' }}
+                    transition={{
+                      repeat: Infinity,
+                      duration: 1.2,
+                      ease: "easeInOut",
+                    }}
                     className="absolute w-4 h-4 rounded-full bg-red-500/50"
                   />
                   <span className="relative w-3 h-3 rounded-full bg-red-500 shadow-sm shadow-red-500/50" />
@@ -79,11 +85,17 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
                 {/* Dynamic Waveform Simulation */}
                 <div className="hidden sm:flex items-center gap-1 h-5 flex-1 max-w-xs pl-4">
-                  {[40, 70, 25, 90, 60, 30, 85, 100, 45, 65, 80, 35, 50, 95, 20].map((h, i) => (
+                  {[
+                    40, 70, 25, 90, 60, 30, 85, 100, 45, 65, 80, 35, 50, 95, 20,
+                  ].map((h, i) => (
                     <motion.span
                       key={i}
                       animate={{
-                        height: [`${h}%`, `${Math.max(15, (h + 50) % 100)}%`, `${h}%`],
+                        height: [
+                          `${h}%`,
+                          `${Math.max(15, (h + 50) % 100)}%`,
+                          `${h}%`,
+                        ],
                       }}
                       transition={{
                         repeat: Infinity,
