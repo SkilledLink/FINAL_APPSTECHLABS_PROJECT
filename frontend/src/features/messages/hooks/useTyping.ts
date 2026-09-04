@@ -15,13 +15,12 @@ export function useTyping(conversationId: string | null, currentUserId: string) 
     channel
       .on('broadcast', { event: 'typing' }, ({ payload }) => {
         const { user_id, typing } = payload;
-        if (user_id === currentUserId) return; // ignore own
-        setTypingUsers(prev => ({ ...prev, [user_id]: typing }));
-        // Auto-clear after 3 seconds if typing stops
+        if (user_id === currentUserId) return;
+        setTypingUsers((prev) => ({ ...prev, [user_id]: typing }));
         if (typing) {
           if (timeoutRef.current) clearTimeout(timeoutRef.current);
           timeoutRef.current = setTimeout(() => {
-            setTypingUsers(prev => ({ ...prev, [user_id]: false }));
+            setTypingUsers((prev) => ({ ...prev, [user_id]: false }));
           }, 3000);
         }
       })
@@ -30,9 +29,7 @@ export function useTyping(conversationId: string | null, currentUserId: string) 
     channelRef.current = channel;
 
     return () => {
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-      }
+      if (channelRef.current) supabase.removeChannel(channelRef.current);
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, [conversationId, currentUserId]);

@@ -1,14 +1,13 @@
 // src/features/auth/hooks/useAuth.ts
-import { useState } from 'react';
-import { toast } from 'react-toastify';
-import { apiClient } from '../../../api/client';
+import { useState } from "react";
+import { apiClient } from "../../../api/client";
+import { toast } from "react-toastify";
 import type {
   LoginCredentials,
   RegisterData,
   ForgotPasswordData,
   ResetPasswordData,
-  AuthResponse,
-} from '../types/auth.types';
+} from "../types/auth.types";
 
 export function useAuth() {
   const [loading, setLoading] = useState(false);
@@ -20,18 +19,28 @@ export function useAuth() {
     setLoading(true);
     setError(null);
     try {
-      const response = await apiClient.post('/auth/login', {
+      // 1. Login – get tokens
+      const loginResponse = await apiClient.post("/auth/login", {
         email: credentials.email,
         password: credentials.password,
       });
-      const data = response.data as AuthResponse;
-      localStorage.setItem('access_token', data.access_token);
-      localStorage.setItem('refresh_token', data.refresh_token);
-      localStorage.setItem('user', JSON.stringify(data));
-      toast.success('Welcome back! 🎉');
+      const loginData = loginResponse.data;
+
+      // Store tokens
+      localStorage.setItem("access_token", loginData.access_token);
+      localStorage.setItem("refresh_token", loginData.refresh_token);
+
+      // 2. Fetch full user profile using the token
+      const userResponse = await apiClient.get("/users/me");
+      const userData = userResponse.data;
+
+      // 3. Store the FULL user object (it has id, email, name, etc.)
+      localStorage.setItem("user", JSON.stringify(userData));
+
+      toast.success("Welcome back! 🎉");
       return true;
     } catch (err: any) {
-      const msg = err.response?.data?.detail || 'Login failed. Please check your credentials.';
+      const msg = err.response?.data?.detail || "Login failed. Please check your credentials.";
       setError(msg);
       toast.error(msg);
       return false;
@@ -40,22 +49,25 @@ export function useAuth() {
     }
   };
 
+  // ... (register, verifyEmail, forgotPassword, resetPassword, logout, getCurrentUser, isAuthenticated) remain the same as before
+
+  // For completeness, include the rest unchanged:
   const register = async (data: RegisterData): Promise<{ success: boolean; user_id?: string }> => {
     setLoading(true);
     setError(null);
     try {
-      const response = await apiClient.post('/auth/register', {
+      const response = await apiClient.post("/auth/register", {
         email: data.email,
         first_name: data.first_name,
         last_name: data.last_name,
         password: data.password,
-        account_type: data.account_type || 'user',
+        account_type: data.account_type || "user",
       });
       const user_id = response.data.user_id;
-      toast.success('Account created! Please verify your email.');
+      toast.success("Account created! Please verify your email.");
       return { success: true, user_id };
     } catch (err: any) {
-      const msg = err.response?.data?.detail || 'Registration failed.';
+      const msg = err.response?.data?.detail || "Registration failed.";
       setError(msg);
       toast.error(msg);
       return { success: false };
@@ -68,11 +80,11 @@ export function useAuth() {
     setLoading(true);
     setError(null);
     try {
-      await apiClient.post('/auth/verify-email', { email, code }); // ✅ both fields
-      toast.success('Email verified successfully! You can now log in.');
+      await apiClient.post("/auth/verify-email", { email, code });
+      toast.success("Email verified successfully! You can now log in.");
       return true;
     } catch (err: any) {
-      const msg = err.response?.data?.detail || 'Invalid or expired verification code.';
+      const msg = err.response?.data?.detail || "Invalid or expired verification code.";
       setError(msg);
       toast.error(msg);
       return false;
@@ -85,11 +97,11 @@ export function useAuth() {
     setLoading(true);
     setError(null);
     try {
-      await apiClient.post('/auth/password-reset/request', { email: data.email });
-      toast.success('If an account exists, a reset link has been sent.');
+      await apiClient.post("/auth/password-reset/request", { email: data.email });
+      toast.success("If an account exists, a reset link has been sent.");
       return true;
     } catch (err: any) {
-      const msg = err.response?.data?.detail || 'Failed to send reset link.';
+      const msg = err.response?.data?.detail || "Failed to send reset link.";
       setError(msg);
       toast.error(msg);
       return false;
@@ -102,15 +114,15 @@ export function useAuth() {
     setLoading(true);
     setError(null);
     try {
-      await apiClient.post('/auth/password-reset/confirm', {
+      await apiClient.post("/auth/password-reset/confirm", {
         email: data.email,
         code: data.code,
         new_password: data.new_password,
       });
-      toast.success('Password reset successfully! Please log in.');
+      toast.success("Password reset successfully! Please log in.");
       return true;
     } catch (err: any) {
-      const msg = err.response?.data?.detail || 'Failed to reset password.';
+      const msg = err.response?.data?.detail || "Failed to reset password.";
       setError(msg);
       toast.error(msg);
       return false;
@@ -120,18 +132,18 @@ export function useAuth() {
   };
 
   const logout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('pending_verification_user_id');
-    toast.info('Logged out.');
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("pending_verification_user_id");
+    toast.info("Logged out.");
   };
 
-  const getCurrentUser = (): AuthResponse | null => {
-    const userData = localStorage.getItem('user');
+  const getCurrentUser = (): any | null => {
+    const userData = localStorage.getItem("user");
     if (userData) {
       try {
-        return JSON.parse(userData) as AuthResponse;
+        return JSON.parse(userData);
       } catch {
         return null;
       }
@@ -140,7 +152,7 @@ export function useAuth() {
   };
 
   const isAuthenticated = (): boolean => {
-    return !!localStorage.getItem('access_token');
+    return !!localStorage.getItem("access_token");
   };
 
   return {

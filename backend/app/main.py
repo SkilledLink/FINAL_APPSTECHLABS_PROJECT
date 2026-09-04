@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware   # <-- ADD THIS
+from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
@@ -9,8 +9,11 @@ from app.api.v1.auth import router as auth_router
 from app.api.v1.conversations import router as conversations_router
 from app.api.v1.messages import router as messages_router
 from app.api.v1.uploads import router as uploads_router
+from app.api.v1.users import router as users_router
+
 from app.database.session import engine
 
+# Import all models so they are registered with SQLModel.metadata
 from app.models.user import User
 from app.models.refresh_token import RefreshToken
 from app.models.verification_token import VerificationToken
@@ -37,21 +40,21 @@ def lifespan(app: FastAPI):
 
 app = FastAPI(title="Appstect API", lifespan=lifespan)
 
-# --- CORS MIDDLEWARE (add this block) ---
+# CORS Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],   # Your Vite frontend
+    allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# ---------------------------------------
 
-# Register routers
+# Register routers (each already has its own prefix)
 app.include_router(auth_router)
 app.include_router(conversations_router)
 app.include_router(messages_router)
 app.include_router(uploads_router)
+app.include_router(users_router)   # <-- added, no extra prefix
 
 @app.get("/health/database")
 def health_check():

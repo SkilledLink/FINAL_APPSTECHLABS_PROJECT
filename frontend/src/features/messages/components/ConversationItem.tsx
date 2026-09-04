@@ -1,3 +1,4 @@
+// src/features/messages/components/ConversationItem.tsx
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Mic } from 'lucide-react';
@@ -42,7 +43,6 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
           : 'bg-white/80 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700/80 shadow-2xs'
       }`}
     >
-      {/* Active Accent Bar */}
       {isActive && (
         <motion.div
           layoutId="activeConversationIndicator"
@@ -51,7 +51,6 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
         />
       )}
 
-      {/* Avatar & Presence Badge */}
       <div className="relative shrink-0">
         <div
           className={`p-0.5 rounded-full transition-all duration-200 ${
@@ -74,9 +73,7 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
         )}
       </div>
 
-      {/* Conversation Meta & Content */}
       <div className="flex-1 min-w-0 space-y-1">
-        {/* Name & Timestamp */}
         <div className="flex items-center justify-between gap-1.5">
           <h4
             className={`font-bold text-sm truncate tracking-tight transition-colors ${
@@ -100,14 +97,12 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
           )}
         </div>
 
-        {/* Professional Role Pill */}
         <div className="flex items-center">
           <span className="inline-block text-[10px] font-semibold px-2 py-0.2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/60 truncate max-w-[140px]">
             {participant.role}
           </span>
         </div>
 
-        {/* Message Snippet & Unread Badge */}
         <div className="flex items-center justify-between gap-2 pt-0.5">
           <div className="text-xs text-slate-500 dark:text-slate-400 truncate flex-1 font-normal">
             {renderMessagePreview()}
