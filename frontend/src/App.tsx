@@ -190,6 +190,32 @@ function App() {
             path="create"
             element={<PlaceholderPage title="Create Post" />}
           />
+          
+          <Route
+            path="marketplace"
+            element={
+              <MarketplacePage
+                onViewProfile={() => undefined}
+                onContact={() => undefined}
+              />
+            }
+          />
+          <Route
+            path="marketplace/service/:professionalId"
+            element={
+              <ServiceDetailsPage
+                professionalId="1"
+                onBack={() => undefined}
+                onContact={() => undefined}
+              />
+            }
+          />
+          <Route
+            path="marketplace/request"
+            element={
+              <RequestServicePage professionalId="1" onBack={() => undefined} />
+            }
+          />
           <Route
             path="*"
             element={<PlaceholderPage title="404 - Not Found" />}
@@ -205,3 +231,4 @@ function App() {
   );
 }
 
+export default App;
