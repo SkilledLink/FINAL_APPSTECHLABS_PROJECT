@@ -1,9 +1,11 @@
 from datetime import datetime, timezone
+from typing import Optional
 from uuid import UUID, uuid4
 
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.enums.user import AccountStatus, AccountType
+from app.models.professional import Professional
 
 
 class User(SQLModel, table=True):
@@ -31,5 +33,31 @@ class User(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False)
 
+    is_email_verified: bool = Field(
+        default=False,
+        nullable=False,
+    )
+
+    last_login_at: datetime | None = Field(
+        default=None,
+        nullable=True,
+    )
+
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    professional: Optional["Professional"] = Relationship(
+    back_populates="user",
+    sa_relationship_kwargs={"uselist": False}
+)
+
+    # Relationships
     refresh_tokens: list["RefreshToken"] = Relationship(back_populates="user")
     verification_tokens: list["VerificationToken"] = Relationship(back_populates="user")
