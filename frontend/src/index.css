@@ -10,3 +10,4 @@
   --font-mono: "JetBrains Mono", monospace;
 }
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
