@@ -550,12 +550,10 @@ export const mockHomeData: HomeData = {
       },
     },
   ],
-
   questions: [
     {
       id: 'q-1',
-      question:
-        'What is the recommended conduit type for outdoor underground wiring?',
+      question: 'What is the recommended conduit type for outdoor underground wiring?',
       author: 'David K.',
       answersCount: 14,
       timeAgo: '4h',
@@ -590,7 +588,6 @@ export const mockHomeData: HomeData = {
       avatarUrl: 'https://i.pravatar.cc/150?img=33',
     },
   ],
-
   activities: [
     {
       id: 'act-1',
