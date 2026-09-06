@@ -14,7 +14,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 async def register(user_data: UserCreate, session: Session = Depends(get_session)):
     user = await register_user(
         email=user_data.email,
-        username=user_data.username,
+        first_name=user_data.first_name,
+        last_name=user_data.last_name,
         password=user_data.password,
         account_type=user_data.account_type,
         session=session,

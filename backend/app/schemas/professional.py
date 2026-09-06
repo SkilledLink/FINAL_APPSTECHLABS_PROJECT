@@ -8,7 +8,8 @@ from pydantic import BaseModel, Field, ConfigDict
 # Minimal user data for nested response
 class ProfessionalUserPublic(BaseModel):
     id: UUID
-    username: str
+    first_name: str
+    last_name: str
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -26,18 +27,55 @@ class ProfessionalCreate(BaseModel):
     available: bool = True
 
 
-class ProfessionalUpdate(BaseModel):
-    profession: Optional[str] = Field(None, max_length=100)
-    bio: Optional[str] = Field(None, max_length=1000)
-    skills: Optional[List[str]] = None
-    years_of_experience: Optional[int] = Field(None, ge=0)
-    services: Optional[List[str]] = None
-    hourly_rate: Optional[float] = Field(None, ge=0)
-    country: Optional[str] = Field(None, max_length=100)
-    region: Optional[str] = Field(None, max_length=100)
-    city: Optional[str] = Field(None, max_length=100)
-    available: Optional[bool] = None
+from typing import List, Optional
+from pydantic import BaseModel, Field
 
+
+class ProfessionalUpdate(BaseModel):
+    profession: Optional[str] = Field(
+        default=None,
+        min_length=2,
+        max_length=100
+    )
+
+    bio: Optional[str] = Field(
+        default=None,
+        max_length=1000
+    )
+
+    skills: Optional[List[str]] = None
+
+    years_of_experience: Optional[int] = Field(
+        default=None,
+        ge=0
+    )
+
+    services: Optional[List[str]] = None
+
+    hourly_rate: Optional[float] = Field(
+        default=None,
+        ge=0
+    )
+
+    country: Optional[str] = Field(
+        default=None,
+        min_length=2,
+        max_length=100
+    )
+
+    region: Optional[str] = Field(
+        default=None,
+        min_length=2,
+        max_length=100
+    )
+
+    city: Optional[str] = Field(
+        default=None,
+        min_length=2,
+        max_length=100
+    )
+
+    available: Optional[bool] = None
 
 class ProfessionalResponse(BaseModel):
     id: UUID
