@@ -10,6 +10,7 @@ from app.api.v1.conversations import router as conversations_router
 from app.api.v1.messages import router as messages_router
 from app.api.v1.uploads import router as uploads_router
 from app.api.v1.users import router as users_router
+from app.api.v1.professionals import router as professionals_router  # <-- NEW
 
 from app.database.session import engine
 
@@ -20,6 +21,7 @@ from app.models.verification_token import VerificationToken
 from app.models.conversation import Conversation
 from app.models.conversation_participant import ConversationParticipant
 from app.models.message import Message
+from app.models.professional import Professional  # <-- NEW
 
 # Sync lifespan
 def lifespan(app: FastAPI):
@@ -54,7 +56,8 @@ app.include_router(auth_router)
 app.include_router(conversations_router)
 app.include_router(messages_router)
 app.include_router(uploads_router)
-app.include_router(users_router)   # <-- added, no extra prefix
+app.include_router(users_router)
+app.include_router(professionals_router)  # <-- NEW
 
 @app.get("/health/database")
 def health_check():

@@ -10,7 +10,7 @@ when you pull run npm install
 
 
 
-professional-network/
+frontend/
 │
 ├── public/
 │   ├── favicon.svg

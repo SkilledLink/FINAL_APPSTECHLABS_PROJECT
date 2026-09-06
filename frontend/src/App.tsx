@@ -1,17 +1,32 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
+// Layouts
 import { AuthLayout } from './features/auth/components/AuthLayout';
-import { MessagesPage } from './features/messages';
-import { ProfilePage } from './features/profile';
+import AppLayout from './components/layout/AppLayout/AppLayout';
+
+// Auth
 import LoginPage from './features/auth/pages/LoginPage';
 import RegisterPage from './features/auth/pages/RegisterPage';
 import ForgotPasswordPage from './features/auth/pages/ForgotPasswordPage';
 import ResetPasswordPage from './features/auth/pages/ResetPasswordPage';
 import VerifyEmailPage from './features/auth/pages/VerifyEmailPage';
-import AppLayout from './components/layout/AppLayout/AppLayout';
+
+// Home
 import HomePage from './features/home/pages/HomePage';
+
+// Feed
+import Feed from './features/posts/components/Feed';
+
+// Dashboard
+import DashboardPage from './features/dashboard/components/pages/DashboardPage';
+
+// Profile
+import { ProfilePage } from './features/profile';
+
+// Messages
+import { MessagesPage } from './features/messages';
 
 function App() {
   return (
@@ -28,8 +43,9 @@ function App() {
         pauseOnHover
         theme="light"
       />
+
       <Routes>
-        {/* Auth Layout Routes */}
+        {/* ==================== AUTH ==================== */}
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
@@ -38,13 +54,25 @@ function App() {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
         </Route>
 
-        {/* Main Application Layout Routes (Includes Dynamic Sidebar) */}
+        {/* ==================== MAIN APPLICATION ==================== */}
         <Route path="/" element={<AppLayout />}>
           <Route index element={<HomePage />} />
+
+          <Route path="dashboard" element={<DashboardPage />} />
+
+          <Route path="feed" element={<Feed />} />
+
           <Route path="profile" element={<ProfilePage />} />
           <Route path="profile/:id" element={<ProfilePage />} />
+
           <Route path="messages" element={<MessagesPage />} />
         </Route>
+
+        {/* ==================== DEFAULT ==================== */}
+        <Route
+          path="*"
+          element={<Navigate to="/" replace />}
+        />
       </Routes>
     </BrowserRouter>
   );

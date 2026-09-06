@@ -1,0 +1,16 @@
+export { default as DashboardPage } from './pages/DashboardPage';
+export { default as DashboardLayout } from './components/DashboardLayout';
+export { default as DashboardSidebar } from './components/DashboardSidebar';
+export { default as DashboardHeader } from './components/DashboardHeader';
+export { default as OverviewTab } from './components/OverviewTab';
+export { default as RequestsTab } from './components/RequestsTab';
+export { default as ServicesTab } from './components/ServicesTab';
+export { default as PortfolioTab } from './components/PortfolioTab';
+export { default as JobsTab } from './components/JobsTab';
+export { default as AnalyticsTab } from './components/AnalyticsTab';
+export { default as ProfileTab } from './components/ProfileTab';
+export { default as SettingsTab } from './components/SettingsTab';
+export { default as MetricCard } from './components/MetricCard';
+export { useDashboard } from './hooks/useDashboard';
+export { dashboardService } from './services/dashboardService';
+export * from './types/dashboard.types';
