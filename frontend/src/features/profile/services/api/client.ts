@@ -1,5 +1,3 @@
-// axios is provided by the application's runtime dependencies.
-// @ts-expect-error The local TypeScript setup does not currently resolve axios typings.
 import axios from 'axios';
 
 const API_BASE_URL =
