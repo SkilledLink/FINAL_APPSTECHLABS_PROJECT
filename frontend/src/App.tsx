@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -15,9 +15,32 @@ import VerifyEmailPage from './features/auth/pages/VerifyEmailPage';
 
 // Home
 import HomePage from './features/home/pages/HomePage';
+import Feed from './features/posts/components/Feed';// Make sure you create this page
+import ContactPage from './api/auth/AuthCheck'; // Make sure you create this page
 
-// Feed
-import Feed from './features/posts/components/Feed';
+// Import your auth hook to check if the user is logged in
+import { useAuth } from './features/auth/hooks/useAuth';
+
+// 1. Protects the app: If not logged in, redirect to /login
+function AuthCheck() { 
+  const { isAuthenticated } = useAuth();
+  const location = useLocation();
+
+  if (!isAuthenticated()) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+  return <Outlet />;
+}
+
+// 2. Public only: If logged in, redirect to /home (prevents seeing login/register while logged in)
+function PublicOnlyRoute() {
+  const { isAuthenticated } = useAuth();
+
+  if (isAuthenticated()) {
+    return <Navigate to="/home" replace />;
+  }
+  return <Outlet />;
+}
 
 // Dashboard
 import DashboardPage from './features/dashboard/components/pages/DashboardPage';

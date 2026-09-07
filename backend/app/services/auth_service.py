@@ -93,10 +93,8 @@ def reset_password(email: str, code: str, new_password: str, session: Session) -
     if not user:
         raise HTTPException(status_code=400, detail="Invalid request")
 
-    # FIX: Use naive UTC to match PostgreSQL TIMESTAMP WITHOUT TIME ZONE
     now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
 
-    # 1-Month Limit
     if user.password_changed_at:
         time_since_change = now_utc - user.password_changed_at
         if time_since_change < timedelta(days=30):
@@ -111,7 +109,6 @@ def reset_password(email: str, code: str, new_password: str, session: Session) -
     user.password_changed_at = now_utc
     session.add(user)
 
-    # Log out everywhere by revoking all refresh tokens
     tokens = session.exec(select(RefreshToken).where(RefreshToken.user_id == user.id)).all()
     for token in tokens:
         token.is_revoked = True
