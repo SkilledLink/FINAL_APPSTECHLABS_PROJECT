@@ -1,69 +1,53 @@
-from fastapi import APIRouter, Depends, Query, HTTPException, status
+from fastapi import APIRouter, Depends, Query, HTTPException, status, UploadFile, File
 from sqlmodel import Session
 from uuid import UUID
 from typing import Optional
-from app.dependencies.current_user import get_current_user
+import logging
+import traceback
+
+from app.dependencies.current_user import get_current_user, get_current_active_user
 from app.database.session import get_session
 from app.services.user_service import UserService
+from app.services.user_follow_service import UserFollowService
 from app.schemas.user import UserResponse, UserUpdate, UserListResponse
+from app.schemas.user_follow import (
+    FollowResponse,
+    FollowCreate,
+    FollowUnfollow,
+    FollowersListResponse,
+    FollowingListResponse,
+    FollowStatusResponse,
+)
 from app.models.user import User
 
 router = APIRouter(
     prefix="/users",
-    tags=["Users"]  # This groups all endpoints under "Users" in Swagger
+    tags=["Users"]
 )
 
+logger = logging.getLogger(__name__)
 
-@router.get(
-    "/me",
-    response_model=UserResponse,
-    summary="Get current user profile",
-    description="Returns the profile of the authenticated user.",
-    responses={
-        200: {"description": "User profile retrieved successfully"},
-        401: {"description": "Unauthorized – missing or invalid token"},
-    },
-)
+# ========== CRUD endpoints ==========
+
+@router.get("/me", response_model=UserResponse)
 def get_me(
     current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
 ):
-    return current_user
+    service = UserService(session)
+    # Use get_user_by_id with current_user for enrichment
+    return service.get_user_by_id(current_user.id, current_user)
 
-
-@router.put(
-    "/me",
-    response_model=UserResponse,
-    summary="Update current user profile",
-    description=(
-        "Updates the authenticated user's own profile. "
-        "Non‑admin users cannot change `is_admin` or `is_moderator`."
-    ),
-    responses={
-        200: {"description": "Profile updated successfully"},
-        400: {"description": "Invalid input data"},
-        401: {"description": "Unauthorized"},
-    },
-)
+@router.put("/me", response_model=UserResponse)
 def update_me(
     data: UserUpdate,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
     service = UserService(session)
-    updated = service.update_user(current_user.id, data, current_user)
-    return updated
+    return service.update_user(current_user.id, data, current_user)
 
-
-@router.delete(
-    "/me",
-    status_code=status.HTTP_204_NO_CONTENT,
-    summary="Delete current user account",
-    description="Soft‑deletes the authenticated user's account (sets `deleted_at`).",
-    responses={
-        204: {"description": "User account deleted successfully"},
-        401: {"description": "Unauthorized"},
-    },
-)
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
 def delete_me(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
@@ -72,113 +56,136 @@ def delete_me(
     service.delete_user(current_user.id, current_user, hard=False)
     return None
 
-
-@router.get(
-    "",
-    response_model=UserListResponse,
-    summary="List all users (admin only)",
-    description=(
-        "Returns a paginated list of all users. "
-        "Only accessible by users with `is_admin=True`."
-    ),
-    responses={
-        200: {"description": "List of users retrieved"},
-        403: {"description": "Forbidden – admin access required"},
-        401: {"description": "Unauthorized"},
-    },
-)
+@router.get("", response_model=UserListResponse)
 def list_users(
-    skip: int = Query(0, ge=0, description="Number of records to skip for pagination"),
-    limit: int = Query(20, ge=1, le=100, description="Number of records to return (max 100)"),
-    search: Optional[str] = Query(None, description="Search by email, first name, or last name"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    search: Optional[str] = Query(None),
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
     service = UserService(session)
     return service.list_users(current_user, skip, limit, search)
 
-
-@router.get(
-    "/{user_id}",
-    response_model=UserResponse,
-    summary="Get a specific user by ID",
-    description=(
-        "Retrieves a user's profile by UUID. "
-        "Users can only view their own profile; admins can view any user."
-    ),
-    responses={
-        200: {"description": "User profile retrieved"},
-        403: {"description": "Forbidden – not enough permissions"},
-        404: {"description": "User not found"},
-    },
-)
+@router.get("/{user_id}", response_model=UserResponse)
 def get_user(
     user_id: UUID,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
     service = UserService(session)
-    user = service.get_user_by_id(user_id, current_user)
-    return user
+    return service.get_user_by_id(user_id, current_user)
 
-
-@router.put(
-    "/{user_id}",
-    response_model=UserResponse,
-    summary="Update a user (admin only)",
-    description=(
-        "Updates any user's profile. Only admins can modify roles (`is_admin`, `is_moderator`). "
-        "Admins can also promote/demote others by sending `is_admin`/`is_moderator` in the request body."
-    ),
-    responses={
-        200: {"description": "User updated successfully"},
-        403: {"description": "Forbidden – admin access required"},
-        404: {"description": "User not found"},
-        400: {"description": "Invalid input"},
-    },
-)
+@router.put("/{user_id}", response_model=UserResponse)
 def update_user(
     user_id: UUID,
     data: UserUpdate,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
-    # Optional safety check: prevent admin from removing their own admin privileges
     if user_id == current_user.id and data.is_admin is False:
-        raise HTTPException(
-            status_code=403,
-            detail="You cannot remove your own admin privileges"
-        )
+        raise HTTPException(status_code=403, detail="You cannot remove your own admin privileges")
     service = UserService(session)
-    updated = service.update_user(user_id, data, current_user)
-    return updated
+    return service.update_user(user_id, data, current_user)
 
-
-@router.delete(
-    "/{user_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    summary="Delete a user (admin only)",
-    description=(
-        "Soft‑deletes a user account (sets `deleted_at`). "
-        "Admins cannot delete themselves via this endpoint (use `/users/me` instead)."
-    ),
-    responses={
-        204: {"description": "User deleted successfully"},
-        403: {"description": "Forbidden – admin access required or cannot delete self"},
-        404: {"description": "User not found"},
-    },
-)
+@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(
     user_id: UUID,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
-    # Prevent admin from deleting themselves via this endpoint
     if user_id == current_user.id:
-        raise HTTPException(
-            status_code=403,
-            detail="Use /users/me to delete your own account"
-        )
+        raise HTTPException(status_code=403, detail="Use /users/me to delete your own account")
     service = UserService(session)
     service.delete_user(user_id, current_user, hard=False)
     return None
+
+# ========== Image upload endpoints ==========
+
+@router.post("/me/profile-image", response_model=UserResponse)
+def upload_profile_image(
+    file: UploadFile = File(..., description="Image file (JPEG, PNG, WEBP, GIF)"),
+    current_user: User = Depends(get_current_active_user),
+    session: Session = Depends(get_session),
+):
+    try:
+        logger.info(f"Profile image upload for user {current_user.id}")
+        if not file.content_type or not file.content_type.startswith("image/"):
+            raise HTTPException(status_code=400, detail="Invalid image content type")
+        service = UserService(session)
+        return service.upload_profile_image(current_user, file, current_user)  # pass current_user
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+@router.post("/me/banner-image", response_model=UserResponse)
+def upload_banner_image(
+    file: UploadFile = File(..., description="Image file (JPEG, PNG, WEBP, GIF)"),
+    current_user: User = Depends(get_current_active_user),
+    session: Session = Depends(get_session),
+):
+    try:
+        logger.info(f"Banner image upload for user {current_user.id}")
+        if not file.content_type or not file.content_type.startswith("image/"):
+            raise HTTPException(status_code=400, detail="Invalid image content type")
+        service = UserService(session)
+        return service.upload_banner_image(current_user, file, current_user)  # pass current_user
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+# ========== Follow endpoints ==========
+
+@router.post("/me/follow", response_model=FollowResponse)
+def follow_user(
+    data: FollowCreate,
+    current_user: User = Depends(get_current_active_user),
+    session: Session = Depends(get_session),
+):
+    service = UserFollowService(session)
+    return service.follow_user(current_user, data.followed_user_id)
+
+@router.delete("/me/follow", status_code=status.HTTP_204_NO_CONTENT)
+def unfollow_user(
+    data: FollowUnfollow,
+    current_user: User = Depends(get_current_active_user),
+    session: Session = Depends(get_session),
+):
+    service = UserFollowService(session)
+    service.unfollow_user(current_user, data.followed_user_id)
+    return None
+
+@router.get("/{user_id}/followers", response_model=FollowersListResponse)
+def get_followers(
+    user_id: UUID,
+    skip: int = 0,
+    limit: int = 20,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    service = UserFollowService(session)
+    return service.get_followers(user_id, current_user, skip, limit)
+
+@router.get("/{user_id}/following", response_model=FollowingListResponse)
+def get_following(
+    user_id: UUID,
+    skip: int = 0,
+    limit: int = 20,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    service = UserFollowService(session)
+    return service.get_following(user_id, current_user, skip, limit)
+
+@router.get("/me/follow-status/{target_user_id}", response_model=FollowStatusResponse)
+def check_follow_status(
+    target_user_id: UUID,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    service = UserFollowService(session)
+    return service.check_follow_status(current_user, target_user_id)

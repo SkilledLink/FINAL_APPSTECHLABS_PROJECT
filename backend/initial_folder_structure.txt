@@ -2,43 +2,44 @@ backend/
 │
 ├── app/
 │   ├── __init__.py
-│   ├── main.py                          # Entry point (CORS, routers, exception handlers)
-│   │
+│   ├── main.py
+│
 │   ├── api/
 │   │   ├── __init__.py
 │   │   └── v1/
 │   │       ├── __init__.py
-│   │       ├── auth.py                  # Login, refresh, logout
-│   │       ├── users.py                 # User CRUD
-│   │       ├── professionals.py         # Professional profiles
-│   │       ├── businesses.py            # Business profiles
-│   │       ├── posts.py                 # Feed posts
-│   │       ├── comments.py              # Post comments
-│   │       ├── services.py              # Service listings
-│   │       ├── service_requests.py      # User service requests
-│   │       ├── quotes.py                # Professional quotes
-│   │       ├── bookings.py              # Appointments/Bookings
-│   │       ├── jobs.py                  # Job postings
-│   │       ├── applications.py          # Job applications
-│   │       ├── conversations.py         # [NEW] GET /conversations, POST /conversations
-│   │       ├── messages.py              # [NEW] GET /messages, POST /messages (idempotent)
-│   │       ├── uploads.py               # [NEW] POST /uploads/voice, /uploads/image (signed URLs)
-│   │       ├── notifications.py         # Push/poll notifications
-│   │       ├── reviews.py               # Ratings & reviews
-│   │       ├── verification.py          # Identity verification
-│   │       └── admin.py                 # Admin dashboard endpoints
-│   │
+│   │       ├── auth.py
+│   │       ├── users.py
+│   │       ├── professionals.py
+│   │       ├── businesses.py
+│   │       ├── posts.py
+│   │       ├── comments.py
+│   │       ├── services.py
+│   │       ├── service_requests.py
+│   │       ├── quotes.py
+│   │       ├── bookings.py
+│   │       ├── jobs.py
+│   │       ├── applications.py
+│   │       ├── conversations.py
+│   │       ├── messages.py
+│   │       ├── uploads.py
+│   │       ├── notifications.py
+│   │       ├── reviews.py
+│   │       ├── verification.py
+│   │       └── admin.py
+│
 │   ├── core/
 │   │   ├── __init__.py
-│   │   ├── config.py                    # Pydantic settings (Supabase URL, Service Role Key)
-│   │   ├── security.py                  # JWT decode, password hashing
-│   │   └── constants.py                 # App constants
-│   │
+│   │   ├── config.py
+│   │   ├── security.py
+│   │   ├── cloudinary.py
+│   │   └── constants.py
+│
 │   ├── database/
 │   │   ├── __init__.py
-│   │   ├── session.py                   # SQLAlchemy async engine/session
-│   │   └── base.py                      # Declarative Base
-│   │
+│   │   ├── session.py
+│   │   └── base.py
+│
 │   ├── enums/
 │   │   ├── __init__.py
 │   │   ├── user.py
@@ -49,12 +50,13 @@ backend/
 │   │   ├── service.py
 │   │   ├── request.py
 │   │   ├── notification.py
-│   │   └── message.py                   # [NEW] MessageType (TEXT, VOICE, IMAGE, FILE, SYSTEM)
-│   │
-│   ├── models/                          # SQLAlchemy ORM Models
+│   │   └── message.py
+│
+│   ├── models/
 │   │   ├── __init__.py
 │   │   ├── user.py
 │   │   ├── user_profile.py
+│   │   ├── user_follow.py              # NEW
 │   │   ├── professional.py
 │   │   ├── business.py
 │   │   ├── refresh_token.py
@@ -71,16 +73,17 @@ backend/
 │   │   ├── booking.py
 │   │   ├── job.py
 │   │   ├── application.py
-│   │   ├── conversation.py              # [NEW] conversations table
-│   │   ├── message.py                   # [NEW] messages table (with client_message_id unique)
+│   │   ├── conversation.py
+│   │   ├── message.py
 │   │   ├── notification.py
 │   │   └── review.py
-│   │
-│   ├── schemas/                         # Pydantic Schemas
+│
+│   ├── schemas/
 │   │   ├── __init__.py
 │   │   ├── auth.py
 │   │   ├── user.py
 │   │   ├── user_profile.py
+│   │   ├── user_follow.py            # NEW
 │   │   ├── professional.py
 │   │   ├── business.py
 │   │   ├── verification.py
@@ -95,15 +98,16 @@ backend/
 │   │   ├── booking.py
 │   │   ├── job.py
 │   │   ├── application.py
-│   │   ├── conversation.py              # [NEW] ConversationCreate, ConversationResponse
-│   │   ├── message.py                   # [NEW] MessageCreate (client_id, type, content), MessageResponse
-│   │   ├── upload.py                    # [NEW] UploadUrlRequest, UploadUrlResponse
+│   │   ├── conversation.py
+│   │   ├── message.py
+│   │   ├── upload.py
 │   │   ├── notification.py
 │   │   └── review.py
-│   │
-│   ├── repositories/                    # Database query layer
+│
+│   ├── repositories/
 │   │   ├── __init__.py
 │   │   ├── user_repository.py
+│   │   ├── user_follow_repository.py  # NEW
 │   │   ├── refresh_token_repository.py
 │   │   ├── verification_repository.py
 │   │   ├── post_repository.py
@@ -114,16 +118,17 @@ backend/
 │   │   ├── booking_repository.py
 │   │   ├── job_repository.py
 │   │   ├── application_repository.py
-│   │   ├── conversation_repository.py   # [NEW] Get user conversations, check participant
-│   │   ├── message_repository.py        # [NEW] Insert message (handles duplicate), get paginated
+│   │   ├── conversation_repository.py
+│   │   ├── message_repository.py
 │   │   ├── notification_repository.py
 │   │   └── review_repository.py
-│   │
-│   ├── services/                        # Business logic layer
+│
+│   ├── services/
 │   │   ├── __init__.py
 │   │   ├── auth_service.py
 │   │   ├── email_service.py
 │   │   ├── user_service.py
+│   │   ├── user_follow_service.py    # NEW
 │   │   ├── verification_service.py
 │   │   ├── post_service.py
 │   │   ├── comment_service.py
@@ -133,46 +138,47 @@ backend/
 │   │   ├── booking_service.py
 │   │   ├── job_service.py
 │   │   ├── application_service.py
-│   │   ├── conversation_service.py      # [NEW] Create conversation, update last_read_at
-│   │   ├── message_service.py           # [NEW] Create message with idempotency check
-│   │   ├── storage_service.py           # [NEW] Generate signed Supabase Storage upload URLs
+│   │   ├── conversation_service.py
+│   │   ├── message_service.py
+│   │   ├── storage_service.py
 │   │   ├── notification_service.py
 │   │   └── review_service.py
-│   │
-│   ├── dependencies/                    # FastAPI dependency injections
+│
+│   ├── dependencies/
 │   │   ├── __init__.py
-│   │   ├── auth.py                      # Supabase JWT validation
-│   │   ├── current_user.py              # get_current_user() -> User
-│   │   └── permissions.py               # Role-based access checks
-│   │
-│   ├── utils/                           # Helpers
+│   │   ├── auth.py
+│   │   ├── current_user.py
+│   │   └── permissions.py
+│
+│   ├── utils/
 │   │   ├── __init__.py
 │   │   ├── helpers.py
 │   │   └── validators.py
-│   │
-│   └── exceptions/                      # Global error handling
-│       ├── __init__.py
-│       ├── handlers.py                  # Global exception middleware
-│       └── custom_exceptions.py         # Custom HTTP exceptions
 │
-├── alembic/                             # Database migrations
+│   └── exceptions/
+│       ├── __init__.py
+│       ├── handlers.py
+│       └── custom_exceptions.py
+│
+├── alembic/
 │   ├── versions/
 │   │   └── (auto-generated migration files)
 │   └── env.py
 │
-├── tests/                               # Pytest test suite
+├── tests/
 │   ├── __init__.py
 │   ├── test_auth.py
 │   ├── test_users.py
 │   ├── test_professionals.py
 │   ├── test_businesses.py
 │   ├── test_services.py
-│   ├── test_conversations.py            # [NEW] Test conversation endpoints
-│   └── test_messages.py                 # [NEW] Test message sending & pagination
+│   ├── test_conversations.py
+│   ├── test_messages.py
+│   └── test_user_follow.py             # NEW
 │
-├── .env                                 # Environment variables
-├── .env.example                          # Template for .env
+├── .env
+├── .env.example
 ├── .gitignore
 ├── alembic.ini
-├── requirements.txt                     # Include: fastapi, supabase, sqlalchemy, python-multipart
+├── requirements.txt
 └── README.md

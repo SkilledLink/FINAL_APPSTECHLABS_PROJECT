@@ -3,6 +3,7 @@
 // ============================================================
 
 import type { Post } from '../features/posts/types/post.types';
+
 import type {
   User,
   Service,
@@ -550,10 +551,12 @@ export const mockHomeData: HomeData = {
       },
     },
   ],
+
   questions: [
     {
       id: 'q-1',
-      question: 'What is the recommended conduit type for outdoor underground wiring?',
+      question:
+        'What is the recommended conduit type for outdoor underground wiring?',
       author: 'David K.',
       answersCount: 14,
       timeAgo: '4h',
@@ -580,7 +583,7 @@ export const mockHomeData: HomeData = {
 
   professionals: [
     {
-      id: 'pro-1',
+      id: 1,
       name: 'Marcus Vance',
       trade: 'HVAC Specialist',
       rating: 4.9,
@@ -588,6 +591,7 @@ export const mockHomeData: HomeData = {
       avatarUrl: 'https://i.pravatar.cc/150?img=33',
     },
   ],
+
   activities: [
     {
       id: 'act-1',
@@ -596,4 +600,21 @@ export const mockHomeData: HomeData = {
       timeAgo: '15m ago',
     },
   ],
+};
+
+// ============================================================
+// COMBINED MOCK DATA
+// ============================================================
+
+export const mockData = {
+  highlights: mockHighlights,
+  posts: mockPosts,
+  user: mockUser,
+  services: mockServices,
+  requests: mockRequests,
+  portfolio: mockPortfolio,
+  jobs: mockJobs,
+  analytics: mockAnalytics,
+  stats: mockStats,
+  home: mockHomeData,
 };

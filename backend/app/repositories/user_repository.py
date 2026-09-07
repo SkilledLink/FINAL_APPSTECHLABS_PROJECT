@@ -20,6 +20,12 @@ class UserRepository:
             stmt = stmt.where(User.deleted_at.is_(None))
         return self.session.exec(stmt).first()
 
+    def get_by_username(self, username: str, include_deleted: bool = False) -> Optional[User]:
+        stmt = select(User).where(User.username == username)
+        if not include_deleted:
+            stmt = stmt.where(User.deleted_at.is_(None))
+        return self.session.exec(stmt).first()
+
     def get_all(
         self,
         skip: int = 0,
@@ -34,9 +40,11 @@ class UserRepository:
             stmt = stmt.where(
                 (User.email.contains(search)) |
                 (User.first_name.contains(search)) |
-                (User.last_name.contains(search))
+                (User.last_name.contains(search)) |
+                (User.username.contains(search)) |
+                (User.bio.contains(search)) |
+                (User.location.contains(search))
             )
-        # total count
         count_stmt = select(func.count()).select_from(User)
         if not include_deleted:
             count_stmt = count_stmt.where(User.deleted_at.is_(None))
@@ -44,7 +52,10 @@ class UserRepository:
             count_stmt = count_stmt.where(
                 (User.email.contains(search)) |
                 (User.first_name.contains(search)) |
-                (User.last_name.contains(search))
+                (User.last_name.contains(search)) |
+                (User.username.contains(search)) |
+                (User.bio.contains(search)) |
+                (User.location.contains(search))
             )
         total = self.session.exec(count_stmt).first() or 0
 

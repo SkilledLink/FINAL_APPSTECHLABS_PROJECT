@@ -1,63 +1,164 @@
-from fastapi import HTTPException, status
 from uuid import UUID
+from typing import Optional
+
+from fastapi import HTTPException, UploadFile
 from sqlmodel import Session
-from app.repositories.user_repository import UserRepository
-from app.schemas.user import UserUpdate
+
 from app.models.user import User
+from app.repositories.user_repository import UserRepository
+from app.repositories.user_follow_repository import UserFollowRepository
+from app.schemas.user import UserResponse, UserUpdate
+from app.services.storage_service import StorageService
+
 
 class UserService:
     def __init__(self, session: Session):
         self.session = session
         self.repo = UserRepository(session)
+        self.follow_repo = UserFollowRepository(session)
 
     def get_current_user(self, user_id: UUID) -> User:
         user = self.repo.get_by_id(user_id)
+
         if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+            raise HTTPException(
+                status_code=404,
+                detail="User not found",
+            )
+
         return user
 
-    def get_user_by_id(self, user_id: UUID, current_user: User) -> User:
-        # Allow access if admin or if requesting own profile
-        if not current_user.is_admin and current_user.id != user_id:
-            raise HTTPException(status_code=403, detail="Not enough permissions")
+    def get_user_by_id(
+        self,
+        user_id: UUID,
+        current_user: User,
+    ) -> UserResponse:
         user = self.repo.get_by_id(user_id)
+
         if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-        return user
+            raise HTTPException(
+                status_code=404,
+                detail="User not found",
+            )
 
-    def list_users(self, current_user: User, skip: int, limit: int, search: Optional[str]) -> dict:
-        if not current_user.is_admin:
-            raise HTTPException(status_code=403, detail="Admin access required")
-        users, total = self.repo.get_all(skip=skip, limit=limit, search=search)
-        return {"items": users, "total": total, "page": skip // limit + 1, "size": limit}
-
-    def update_user(self, user_id: UUID, data: UserUpdate, current_user: User) -> User:
-        user = self.repo.get_by_id(user_id)
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-
-        # Permission: only admin can update others, or update self (but limited)
         if current_user.id != user_id and not current_user.is_admin:
-            raise HTTPException(status_code=403, detail="Not enough permissions")
+            raise HTTPException(
+                status_code=403,
+                detail="Not enough permissions",
+            )
 
-        # Non‑admins cannot change is_admin/is_moderator, and cannot update email (for now)
-        update_data = data.model_dump(exclude_unset=True)
+        return self._build_user_response(
+            user,
+            current_user,
+        )
+
+    def _build_user_response(
+        self,
+        user: User,
+        current_user: User,
+    ) -> UserResponse:
+        followers_count = self.follow_repo.get_follow_count(
+            user.id,
+            "followers",
+        )
+
+        following_count = self.follow_repo.get_follow_count(
+            user.id,
+            "following",
+        )
+
+        is_following = self.follow_repo.is_following(
+            current_user.id,
+            user.id,
+        )
+
+        response = UserResponse.model_validate(user)
+
+        response.followers_count = followers_count
+        response.following_count = following_count
+        response.is_following = is_following
+
+        return response
+
+    def update_user(
+        self,
+        user_id: UUID,
+        data: UserUpdate,
+        current_user: User,
+    ) -> User:
+        user = self.repo.get_by_id(user_id)
+
+        if not user:
+            raise HTTPException(
+                status_code=404,
+                detail="User not found",
+            )
+
+        if current_user.id != user_id and not current_user.is_admin:
+            raise HTTPException(
+                status_code=403,
+                detail="Not enough permissions",
+            )
+
+        update_data = data.model_dump(
+            exclude_unset=True
+        )
+
         if not current_user.is_admin:
-            # non‑admin cannot change these fields
             update_data.pop("is_admin", None)
             update_data.pop("is_moderator", None)
-            # also prevent email change for now (we'll implement with verification later)
             update_data.pop("email", None)
 
-        return self.repo.update(user, update_data)
+        return self.repo.update(
+            user,
+            update_data,
+        )
 
-    def delete_user(self, user_id: UUID, current_user: User, hard: bool = False) -> None:
+    def delete_user(
+        self,
+        user_id: UUID,
+        current_user: User,
+        hard: bool = False,
+    ) -> None:
         user = self.repo.get_by_id(user_id)
+
         if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+            raise HTTPException(
+                status_code=404,
+                detail="User not found",
+            )
 
-        # Only admin can delete others; self-deletion allowed
         if current_user.id != user_id and not current_user.is_admin:
-            raise HTTPException(status_code=403, detail="Not enough permissions")
+            raise HTTPException(
+                status_code=403,
+                detail="Not enough permissions",
+            )
 
-        self.repo.delete(user, hard=hard)
+        self.repo.delete(
+            user,
+            hard=hard,
+        )
+
+    def upload_profile_image(
+        self,
+        user: User,
+        file: UploadFile,
+    ) -> User:
+        storage = StorageService()
+
+        url = storage.upload_image(
+            file,
+            str(user.id),
+            folder="profile",
+        )
+
+        user.profile_image_url = url
+
+        self.repo.update(
+            user,
+            {
+                "profile_image_url": url,
+            },
+        )
+
+        return user
