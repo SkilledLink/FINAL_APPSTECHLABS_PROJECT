@@ -3,20 +3,12 @@ from typing import Optional, List
 from datetime import datetime
 from enum import Enum
 
-# ============================================================
-# ENUMS
-# ============================================================
-
 class UrgencyLevel(str, Enum):
     TODAY = "today"
     TOMORROW = "tomorrow"
     THIS_WEEK = "this-week"
     NEXT_WEEK = "next-week"
     FLEXIBLE = "flexible"
-
-# ============================================================
-# JOB SCHEMAS
-# ============================================================
 
 class JobPostBase(BaseModel):
     title: str

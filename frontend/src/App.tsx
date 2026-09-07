@@ -96,6 +96,7 @@ function ProfileRoute() {
 // MAIN APP
 // ============================================================
 
+
 function App() {
   return (
     <AuthProvider>

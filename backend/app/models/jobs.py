@@ -2,11 +2,7 @@ from sqlmodel import SQLModel, Field
 from typing import Optional, List
 from datetime import datetime
 from enum import Enum
-from sqlalchemy import Column, String, ARRAY, DateTime, Boolean
-
-# ============================================================
-# ENUMS
-# ============================================================
+from sqlalchemy import Column, String, ARRAY, Text
 
 class UrgencyLevel(str, Enum):
     TODAY = "today"
@@ -14,10 +10,6 @@ class UrgencyLevel(str, Enum):
     THIS_WEEK = "this-week"
     NEXT_WEEK = "next-week"
     FLEXIBLE = "flexible"
-
-# ============================================================
-# JOB MODEL
-# ============================================================
 
 class JobPost(SQLModel, table=True):
     __tablename__ = "job_posts"
@@ -29,7 +21,7 @@ class JobPost(SQLModel, table=True):
     location: str = Field(max_length=255)
     trade: str = Field(max_length=100)
     custom_trade: Optional[str] = Field(default=None, max_length=100)
-    description: str = Field()
+    description: str = Field(sa_column=Column(Text))
     budget: Optional[str] = Field(default=None, max_length=100)
     urgency: UrgencyLevel = Field(default=UrgencyLevel.FLEXIBLE)
     contact_phone: str = Field(max_length=20)
