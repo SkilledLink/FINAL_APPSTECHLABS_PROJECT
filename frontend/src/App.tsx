@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 // src/App.tsx
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from "react-toastify";
@@ -36,6 +37,22 @@ function App() {
 
         {/* Redirect root to profile */}
         <Route path="/" element={<Navigate to="/profile" replace />} />
+=======
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { MessagesPage } from './features/messages';
+import { ProfilePage } from './features/profile';
+import Landing from './features/home/Landing'
+import CreateJob from './features/jobs/pages/CreateJob'
+import CreateProject from './features/portfolio/pages/CreateProject'
+
+function App() {
+  return (
+    <BrowserRouter> 
+      <Routes>
+        {/* Redirect root to home for testing */}
+        <Route path="/" element={<Landing />} />
+        
+>>>>>>> Stashed changes
 
         {/* Profile Routes */}
         <Route path="/profile" element={<ProfilePage />} />
@@ -43,6 +60,10 @@ function App() {
 
         {/* Messages Route */}
         <Route path="/messages" element={<MessagesPage />} />
+        {/* Create Job Route */}
+        <Route path="/create-job" element={<CreateJob />} />
+        {/* Create Project Route */}
+        <Route path="/create-project" element={<CreateProject />} />
       </Routes>
     </BrowserRouter>
   );
