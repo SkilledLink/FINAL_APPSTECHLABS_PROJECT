@@ -1,3 +1,4 @@
+// src/features/posts/components/ShareModal.tsx
 import React, { useState } from 'react';
 import type { Post } from '../types/post.types';
 
@@ -12,7 +13,6 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, post }) => {
 
   if (!isOpen) return null;
 
-  // Mock URL for sharing (In real app, use the actual post URL from backend)
   const postUrl = `https://professional-network.com/post/${post.id}`;
 
   const handleCopyLink = async () => {
@@ -41,7 +41,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, post }) => {
     {
       name: 'Twitter (X)',
       icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6 text-black">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6 text-black dark:text-white">
           <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
         </svg>
       ),
@@ -60,13 +60,13 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, post }) => {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div 
-        className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden"
+      <div
+        className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-4 border-b border-gray-100">
-          <h2 className="text-lg font-bold text-gray-900">Share Post</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+        <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-slate-700">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">Share Post</h2>
+          <button onClick={onClose} className="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
             </svg>
@@ -84,21 +84,21 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, post }) => {
                 rel="noopener noreferrer"
                 className="flex flex-col items-center gap-2 group"
               >
-                <div className="p-3 bg-gray-100 rounded-full group-hover:bg-gray-200 transition-colors">
+                <div className="p-3 bg-gray-100 dark:bg-slate-700 rounded-full group-hover:bg-gray-200 dark:group-hover:bg-slate-600 transition-colors">
                   {social.icon}
                 </div>
-                <span className="text-xs font-medium text-gray-600">{social.name}</span>
+                <span className="text-xs font-medium text-gray-600 dark:text-slate-400">{social.name}</span>
               </a>
             ))}
           </div>
 
           {/* Copy Link Section */}
-          <div className="flex items-center gap-2 bg-gray-100 p-3 rounded-xl">
+          <div className="flex items-center gap-2 bg-gray-100 dark:bg-slate-700 p-3 rounded-xl">
             <input
               type="text"
               readOnly
               value={postUrl}
-              className="flex-1 bg-transparent text-sm text-gray-600 outline-none truncate"
+              className="flex-1 bg-transparent text-sm text-gray-600 dark:text-slate-300 outline-none truncate"
             />
             <button
               onClick={handleCopyLink}
