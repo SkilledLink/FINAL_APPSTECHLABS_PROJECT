@@ -1,40 +1,55 @@
-export type UserRole = 'CLIENT' | 'PROFESSIONAL' | 'COMPANY' | 'ADMIN' | 'MODERATOR';
+// src/features/profile/types/profile.types.ts
 
-export type ProfileTab = 'overview' | 'work' | 'services' | 'posts' | 'reviews';
+export type AccountType = 'standard' | 'professional' | 'business';
+export type AccountStatus = 'active' | 'suspended' | 'deleted';
 
-export interface ServiceItem {
+export interface User {
   id: string;
-  name: string;
-  priceLabel: string;
-  responseNotice?: string;
-  description?: string;
+  email: string;
+  username?: string;
+  firstName: string;
+  lastName: string;
+  bio?: string;
+  location?: string;
+  accountType: AccountType;
+  status: AccountStatus;
+  isEmailVerified: boolean;
+  isAdmin: boolean;
+  isModerator: boolean;
+  createdAt: string;
+  updatedAt: string;
+  lastLoginAt?: string;
+  deletedAt?: string;
+  profileImageUrl?: string;
+  bannerImageUrl?: string;
+  followersCount: number;
+  followingCount: number;
+  isFollowing: boolean;
 }
 
-export interface BeforeAfterProject {
-  id: string;
-  title: string;
-  description: string;
-  beforeImage: string;
-  afterImage: string;
-}
-
-export interface UserProfile {
+export interface Professional {
   id: string;
   userId: string;
-  name: string;
-  tradeTitle: string;
-  email: string;
-  role: UserRole;
-  avatar: string;
-  coverImage?: string;
-  followersCount: string;
-  yearsInTrade: number;
-  isVerified: boolean;
+  profession: string;
+  bio?: string;
+  skills: string[];
+  yearsOfExperience?: number;
+  services: string[];
   hourlyRate?: number;
+  country?: string;
+  region?: string;
+  city?: string;
+  available: boolean;
+  isVerified: boolean;
   rating: number;
-  reviewCount: number;
-  location: string;
-  bio: string;
-  services: ServiceItem[];
-  featuredProjects: BeforeAfterProject[];
+  totalReviews: number;
+  completedJobs: number;
+  createdAt: string;
+  updatedAt: string;
 }
+
+export interface UserProfile extends User {
+  professional?: Professional; // null if standard
+}
+
+export type ProfileTab = 'overview' | 'work' | 'services' | 'posts' | 'reviews';

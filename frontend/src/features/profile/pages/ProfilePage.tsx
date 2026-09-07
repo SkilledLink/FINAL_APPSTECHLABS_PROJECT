@@ -1,83 +1,139 @@
+// src/features/profile/pages/ProfilePage.tsx
+
 import React, { useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { useProfile } from '../hooks/useProfile';
 import { ProfileHeader } from '../components/ProfileHeader';
 import { ProfileTabs } from '../components/ProfileTabs';
+import { ProfileAbout } from '../components/ProfileAbout';
+import { ProfileSkills } from '../components/ProfileSkills';
+import { ProfileExperience } from '../components/ProfileExperience';
 import { ProfileWorkTab } from '../components/ProfileWorkTab';
-import type { UserProfile, ProfileTab } from '../types/profile.types';
-
-const MOCK_TRADE_PROFILE: UserProfile = {
-  id: 'prof_001',
-  userId: 'u_101',
-  name: 'Alex Chen',
-  tradeTitle: 'Master Electrician',
-  email: 'alex.chen@tradecraft.com',
-  role: 'PROFESSIONAL',
-  avatar: 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400',
-  coverImage: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=1200',
-  followersCount: '12.4K',
-  yearsInTrade: 15,
-  isVerified: true,
-  rating: 4.9,
-  reviewCount: 184,
-  location: 'San Francisco, CA',
-  bio: 'Specializing in residential panel upgrades, smart home integrations, EV charger setups, and commercial retrofitting.',
-  services: [
-    { id: 's1', name: 'Panel Upgrade', priceLabel: 'Starting at $1,200' },
-    { id: 's2', name: 'EV Charger Install', priceLabel: 'Starting at $800' },
-    {
-      id: 's3',
-      name: 'Emergency Repair',
-      priceLabel: '$150/hr',
-      responseNotice: 'Response within 1 Hr',
-    },
-    { id: 's4', name: 'Lighting Design', priceLabel: 'Custom Quote' },
-  ],
-  featuredProjects: [
-    {
-      id: 'p1',
-      title: 'Kitchen Renovation Electrical',
-      description: 'Kitchen renovation Electrical - before renovation on sensitive circuits.',
-      beforeImage: 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=600',
-      afterImage: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=600',
-    },
-    {
-      id: 'p2',
-      title: 'Historic Building Safety Upgrade',
-      description: 'Historic Building Safety Upgrade - knob and tube replacement.',
-      beforeImage: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=600',
-      afterImage: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600',
-    },
-  ],
-};
+import { EditProfileForm } from '../components/EditProfileForm';
+import { ProfessionalOnboardingModal } from './ProfessionalOnboardingModal';
+import { useAuth } from '../../../providers/AuthProvider';
+import type { ProfileTab } from '../types/profile.types';
 
 export const ProfilePage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<ProfileTab>('work');
+  const { id } = useParams<{ id: string }>();
+  const { currentUser, updateUser } = useAuth();
+
+  // Use the ID from the URL, or fallback to the current user's ID
+  const userId = id || currentUser?.id;
+
+  const { profile, loading, error, updateProfile } = useProfile(userId || '');
+  const [activeTab, setActiveTab] = useState<ProfileTab>('overview');
+  const [isEditing, setIsEditing] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  // Handle loading / error / missing user
+  if (!userId) {
+    return <div className="p-8 text-center text-red-500">No user ID provided.</div>;
+  }
+
+  if (loading) return <div className="p-8 text-center">Loading profile...</div>;
+  if (error) return <div className="p-8 text-center text-red-500">Error: {error}</div>;
+  if (!profile) return <div className="p-8 text-center">Profile not found.</div>;
+
+  const isOwnProfile = currentUser?.id === profile.id;
+  const isProfessional = profile.accountType === 'professional';
+
+  const handleSaveProfile = async (data: Partial<typeof profile>) => {
+    const updated = await updateProfile(data);
+    if (updated && isOwnProfile) {
+      updateUser(updated);
+    }
+    setIsEditing(false);
+  };
+
+  const handleUpgradeSuccess = () => {
+    setShowUpgradeModal(false);
+    // Re‑fetch the profile after upgrade (the hook will update automatically if we force a refetch)
+    // Since we're using the same profileId, we can just trigger a reload by changing a key or simply
+    // call updateProfile with empty data to trigger a re‑fetch? Better: we can update the local profile state.
+    // The upgrade service already updates the mock and returns the updated user.
+    // We can call updateProfile again or just manually set the profile.
+    // For simplicity, we'll reload the page (as before) but we can also update via hook.
+    window.location.reload();
+  };
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-2.5 sm:px-4 md:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4">
+    <div className="w-full px-2.5 sm:px-4 md:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4">
       <ProfileHeader
-        profile={MOCK_TRADE_PROFILE}
-        onFollow={() => alert('Followed Alex Chen')}
-        onMessage={() => alert('Opening conversation with Alex Chen')}
-        onRequestService={() => alert('Opening Service Request Dialog')}
+        profile={profile}
+        isOwnProfile={isOwnProfile}
+        onFollow={() => alert(`Follow ${profile.firstName}`)}
+        onMessage={() => alert(`Message ${profile.firstName}`)}
+        onRequestService={() => alert('Request service')}
+        onUpgrade={() => setShowUpgradeModal(true)}
       />
 
-      <ProfileTabs activeTab={activeTab} onChangeTab={setActiveTab} />
+      <ProfileTabs
+        activeTab={activeTab}
+        onChangeTab={setActiveTab}
+        isProfessional={isProfessional}
+      />
 
-      {activeTab === 'work' && (
+      {activeTab === 'overview' && (
+        <div className="space-y-4">
+          <ProfileAbout profile={profile} />
+          <ProfileSkills profile={profile} isOwnProfile={isOwnProfile} />
+          {isProfessional && <ProfileExperience profile={profile} />}
+        </div>
+      )}
+
+      {activeTab === 'work' && isProfessional && (
         <ProfileWorkTab
-          profile={MOCK_TRADE_PROFILE}
-          onRequestService={() => alert('Opening Service Request Dialog')}
+          profile={profile}
+          onRequestService={() => alert('Request service')}
           onViewAllServices={() => setActiveTab('services')}
         />
       )}
 
-      {activeTab !== 'work' && (
-        <div className="p-6 sm:p-12 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl sm:rounded-3xl text-center text-slate-500 font-bold text-xs sm:text-base">
-          {activeTab.toUpperCase()} Section Content
+      {activeTab === 'services' && isProfessional && (
+        <div className="p-6 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs">
+          <h3 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">All Services</h3>
+          <ul className="mt-4 space-y-2">
+            {profile.professional?.services.map((service, idx) => (
+              <li key={idx} className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
+                {service}
+              </li>
+            ))}
+          </ul>
         </div>
+      )}
+
+      {activeTab === 'reviews' && isProfessional && (
+        <div className="p-6 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs">
+          <h3 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">Reviews</h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+            {profile.professional?.totalReviews} reviews • Rating {profile.professional?.rating.toFixed(1)}
+          </p>
+        </div>
+      )}
+
+      {activeTab === 'posts' && (
+        <div className="p-6 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs">
+          <h3 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">Posts</h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">No posts yet.</p>
+        </div>
+      )}
+
+      {isEditing && (
+        <EditProfileForm
+          profile={profile}
+          onSave={handleSaveProfile}
+          onCancel={() => setIsEditing(false)}
+        />
+      )}
+
+      {showUpgradeModal && (
+        <ProfessionalOnboardingModal
+          userId={profile.id}
+          onClose={() => setShowUpgradeModal(false)}
+          onSuccess={handleUpgradeSuccess}
+        />
       )}
     </div>
   );
 };
-
-export default ProfilePage;

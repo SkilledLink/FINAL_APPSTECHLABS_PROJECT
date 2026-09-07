@@ -1,3 +1,5 @@
+// src/features/profile/components/BeforeAfterSlider.tsx
+
 import React, { useState } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 
@@ -18,26 +20,23 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
 
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs w-full">
-      {/* Aspect Ratio Container for Fluid Scaling */}
       <div className="relative w-full aspect-[4/3] sm:aspect-[16/10] select-none overflow-hidden bg-slate-950">
-        {/* After Image */}
         <img
           src={afterImage}
-          alt="After renovation"
+          alt="After"
           className="absolute inset-0 w-full h-full object-cover"
         />
         <span className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 px-2 py-0.5 bg-slate-900/80 text-white text-[9px] sm:text-[10px] font-extrabold uppercase rounded tracking-wider backdrop-blur-xs z-10">
           After
         </span>
 
-        {/* Before Image Overlay */}
         <div
           className="absolute inset-0 overflow-hidden"
           style={{ width: `${sliderPos}%` }}
         >
           <img
             src={beforeImage}
-            alt="Before renovation"
+            alt="Before"
             className="absolute inset-0 w-full h-full object-cover max-w-none"
             style={{ width: '100%' }}
           />
@@ -46,7 +45,6 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
           </span>
         </div>
 
-        {/* Divider Handle Bar */}
         <div
           className="absolute top-0 bottom-0 w-0.5 bg-white shadow-lg pointer-events-none flex items-center justify-center z-20"
           style={{ left: `calc(${sliderPos}% - 1px)` }}
@@ -56,7 +54,6 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
           </div>
         </div>
 
-        {/* Touch & Mouse Drag Input */}
         <input
           type="range"
           min="0"

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useParams } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -15,24 +15,23 @@ import VerifyEmailPage from './features/auth/pages/VerifyEmailPage';
 
 // Home
 import HomePage from './features/home/pages/HomePage';
-import Feed from './features/posts/components/Feed';// Make sure you create this page
-import ContactPage from './api/auth/AuthCheck'; // Make sure you create this page
+import Feed from './features/posts/components/Feed'; // make sure this exists
 
-// Import your auth hook to check if the user is logged in
+// Auth hook
 import { useAuth } from './features/auth/hooks/useAuth';
 
-// 1. Protects the app: If not logged in, redirect to /login
-function AuthCheck() { 
-  const { isAuthenticated } = useAuth();
-  const location = useLocation();
+// Dashboard
+import DashboardPage from './features/dashboard/components/pages/DashboardPage';
 
-  if (!isAuthenticated()) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-  return <Outlet />;
-}
+// Profile (our feature)
+import { ProfilePage } from './features/profile';
 
-// 2. Public only: If logged in, redirect to /home (prevents seeing login/register while logged in)
+// Messages
+import { MessagesPage } from './features/messages';
+
+// ============================================================
+// Route guards (optional – you can enable them as needed)
+// ============================================================
 function PublicOnlyRoute() {
   const { isAuthenticated } = useAuth();
 
@@ -42,15 +41,15 @@ function PublicOnlyRoute() {
   return <Outlet />;
 }
 
-// Dashboard
-import DashboardPage from './features/dashboard/components/pages/DashboardPage';
+function ProfileRoute() {
+  const { id } = useParams<{ id: string }>();
 
-// Profile
-import { ProfilePage } from './features/profile';
+  return <ProfilePage userId={id ?? ''} />;
+}
 
-// Messages
-import { MessagesPage } from './features/messages';
-
+// ============================================================
+// Main App
+// ============================================================
 function App() {
   return (
     <BrowserRouter>
@@ -68,34 +67,32 @@ function App() {
       />
 
       <Routes>
-        {/* ==================== AUTH ==================== */}
-        <Route element={<AuthLayout />}>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/verify-email" element={<VerifyEmailPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
+        {/* ========== AUTH ROUTES (no layout) ========== */}
+        <Route element={<PublicOnlyRoute />}>
+          <Route element={<AuthLayout />}>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+          </Route>
         </Route>
 
-        {/* ==================== MAIN APPLICATION ==================== */}
+        {/* ========== MAIN APPLICATION (with AppLayout) ========== */}
         <Route path="/" element={<AppLayout />}>
           <Route index element={<HomePage />} />
-
           <Route path="dashboard" element={<DashboardPage />} />
-
           <Route path="feed" element={<Feed />} />
 
-          <Route path="profile" element={<ProfilePage />} />
-          <Route path="profile/:id" element={<ProfilePage />} />
+          {/* Profile routes – with or without an ID */}
+          <Route path="profile" element={<ProfileRoute />} />
+          <Route path="profile/:id" element={<ProfileRoute />} />
 
           <Route path="messages" element={<MessagesPage />} />
         </Route>
 
-        {/* ==================== DEFAULT ==================== */}
-        <Route
-          path="*"
-          element={<Navigate to="/" replace />}
-        />
+        {/* ========== CATCH‑ALL ========== */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );
