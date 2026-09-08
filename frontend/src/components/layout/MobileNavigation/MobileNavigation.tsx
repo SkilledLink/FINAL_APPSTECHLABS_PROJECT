@@ -15,7 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { useAuth } from "../../../features/auth/hooks/useAuth";
-import { useUser } from "../../../features/users/hooks/useUser";
+import { useUser } from "../../../features/profile/hooks/useUser";
 
 interface MobileNavigationProps {
   isDark: boolean;

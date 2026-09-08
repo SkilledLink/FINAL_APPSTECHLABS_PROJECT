@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../features/auth/hooks/useAuth';
 import { useUser } from '../../../features/profile/hooks/useUser';
+import { Link } from 'react-router-dom';
 
 interface HeaderProps {
   isDark: boolean;

@@ -17,7 +17,7 @@ import {
   ImagePlus,
 } from "lucide-react";
 import { useAuth } from "../../../features/auth/hooks/useAuth";
-import { useUser } from "../../../features/users/hooks/useUser";
+import { useUser } from "../../../features/profile/hooks/useUser";
 
 interface SidebarProps {
   isDark: boolean;

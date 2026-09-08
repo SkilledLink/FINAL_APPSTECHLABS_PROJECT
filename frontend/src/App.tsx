@@ -1,11 +1,4 @@
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-  Navigate,
-  Outlet,
-  useParams,
-} from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useParams } from 'react-router-dom';
 
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -35,7 +28,7 @@ import { useAuth } from './features/auth/hooks/useAuth';
 import DashboardPage from './features/dashboard/components/pages/DashboardPage';
 import { ProfilePage } from './features/profile';
 import { MessagesPage } from './features/messages';
-
+import { DiscoverPage } from './features/discover';
 
 // ============================================================
 // Route guards
@@ -51,7 +44,6 @@ function PublicOnlyRoute() {
   return <Outlet />;
 }
 
-
 // ============================================================
 // Profile route
 // ============================================================
@@ -62,7 +54,6 @@ function ProfileRoute() {
   return <ProfilePage userId={id ?? ''} />;
 }
 
-
 // ============================================================
 // Main App
 // ============================================================
@@ -71,7 +62,6 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-
         <ToastContainer
           position="top-right"
           autoClose={3000}
@@ -86,95 +76,51 @@ function App() {
         />
 
         <Routes>
-
           {/* ==================================================
               AUTH ROUTES
               ================================================== */}
 
           <Route element={<PublicOnlyRoute />}>
             <Route element={<AuthLayout />}>
+              <Route path="/login" element={<LoginPage />} />
 
-              <Route
-                path="/login"
-                element={<LoginPage />}
-              />
+              <Route path="/register" element={<RegisterPage />} />
 
-              <Route
-                path="/register"
-                element={<RegisterPage />}
-              />
+              <Route path="/verify-email" element={<VerifyEmailPage />} />
 
-              <Route
-                path="/verify-email"
-                element={<VerifyEmailPage />}
-              />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-              <Route
-                path="/forgot-password"
-                element={<ForgotPasswordPage />}
-              />
-
-              <Route
-                path="/reset-password"
-                element={<ResetPasswordPage />}
-              />
-
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
             </Route>
           </Route>
-
 
           {/* ==================================================
               MAIN APPLICATION
               ================================================== */}
 
           <Route path="/" element={<AppLayout />}>
+            <Route index element={<HomePage />} />
 
-            <Route
-              index
-              element={<HomePage />}
-            />
+            <Route path="dashboard" element={<DashboardPage />} />
 
-            <Route
-              path="dashboard"
-              element={<DashboardPage />}
-            />
-
-            <Route
-              path="feed"
-              element={<Feed />}
-            />
+            <Route path="feed" element={<Feed />} />
 
             {/* Profile */}
-            <Route
-              path="profile"
-              element={<ProfileRoute />}
-            />
+            <Route path="profile" element={<ProfileRoute />} />
 
-            <Route
-              path="profile/:id"
-              element={<ProfileRoute />}
-            />
+            <Route path="profile/:id" element={<ProfileRoute />} />
 
             {/* Messages */}
-            <Route
-              path="messages"
-              element={<MessagesPage />}
-            />
-
+            <Route path="messages" element={<MessagesPage />} />
+            <Route path='/discover' element={<DiscoverPage />} />
           </Route>
-
 
           {/* ==================================================
               CATCH-ALL
               ================================================== */}
 
-          <Route
-            path="*"
-            element={<Navigate to="/" replace />}
-          />
-
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-
       </BrowserRouter>
     </AuthProvider>
   );
