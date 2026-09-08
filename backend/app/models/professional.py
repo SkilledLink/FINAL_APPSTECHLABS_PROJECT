@@ -3,7 +3,7 @@ from typing import Optional, List, TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from sqlmodel import Field, Relationship, SQLModel, Column
-from sqlalchemy import JSON, DECIMAL, CheckConstraint
+from sqlalchemy import JSON, DECIMAL
 
 if TYPE_CHECKING:
     from app.models.user import User
@@ -20,7 +20,7 @@ class Professional(SQLModel, table=True):
 
     user_id: UUID = Field(
         foreign_key="users.id",
-        unique=True,          # one professional per user
+        unique=True,
         nullable=False,
         index=True,
     )
@@ -37,10 +37,21 @@ class Professional(SQLModel, table=True):
     available: bool = Field(default=True)
 
     # System-controlled fields
-    is_verified: bool = Field(default=False)
+    is_verified: bool = Field(default=False)          # kept for legacy
     rating: float = Field(default=0.0, sa_column=Column(DECIMAL(3, 2)))
     total_reviews: int = Field(default=0)
     completed_jobs: int = Field(default=0)
+
+    # ─── Didit KYC fields ────────────────────────────
+    verification_status: str = Field(
+        default="not_started",
+        max_length=50,
+    )
+    verification_data: Optional[dict] = Field(
+        default=None,
+        sa_column=Column(JSON),
+    )
+    verified_at: Optional[datetime] = Field(default=None)
 
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
@@ -53,5 +64,3 @@ class Professional(SQLModel, table=True):
 
     # Relationship back to User
     user: "User" = Relationship(back_populates="professional")
-
-    

@@ -38,5 +38,10 @@ class Settings(BaseSettings):
     CLOUDINARY_API_KEY: str
     CLOUDINARY_API_SECRET: str
 
+    # ─── Didit KYC (professional verification) ───
+    DIDIT_API_KEY: str
+    DIDIT_WEBHOOK_SECRET: str
+    # workflow_id is per-session config, but we keep it here for convenience
+    DIDIT_WORKFLOW_ID: str = "9245dbac-f2de-4f75-8b19-5a35fa43e416"
 
 settings = Settings()
