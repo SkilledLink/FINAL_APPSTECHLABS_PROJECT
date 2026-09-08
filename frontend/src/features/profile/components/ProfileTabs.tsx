@@ -1,22 +1,31 @@
+// src/features/profile/components/ProfileTabs.tsx
+
 import React from 'react';
 import type { ProfileTab } from '../types/profile.types';
 
 interface ProfileTabsProps {
   activeTab: ProfileTab;
   onChangeTab: (tab: ProfileTab) => void;
+  isProfessional: boolean;
 }
 
 export const ProfileTabs: React.FC<ProfileTabsProps> = ({
   activeTab,
   onChangeTab,
+  isProfessional,
 }) => {
-  const tabs: { id: ProfileTab; label: string }[] = [
+  const baseTabs: { id: ProfileTab; label: string }[] = [
     { id: 'overview', label: 'Overview' },
+    { id: 'posts', label: 'Posts' },
+  ];
+
+  const professionalTabs: { id: ProfileTab; label: string }[] = [
     { id: 'work', label: 'Work' },
     { id: 'services', label: 'Services' },
-    { id: 'posts', label: 'Posts' },
     { id: 'reviews', label: 'Reviews' },
   ];
+
+  const tabs = isProfessional ? [...baseTabs, ...professionalTabs] : baseTabs;
 
   return (
     <div className="w-full border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md px-1 sm:px-3 rounded-xl sm:rounded-2xl my-3 sm:my-4 overflow-x-auto no-scrollbar scroll-smooth">

@@ -1,6 +1,8 @@
+// src/features/profile/components/EditProfileForm.tsx
+
 import React, { useState } from 'react';
 import { X, Save } from 'lucide-react';
-import type { UserProfile } from '../types/profile.types';
+import type{ UserProfile } from '../types/profile.types';
 
 interface EditProfileFormProps {
   profile: UserProfile;
@@ -14,11 +16,10 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({
   onCancel,
 }) => {
   const [formData, setFormData] = useState({
-    name: profile.name,
-    headline: profile.headline,
-    bio: profile.bio,
-    location: profile.location,
-    hourlyRate: profile.hourlyRate || 0,
+    firstName: profile.firstName,
+    lastName: profile.lastName,
+    bio: profile.bio || '',
+    location: profile.location || '',
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -44,24 +45,24 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Full Name
+              First Name
             </label>
             <input
               type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              value={formData.firstName}
+              onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
               className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100"
             />
           </div>
 
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Headline
+              Last Name
             </label>
             <input
               type="text"
-              value={formData.headline}
-              onChange={(e) => setFormData({ ...formData, headline: e.target.value })}
+              value={formData.lastName}
+              onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
               className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100"
             />
           </div>
@@ -78,32 +79,16 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Location
-              </label>
-              <input
-                type="text"
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Hourly Rate ($)
-              </label>
-              <input
-                type="number"
-                value={formData.hourlyRate}
-                onChange={(e) =>
-                  setFormData({ ...formData, hourlyRate: Number(e.target.value) })
-                }
-                className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100"
-              />
-            </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Location
+            </label>
+            <input
+              type="text"
+              value={formData.location}
+              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+              className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100"
+            />
           </div>
 
           <div className="flex justify-end gap-2 pt-4">

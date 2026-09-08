@@ -1,55 +1,52 @@
+// src/features/profile/components/ServiceQuickView.tsx
+
 import React from 'react';
-import { Clock, ArrowRight, Zap } from 'lucide-react';
-import type { ServiceItem } from '../types/profile.types';
+import { ArrowRight, Zap } from 'lucide-react';
+import type { UserProfile } from '../types/profile.types';
 
 interface ServiceQuickViewProps {
-  services: ServiceItem[];
+  profile: UserProfile;
   onRequestService?: () => void;
   onViewAllServices?: () => void;
 }
 
 export const ServiceQuickView: React.FC<ServiceQuickViewProps> = ({
-  services,
+  profile,
   onRequestService,
   onViewAllServices,
 }) => {
+  const services = profile.professional?.services || [];
+
+  if (!profile.professional) return null;
+
   return (
     <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs space-y-3 sm:space-y-4">
       <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5 sm:pb-3">
         <div>
           <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-slate-100">
-            Service Quick-View
+            Services
           </h3>
           <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
-            Available services & pricing
+            What I offer
           </p>
         </div>
         <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 fill-amber-500/20 shrink-0" />
       </div>
 
       <div className="space-y-2">
-        {services.map((service) => (
+        {services.map((service, idx) => (
           <div
-            key={service.id}
-            className="p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/50 space-y-1"
+            key={idx}
+            className="p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/50"
           >
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
-                {service.name}
-              </span>
-              <span className="text-xs font-black text-indigo-600 dark:text-indigo-400 whitespace-nowrap shrink-0">
-                {service.priceLabel}
-              </span>
-            </div>
-
-            {service.responseNotice && (
-              <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-medium text-amber-600 dark:text-amber-400">
-                <Clock className="w-3 h-3 shrink-0" />
-                <span className="truncate">{service.responseNotice}</span>
-              </div>
-            )}
+            <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+              {service}
+            </span>
           </div>
         ))}
+        {services.length === 0 && (
+          <p className="text-sm text-slate-400 dark:text-slate-500">No services listed.</p>
+        )}
       </div>
 
       <div className="pt-1 sm:pt-2 space-y-2">

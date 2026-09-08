@@ -38,6 +38,7 @@ def get_me(
     # Use get_user_by_id with current_user for enrichment
     return service.get_user_by_id(current_user.id, current_user)
 
+
 @router.put("/me", response_model=UserResponse)
 def update_me(
     data: UserUpdate,
@@ -47,6 +48,7 @@ def update_me(
     service = UserService(session)
     return service.update_user(current_user.id, data, current_user)
 
+
 @router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
 def delete_me(
     current_user: User = Depends(get_current_user),
@@ -55,6 +57,7 @@ def delete_me(
     service = UserService(session)
     service.delete_user(current_user.id, current_user, hard=False)
     return None
+
 
 @router.get("", response_model=UserListResponse)
 def list_users(
@@ -67,6 +70,7 @@ def list_users(
     service = UserService(session)
     return service.list_users(current_user, skip, limit, search)
 
+
 @router.get("/{user_id}", response_model=UserResponse)
 def get_user(
     user_id: UUID,
@@ -76,6 +80,7 @@ def get_user(
     service = UserService(session)
     return service.get_user_by_id(user_id, current_user)
 
+
 @router.put("/{user_id}", response_model=UserResponse)
 def update_user(
     user_id: UUID,
@@ -84,9 +89,14 @@ def update_user(
     session: Session = Depends(get_session),
 ):
     if user_id == current_user.id and data.is_admin is False:
-        raise HTTPException(status_code=403, detail="You cannot remove your own admin privileges")
+        raise HTTPException(
+            status_code=403,
+            detail="You cannot remove your own admin privileges"
+        )
+
     service = UserService(session)
     return service.update_user(user_id, data, current_user)
+
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(
@@ -95,10 +105,15 @@ def delete_user(
     session: Session = Depends(get_session),
 ):
     if user_id == current_user.id:
-        raise HTTPException(status_code=403, detail="Use /users/me to delete your own account")
+        raise HTTPException(
+            status_code=403,
+            detail="Use /users/me to delete your own account"
+        )
+
     service = UserService(session)
     service.delete_user(user_id, current_user, hard=False)
     return None
+
 
 # ========== Image upload endpoints ==========
 
@@ -110,33 +125,69 @@ def upload_profile_image(
 ):
     try:
         logger.info(f"Profile image upload for user {current_user.id}")
+
         if not file.content_type or not file.content_type.startswith("image/"):
-            raise HTTPException(status_code=400, detail="Invalid image content type")
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid image content type"
+            )
+
         service = UserService(session)
-        return service.upload_profile_image(current_user, file, current_user)  # pass current_user
+
+        # Fixed: removed the duplicate current_user argument
+        return service.upload_profile_image(current_user, file)
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Upload failed: {str(e)}"
+        )
+
 
 @router.post("/me/banner-image", response_model=UserResponse)
 def upload_banner_image(
-    file: UploadFile = File(..., description="Image file (JPEG, PNG, WEBP, GIF)"),
+    file: UploadFile = File(
+        ...,
+        description="Image file (JPEG, PNG, WEBP, GIF)"
+    ),
     current_user: User = Depends(get_current_active_user),
     session: Session = Depends(get_session),
 ):
     try:
-        logger.info(f"Banner image upload for user {current_user.id}")
-        if not file.content_type or not file.content_type.startswith("image/"):
-            raise HTTPException(status_code=400, detail="Invalid image content type")
+        logger.info(
+            f"Banner image upload for user {current_user.id}"
+        )
+
+        if (
+            not file.content_type
+            or not file.content_type.startswith("image/")
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid image content type",
+            )
+
         service = UserService(session)
-        return service.upload_banner_image(current_user, file, current_user)  # pass current_user
+
+        return service.upload_banner_image(
+            current_user,
+            file,
+        )
+
     except HTTPException:
         raise
+
     except Exception as e:
         logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Upload failed: {str(e)}",
+        )
+
 
 # ========== Follow endpoints ==========
 
@@ -149,6 +200,7 @@ def follow_user(
     service = UserFollowService(session)
     return service.follow_user(current_user, data.followed_user_id)
 
+
 @router.delete("/me/follow", status_code=status.HTTP_204_NO_CONTENT)
 def unfollow_user(
     data: FollowUnfollow,
@@ -158,6 +210,7 @@ def unfollow_user(
     service = UserFollowService(session)
     service.unfollow_user(current_user, data.followed_user_id)
     return None
+
 
 @router.get("/{user_id}/followers", response_model=FollowersListResponse)
 def get_followers(
@@ -170,6 +223,7 @@ def get_followers(
     service = UserFollowService(session)
     return service.get_followers(user_id, current_user, skip, limit)
 
+
 @router.get("/{user_id}/following", response_model=FollowingListResponse)
 def get_following(
     user_id: UUID,
@@ -180,6 +234,7 @@ def get_following(
 ):
     service = UserFollowService(session)
     return service.get_following(user_id, current_user, skip, limit)
+
 
 @router.get("/me/follow-status/{target_user_id}", response_model=FollowStatusResponse)
 def check_follow_status(
