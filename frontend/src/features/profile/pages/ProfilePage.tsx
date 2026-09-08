@@ -31,48 +31,145 @@ export const ProfilePage: React.FC = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   const userId = id || currentUser?.id;
 
-  // Load profile data
+  // Load profile data in parallel
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+
     const loadProfile = async () => {
-      const userData = await fetchUser(userId);
-      if (userData) {
-        let profData = userData.professional;
-        // If viewing own profile and it's professional, fetch full professional details
-        if (userId === currentUser?.id && userData.accountType === 'professional') {
-          const myProf = await fetchMyProfessional();
-          if (myProf) profData = myProf;
+      setLoading(true);
+
+      try {
+        // 1. Fetch user data
+        const userData = await fetchUser(userId);
+        if (!isMounted) return;
+        if (!userData) {
+          setProfile(null);
+          setLoading(false);
+          return;
         }
+
+        // 2. Prepare parallel requests
+        const promises: Promise<any>[] = [];
+
+        let profData = userData.professional;
+        let followStatus = false;
+
+        // Fetch professional details if viewing own professional profile
+        if (userId === currentUser?.id && userData.accountType === 'professional') {
+          promises.push(
+            fetchMyProfessional().then((p) => {
+              if (p) profData = p;
+            })
+          );
+        }
+
+        // Check follow status if viewing other user
+        if (userId !== currentUser?.id) {
+          promises.push(
+            checkFollowStatus(userId).then((status) => {
+              if (status) followStatus = status.isFollowing;
+            })
+          );
+        }
+
+        // Execute all parallel requests
+        if (promises.length > 0) {
+          await Promise.all(promises);
+        }
+
+        if (!isMounted) return;
+
+        // Set profile data
         setProfile({
           ...userData,
           professional: profData,
         });
         setFollowersCount(userData.followersCount || 0);
-        // Check follow status only for other users
-        if (userId !== currentUser?.id) {
-          const status = await checkFollowStatus(userId);
-          if (status) {
-            setIsFollowing(status.isFollowing);
-          }
+        setIsFollowing(followStatus);
+      } catch (error) {
+        console.error('Failed to load profile:', error);
+        // error is already handled by the hooks, but we can show a fallback
+      } finally {
+        if (isMounted) {
+          setLoading(false);
         }
       }
     };
+
     loadProfile();
+
+    return () => {
+      isMounted = false;
+    };
   }, [userId, fetchUser, currentUser, fetchMyProfessional, checkFollowStatus]);
 
-  const loading = userLoading || profLoading || imageLoading || followLoading;
   const error = userError;
 
   if (!userId) {
     return <div className="p-8 text-center text-red-500">No user ID provided.</div>;
   }
 
-  if (loading) return <div className="p-8 text-center">Loading profile...</div>;
-  if (error) return <div className="p-8 text-center text-red-500">Error: {error}</div>;
-  if (!profile) return <div className="p-8 text-center">Profile not found.</div>;
+  // Skeleton loading UI – also has top padding to clear the navbar
+  if (loading) {
+    return (
+      <div className="w-full max-w-6xl mx-auto px-2.5 sm:px-4 md:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4 animate-pulse pt-16 sm:pt-20 md:pt-24">
+        {/* Skeleton Header */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs">
+          <div className="h-32 sm:h-48 md:h-60 w-full bg-slate-200 dark:bg-slate-800" />
+          <div className="p-4 sm:p-6 relative">
+            <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3 sm:gap-4 -mt-14 sm:-mt-20 md:-mt-24">
+              <div className="w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full bg-slate-200 dark:bg-slate-800 ring-4 ring-white dark:ring-slate-900 shrink-0" />
+              <div className="space-y-3 w-full">
+                <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded w-48" />
+                <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-32" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Skeleton Tabs */}
+        <div className="flex gap-2 py-2 border-b border-slate-200 dark:border-slate-800">
+          <div className="h-10 w-20 bg-slate-200 dark:bg-slate-800 rounded-xl" />
+          <div className="h-10 w-20 bg-slate-200 dark:bg-slate-800 rounded-xl" />
+          <div className="h-10 w-20 bg-slate-200 dark:bg-slate-800 rounded-xl" />
+        </div>
+
+        {/* Skeleton Content */}
+        <div className="space-y-4">
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800/80">
+            <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded w-32 mb-4" />
+            <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-full mb-2" />
+            <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-3/4" />
+          </div>
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800/80">
+            <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded w-40 mb-4" />
+            <div className="flex flex-wrap gap-2">
+              <div className="h-8 w-24 bg-slate-200 dark:bg-slate-800 rounded-full" />
+              <div className="h-8 w-28 bg-slate-200 dark:bg-slate-800 rounded-full" />
+              <div className="h-8 w-20 bg-slate-200 dark:bg-slate-800 rounded-full" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div className="p-8 text-center text-red-500">Error: {error}</div>;
+  }
+
+  if (!profile) {
+    return <div className="p-8 text-center">Profile not found.</div>;
+  }
 
   const isOwnProfile = currentUser?.id === profile.id;
   const isProfessional = profile.accountType === 'professional';
@@ -80,7 +177,7 @@ export const ProfilePage: React.FC = () => {
   const handleSaveProfile = async (data: Partial<UserProfile>) => {
     const updated = await updateUserAPI(data);
     if (updated) {
-      setProfile(prev => ({ ...prev!, ...updated }));
+      setProfile((prev) => ({ ...prev!, ...updated }));
       if (isOwnProfile) {
         updateUser(updated);
       }
@@ -93,13 +190,13 @@ export const ProfilePage: React.FC = () => {
       const success = await unfollow(profile.id);
       if (success) {
         setIsFollowing(false);
-        setFollowersCount(prev => prev - 1);
+        setFollowersCount((prev) => prev - 1);
       }
     } else {
       const success = await follow(profile.id);
       if (success) {
         setIsFollowing(true);
-        setFollowersCount(prev => prev + 1);
+        setFollowersCount((prev) => prev + 1);
       }
     }
   };
@@ -122,12 +219,10 @@ export const ProfilePage: React.FC = () => {
   };
 
   const handleImageUpload = async (file: File, type: 'profile' | 'banner') => {
-    const result = type === 'profile' 
-      ? await uploadProfileImage(file) 
-      : await uploadBannerImage(file);
+    const result =
+      type === 'profile' ? await uploadProfileImage(file) : await uploadBannerImage(file);
     if (result) {
-      // Update local profile with new image URL
-      setProfile(prev => ({
+      setProfile((prev) => ({
         ...prev!,
         profileImageUrl: result.profileImageUrl || prev!.profileImageUrl,
         bannerImageUrl: result.bannerImageUrl || prev!.bannerImageUrl,
@@ -139,7 +234,8 @@ export const ProfilePage: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-2.5 sm:px-4 md:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4">
+    // Added top padding to clear the fixed navbar (adjust these values to match your navbar height)
+    <div className="w-full max-w-6xl mx-auto px-8 sm:px-4 md:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4 pt-16 sm:pt-20 md:pt-24">
       <ProfileHeader
         profile={profile}
         isOwnProfile={isOwnProfile}

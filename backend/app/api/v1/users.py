@@ -149,30 +149,43 @@ def upload_profile_image(
 
 @router.post("/me/banner-image", response_model=UserResponse)
 def upload_banner_image(
-    file: UploadFile = File(..., description="Image file (JPEG, PNG, WEBP, GIF)"),
+    file: UploadFile = File(
+        ...,
+        description="Image file (JPEG, PNG, WEBP, GIF)"
+    ),
     current_user: User = Depends(get_current_active_user),
     session: Session = Depends(get_session),
 ):
     try:
-        logger.info(f"Banner image upload for user {current_user.id}")
+        logger.info(
+            f"Banner image upload for user {current_user.id}"
+        )
 
-        if not file.content_type or not file.content_type.startswith("image/"):
+        if (
+            not file.content_type
+            or not file.content_type.startswith("image/")
+        ):
             raise HTTPException(
                 status_code=400,
-                detail="Invalid image content type"
+                detail="Invalid image content type",
             )
 
         service = UserService(session)
 
-        return service.upload_banner_image(current_user, file, current_user)
+        return service.upload_banner_image(
+            current_user,
+            file,
+        )
 
     except HTTPException:
         raise
+
     except Exception as e:
         logger.error(traceback.format_exc())
+
         raise HTTPException(
             status_code=500,
-            detail=f"Upload failed: {str(e)}"
+            detail=f"Upload failed: {str(e)}",
         )
 
 

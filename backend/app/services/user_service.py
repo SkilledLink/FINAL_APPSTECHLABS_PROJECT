@@ -162,3 +162,27 @@ class UserService:
         )
 
         return user
+
+    def upload_banner_image(
+        self,
+        user: User,
+        file: UploadFile,
+    ) -> User:
+        storage = StorageService()
+
+        url = storage.upload_image(
+            file,
+            str(user.id),
+            folder="banner",
+        )
+
+        user.banner_image_url = url
+
+        self.repo.update(
+            user,
+            {
+                "banner_image_url": url,
+            },
+        )
+
+        return user
