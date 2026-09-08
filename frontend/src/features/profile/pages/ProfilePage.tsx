@@ -1,8 +1,12 @@
 // src/features/profile/pages/ProfilePage.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { useProfile } from '../hooks/useProfile';
+import { useUser } from '../hooks/useUser';
+import { useProfessional } from '../hooks/useProfessional';
+import { useFollow } from '../hooks/useFollow';
+import { useProfileImage } from '../hooks/useProfileImage';
+import { useAuth } from '../../../providers/AuthProvider';
 import { ProfileHeader } from '../components/ProfileHeader';
 import { ProfileTabs } from '../components/ProfileTabs';
 import { ProfileAbout } from '../components/ProfileAbout';
@@ -11,22 +15,57 @@ import { ProfileExperience } from '../components/ProfileExperience';
 import { ProfileWorkTab } from '../components/ProfileWorkTab';
 import { EditProfileForm } from '../components/EditProfileForm';
 import { ProfessionalOnboardingModal } from './ProfessionalOnboardingModal';
-import { useAuth } from '../../../providers/AuthProvider';
-import type { ProfileTab } from '../types/profile.types';
+import type { ProfileTab, UserProfile } from '../types/profile.types';
 
 export const ProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { currentUser, updateUser } = useAuth();
+  const { user, loading: userLoading, error: userError, fetchUser, updateUser: updateUserAPI } = useUser();
+  const { professional, loading: profLoading, fetchMyProfessional, createProfessional, updateProfessional } = useProfessional();
+  const { follow, unfollow, checkFollowStatus, loading: followLoading } = useFollow();
+  const { uploadProfileImage, uploadBannerImage, loading: imageLoading } = useProfileImage();
 
-  // Use the ID from the URL, or fallback to the current user's ID
-  const userId = id || currentUser?.id;
-
-  const { profile, loading, error, updateProfile } = useProfile(userId || '');
   const [activeTab, setActiveTab] = useState<ProfileTab>('overview');
   const [isEditing, setIsEditing] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followersCount, setFollowersCount] = useState(0);
 
-  // Handle loading / error / missing user
+  const userId = id || currentUser?.id;
+
+  // Load profile data
+  useEffect(() => {
+    if (!userId) return;
+    const loadProfile = async () => {
+      const userData = await fetchUser(userId);
+      if (userData) {
+        let profData = userData.professional;
+        // If viewing own profile and it's professional, fetch full professional details
+        if (userId === currentUser?.id && userData.accountType === 'professional') {
+          const myProf = await fetchMyProfessional();
+          if (myProf) profData = myProf;
+        }
+        setProfile({
+          ...userData,
+          professional: profData,
+        });
+        setFollowersCount(userData.followersCount || 0);
+        // Check follow status only for other users
+        if (userId !== currentUser?.id) {
+          const status = await checkFollowStatus(userId);
+          if (status) {
+            setIsFollowing(status.isFollowing);
+          }
+        }
+      }
+    };
+    loadProfile();
+  }, [userId, fetchUser, currentUser, fetchMyProfessional, checkFollowStatus]);
+
+  const loading = userLoading || profLoading || imageLoading || followLoading;
+  const error = userError;
+
   if (!userId) {
     return <div className="p-8 text-center text-red-500">No user ID provided.</div>;
   }
@@ -38,34 +77,80 @@ export const ProfilePage: React.FC = () => {
   const isOwnProfile = currentUser?.id === profile.id;
   const isProfessional = profile.accountType === 'professional';
 
-  const handleSaveProfile = async (data: Partial<typeof profile>) => {
-    const updated = await updateProfile(data);
-    if (updated && isOwnProfile) {
-      updateUser(updated);
+  const handleSaveProfile = async (data: Partial<UserProfile>) => {
+    const updated = await updateUserAPI(data);
+    if (updated) {
+      setProfile(prev => ({ ...prev!, ...updated }));
+      if (isOwnProfile) {
+        updateUser(updated);
+      }
     }
     setIsEditing(false);
   };
 
-  const handleUpgradeSuccess = () => {
+  const handleFollowToggle = async () => {
+    if (isFollowing) {
+      const success = await unfollow(profile.id);
+      if (success) {
+        setIsFollowing(false);
+        setFollowersCount(prev => prev - 1);
+      }
+    } else {
+      const success = await follow(profile.id);
+      if (success) {
+        setIsFollowing(true);
+        setFollowersCount(prev => prev + 1);
+      }
+    }
+  };
+
+  const handleUpgradeSuccess = async () => {
     setShowUpgradeModal(false);
-    // Re‑fetch the profile after upgrade (the hook will update automatically if we force a refetch)
-    // Since we're using the same profileId, we can just trigger a reload by changing a key or simply
-    // call updateProfile with empty data to trigger a re‑fetch? Better: we can update the local profile state.
-    // The upgrade service already updates the mock and returns the updated user.
-    // We can call updateProfile again or just manually set the profile.
-    // For simplicity, we'll reload the page (as before) but we can also update via hook.
-    window.location.reload();
+    // Re-fetch the profile to get updated data
+    const userData = await fetchUser(profile.id);
+    if (userData) {
+      const profData = await fetchMyProfessional();
+      const updatedProfile = {
+        ...userData,
+        professional: profData || userData.professional,
+      };
+      setProfile(updatedProfile);
+      if (isOwnProfile) {
+        updateUser(updatedProfile);
+      }
+    }
+  };
+
+  const handleImageUpload = async (file: File, type: 'profile' | 'banner') => {
+    const result = type === 'profile' 
+      ? await uploadProfileImage(file) 
+      : await uploadBannerImage(file);
+    if (result) {
+      // Update local profile with new image URL
+      setProfile(prev => ({
+        ...prev!,
+        profileImageUrl: result.profileImageUrl || prev!.profileImageUrl,
+        bannerImageUrl: result.bannerImageUrl || prev!.bannerImageUrl,
+      }));
+      if (isOwnProfile) {
+        updateUser({ ...profile, ...result });
+      }
+    }
   };
 
   return (
-    <div className="w-full px-2.5 sm:px-4 md:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4">
+    <div className="w-full max-w-6xl mx-auto px-2.5 sm:px-4 md:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4">
       <ProfileHeader
         profile={profile}
         isOwnProfile={isOwnProfile}
-        onFollow={() => alert(`Follow ${profile.firstName}`)}
+        isFollowing={isFollowing}
+        followersCount={followersCount}
+        onFollow={handleFollowToggle}
         onMessage={() => alert(`Message ${profile.firstName}`)}
         onRequestService={() => alert('Request service')}
         onUpgrade={() => setShowUpgradeModal(true)}
+        onEditProfile={() => setIsEditing(true)}
+        onImageUpload={handleImageUpload}
       />
 
       <ProfileTabs

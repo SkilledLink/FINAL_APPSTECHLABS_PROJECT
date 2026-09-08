@@ -2,10 +2,8 @@
 
 import React, { useState } from 'react';
 import { X, Save, Briefcase, Loader2 } from 'lucide-react';
-
 import type { Professional } from '../types/profile.types';
-import { profileService } from '../services/profileService';
-import { useAuth } from '../../../providers/AuthProvider';
+import { useProfessional } from '../hooks/useProfessional';
 
 interface ProfessionalOnboardingModalProps {
   userId: string;
@@ -28,7 +26,7 @@ interface FormData {
 export const ProfessionalOnboardingModal: React.FC<
   ProfessionalOnboardingModalProps
 > = ({ userId, onClose, onSuccess }) => {
-  const { updateUser } = useAuth();
+  const { createProfessional } = useProfessional();
 
   const [formData, setFormData] = useState<FormData>({
     profession: '',
@@ -74,31 +72,24 @@ export const ProfessionalOnboardingModal: React.FC<
     try {
       const professionalData: Partial<Professional> = {
         profession: formData.profession.trim(),
-
         bio: formData.bio.trim() || undefined,
-
         skills: formData.skills
           .split(',')
           .map((skill) => skill.trim())
           .filter(Boolean),
-
         yearsOfExperience:
           formData.yearsOfExperience > 0
             ? formData.yearsOfExperience
             : undefined,
-
         services: formData.services
           .split(',')
           .map((service) => service.trim())
           .filter(Boolean),
-
         hourlyRate:
           formData.hourlyRate > 0 ? formData.hourlyRate : undefined,
-
         country: formData.country.trim() || undefined,
         region: formData.region.trim() || undefined,
         city: formData.city.trim() || undefined,
-
         available: true,
         isVerified: false,
         rating: 0,
@@ -106,21 +97,20 @@ export const ProfessionalOnboardingModal: React.FC<
         completedJobs: 0,
       };
 
-      const updatedUser =
-        await profileService.upgradeToProfessional(
-          userId,
-          professionalData
-        );
+      const created = await createProfessional(professionalData);
 
-      updateUser(updatedUser);
-
-      onSuccess();
+      if (created) {
+        onSuccess();
+      } else {
+        setError('Failed to create professional profile.');
+      }
     } catch (submitError) {
       console.error('Failed to upgrade user to professional:', submitError);
-
-      setError(
-        'Failed to upgrade your account. Please check your information and try again.'
-      );
+      const errorMessage =
+        submitError instanceof Error
+          ? submitError.message
+          : 'Failed to upgrade your account. Please check your information and try again.';
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -578,5 +568,3 @@ export const ProfessionalOnboardingModal: React.FC<
 };
 
 export default ProfessionalOnboardingModal;
-
-// One thing to check after replacing it: **if you still get `useAuth must be used within an AuthProvider`, the component is being mounted outside your provider.** In that case, changing this component will not fix it. The fix is in `main.tsx` or `App.tsx`, where `<AuthProvider>` needs to wrap the routes.

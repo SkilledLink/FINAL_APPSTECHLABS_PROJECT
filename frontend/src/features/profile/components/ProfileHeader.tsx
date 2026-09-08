@@ -7,36 +7,66 @@ import type { UserProfile } from '../types/profile.types';
 interface ProfileHeaderProps {
   profile: UserProfile;
   isOwnProfile: boolean;
+  isFollowing?: boolean;
+  followersCount?: number;
   onFollow?: () => void;
   onMessage?: () => void;
   onRequestService?: () => void;
   onUpgrade?: () => void;
+  onEditProfile?: () => void;
+  onImageUpload?: (file: File, type: 'profile' | 'banner') => void;
 }
 
 export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   profile,
   isOwnProfile,
+  isFollowing = false,
+  followersCount: propFollowersCount,
   onFollow,
   onMessage,
   onRequestService,
   onUpgrade,
+  onEditProfile,
+  onImageUpload,
 }) => {
   const fullName = `${profile.firstName} ${profile.lastName}`;
   const tradeTitle = profile.professional?.profession || '';
+  const displayFollowers = propFollowersCount ?? profile.followersCount ?? 0;
 
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs">
+      {/* Banner Image */}
       <div className="h-32 sm:h-48 md:h-60 w-full relative bg-slate-800">
         {profile.bannerImageUrl && (
           <img src={profile.bannerImageUrl} alt="Cover" className="w-full h-full object-cover" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
+        {/* Optional: Edit banner button for own profile */}
+        {isOwnProfile && onImageUpload && (
+          <button
+            onClick={() => {
+              const input = document.createElement('input');
+              input.type = 'file';
+              input.accept = 'image/*';
+              input.onchange = (e) => {
+                const file = (e.target as HTMLInputElement).files?.[0];
+                if (file) onImageUpload(file, 'banner');
+              };
+              input.click();
+            }}
+            className="absolute bottom-3 right-3 p-2 bg-white/80 dark:bg-slate-900/80 rounded-lg shadow-md text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 transition"
+          >
+            Edit Banner
+          </button>
+        )}
       </div>
 
+      {/* Profile Details */}
       <div className="p-4 sm:p-6 relative">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 -mt-14 sm:-mt-20 md:-mt-24 mb-3 sm:mb-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3 sm:gap-4">
-            <div className="relative shrink-0">
+            {/* Avatar */}
+            <div className="relative shrink-0 group">
               <img
                 src={profile.profileImageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}`}
                 alt={fullName}
@@ -47,8 +77,26 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                   <BadgeCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </span>
               )}
+              {isOwnProfile && onImageUpload && (
+                <button
+                  onClick={() => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*';
+                    input.onchange = (e) => {
+                      const file = (e.target as HTMLInputElement).files?.[0];
+                      if (file) onImageUpload(file, 'profile');
+                    };
+                    input.click();
+                  }}
+                  className="absolute bottom-0 left-0 right-0 mx-auto w-full text-center bg-black/50 text-white text-[10px] font-bold py-1 rounded-b-full opacity-0 group-hover:opacity-100 transition"
+                >
+                  Change
+                </button>
+              )}
             </div>
 
+            {/* Name & Stats */}
             <div className="pb-0.5 space-y-1">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <h1 className="text-lg sm:text-2xl font-black text-slate-900 dark:text-slate-100 leading-tight">
@@ -61,7 +109,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               </div>
 
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                <span>{profile.followersCount} Followers</span>
+                <span>{displayFollowers} Followers</span>
                 {profile.professional && (
                   <>
                     <span className="hidden xs:inline">•</span>
@@ -78,6 +126,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             </div>
           </div>
 
+          {/* Action Buttons */}
           <div className="grid grid-cols-2 xs:grid-cols-3 sm:flex items-center gap-2 pt-2 md:pt-0 w-full md:w-auto">
             {isOwnProfile && profile.accountType === 'standard' && (
               <button
@@ -89,14 +138,27 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               </button>
             )}
 
+            {isOwnProfile && (
+              <button
+                onClick={onEditProfile}
+                className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 text-xs font-bold rounded-xl sm:rounded-2xl transition active:scale-[0.98]"
+              >
+                Edit Profile
+              </button>
+            )}
+
             {!isOwnProfile && (
               <>
                 <button
                   onClick={onFollow}
-                  className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl sm:rounded-2xl shadow-xs transition active:scale-[0.98]"
+                  className={`flex items-center justify-center gap-1.5 px-3.5 py-2.5 text-xs font-bold rounded-xl transition active:scale-[0.98] ${
+                    isFollowing
+                      ? 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}
                 >
                   <UserPlus className="w-3.5 h-3.5 shrink-0" />
-                  <span>Follow</span>
+                  <span>{isFollowing ? 'Following' : 'Follow'}</span>
                 </button>
 
                 <button
@@ -119,11 +181,18 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               </button>
             )}
 
+            {/* Utility Buttons (Share, More) */}
             <div className="hidden sm:flex items-center gap-2">
-              <button className="p-2.5 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-[0.98]">
+              <button
+                className="p-2.5 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-[0.98]"
+                aria-label="Share"
+              >
                 <Share2 className="w-4 h-4" />
               </button>
-              <button className="p-2.5 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-[0.98]">
+              <button
+                className="p-2.5 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-[0.98]"
+                aria-label="More options"
+              >
                 <MoreHorizontal className="w-4 h-4" />
               </button>
             </div>

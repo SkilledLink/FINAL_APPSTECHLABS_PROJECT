@@ -3,7 +3,7 @@ import { Search, Bell, Sun, Moon, ChevronDown, User, Settings, LogOut, ImagePlus
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../features/auth/hooks/useAuth';
-import { useUser } from '../../../features/users/hooks/useUser';
+import { useUser } from '../../../features/profile/hooks/useUser';
 
 interface HeaderProps {
   isDark: boolean;
