@@ -16,8 +16,9 @@ class ProfessionalService:
         self.session = session
         self.repo = ProfessionalRepository(session)
 
+    # ─── Existing methods ──────────────────────────────
+
     def create_professional(self, user: User, data: dict) -> Professional:
-        # Check if user already has a professional profile
         existing = self.repo.get_by_user_id(user.id)
         if existing:
             raise HTTPException(
@@ -25,7 +26,6 @@ class ProfessionalService:
                 detail="User already has a professional profile"
             )
 
-        # Build professional object
         professional = Professional(
             user_id=user.id,
             profession=data["profession"],
@@ -38,23 +38,17 @@ class ProfessionalService:
             region=data.get("region"),
             city=data.get("city"),
             available=data.get("available", True),
-            # System fields default
             is_verified=False,
             rating=0.0,
             total_reviews=0,
             completed_jobs=0,
         )
 
-        # Update user account type
         user.account_type = AccountType.PROFESSIONAL
         self.session.add(user)
-
-        # Save professional
         self.repo.create(professional)
-
-        # Commit the transaction (both operations)
         self.session.commit()
-        self.session.refresh(professional)  # to load any defaults from DB
+        self.session.refresh(professional)
         return professional
 
     def get_by_user(self, user: User) -> Optional[Professional]:
@@ -71,22 +65,55 @@ class ProfessionalService:
                 detail="Professional profile not found"
             )
 
-        # Allowed fields for update (exclude system fields and user_id)
         allowed_fields = {
             "profession", "bio", "skills", "years_of_experience",
             "services", "hourly_rate", "country", "region", "city", "available"
         }
         update_data = {k: v for k, v in data.items() if k in allowed_fields and v is not None}
-
         if not update_data:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="No valid fields to update"
             )
 
-        # Apply updates
         for key, value in update_data.items():
             setattr(professional, key, value)
+        professional.updated_at = datetime.now(timezone.utc)
+
+        self.session.add(professional)
+        self.session.commit()
+        self.session.refresh(professional)
+        return professional
+
+    # ─── NEW methods for KYC ──────────────────────────
+
+    def get_by_user_id(self, user_id: str | UUID) -> Optional[Professional]:
+        """Fetch a professional profile by the user's UUID (string or UUID)."""
+        if isinstance(user_id, str):
+            try:
+                user_id = UUID(user_id)
+            except ValueError:
+                return None
+        return self.repo.get_by_user_id(user_id)
+
+    def update_verification_status(
+        self,
+        user_id: str | UUID,
+        status: str,          # "approved", "declined", "review", ...
+        decision: dict,
+        verified_at: Optional[datetime] = None,
+    ) -> Optional[Professional]:
+        """Update KYC status after receiving a webhook from Didit."""
+        professional = self.get_by_user_id(user_id)
+        if not professional:
+            # Log this – unknown user received a webhook
+            return None
+
+        professional.verification_status = status
+        professional.verification_data = decision
+        professional.is_verified = (status == "approved")
+        if verified_at:
+            professional.verified_at = verified_at
         professional.updated_at = datetime.now(timezone.utc)
 
         self.session.add(professional)

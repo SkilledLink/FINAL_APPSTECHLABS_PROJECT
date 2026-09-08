@@ -19,7 +19,7 @@ export default function VerifyEmailPage() {
       const success = await verifyEmail(email, value);
       if (success) {
         setVerified(true);
-        setTimeout(() => navigate("/login"), 2000);
+        setTimeout(() => navigate("/onboarding"), 2000);
       }
     }
   };

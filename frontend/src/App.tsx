@@ -17,14 +17,14 @@ import { AuthProvider } from './providers/AuthProvider';
 import { AuthLayout } from './features/auth/components/AuthLayout';
 import AppLayout from './components/layout/AppLayout/AppLayout';
 
-// Auth
+// Auth pages
 import LoginPage from './features/auth/pages/LoginPage';
 import RegisterPage from './features/auth/pages/RegisterPage';
 import ForgotPasswordPage from './features/auth/pages/ForgotPasswordPage';
 import ResetPasswordPage from './features/auth/pages/ResetPasswordPage';
 import VerifyEmailPage from './features/auth/pages/VerifyEmailPage';
 
-// Home
+// Main pages
 import HomePage from './features/home/pages/HomePage';
 import Feed from './features/posts/components/Feed';
 
@@ -33,11 +33,7 @@ import { useAuth } from './features/auth/hooks/useAuth';
 
 // Dashboard
 import DashboardPage from './features/dashboard/components/pages/DashboardPage';
-
-// Profile
 import { ProfilePage } from './features/profile';
-
-// Messages
 import { MessagesPage } from './features/messages';
 
 

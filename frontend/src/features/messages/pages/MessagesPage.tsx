@@ -227,7 +227,7 @@ export const MessagesPage: React.FC = () => {
   }
 
   return (
-    <div className="h-screen w-full max-w-7xl mx-auto flex overflow-hidden border-x border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-2xl">
+    <div className="h-screen w-full  flex overflow-hidden border-x border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-2xl">
       <div
         className={`${
           activeConversationId ? 'hidden lg:block' : 'w-full'
