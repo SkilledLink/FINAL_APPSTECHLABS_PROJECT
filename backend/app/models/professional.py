@@ -4,6 +4,8 @@ from uuid import UUID, uuid4
 
 from sqlmodel import Field, Relationship, SQLModel, Column
 from sqlalchemy import JSON, DECIMAL
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import JSON, DECIMAL, Column
 
 if TYPE_CHECKING:
     from app.models.user import User
@@ -41,6 +43,13 @@ class Professional(SQLModel, table=True):
     rating: float = Field(default=0.0, sa_column=Column(DECIMAL(3, 2)))
     total_reviews: int = Field(default=0)
     completed_jobs: int = Field(default=0)
+
+        # ─── AI Embedding for Semantic Search ──────────────
+    embedding: Optional[List[float]] = Field(
+        default=None,
+        sa_column=Column(Vector(1536))  # 1536 dimensions for text-embedding-3-small
+    )
+    embedding_stale: bool = Field(default=False)
 
     # ─── Didit KYC fields ────────────────────────────
     verification_status: str = Field(

@@ -4,6 +4,7 @@ from uuid import UUID, uuid4
 from fastapi import HTTPException, UploadFile
 from sqlmodel import Session
 from app.models.user import User
+from app.services.indexing_service import IndexingService
 from app.models.professional_portfolio import (
     ProfessionalPortfolio, PortfolioWork, ProfessionalService, ProfessionalAvailability
 )
@@ -46,6 +47,13 @@ class ProfessionalPortfolioService:
 
             response = self._build_portfolio_response(portfolio, user)
             self.session.commit()
+
+            # Trigger AI reindexing after portfolio creation
+            try:
+                IndexingService(self.session).regenerate_vector(user.id)
+            except Exception as e:
+                logger.error(f"Failed to reindex after creating portfolio for user {user.id}: {e}")
+
             return response
 
         except Exception as e:
@@ -94,6 +102,14 @@ class ProfessionalPortfolioService:
                     self.repo.add_specialties(portfolio, data.specialty_ids)
 
             self.session.commit()
+
+            # Trigger AI reindexing after portfolio update (if headline/bio changed)
+            # We'll call regardless; the indexing service will compile and update if needed.
+            try:
+                IndexingService(self.session).regenerate_vector(user.id)
+            except Exception as e:
+                logger.error(f"Failed to reindex after updating portfolio for user {user.id}: {e}")
+
             return self._build_portfolio_response(portfolio, user)
         except Exception as e:
             self.session.rollback()
@@ -107,6 +123,13 @@ class ProfessionalPortfolioService:
         try:
             self.session.delete(portfolio)
             self.session.commit()
+
+            # Trigger AI reindexing to clear embedding (or set to none)
+            try:
+                IndexingService(self.session).regenerate_vector(user.id)
+            except Exception as e:
+                logger.error(f"Failed to reindex after deleting portfolio for user {user.id}: {e}")
+
         except Exception as e:
             self.session.rollback()
             logger.error(f"Portfolio deletion failed: {e}")
@@ -118,6 +141,13 @@ class ProfessionalPortfolioService:
         try:
             work = self.repo.create_work(portfolio, data.model_dump())
             self.session.commit()
+
+            # Trigger AI reindexing after work creation
+            try:
+                IndexingService(self.session).regenerate_vector(user.id)
+            except Exception as e:
+                logger.error(f"Failed to reindex after creating work for user {user.id}: {e}")
+
             return WorkResponse.model_validate(work)
         except Exception as e:
             self.session.rollback()
@@ -140,6 +170,13 @@ class ProfessionalPortfolioService:
             if update_data:
                 self.repo.update_work(work, update_data)
             self.session.commit()
+
+            # Trigger AI reindexing after work update
+            try:
+                IndexingService(self.session).regenerate_vector(user.id)
+            except Exception as e:
+                logger.error(f"Failed to reindex after updating work for user {user.id}: {e}")
+
             return WorkResponse.model_validate(work)
         except Exception as e:
             self.session.rollback()
@@ -151,6 +188,13 @@ class ProfessionalPortfolioService:
         try:
             self.repo.delete_work(work)
             self.session.commit()
+
+            # Trigger AI reindexing after work deletion
+            try:
+                IndexingService(self.session).regenerate_vector(user.id)
+            except Exception as e:
+                logger.error(f"Failed to reindex after deleting work for user {user.id}: {e}")
+
         except Exception as e:
             self.session.rollback()
             logger.error(f"Work deletion failed: {e}")
@@ -175,6 +219,10 @@ class ProfessionalPortfolioService:
                 work.after_image_url = url
             self.repo.update_work(work, {})
             self.session.commit()
+
+            # Images don't affect search text, so we skip reindexing here.
+            # If you want to reindex when images change, you could add it, but it's unnecessary.
+
             return WorkResponse.model_validate(work)
         except Exception as e:
             self.session.rollback()
@@ -187,6 +235,13 @@ class ProfessionalPortfolioService:
         try:
             service = self.repo.create_service(portfolio, data.model_dump())
             self.session.commit()
+
+            # Trigger AI reindexing after service creation
+            try:
+                IndexingService(self.session).regenerate_vector(user.id)
+            except Exception as e:
+                logger.error(f"Failed to reindex after creating service for user {user.id}: {e}")
+
             return ServiceResponse.model_validate(service)
         except Exception as e:
             self.session.rollback()
@@ -200,6 +255,13 @@ class ProfessionalPortfolioService:
             if update_data:
                 self.repo.update_service(service, update_data)
             self.session.commit()
+
+            # Trigger AI reindexing after service update
+            try:
+                IndexingService(self.session).regenerate_vector(user.id)
+            except Exception as e:
+                logger.error(f"Failed to reindex after updating service for user {user.id}: {e}")
+
             return ServiceResponse.model_validate(service)
         except Exception as e:
             self.session.rollback()
@@ -211,6 +273,13 @@ class ProfessionalPortfolioService:
         try:
             self.repo.delete_service(service)
             self.session.commit()
+
+            # Trigger AI reindexing after service deletion
+            try:
+                IndexingService(self.session).regenerate_vector(user.id)
+            except Exception as e:
+                logger.error(f"Failed to reindex after deleting service for user {user.id}: {e}")
+
         except Exception as e:
             self.session.rollback()
             logger.error(f"Service deletion failed: {e}")
