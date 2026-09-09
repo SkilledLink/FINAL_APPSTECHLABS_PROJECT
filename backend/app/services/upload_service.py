@@ -1,39 +1,51 @@
 import os
-import shutil
+import cloudinary
+import cloudinary.uploader
 from fastapi import UploadFile
-from datetime import datetime
-import uuid
+from dotenv import load_dotenv
 
-UPLOAD_DIR = "uploads"
-JOB_UPLOAD_DIR = "uploads/jobs"
+load_dotenv()
 
-def ensure_upload_dirs():
-    """Create upload directories if they don't exist"""
-    os.makedirs(JOB_UPLOAD_DIR, exist_ok=True)
+# ============================================================
+# CLOUDINARY CONFIGURATION
+# ============================================================
+
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
+)
+
+# ============================================================
+# JOB IMAGE FUNCTIONS
+# ============================================================
 
 async def save_job_image(file: UploadFile) -> str:
-    """Save job image and return filename"""
-    ensure_upload_dirs()
-    
-    # Generate unique filename
-    file_extension = os.path.splitext(file.filename)[1]
-    unique_filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}{file_extension}"
-    file_path = os.path.join(JOB_UPLOAD_DIR, unique_filename)
-    
-    # Save file
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-    
-    return unique_filename
+    """Upload job image to Cloudinary and return URL"""
+    result = cloudinary.uploader.upload(
+        file.file,
+        folder="jobs",
+        resource_type="image"
+    )
+    return result["secure_url"]  # Returns the Cloudinary URL
 
-def delete_job_image(filename: str):
-    """Delete job image"""
-    file_path = os.path.join(JOB_UPLOAD_DIR, filename)
-    if os.path.exists(file_path):
-        os.remove(file_path)
-        return True
-    return False
+def delete_job_image(public_id: str):
+    """Delete job image from Cloudinary"""
+    cloudinary.uploader.destroy(public_id)
 
-def get_job_image_url(filename: str):
-    """Get URL to access the file"""
-    return f"/uploads/jobs/{filename}"
+# ============================================================
+# PROJECT IMAGE FUNCTIONS
+# ============================================================
+
+async def save_project_image(file: UploadFile) -> str:
+    """Upload project image to Cloudinary and return URL"""
+    result = cloudinary.uploader.upload(
+        file.file,
+        folder="projects",
+        resource_type="image"
+    )
+    return result["secure_url"]  # Returns the Cloudinary URL
+
+def delete_project_image(public_id: str):
+    """Delete project image from Cloudinary"""
+    cloudinary.uploader.destroy(public_id)

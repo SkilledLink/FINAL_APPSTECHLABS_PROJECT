@@ -3,6 +3,10 @@ from typing import List, Optional
 from app.models.project import Project, ProjectStatus
 from app.schemas.project import ProjectCreate, ProjectUpdate
 
+# ============================================================
+# CREATE PROJECT
+# ============================================================
+
 def create_project(db: Session, project_data: ProjectCreate) -> Project:
     db_project = Project(
         title=project_data.title,
@@ -28,12 +32,24 @@ def create_project(db: Session, project_data: ProjectCreate) -> Project:
     db.refresh(db_project)
     return db_project
 
+# ============================================================
+# GET ALL PROJECTS
+# ============================================================
+
 def get_projects(db: Session, skip: int = 0, limit: int = 20) -> List[Project]:
     statement = select(Project).where(Project.status == ProjectStatus.PUBLISHED).order_by(Project.created_at.desc()).offset(skip).limit(limit)
     return db.exec(statement).all()
 
+# ============================================================
+# GET SINGLE PROJECT
+# ============================================================
+
 def get_project(db: Session, project_id: int) -> Optional[Project]:
     return db.get(Project, project_id)
+
+# ============================================================
+# UPDATE PROJECT
+# ============================================================
 
 def update_project(db: Session, project_id: int, project_data: ProjectUpdate) -> Optional[Project]:
     db_project = get_project(db, project_id)
@@ -47,6 +63,10 @@ def update_project(db: Session, project_id: int, project_data: ProjectUpdate) ->
     db.refresh(db_project)
     return db_project
 
+# ============================================================
+# DELETE PROJECT
+# ============================================================
+
 def delete_project(db: Session, project_id: int) -> bool:
     db_project = get_project(db, project_id)
     if not db_project:
@@ -55,6 +75,21 @@ def delete_project(db: Session, project_id: int) -> bool:
     db.commit()
     return True
 
+# ============================================================
+# GET PROJECTS BY PROFESSIONAL
+# ============================================================
+
 def get_projects_by_professional(db: Session, professional_id: int) -> List[Project]:
     statement = select(Project).where(Project.professional_id == professional_id).order_by(Project.created_at.desc())
+    return db.exec(statement).all()
+
+# ============================================================
+# ✅ NEW: GET PROJECTS BY TRADE (MISSING FUNCTION)
+# ============================================================
+
+def get_projects_by_trade(db: Session, trade: str, limit: int = 10) -> List[Project]:
+    statement = select(Project).where(
+        Project.trade == trade,
+        Project.status == ProjectStatus.PUBLISHED
+    ).order_by(Project.created_at.desc()).limit(limit)
     return db.exec(statement).all()

@@ -8,8 +8,9 @@ from sqlalchemy.exc import OperationalError
 from app.api.v1.auth import router as auth_router
 from app.api.v1.conversations import router as conversations_router
 from app.api.v1.messages import router as messages_router
-from app.api.v1.uploads import router as uploads_router
+from app.api.v1.upload import router as upload_router
 from app.api.v1.jobs import router as jobs_router
+from app.api.v1.project import router as project_router
 
 from app.database.session import engine
 
@@ -21,6 +22,9 @@ from app.models.conversation import Conversation
 from app.models.conversation_participant import ConversationParticipant
 from app.models.message import Message
 from app.models.jobs import JobPost
+from app.models.project import Project
+from app.models.job_interaction import JobLike, JobComment, JobShare, JobApplication
+from app.api.v1.upload import router as upload_router
 
 def lifespan(app: FastAPI):
     print("⏳ Attempting to connect to the database...")
@@ -28,8 +32,11 @@ def lifespan(app: FastAPI):
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
         print("✅ Database connection successful!")
+        
+        # ✅ CREATE ALL TABLES (including new ones)
         SQLModel.metadata.create_all(engine)
         print("✅ Database tables are ready.")
+        
     except OperationalError as e:
         print("❌ Database connection FAILED.")
         print(f"Error details: {e}")
@@ -38,12 +45,23 @@ def lifespan(app: FastAPI):
     print("⏳ Shutting down...")
     engine.dispose()
 
-app = FastAPI(title="Appstect API", lifespan=lifespan)
+app = FastAPI(
+    title="Appstect API",
+    lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json"
+)
 
-# CORS Middleware
+# ✅ CORS Middleware - Allow frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://localhost:8000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -53,8 +71,10 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(conversations_router)
 app.include_router(messages_router)
-app.include_router(uploads_router)
+app.include_router(upload_router)
 app.include_router(jobs_router)
+app.include_router(project_router)
+app.include_router(upload_router)
 
 @app.get("/")
 def root():
