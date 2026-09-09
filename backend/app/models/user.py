@@ -1,12 +1,15 @@
-# app/models/user.py
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.enums.user import AccountStatus, AccountType
 from app.models.professional import Professional
+
+if TYPE_CHECKING:
+    from app.models.job import Job
+    from app.models.professional_portfolio import ProfessionalPortfolio
 
 
 class RefreshToken:
@@ -159,4 +162,12 @@ class User(SQLModel, table=True):
 
     verification_tokens: list["VerificationToken"] = Relationship(
         back_populates="user",
+    )
+
+    jobs: list["Job"] = Relationship(back_populates="user")
+
+    # ✅ Professional Portfolio (one-to-one)
+    portfolio: Optional["ProfessionalPortfolio"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"uselist": False},
     )

@@ -30,6 +30,9 @@ import { ProfilePage } from './features/profile';
 import { MessagesPage } from './features/messages';
 import { DiscoverPage } from './features/discover';
 
+// ─── Professional Portfolio ────────────────────────────────
+import PortfolioDashboard from './features/portfolio/pages/PortfolioDashboard';
+
 // ============================================================
 // Route guards
 // ============================================================
@@ -83,36 +86,32 @@ function App() {
           <Route element={<PublicOnlyRoute />}>
             <Route element={<AuthLayout />}>
               <Route path="/login" element={<LoginPage />} />
-
               <Route path="/register" element={<RegisterPage />} />
-
               <Route path="/verify-email" element={<VerifyEmailPage />} />
-
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-
               <Route path="/reset-password" element={<ResetPasswordPage />} />
             </Route>
           </Route>
 
           {/* ==================================================
-              MAIN APPLICATION
+              MAIN APPLICATION (protected)
               ================================================== */}
 
           <Route path="/" element={<AppLayout />}>
             <Route index element={<HomePage />} />
-
             <Route path="dashboard" element={<DashboardPage />} />
-
             <Route path="feed" element={<Feed />} />
 
             {/* Profile */}
             <Route path="profile" element={<ProfileRoute />} />
-
             <Route path="profile/:id" element={<ProfileRoute />} />
 
             {/* Messages */}
             <Route path="messages" element={<MessagesPage />} />
-            <Route path='/discover' element={<DiscoverPage />} />
+            <Route path="discover" element={<DiscoverPage />} />
+
+            {/* ─── Professional Portfolio ─── */}
+            <Route path="portfolio" element={<PortfolioDashboard />} />
           </Route>
 
           {/* ==================================================

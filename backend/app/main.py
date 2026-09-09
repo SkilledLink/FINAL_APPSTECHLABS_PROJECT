@@ -12,9 +12,11 @@ from app.api.v1.messages import router as messages_router
 from app.api.v1.uploads import router as uploads_router
 from app.api.v1.users import router as users_router
 from app.api.v1.professionals import router as professionals_router
+from app.api.v1.jobs import router as jobs_router
 
 # ─── NEW routers ──────────────────────────────────────────
 from app.api.v1.professional_kyc import router as professional_kyc_router
+from app.api.v1.professional_portfolio import router as professional_portfolio_router
 from app.webhooks import router as webhooks_router
 
 from app.database.session import engine
@@ -26,7 +28,17 @@ from app.models.verification_token import VerificationToken
 from app.models.conversation import Conversation
 from app.models.conversation_participant import ConversationParticipant
 from app.models.message import Message
-from app.models.professional import Professional   # updated with KYC fields
+from app.models.professional import Professional
+from app.models.job import Job, JobImage, JobLike, JobComment
+from app.models.professional_portfolio import (
+    ProfessionalCategory,
+    ProfessionalSpecialty,
+    PortfolioSpecialty,
+    ProfessionalPortfolio,
+    PortfolioWork,
+    ProfessionalService,
+    ProfessionalAvailability,
+)
 
 # ─── Lifespan (database init) ────────────────────────────
 def lifespan(app: FastAPI):
@@ -58,16 +70,21 @@ app.add_middleware(
 )
 
 # ─── Register routers ─────────────────────────────────────
-app.include_router(auth_router)                 # /api/v1/auth
-app.include_router(conversations_router)        # /api/v1/conversations
-app.include_router(messages_router)             # /api/v1/messages
-app.include_router(uploads_router)              # /api/v1/uploads
-app.include_router(users_router)                # /api/v1/users
-app.include_router(professionals_router)        # /api/v1/professionals (CRUD)
-app.include_router(professional_kyc_router)     # /api/v1/professionals/kyc (NEW)
+app.include_router(auth_router)                          # /auth
+app.include_router(conversations_router)                # /conversations
+app.include_router(messages_router)                     # /messages
+app.include_router(uploads_router)                      # /uploads
+app.include_router(users_router)                        # /users
+
+# ─── IMPORTANT: Put professional_portfolio_router BEFORE professionals_router ──
+app.include_router(professional_portfolio_router)       # /professionals/portfolio (static)
+app.include_router(professionals_router)                # /professionals (dynamic routes like /{professional_id})
+app.include_router(professional_kyc_router)             # /professionals/kyc
+
+app.include_router(jobs_router)                         # /jobs
 
 # ─── Webhooks (global, not versioned) ──────────────────
-app.include_router(webhooks_router)             # /webhooks/didit
+app.include_router(webhooks_router)                     # /webhooks/didit
 
 # ─── Health check ────────────────────────────────────────
 @app.get("/health/database")

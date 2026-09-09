@@ -139,6 +139,10 @@ class UserService:
             hard=hard,
         )
 
+    # ============================================================
+    # IMAGE UPLOAD – updated to match new StorageService signature
+    # ============================================================
+
     def upload_profile_image(
         self,
         user: User,
@@ -146,10 +150,11 @@ class UserService:
     ) -> User:
         storage = StorageService()
 
+        # Use folder: "users/<user_id>/profile" and fixed public_id "avatar"
         url = storage.upload_image(
             file,
-            str(user.id),
-            folder="profile",
+            folder=f"users/{user.id}/profile",
+            public_id="avatar",
         )
 
         user.profile_image_url = url
@@ -170,10 +175,11 @@ class UserService:
     ) -> User:
         storage = StorageService()
 
+        # Use folder: "users/<user_id>/banner" and fixed public_id "banner"
         url = storage.upload_image(
             file,
-            str(user.id),
-            folder="banner",
+            folder=f"users/{user.id}/banner",
+            public_id="banner",
         )
 
         user.banner_image_url = url
