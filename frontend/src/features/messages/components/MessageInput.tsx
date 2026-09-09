@@ -1,7 +1,6 @@
-// src/features/messages/components/MessageInput.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Paperclip, Send, Mic, Square, Trash2, X, File, Image } from 'lucide-react';
+import { Paperclip, Send, Mic, Square, Trash2, X, File } from 'lucide-react';
 
 interface MessageInputProps {
   onSendMessage: (text: string) => void;
@@ -39,7 +38,6 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedFile) {
-      // Determine if image or file
       if (selectedFile.type.startsWith('image/') && onSendImage) {
         onSendImage(selectedFile);
       } else if (onSendFile) {
@@ -76,7 +74,6 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   return (
     <div className="p-4 bg-slate-50/50 dark:bg-slate-950/50 relative">
       <div className="max-w-4xl mx-auto">
-        {/* Upload progress bar */}
         {uploading && (
           <div className="mb-2 h-1 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
             <motion.div
@@ -88,7 +85,6 @@ export const MessageInput: React.FC<MessageInputProps> = ({
           </div>
         )}
 
-        {/* File preview banner */}
         <AnimatePresence>
           {selectedFile && (
             <motion.div
@@ -136,7 +132,6 @@ export const MessageInput: React.FC<MessageInputProps> = ({
               initial={{ opacity: 0, scale: 0.96, y: 8 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 8 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 28 }}
               className="flex items-center justify-between gap-4 p-2.5 pl-5 bg-gradient-to-r from-rose-500/10 via-red-500/10 to-amber-500/10 dark:from-rose-950/40 dark:via-red-950/40 dark:to-amber-950/30 border border-red-500/30 rounded-3xl backdrop-blur-xl shadow-lg shadow-red-500/5 ring-1 ring-red-500/20"
             >
               <div className="flex items-center gap-4 flex-1">
@@ -179,7 +174,6 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                   type="button"
                   onClick={() => setIsRecording(false)}
                   className="p-2.5 text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-2xl transition"
-                  title="Discard Recording"
                 >
                   <Trash2 className="w-4 h-4" />
                 </motion.button>
@@ -204,7 +198,6 @@ export const MessageInput: React.FC<MessageInputProps> = ({
               onSubmit={handleSubmit}
               className="flex items-center gap-2 p-1.5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 rounded-3xl shadow-xl shadow-slate-900/5 ring-1 ring-slate-900/5 focus-within:ring-2 focus-within:ring-indigo-500/40 transition-all duration-200"
             >
-              {/* Attachment Button */}
               <div className="flex items-center gap-1">
                 <motion.button
                   whileHover={{ scale: 1.08 }}
@@ -212,7 +205,6 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="p-2.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-2xl transition ml-1"
-                  title="Attach File"
                 >
                   <Paperclip className="w-5 h-5" />
                 </motion.button>
@@ -224,7 +216,6 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                 />
               </div>
 
-              {/* Text Input */}
               <input
                 type="text"
                 placeholder={selectedFile ? 'File selected...' : 'Write a message...'}
@@ -234,7 +225,6 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                 className="flex-1 bg-transparent px-3 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none disabled:opacity-50"
               />
 
-              {/* Action Buttons */}
               <div className="flex items-center gap-1.5 pr-1">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
@@ -242,7 +232,6 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                   type="button"
                   onClick={() => setIsRecording(true)}
                   className="p-2.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 bg-slate-100/80 dark:bg-slate-800/60 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-2xl transition"
-                  title="Record Voicemail"
                 >
                   <Mic className="w-4 h-4" />
                 </motion.button>

@@ -35,6 +35,7 @@ import { DiscoverPage } from './features/discover';
 
 // ─── Professional Portfolio ────────────────────────────────
 import PortfolioDashboard from './features/portfolio/pages/PortfolioDashboard';
+import UsersPage from './features/users/pages/UsersPage';
 
 // ============================================================
 // Route guards
@@ -115,6 +116,7 @@ function App() {
 
             {/* ─── Professional Portfolio ─── */}
             <Route path="portfolio" element={<PortfolioDashboard />} />
+            <Route path="users" element={<UsersPage />} />
           </Route>
 
           {/* ==================================================

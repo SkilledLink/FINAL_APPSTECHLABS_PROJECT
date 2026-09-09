@@ -1,8 +1,7 @@
-// src/types/message.types.ts
 export interface MessageUser {
   id: string;
   name: string;
-  avatar: string;
+  avatar?: string;
   role?: string;
   isOnline: boolean;
   lastSeen?: string;
@@ -16,10 +15,10 @@ export interface AudioDetails {
 
 export interface FileDetails {
   name: string;
-  size: string;        // human-readable
-  type: string;        // MIME type
-  icon: string;        // icon name
-  extension: string;   // file extension
+  size: string;
+  type: string;
+  icon: string;
+  extension: string;
 }
 
 export interface Message {
@@ -39,6 +38,7 @@ export interface Message {
   edited_at?: string;
   deleted_at?: string;
   status?: 'sending' | 'sent' | 'failed';
+  isRead?: boolean;
   audioDetails?: AudioDetails;
   fileDetails?: FileDetails;
 }
@@ -52,7 +52,7 @@ export interface Conversation {
   updated_at: string;
   lastMessage?: Message;
   unreadCount: number;
-  participant?: MessageUser;
+  participant?: MessageUser | null;
 }
 
 export interface MessageCreate {

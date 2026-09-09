@@ -8,8 +8,13 @@ class MessageCreate(BaseModel):
     client_message_id: UUID = Field(..., description="UUID generated on client for idempotency")
     type: MessageType = MessageType.TEXT
     content: Optional[str] = None
+
+    # ─── Attachment fields (now part of creation) ──────────────
     attachment_path: Optional[str] = None
-    duration_seconds: Optional[float] = None
+    attachment_name: Optional[str] = None
+    attachment_size: Optional[int] = None
+    attachment_type: Optional[str] = None    # MIME type, e.g. "image/jpeg"
+    duration_seconds: Optional[float] = None  # for voice notes
 
 class MessageResponse(BaseModel):
     id: UUID
@@ -19,9 +24,10 @@ class MessageResponse(BaseModel):
     type: MessageType
     content: Optional[str]
     attachment_path: Optional[str]
-    attachment_name: Optional[str]
-    attachment_size: Optional[int]
-    duration_seconds: Optional[float]
+    attachment_name: Optional[str]          # ✅ added
+    attachment_size: Optional[int]          # ✅ added
+    attachment_type: Optional[str]          # ✅ added
+    duration_seconds: Optional[float]       # returned as float for convenience
     created_at: datetime
     edited_at: Optional[datetime]
     deleted_at: Optional[datetime]

@@ -1,14 +1,6 @@
-// src/features/messages/components/ChatWindow.tsx
 import React, { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  MessageSquare,
-  Sparkles,
-  ShieldCheck,
-  ArrowDown,
-  Lock,
-  Users,
-} from 'lucide-react';
+import { MessageSquare, Sparkles, ShieldCheck, ArrowDown, Lock, Users } from 'lucide-react';
 import type { Conversation, Message } from '../types/message.types';
 import { ChatHeader } from './ChatHeader';
 import { MessageBubble } from './MessageBubble';
@@ -47,10 +39,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollBottomButton, setShowScrollBottomButton] = useState(false);
 
-  // Debug: log user IDs
-  console.log('🔍 ChatWindow currentUserId:', currentUserId);
-  console.log('🔍 First message sender_id:', messages[0]?.sender_id);
-
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     messagesEndRef.current?.scrollIntoView({ behavior });
   };
@@ -77,7 +65,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         <motion.div
           initial={{ opacity: 0, scale: 0.92, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ type: 'spring', stiffness: 350, damping: 28 }}
           className="relative z-10 flex flex-col items-center max-w-sm"
         >
           <div className="relative mb-6">
@@ -98,12 +85,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           </p>
           <div className="flex flex-wrap items-center justify-center gap-2">
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300 shadow-sm">
-              <Lock className="w-3.5 h-3.5 text-indigo-500" />
-              Encrypted
+              <Lock className="w-3.5 h-3.5 text-indigo-500" /> Encrypted
             </span>
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300 shadow-sm">
-              <Users className="w-3.5 h-3.5 text-emerald-500" />
-              Team Chat
+              <Users className="w-3.5 h-3.5 text-emerald-500" /> Team Chat
             </span>
           </div>
         </motion.div>
@@ -113,13 +98,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   return (
     <div className="flex-1 flex flex-col h-full bg-gradient-to-b from-slate-50/60 via-white to-slate-100/60 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950/90 relative overflow-hidden">
-      <ChatHeader user={conversation.participant} onBack={onBack} />
+      {conversation.participant && (
+        <ChatHeader user={conversation.participant} onBack={onBack} />
+      )}
 
       <div className="flex items-center justify-center gap-2 py-1.5 px-4 bg-slate-100/60 dark:bg-slate-900/50 border-b border-slate-200/40 dark:border-slate-800/40 text-[11px] font-semibold text-slate-500 dark:text-slate-400 backdrop-blur-sm">
         <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
         <span>End-to-end encrypted session with</span>
         <span className="text-slate-700 dark:text-slate-300 font-bold">
-          {conversation.participant.name}
+          {conversation.participant?.name || 'User'}
         </span>
       </div>
 

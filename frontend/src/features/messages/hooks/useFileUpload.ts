@@ -1,6 +1,5 @@
-// src/hooks/useFileUpload.ts
 import { useState } from 'react';
-import { uploadsApi } from '../api/file_uploads';
+import { apiClient } from '../../../api/client';
 
 export function useFileUpload() {
   const [uploading, setUploading] = useState(false);
@@ -19,40 +18,23 @@ export function useFileUpload() {
     setError(null);
 
     try {
-      const { upload_url, path, public_url } = await uploadsApi.getFileUploadUrl({
-        file_name: file.name,
-        content_type: file.type,
-        file_size: file.size,
-      });
+      const formData = new FormData();
+      formData.append('file', file);
 
-      const xhr = new XMLHttpRequest();
-      const uploadPromise = new Promise<void>((resolve, reject) => {
-        xhr.upload.addEventListener('progress', (event) => {
-          if (event.lengthComputable) {
-            const percent = Math.round((event.loaded / event.total) * 100);
+      const res = await apiClient.post('/uploads/file', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
             setProgress(percent);
           }
-        });
-        xhr.addEventListener('load', () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            resolve();
-          } else {
-            reject(new Error(`Upload failed with status ${xhr.status}`));
-          }
-        });
-        xhr.addEventListener('error', () => reject(new Error('Upload failed')));
-        xhr.addEventListener('abort', () => reject(new Error('Upload aborted')));
-        xhr.open('PUT', upload_url);
-        xhr.setRequestHeader('Content-Type', file.type);
-        xhr.send(file);
+        },
       });
-
-      await uploadPromise;
 
       setUploading(false);
       return {
-        path,
-        publicUrl: public_url || '',
+        path: res.data.path,
+        publicUrl: res.data.url,   // ✅ Cloudinary URL
         name: file.name,
         size: file.size,
         type: file.type,

@@ -1,19 +1,8 @@
-// src/features/messages/components/MessageBubble.tsx
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Play,
-  Pause,
-  Check,
-  CheckCheck,
-  Mic,
-  Reply,
-  Smile,
-  Copy,
-  File,
-  FileImage,
-  FileText,
-  Download,
+  Play, Pause, Check, CheckCheck, Mic, Reply, Smile, Copy,
+  File, FileImage, FileText, Download,
 } from 'lucide-react';
 import type { Message } from '../types/message.types';
 
@@ -23,18 +12,6 @@ interface MessageBubbleProps {
   onReply?: (message: Message) => void;
   onReact?: (messageId: string, emoji: string) => void;
 }
-
-const fileIcons: Record<string, React.ReactNode> = {
-  'file-image': <FileImage className="w-5 h-5" />,
-  'file-text': <FileText className="w-5 h-5" />,
-};
-
-const getIcon = (type?: string, icon?: string) => {
-  if (icon && fileIcons[icon]) return fileIcons[icon];
-  if (type?.startsWith('image/')) return <FileImage className="w-5 h-5" />;
-  if (type === 'application/pdf') return <FileText className="w-5 h-5" />;
-  return <File className="w-5 h-5" />;
-};
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
   message,
@@ -64,15 +41,16 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
   const getFileUrl = (path?: string) => {
     if (!path) return '';
+    // If it's already a full URL (starts with http), return it as is
+    if (path.startsWith('http')) return path;
+    // Otherwise, assume it's a Supabase path
     return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/messages/${path}`;
   };
 
-  // Determine status label for sender messages
   const getStatusLabel = () => {
     if (!isSender) return null;
     if (message.status === 'sending') return 'Sending...';
     if (message.status === 'failed') return 'Failed';
-    // If status is 'sent' or undefined, we show 'Sent'
     return 'Sent';
   };
 
@@ -85,7 +63,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       transition={{ type: 'spring', stiffness: 450, damping: 30 }}
       className={`group relative flex flex-col ${isSender ? 'items-end' : 'items-start'} my-2 px-2`}
     >
-      {/* Floating action menu */}
       <div
         className={`absolute z-20 -top-3.5 ${isSender ? 'right-4' : 'left-4'} 
           opacity-0 group-hover:opacity-100 transition-all duration-200 ease-out 
@@ -97,7 +74,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               type="button"
               onClick={() => onReply(message)}
               className="p-1.5 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-full transition"
-              title="Reply"
             >
               <Reply className="w-3.5 h-3.5" />
             </button>
@@ -107,7 +83,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               type="button"
               onClick={handleCopyText}
               className="p-1.5 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-full transition"
-              title="Copy"
             >
               <Copy className="w-3.5 h-3.5" />
             </button>
@@ -117,7 +92,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               type="button"
               onClick={() => onReact(message.id, '❤️')}
               className="p-1.5 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-full transition"
-              title="React"
             >
               <Smile className="w-3.5 h-3.5" />
             </button>
@@ -125,7 +99,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         </div>
       </div>
 
-      {/* Main bubble */}
       <div
         className={`relative max-w-[85%] sm:max-w-[70%] px-5 py-3.5 text-[15px] leading-relaxed transition-all duration-200 ${
           isSender
@@ -150,12 +123,13 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               className="w-full h-auto object-cover rounded-lg hover:scale-[1.02] transition-transform duration-200"
               loading="lazy"
               onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-                const parent = (e.target as HTMLImageElement).parentElement;
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                const parent = target.parentElement;
                 if (parent) {
                   const fallback = document.createElement('div');
                   fallback.textContent = 'Image failed to load';
-                  fallback.className = 'p-4 text-sm text-slate-500';
+                  fallback.className = 'p-4 text-sm text-slate-500 dark:text-slate-400';
                   parent.appendChild(fallback);
                 }
               }}
@@ -163,11 +137,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           </motion.div>
         )}
 
-        {/* FILE (non-image) */}
+        {/* FILE */}
         {message.type === 'file' && message.attachment_path && (
           <div className="flex items-center gap-3 p-2 min-w-[180px]">
             <div className={`p-2 rounded-lg ${isSender ? 'bg-white/20' : 'bg-slate-100 dark:bg-slate-700'}`}>
-              {getIcon(message.attachment_type, message.fileDetails?.icon)}
+              {message.fileDetails?.icon === 'file-image' && <FileImage className="w-5 h-5" />}
+              {message.fileDetails?.icon === 'file-pdf' && <FilePdf className="w-5 h-5" />}
+              {message.fileDetails?.icon === 'file-word' && <FileText className="w-5 h-5" />}
+              {!message.fileDetails?.icon && <File className="w-5 h-5" />}
             </div>
             <div className="flex-1 min-w-0">
               <p className={`text-sm font-semibold truncate ${isSender ? 'text-white' : 'text-slate-800 dark:text-slate-200'}`}>
@@ -181,19 +158,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               href={getFileUrl(message.attachment_path)}
               target="_blank"
               rel="noopener noreferrer"
-              className={`p-2 rounded-full transition ${
-                isSender
-                  ? 'hover:bg-white/20 text-white/80 hover:text-white'
-                  : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
-              }`}
-              title="Download"
+              className={`p-2 rounded-full transition ${isSender ? 'hover:bg-white/20 text-white/80' : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400'}`}
             >
               <Download className="w-4 h-4" />
             </a>
           </div>
         )}
 
-        {/* VOICE NOTE */}
+        {/* VOICE */}
         {message.type === 'audio' && message.audioDetails && (
           <div className="flex items-center gap-4 min-w-[220px] sm:min-w-[260px]">
             <div className="relative">
@@ -278,34 +250,26 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
         {/* TEXT */}
         {message.type === 'text' && (
-          <p className="break-words font-medium leading-relaxed">
-            {message.text || message.content}
-          </p>
+          <p className="break-words font-medium leading-relaxed">{message.text || message.content}</p>
         )}
 
-        {/* Timestamp & delivery status */}
-        <div
-          className={`flex items-center justify-end gap-1.5 mt-1.5 text-[10px] font-medium ${
-            isSender ? 'text-blue-100/80' : 'text-slate-400 dark:text-slate-500'
-          }`}
-        >
-          <span className="font-mono tracking-wide">{message.createdAt}</span>
-          {isSender && (
-            <CheckCheck
-              className={`w-3.5 h-3.5 ${message.isRead ? 'text-blue-300' : 'text-blue-200/60'}`}
-            />
+        {/* Timestamp & status */}
+        <div className={`flex items-center justify-end gap-1.5 mt-1.5 text-[10px] font-medium ${isSender ? 'text-blue-100/80' : 'text-slate-400 dark:text-slate-500'}`}>
+          <span className="font-mono tracking-wide">
+            {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </span>
+          {isSender && message.status === 'sent' && <CheckCheck className="w-3.5 h-3.5 text-blue-300" />}
+          {isSender && message.status === 'sending' && (
+            <div className="w-3.5 h-3.5 border-2 border-blue-300/50 border-t-transparent rounded-full animate-spin" />
           )}
         </div>
 
-        {/* Status label for sender messages */}
         {isSender && statusLabel && (
-          <div className={`mt-1 text-right text-[10px] font-medium ${
-            statusLabel === 'Failed'
-              ? 'text-red-300'
-              : statusLabel === 'Sending...'
-              ? 'text-blue-200/70'
-              : 'text-blue-200/80'
-          }`}>
+          <div
+            className={`mt-1 text-right text-[10px] font-medium ${
+              statusLabel === 'Failed' ? 'text-red-300' : statusLabel === 'Sending...' ? 'text-blue-200/70' : 'text-blue-200/80'
+            }`}
+          >
             {statusLabel}
           </div>
         )}

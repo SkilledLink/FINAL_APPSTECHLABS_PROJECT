@@ -1,4 +1,3 @@
-// src/features/messages/components/ConversationItem.tsx
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Mic } from 'lucide-react';
@@ -15,21 +14,24 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
   isActive,
   onSelect,
 }) => {
-  const { participant, lastMessage, unreadCount } = conversation;
+  const participant = conversation.participant;
+  const displayName = participant?.name || 'Unknown User';
+  const displayAvatar = participant?.avatar || '/default-avatar.png';
+  const isOnline = participant?.isOnline || false;
+  const role = participant?.role || 'User';
 
   const renderMessagePreview = () => {
-    if (!lastMessage) return 'Started a conversation';
-
-    if (lastMessage.type === 'audio') {
+    const lm = conversation.lastMessage;
+    if (!lm) return 'Started a conversation';
+    if (lm.type === 'audio') {
       return (
         <span className="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-medium">
           <Mic className="w-3.5 h-3.5" />
-          <span>Voice note ({lastMessage.audioDetails?.duration || 'Audio'})</span>
+          <span>Voice note ({lm.audioDetails?.duration || 'Audio'})</span>
         </span>
       );
     }
-
-    return lastMessage.text || 'Message attachment';
+    return lm.text || lm.content || 'Message attachment';
   };
 
   return (
@@ -47,7 +49,6 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
         <motion.div
           layoutId="activeConversationIndicator"
           className="absolute left-0 top-3 bottom-3 w-1 bg-gradient-to-b from-blue-600 via-indigo-600 to-purple-600 rounded-r-full"
-          transition={{ type: 'spring', stiffness: 400, damping: 30 }}
         />
       )}
 
@@ -60,16 +61,13 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
           }`}
         >
           <img
-            src={participant.avatar}
-            alt={participant.name}
+            src={displayAvatar}
+            alt={displayName}
             className="w-12 h-12 rounded-full object-cover border-2 border-white dark:border-slate-900 shadow-xs"
           />
         </div>
-        {participant.isOnline && (
-          <span
-            className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full shadow-xs"
-            title="Online"
-          />
+        {isOnline && (
+          <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full shadow-xs" />
         )}
       </div>
 
@@ -82,24 +80,24 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
                 : 'text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400'
             }`}
           >
-            {participant.name}
+            {displayName}
           </h4>
-          {lastMessage && (
+          {conversation.lastMessage && (
             <span
               className={`text-[11px] font-medium shrink-0 ${
-                unreadCount > 0
+                (conversation.unreadCount || 0) > 0
                   ? 'text-indigo-600 dark:text-indigo-400 font-semibold'
                   : 'text-slate-400 dark:text-slate-500'
               }`}
             >
-              {lastMessage.createdAt}
+              {new Date(conversation.lastMessage.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
           )}
         </div>
 
         <div className="flex items-center">
           <span className="inline-block text-[10px] font-semibold px-2 py-0.2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/60 truncate max-w-[140px]">
-            {participant.role}
+            {role}
           </span>
         </div>
 
@@ -107,15 +105,13 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
           <div className="text-xs text-slate-500 dark:text-slate-400 truncate flex-1 font-normal">
             {renderMessagePreview()}
           </div>
-
-          {unreadCount > 0 && (
+          {(conversation.unreadCount || 0) > 0 && (
             <motion.span
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              transition={{ type: 'spring', stiffness: 500, damping: 20 }}
               className="shrink-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[10px] font-extrabold px-1.5 py-0.5 rounded-full min-w-[20px] text-center shadow-xs shadow-indigo-500/30"
             >
-              {unreadCount}
+              {conversation.unreadCount}
             </motion.span>
           )}
         </div>

@@ -1,4 +1,3 @@
-// src/hooks/usePresence.ts
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
@@ -14,13 +13,11 @@ export function usePresence(conversationId: string | null, currentUserId: string
     channel
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState();
-        // state is { user_id: { ... } }
         const userIds = Object.keys(state);
         setOnlineUsers(userIds);
       })
       .subscribe(async status => {
         if (status === 'SUBSCRIBED') {
-          // Track current user
           await channel.track({
             user_id: currentUserId,
             online_at: new Date().toISOString(),

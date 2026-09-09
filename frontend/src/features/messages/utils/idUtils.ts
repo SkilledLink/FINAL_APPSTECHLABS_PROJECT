@@ -1,5 +1,4 @@
-// src/utils/idUtils.ts
-export function normalizeId(id: string | null | undefined): string {
+export const normalizeId = (id: any): string => {
   if (!id) return '';
-  return String(id).trim().replace(/^["']|["']$/g, ''); // remove surrounding quotes
-}
+  return String(id).trim();
+};
