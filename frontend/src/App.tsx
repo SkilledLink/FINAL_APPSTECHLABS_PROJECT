@@ -24,6 +24,9 @@ import Feed from './features/posts/components/Feed';
 // Auth hook
 import { useAuth } from './features/auth/hooks/useAuth';
 
+// ai assistant
+import { AIFloatingWidget } from './features/ai/components/AIFloatingWidget';
+
 // Dashboard
 import DashboardPage from './features/dashboard/components/pages/DashboardPage';
 import { ProfilePage } from './features/profile';
@@ -120,6 +123,7 @@ function App() {
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <AIFloatingWidget />
       </BrowserRouter>
     </AuthProvider>
   );

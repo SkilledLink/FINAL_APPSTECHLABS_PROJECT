@@ -1,0 +1,1 @@
+export { ProfileAssistantPage } from './ProfileAssistantPage';
