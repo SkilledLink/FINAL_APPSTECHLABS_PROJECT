@@ -20,9 +20,18 @@ export function useWorks() {
     }
   }, []);
 
-  const createWork = useCallback(async (data: Parameters<typeof portfolioApi.createWork>[0]) => {
+  const createWork = useCallback(async (data: any, files?: { before?: File; after?: File }) => {
     try {
+      // 1. Create work
       const newWork = await portfolioApi.createWork(data);
+      // 2. Upload images if any
+      if (files?.before || files?.after) {
+        await portfolioApi.uploadWorkImages(newWork.id, files?.before, files?.after);
+        // Refresh to get updated work with image URLs
+        const updated = await portfolioApi.getWork(newWork.id);
+        setWorks(prev => [updated, ...prev]);
+        return updated;
+      }
       setWorks(prev => [newWork, ...prev]);
       return newWork;
     } catch (err: any) {
@@ -30,9 +39,17 @@ export function useWorks() {
     }
   }, []);
 
-  const updateWork = useCallback(async (workId: string, data: Parameters<typeof portfolioApi.updateWork>[1]) => {
+  const updateWork = useCallback(async (workId: string, data: any, files?: { before?: File; after?: File }) => {
     try {
+      // 1. Update work data
       const updated = await portfolioApi.updateWork(workId, data);
+      // 2. Upload images if any
+      if (files?.before || files?.after) {
+        await portfolioApi.uploadWorkImages(workId, files?.before, files?.after);
+        const refreshed = await portfolioApi.getWork(workId);
+        setWorks(prev => prev.map(w => w.id === workId ? refreshed : w));
+        return refreshed;
+      }
       setWorks(prev => prev.map(w => w.id === workId ? updated : w));
       return updated;
     } catch (err: any) {
