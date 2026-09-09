@@ -1,0 +1,1 @@
+export { SmartSearchPage } from './SmartSearchPage';
