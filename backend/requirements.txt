@@ -51,6 +51,9 @@ resend
 
 httpx
 
+openai>=1.0.0
+pgvector>=0.2.0
+
 
 # ==============================
 # FILE VALIDATION / UPLOADS

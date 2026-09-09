@@ -2,13 +2,14 @@ from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException, logger, status
 from sqlmodel import Session
 
 from app.models.professional import Professional
 from app.models.user import User
 from app.repositories.professional_repository import ProfessionalRepository
 from app.enums.user import AccountType
+from app.services.indexing_service import IndexingService
 
 
 class ProfessionalService:
@@ -82,6 +83,15 @@ class ProfessionalService:
 
         self.session.add(professional)
         self.session.commit()
+
+                # After commit, check if relevant search fields changed
+        if any(field in update_data for field in {"profession", "bio", "skills", "services"}):
+            try:
+                IndexingService(self.session).regenerate_vector(user.id)
+            except Exception as e:
+                logger.error(f"Failed to reindex professional {user.id}: {e}")
+                # We don't raise; the update already succeeded
+                
         self.session.refresh(professional)
         return professional
 

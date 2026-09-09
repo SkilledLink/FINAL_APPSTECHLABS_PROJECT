@@ -43,5 +43,9 @@ class Settings(BaseSettings):
     DIDIT_WEBHOOK_SECRET: str
     # workflow_id is per-session config, but we keep it here for convenience
     DIDIT_WORKFLOW_ID: str = "9245dbac-f2de-4f75-8b19-5a35fa43e416"
+        # AI / Embeddings
+    OPENAI_API_KEY: str
+    EMBEDDING_MODEL: str = "text-embedding-3-small"
+    EMBEDDING_DIMENSION: int = 1536
 
 settings = Settings()

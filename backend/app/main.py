@@ -13,6 +13,8 @@ from app.api.v1.uploads import router as uploads_router
 from app.api.v1.users import router as users_router
 from app.api.v1.professionals import router as professionals_router
 from app.api.v1.jobs import router as jobs_router
+from app.api.v1 import search
+
 
 # ─── NEW routers ──────────────────────────────────────────
 from app.api.v1.professional_kyc import router as professional_kyc_router
@@ -82,6 +84,9 @@ app.include_router(professionals_router)                # /professionals (dynami
 app.include_router(professional_kyc_router)             # /professionals/kyc
 
 app.include_router(jobs_router)                         # /jobs
+
+app.include_router(search.router, prefix="/api/v1")
+
 
 # ─── Webhooks (global, not versioned) ──────────────────
 app.include_router(webhooks_router)                     # /webhooks/didit
