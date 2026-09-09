@@ -1,4 +1,4 @@
-import { apiClient } from '../../../api/client';
+import { apiClient } from './client';
 import type { UploadUrlRequest, UploadUrlResponse } from '../types/message.types';
 
 export const uploadsApi = {

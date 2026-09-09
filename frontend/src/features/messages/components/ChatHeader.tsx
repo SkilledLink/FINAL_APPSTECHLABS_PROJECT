@@ -1,16 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Mic,
-  Sparkles,
-  MoreVertical,
-  ArrowLeft,
-  Phone,
-  Video,
-  Search,
-  ShieldCheck,
-  UserCheck,
-} from 'lucide-react';
+import { Mic, Sparkles, MoreVertical, ArrowLeft, Phone, Video, Search, ShieldCheck, UserCheck } from 'lucide-react';
 import type { MessageUser } from '../types/message.types';
 
 interface ChatHeaderProps {
@@ -32,7 +22,6 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
 
   return (
     <div className="h-20 px-4 sm:px-6 border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl flex items-center justify-between shrink-0 z-20 transition-colors">
-      {/* User Info & Back Button */}
       <div className="flex items-center gap-3 sm:gap-4 min-w-0">
         {onBack && (
           <motion.button
@@ -40,17 +29,15 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
             whileTap={{ scale: 0.95 }}
             onClick={onBack}
             className="lg:hidden p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition"
-            aria-label="Back to conversations"
           >
             <ArrowLeft className="w-5 h-5" />
           </motion.button>
         )}
 
-        {/* Avatar with Gradient Ring & Pulsing Presence Beacon */}
         <div className="relative shrink-0">
           <div className="p-0.5 rounded-full bg-gradient-to-tr from-blue-500 via-indigo-500 to-purple-500 shadow-xs">
             <img
-              src={user.avatar}
+              src={user.avatar || '/default-avatar.png'}
               alt={user.name}
               className="w-11 h-11 rounded-full object-cover border-2 border-white dark:border-slate-900"
             />
@@ -63,7 +50,6 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           )}
         </div>
 
-        {/* User Status Meta */}
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <h3 className="font-extrabold text-base text-slate-900 dark:text-slate-100 tracking-tight truncate">
@@ -95,9 +81,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         </div>
       </div>
 
-      {/* Action Toolbar & Menu */}
       <div className="flex items-center gap-1.5 sm:gap-2">
-        {/* Voicemail Status Badge */}
         <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100/80 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 text-slate-600 dark:text-slate-300 text-xs font-semibold">
           <Mic className="w-3.5 h-3.5 text-indigo-500" />
           <span>Voice Memos Active</span>
@@ -109,44 +93,37 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
             whileTap={{ scale: 0.95 }}
             onClick={onSearchMessages}
             className="p-2.5 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition"
-            title="Search in conversation"
           >
             <Search className="w-4 h-4" />
           </motion.button>
         )}
-
         {onCall && (
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onCall}
             className="p-2.5 text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition"
-            title="Audio Call"
           >
             <Phone className="w-4 h-4" />
           </motion.button>
         )}
-
         {onVideoCall && (
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onVideoCall}
             className="p-2.5 text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition"
-            title="Video Call"
           >
             <Video className="w-4 h-4" />
           </motion.button>
         )}
 
-        {/* Dropdown Options */}
         <div className="relative">
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setShowDropdown((prev) => !prev)}
             className="p-2.5 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition"
-            title="More Options"
           >
             <MoreVertical className="w-4 h-4" />
           </motion.button>
@@ -154,15 +131,11 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           <AnimatePresence>
             {showDropdown && (
               <>
-                <div
-                  className="fixed inset-0 z-30"
-                  onClick={() => setShowDropdown(false)}
-                />
+                <div className="fixed inset-0 z-30" onClick={() => setShowDropdown(false)} />
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95, y: -8 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: -8 }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                   className="absolute right-0 mt-2 w-48 py-1.5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-xl z-40 text-xs font-medium text-slate-700 dark:text-slate-300"
                 >
                   <button

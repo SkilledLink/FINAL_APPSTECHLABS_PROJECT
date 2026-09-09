@@ -1,4 +1,3 @@
-// src/hooks/useSendMessage.ts
 import { useState } from 'react';
 import { messagesApi } from '../api/messages';
 import type { Message } from '../types/message.types';
@@ -9,6 +8,7 @@ export function useSendMessage(conversationId: string | null) {
   const [error, setError] = useState<Error | null>(null);
 
   const send = async (
+    clientMessageId: string,                  // ✅ now required
     content: string | null,
     type: 'text' | 'voice' | 'file' | 'image' = 'text',
     attachmentPath?: string,
@@ -22,16 +22,16 @@ export function useSendMessage(conversationId: string | null) {
     rawMessage: any | null;
     error?: string;
   }> => {
-    if (!conversationId) return { tempId: '', realMessage: null, rawMessage: null, error: 'No conversation' };
-
-    const clientMessageId = crypto.randomUUID();
+    if (!conversationId) {
+      return { tempId: clientMessageId, realMessage: null, rawMessage: null, error: 'No conversation' };
+    }
 
     setSending(true);
     setError(null);
 
     try {
       const backendMessage = await messagesApi.send(conversationId, {
-        client_message_id: clientMessageId,
+        client_message_id: clientMessageId,   // ✅ use the passed ID
         type: type === 'text' ? 'text' : type,
         content: content || undefined,
         attachment_path: attachmentPath,
@@ -42,6 +42,7 @@ export function useSendMessage(conversationId: string | null) {
       });
 
       const realMessage = mapBackendMessage(backendMessage);
+      realMessage.status = 'sent';
       setSending(false);
       return { tempId: clientMessageId, realMessage, rawMessage: backendMessage };
     } catch (err) {

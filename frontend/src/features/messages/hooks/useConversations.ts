@@ -1,23 +1,33 @@
-// src/hooks/useConversations.ts
 import { useState, useEffect, useCallback } from 'react';
 import { conversationsApi } from '../api/conversations';
-import type { Conversation, Message } from '../types/message.types';
+import type { Conversation, Message, MessageUser } from '../types/message.types';
+import { useAuth } from '../features/auth/hooks/useAuth';
+import { formatFileSize, getFileIcon } from '../utils/fileUtils';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 function mapBackendConversation(backend: any): Conversation {
-  const participant = backend.participant || {
-    id: 'unknown',
-    name: 'User',
-    avatar: 'https://ui-avatars.com/api/?name=User',
-    role: 'Professional',
-    isOnline: false,
-  };
+  const p = backend.participant;
+  let participant: MessageUser | null = null;
+  if (p) {
+    participant = {
+      id: p.id,
+      name: `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'User',
+      avatar: p.profile_image_url || '/default-avatar.png',
+      role: p.account_type || 'User',
+      isOnline: false,
+      lastSeen: p.last_seen || undefined,
+    };
+  }
 
   let lastMessage: Message | undefined;
   if (backend.last_message) {
     const lm = backend.last_message;
     const isVoice = lm.type === 'voice';
+    const attachmentUrl = lm.attachment_path?.startsWith('http')
+      ? lm.attachment_path
+      : lm.attachment_path ? `${SUPABASE_URL}/storage/v1/object/public/messages/${lm.attachment_path}` : '';
+
     lastMessage = {
       id: lm.id,
       conversation_id: backend.id,
@@ -27,16 +37,24 @@ function mapBackendConversation(backend: any): Conversation {
       content: lm.content,
       text: lm.content,
       attachment_path: lm.attachment_path,
+      attachment_name: lm.attachment_name,
+      attachment_size: lm.attachment_size,
+      attachment_type: lm.attachment_type,
       duration_seconds: lm.duration_seconds,
       created_at: lm.created_at,
       edited_at: lm.edited_at,
       deleted_at: lm.deleted_at,
       audioDetails: isVoice ? {
-        url: lm.attachment_path
-          ? `${SUPABASE_URL}/storage/v1/object/public/messages/${lm.attachment_path}`
-          : '',
+        url: attachmentUrl,
         duration: lm.duration_seconds ? `${Math.floor(lm.duration_seconds)}s` : '0s',
         waveform: Array.from({ length: 15 }, () => Math.floor(Math.random() * 75 + 25)),
+      } : undefined,
+      fileDetails: lm.attachment_name ? {
+        name: lm.attachment_name,
+        size: formatFileSize(lm.attachment_size || 0),
+        type: lm.attachment_type || 'application/octet-stream',
+        icon: getFileIcon(lm.attachment_type || ''),
+        extension: lm.attachment_name?.split('.').pop() || '',
       } : undefined,
     };
   }
@@ -55,11 +73,16 @@ function mapBackendConversation(backend: any): Conversation {
 }
 
 export function useConversations() {
+  const { user, isAuthenticated } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   const fetchConversations = useCallback(async () => {
+    if (!isAuthenticated() || !user) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       const data = await conversationsApi.list();
@@ -71,7 +94,7 @@ export function useConversations() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isAuthenticated, user]);
 
   useEffect(() => {
     fetchConversations();

@@ -3,10 +3,17 @@ from uuid import UUID
 from datetime import datetime
 from typing import Optional
 
+class ParticipantInfo(BaseModel):
+    id: UUID
+    first_name: str
+    last_name: str
+    profile_image_url: Optional[str] = None
+    username: Optional[str] = None
+
 class ConversationCreate(BaseModel):
     type: str = "direct"
     title: Optional[str] = None
-    participant_ids: list[UUID]  # user IDs to add
+    participant_ids: list[UUID]
 
 class ConversationResponse(BaseModel):
     id: UUID
@@ -17,6 +24,6 @@ class ConversationResponse(BaseModel):
     updated_at: datetime
     last_message: Optional[dict] = None
     unread_count: int = 0
-    participant: Optional[dict] = None  # for direct chats
+    participant: Optional[ParticipantInfo] = None
 
     model_config = {"from_attributes": True}

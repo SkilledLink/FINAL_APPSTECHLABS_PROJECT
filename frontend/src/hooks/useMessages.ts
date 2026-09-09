@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { messagesApi } from '../api/messages';
-import type { Message } from '../types/message.types';
-import { formatFileSize, getFileIcon } from '../utils/fileUtils';
+import type { Message } from '../features/messages/types/message.types';
+import { formatFileSize, getFileIcon } from '../features/messages/utils/fileUtils';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
@@ -18,7 +18,7 @@ export const mapBackendMessage = (backendMsg: any): Message => {
     type: isVoice ? 'audio' : backendMsg.type,
     content: backendMsg.content,
     text: backendMsg.content,
-    attachment_path: backendMsg.attachment_path,   // ✅ preserves full URL
+    attachment_path: backendMsg.attachment_path,
     attachment_name: backendMsg.attachment_name,
     attachment_size: backendMsg.attachment_size,
     attachment_type: backendMsg.attachment_type,
@@ -26,11 +26,8 @@ export const mapBackendMessage = (backendMsg: any): Message => {
     created_at: backendMsg.created_at,
     edited_at: backendMsg.edited_at,
     deleted_at: backendMsg.deleted_at,
-    status: 'sent',   // ✅ all backend messages are sent
     audioDetails: isVoice ? {
-      url: backendMsg.attachment_path?.startsWith('http')
-        ? backendMsg.attachment_path
-        : backendMsg.attachment_path ? `${SUPABASE_URL}/storage/v1/object/public/messages/${backendMsg.attachment_path}` : '',
+      url: backendMsg.attachment_path ? `${SUPABASE_URL}/storage/v1/object/public/messages/${backendMsg.attachment_path}` : '',
       duration: backendMsg.duration_seconds ? `${Math.floor(backendMsg.duration_seconds)}s` : '0s',
       waveform: Array.from({ length: 15 }, () => Math.floor(Math.random() * 75 + 25)),
     } : undefined,
@@ -75,19 +72,15 @@ export function useMessages(conversationId: string | null) {
   }, [conversationId, loadMessages]);
 
   const addOptimistic = useCallback((msg: Message) => {
-    setMessages((prev) => [...prev, { ...msg, status: 'sending' }]);
+    setMessages((prev) => [...prev, msg]);
   }, []);
 
   const confirmMessage = useCallback((real: Message) => {
-    setMessages((prev) => {
-      const index = prev.findIndex(m => m.client_message_id === real.client_message_id);
-      if (index !== -1) {
-        const newMessages = [...prev];
-        newMessages[index] = { ...real, status: 'sent' };
-        return newMessages;
-      }
-      return [...prev, { ...real, status: 'sent' }];
-    });
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.client_message_id === real.client_message_id ? real : m
+      )
+    );
   }, []);
 
   const loadMore = useCallback(async () => {

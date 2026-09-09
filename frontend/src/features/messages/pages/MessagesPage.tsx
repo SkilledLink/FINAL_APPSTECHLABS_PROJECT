@@ -1,9 +1,8 @@
-// src/features/messages/pages/MessagesPage.tsx
 import React, { useState, useCallback, useMemo } from 'react';
 import { ConversationList } from '../components/ConversationList';
 import { ChatWindow } from '../components/ChatWindow';
-import { useConversations } from '../hooks/useConversations';
-import { useMessages } from '../hooks/useMessages';
+import { useConversations } from '../../../hooks/useConversations';
+import { useMessages } from '../../../hooks/useMessages';
 import { useRealtimeMessages } from '../hooks/useRealtimeMessages';
 import { useSendMessage } from '../hooks/useSendMessage';
 import { useVoiceUpload } from '../hooks/useVoiceUpload';
@@ -23,31 +22,24 @@ export const MessagesPage: React.FC = () => {
   const { uploadFile, uploading: fileUploading, progress: uploadProgress } = useFileUpload();
 
   const isUploading = voiceUploading || fileUploading || sending;
-
-  // Normalize user ID
   const currentUserId = normalizeId(user?.id);
 
-  // Debug logs
-  console.log('👤 User from useAuth:', user);
-  console.log('👤 Normalized current user ID:', currentUserId);
-  if (messages.length > 0) {
-    const firstSender = normalizeId(messages[0].sender_id);
-    console.log('📩 First message sender_id (normalized):', firstSender);
-    console.log('🔍 Comparison (sender_id === currentUserId):', firstSender === currentUserId);
-    console.log('🔍 First message object:', messages[0]);
-  }
-
-  const handleNewMessage = useCallback((newMsg: any) => {
-    setMessages((prev) => {
-      if (prev.some((m) => m.id === newMsg.id)) return prev;
-      const withoutTemp = prev.filter((m) => m.id !== newMsg.id && !m.id.startsWith('temp-'));
-      return [...withoutTemp, newMsg];
-    });
-    updateConversation(newMsg.conversation_id, {
-      lastMessage: newMsg,
-      updated_at: newMsg.created_at,
-    });
-  }, [setMessages, updateConversation]);
+  const handleNewMessage = useCallback(
+    (newMsg: any) => {
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === newMsg.id)) return prev;
+        const withoutTemp = prev.filter((m) => m.id !== newMsg.id && !m.id.startsWith('temp-'));
+        return [...withoutTemp, newMsg];
+      });
+      if (updateConversation) {
+        updateConversation(newMsg.conversation_id, {
+          lastMessage: newMsg,
+          updated_at: newMsg.created_at,
+        });
+      }
+    },
+    [setMessages, updateConversation]
+  );
 
   const { broadcastMessage } = useRealtimeMessages(activeConversationId, handleNewMessage);
 
@@ -55,16 +47,19 @@ export const MessagesPage: React.FC = () => {
     setActiveConversationId(id);
   }, []);
 
-  // Send text
+  // ── Send Text ──────────────────────────────────────────────
   const handleSendMessage = useCallback(
     async (text: string) => {
       if (!activeConversationId) return;
-      const tempId = `temp-${crypto.randomUUID()}`;
+      // ✅ Generate clientMessageId once
+      const clientMessageId = crypto.randomUUID();
+      const tempId = `temp-${clientMessageId}`;
+
       const tempMessage: any = {
         id: tempId,
         conversation_id: activeConversationId,
         sender_id: currentUserId,
-        client_message_id: crypto.randomUUID(),
+        client_message_id: clientMessageId,
         type: 'text',
         content: text,
         text: text,
@@ -74,14 +69,17 @@ export const MessagesPage: React.FC = () => {
       };
       addOptimistic(tempMessage);
 
-      const { realMessage, rawMessage, error } = await send(text, 'text');
+      // ✅ Pass clientMessageId to send
+      const { realMessage, rawMessage, error } = await send(clientMessageId, text, 'text');
       if (realMessage && rawMessage) {
         confirmMessage(realMessage);
         broadcastMessage(rawMessage);
-        updateConversation(activeConversationId, {
-          lastMessage: realMessage,
-          updated_at: realMessage.created_at,
-        });
+        if (updateConversation) {
+          updateConversation(activeConversationId, {
+            lastMessage: realMessage,
+            updated_at: realMessage.created_at,
+          });
+        }
       } else if (error) {
         setMessages((prev) =>
           prev.map((m) =>
@@ -93,21 +91,23 @@ export const MessagesPage: React.FC = () => {
     [activeConversationId, send, confirmMessage, broadcastMessage, updateConversation, setMessages, addOptimistic, currentUserId]
   );
 
+  // ── Send File / Image ──────────────────────────────────────
   const handleSendFile = useCallback(
     async (file: File) => {
       if (!activeConversationId) return;
       try {
-        const { path, name, size, type } = await uploadFile(file);
-
-        const tempId = `temp-${crypto.randomUUID()}`;
+        const { publicUrl, name, size, type } = await uploadFile(file);
+        const clientMessageId = crypto.randomUUID();
+        const tempId = `temp-${clientMessageId}`;
         const isImage = type.startsWith('image/');
+
         const tempMessage: any = {
           id: tempId,
           conversation_id: activeConversationId,
           sender_id: currentUserId,
-          client_message_id: crypto.randomUUID(),
+          client_message_id: clientMessageId,
           type: isImage ? 'image' : 'file',
-          attachment_path: path,
+          attachment_path: publicUrl,
           attachment_name: name,
           attachment_size: size,
           attachment_type: type,
@@ -125,9 +125,10 @@ export const MessagesPage: React.FC = () => {
         addOptimistic(tempMessage);
 
         const { realMessage, rawMessage, error } = await send(
+          clientMessageId,
           null,
           isImage ? 'image' : 'file',
-          path,
+          publicUrl,
           undefined,
           name,
           type,
@@ -137,10 +138,12 @@ export const MessagesPage: React.FC = () => {
         if (realMessage && rawMessage) {
           confirmMessage(realMessage);
           broadcastMessage(rawMessage);
-          updateConversation(activeConversationId, {
-            lastMessage: realMessage,
-            updated_at: realMessage.created_at,
-          });
+          if (updateConversation) {
+            updateConversation(activeConversationId, {
+              lastMessage: realMessage,
+              updated_at: realMessage.created_at,
+            });
+          }
         } else if (error) {
           setMessages((prev) =>
             prev.map((m) =>
@@ -162,6 +165,7 @@ export const MessagesPage: React.FC = () => {
     [handleSendFile]
   );
 
+  // ── Send Voice Note ────────────────────────────────────────
   const handleSendVoiceNote = useCallback(
     async (duration: string) => {
       if (!activeConversationId) return;
@@ -170,35 +174,46 @@ export const MessagesPage: React.FC = () => {
       const durationNum = parseInt(duration.split(':')[1]) || 5;
 
       try {
-        const { path } = await uploadVoice(file, durationNum);
-        const tempId = `temp-${crypto.randomUUID()}`;
+        const { publicUrl } = await uploadVoice(file, durationNum);
+        const clientMessageId = crypto.randomUUID();
+        const tempId = `temp-${clientMessageId}`;
+
         const tempMessage: any = {
           id: tempId,
           conversation_id: activeConversationId,
           sender_id: currentUserId,
-          client_message_id: crypto.randomUUID(),
+          client_message_id: clientMessageId,
           type: 'audio',
-          attachment_path: path,
+          attachment_path: publicUrl,
           duration_seconds: durationNum,
           created_at: new Date().toISOString(),
           status: 'sending',
           isRead: false,
           audioDetails: {
-            url: `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/messages/${path}`,
+            url: publicUrl,
             duration: `${durationNum}s`,
             waveform: Array.from({ length: 15 }, () => Math.floor(Math.random() * 75 + 25)),
           },
         };
         addOptimistic(tempMessage);
 
-        const { realMessage, rawMessage, error } = await send(null, 'voice', path, durationNum);
+        const { realMessage, rawMessage, error } = await send(
+          clientMessageId,
+          null,
+          'voice',
+          publicUrl,
+          durationNum
+        );
+
         if (realMessage && rawMessage) {
           confirmMessage(realMessage);
           broadcastMessage(rawMessage);
-          updateConversation(activeConversationId, {
-            lastMessage: realMessage,
-            updated_at: realMessage.created_at,
-          });
+          if (updateConversation) {
+            updateConversation(activeConversationId, {
+              lastMessage: realMessage,
+              updated_at: realMessage.created_at,
+            });
+          }
         } else if (error) {
           setMessages((prev) =>
             prev.map((m) =>
@@ -227,7 +242,7 @@ export const MessagesPage: React.FC = () => {
   }
 
   return (
-    <div className="h-screen w-full  flex overflow-hidden border-x border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-2xl">
+    <div className="h-screen w-full flex overflow-hidden border-x border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-2xl">
       <div
         className={`${
           activeConversationId ? 'hidden lg:block' : 'w-full'

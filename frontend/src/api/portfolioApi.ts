@@ -13,7 +13,7 @@ import type {
 export type {
   Portfolio,
   Work,
-  Service,
+  Service, 
   Availability,
   Category,
   PublicPortfolio,

@@ -15,7 +15,7 @@ router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 # ─── Canonicalisation helpers (must match Didit exactly) ───
 
 def shorten_floats(obj: Any) -> Any:
-    if isinstance(obj, list):
+    if isinstance(obj, list): 
         return [shorten_floats(item) for item in obj]
     if isinstance(obj, dict):
         return {k: shorten_floats(v) for k, v in obj.items()}
