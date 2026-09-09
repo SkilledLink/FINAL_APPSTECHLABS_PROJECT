@@ -1,5 +1,4 @@
-// src/features/auth/hooks/useAuth.ts
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { apiClient } from "../../../api/client";
 import { toast } from "react-toastify";
 import type {
@@ -11,7 +10,22 @@ import type {
 
 export function useAuth() {
   const [loading, setLoading] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<any | null>(null);
+
+  // Load user from localStorage on mount
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch {
+        setUser(null);
+      }
+    }
+    setAuthLoading(false);
+  }, []);
 
   const clearError = () => setError(null);
 
@@ -19,23 +33,20 @@ export function useAuth() {
     setLoading(true);
     setError(null);
     try {
-      // 1. Login – get tokens
       const loginResponse = await apiClient.post("/auth/login", {
         email: credentials.email,
         password: credentials.password,
       });
       const loginData = loginResponse.data;
 
-      // Store tokens
       localStorage.setItem("access_token", loginData.access_token);
       localStorage.setItem("refresh_token", loginData.refresh_token);
 
-      // 2. Fetch full user profile using the token
       const userResponse = await apiClient.get("/users/me");
       const userData = userResponse.data;
 
-      // 3. Store the FULL user object (it has id, email, name, etc.)
       localStorage.setItem("user", JSON.stringify(userData));
+      setUser(userData);
 
       toast.success("Welcome back! 🎉");
       return true;
@@ -49,9 +60,6 @@ export function useAuth() {
     }
   };
 
-  // ... (register, verifyEmail, forgotPassword, resetPassword, logout, getCurrentUser, isAuthenticated) remain the same as before
-
-  // For completeness, include the rest unchanged:
   const register = async (data: RegisterData): Promise<{ success: boolean; user_id?: string }> => {
     setLoading(true);
     setError(null);
@@ -63,9 +71,8 @@ export function useAuth() {
         password: data.password,
         account_type: data.account_type || "user",
       });
-      const user_id = response.data.user_id;
       toast.success("Account created! Please verify your email.");
-      return { success: true, user_id };
+      return { success: true, user_id: response.data.user_id };
     } catch (err: any) {
       const msg = err.response?.data?.detail || "Registration failed.";
       setError(msg);
@@ -136,19 +143,12 @@ export function useAuth() {
     localStorage.removeItem("refresh_token");
     localStorage.removeItem("user");
     localStorage.removeItem("pending_verification_user_id");
+    setUser(null);
     toast.info("Logged out.");
   };
 
   const getCurrentUser = (): any | null => {
-    const userData = localStorage.getItem("user");
-    if (userData) {
-      try {
-        return JSON.parse(userData);
-      } catch {
-        return null;
-      }
-    }
-    return null;
+    return user;
   };
 
   const isAuthenticated = (): boolean => {
@@ -165,7 +165,9 @@ export function useAuth() {
     getCurrentUser,
     isAuthenticated,
     loading,
+    authLoading,
     error,
     clearError,
+    user, // ✅ reactive user state
   };
 }
