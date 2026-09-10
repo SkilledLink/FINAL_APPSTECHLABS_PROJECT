@@ -23,6 +23,9 @@ backend/
 │   │       ├── conversations.py
 │   │       ├── messages.py
 │   │       ├── uploads.py
+│   │       ├── professional_kyc.py
+│   │       ├── professional_portfolio.py
+│   │       ├── search.py
 │   │       ├── notifications.py
 │   │       ├── reviews.py
 │   │       ├── verification.py
@@ -43,6 +46,7 @@ backend/
 │   ├── enums/
 │   │   ├── __init__.py
 │   │   ├── user.py
+│   │   ├── professional.py
 │   │   ├── verification.py
 │   │   ├── booking.py
 │   │   ├── job.py
@@ -55,9 +59,11 @@ backend/
 │   ├── models/
 │   │   ├── __init__.py
 │   │   ├── user.py
+│   │   ├── profile.py
 │   │   ├── user_profile.py
 │   │   ├── user_follow.py              # NEW
 │   │   ├── professional.py
+│   │   ├── professional_portfolio.py
 │   │   ├── business.py
 │   │   ├── refresh_token.py
 │   │   ├── verification.py
@@ -74,8 +80,11 @@ backend/
 │   │   ├── job.py
 │   │   ├── application.py
 │   │   ├── conversation.py
+│   │   ├── conversation_participant.py
 │   │   ├── message.py
+│   │   ├── password_reset_token.py
 │   │   ├── notification.py
+│   │   ├── verification_token.py
 │   │   └── review.py
 │
 │   ├── schemas/
@@ -85,6 +94,7 @@ backend/
 │   │   ├── user_profile.py
 │   │   ├── user_follow.py            # NEW
 │   │   ├── professional.py
+│   │   ├── professional_portfolio.py
 │   │   ├── business.py
 │   │   ├── verification.py
 │   │   ├── token.py
@@ -100,6 +110,7 @@ backend/
 │   │   ├── application.py
 │   │   ├── conversation.py
 │   │   ├── message.py
+│   │   ├── search.py
 │   │   ├── upload.py
 │   │   ├── notification.py
 │   │   └── review.py
@@ -109,6 +120,9 @@ backend/
 │   │   ├── user_repository.py
 │   │   ├── user_follow_repository.py  # NEW
 │   │   ├── refresh_token_repository.py
+│   │   ├── professional_repository.py
+│   │   ├── professional_portfolio_repository.py
+│   │   ├── search_repository.py
 │   │   ├── verification_repository.py
 │   │   ├── post_repository.py
 │   │   ├── comment_repository.py
@@ -130,6 +144,10 @@ backend/
 │   │   ├── user_service.py
 │   │   ├── user_follow_service.py    # NEW
 │   │   ├── verification_service.py
+│   │   ├── embedding_service.py
+│   │   ├── indexing_service.py
+│   │   ├── professional_service.py
+│   │   ├── professional_portfolio_service.py
 │   │   ├── post_service.py
 │   │   ├── comment_service.py
 │   │   ├── service_service.py
@@ -141,6 +159,7 @@ backend/
 │   │   ├── conversation_service.py
 │   │   ├── message_service.py
 │   │   ├── storage_service.py
+│   │   ├── search_service.py
 │   │   ├── notification_service.py
 │   │   └── review_service.py
 │
@@ -159,8 +178,14 @@ backend/
 │       ├── __init__.py
 │       ├── handlers.py
 │       └── custom_exceptions.py
+
+│   ├── webhooks.py
+│   └── websockets/
+│       └── __init__.py
 │
 ├── alembic/
+│   ├── README
+│   ├── script.py.mako
 │   ├── versions/
 │   │   └── (auto-generated migration files)
 │   └── env.py
@@ -179,6 +204,7 @@ backend/
 ├── .env
 ├── .env.example
 ├── .gitignore
+├── initial_folder_structure.txt
 ├── alembic.ini
 ├── requirements.txt
 └── README.md

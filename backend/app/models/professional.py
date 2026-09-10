@@ -5,7 +5,6 @@ from uuid import UUID, uuid4
 from sqlmodel import Field, Relationship, SQLModel, Column
 from sqlalchemy import JSON, DECIMAL
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import JSON, DECIMAL, Column
 
 if TYPE_CHECKING:
     from app.models.user import User
@@ -14,18 +13,8 @@ if TYPE_CHECKING:
 class Professional(SQLModel, table=True):
     __tablename__ = "professionals"
 
-    id: UUID = Field(
-        default_factory=uuid4,
-        primary_key=True,
-        index=True,
-    )
-
-    user_id: UUID = Field(
-        foreign_key="users.id",
-        unique=True,
-        nullable=False,
-        index=True,
-    )
+    id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
+    user_id: UUID = Field(foreign_key="users.id", unique=True, nullable=False, index=True)
 
     profession: str = Field(nullable=False, max_length=100)
     bio: Optional[str] = Field(default=None, max_length=1000)
@@ -39,37 +28,24 @@ class Professional(SQLModel, table=True):
     available: bool = Field(default=True)
 
     # System-controlled fields
-    is_verified: bool = Field(default=False)          # kept for legacy
+    is_verified: bool = Field(default=False)
     rating: float = Field(default=0.0, sa_column=Column(DECIMAL(3, 2)))
     total_reviews: int = Field(default=0)
     completed_jobs: int = Field(default=0)
 
-        # ─── AI Embedding for Semantic Search ──────────────
+    # ─── Didit KYC fields ────────────────────────────
+    verification_status: str = Field(default="not_started", max_length=50)
+    verification_data: Optional[dict] = Field(default=None, sa_column=Column(JSON))
+    verified_at: Optional[datetime] = Field(default=None)
+
+    # ─── AI Embedding for Semantic Search (768 = gemini-embedding-2) ───
     embedding: Optional[List[float]] = Field(
         default=None,
-        sa_column=Column(Vector(1536))  # 1536 dimensions for text-embedding-3-small
+        sa_column=Column(Vector(768))
     )
     embedding_stale: bool = Field(default=False)
 
-    # ─── Didit KYC fields ────────────────────────────
-    verification_status: str = Field(
-        default="not_started",
-        max_length=50,
-    )
-    verification_data: Optional[dict] = Field(
-        default=None,
-        sa_column=Column(JSON),
-    )
-    verified_at: Optional[datetime] = Field(default=None)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False)
 
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
-        nullable=False,
-    )
-    updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
-        nullable=False,
-    )
-
-    # Relationship back to User
     user: "User" = Relationship(back_populates="professional")

@@ -1,11 +1,9 @@
 import logging
 from typing import List, Optional, Dict, Any
-from uuid import UUID
 from sqlmodel import Session, text
-from app.models.professional import Professional
-from app.models.user import User
 
 logger = logging.getLogger(__name__)
+
 
 class SearchRepository:
     def __init__(self, session: Session):
@@ -18,22 +16,18 @@ class SearchRepository:
         region: Optional[str] = None,
         limit: int = 20
     ) -> List[Dict[str, Any]]:
-        """
-        Perform vector similarity search using pgvector.
-        Returns a list of dicts with professional data plus relevance score.
-        """
         conditions = ["p.embedding IS NOT NULL", "p.embedding_stale = false"]
-        params = {
+        params: Dict[str, Any] = {
             "query_vector": query_vector,
             "limit": limit
         }
 
         if city:
-            conditions.append("p.city = :city")
-            params["city"] = city
+            conditions.append("p.city ILIKE :city")
+            params["city"] = f"%{city}%"
         if region:
-            conditions.append("p.region = :region")
-            params["region"] = region
+            conditions.append("p.region ILIKE :region")
+            params["region"] = f"%{region}%"
 
         where_clause = " AND ".join(conditions)
 
@@ -43,7 +37,7 @@ class SearchRepository:
                 u.first_name,
                 u.last_name,
                 u.profile_image_url,
-                1 - (p.embedding <=> :query_vector) AS relevance_score
+                1 - (p.embedding <=> CAST(:query_vector AS vector)) AS relevance_score
             FROM professionals p
             JOIN users u ON u.id = p.user_id
             WHERE {where_clause}
@@ -52,8 +46,7 @@ class SearchRepository:
         """)
 
         result = self.session.execute(sql, params)
-        rows = result.mappings().all()
-        return [dict(row) for row in rows]
+        return [dict(row) for row in result.mappings().all()]
 
     def keyword_search(
         self,
@@ -62,22 +55,19 @@ class SearchRepository:
         region: Optional[str] = None,
         limit: int = 20
     ) -> List[Dict[str, Any]]:
-        """
-        Fallback keyword search when vector search fails.
-        """
         conditions = []
-        params = {"query": f"%{query}%", "limit": limit}
+        params: Dict[str, Any] = {"query": f"%{query}%", "limit": limit}
 
         conditions.append(
             "(p.profession ILIKE :query OR p.bio ILIKE :query OR p.skills::text ILIKE :query)"
         )
 
         if city:
-            conditions.append("p.city = :city")
-            params["city"] = city
+            conditions.append("p.city ILIKE :city")
+            params["city"] = f"%{city}%"
         if region:
-            conditions.append("p.region = :region")
-            params["region"] = region
+            conditions.append("p.region ILIKE :region")
+            params["region"] = f"%{region}%"
 
         where_clause = " AND ".join(conditions)
 
@@ -87,7 +77,7 @@ class SearchRepository:
                 u.first_name,
                 u.last_name,
                 u.profile_image_url,
-                0.5 AS relevance_score   -- fixed placeholder
+                0.5 AS relevance_score
             FROM professionals p
             JOIN users u ON u.id = p.user_id
             WHERE {where_clause}
@@ -96,5 +86,4 @@ class SearchRepository:
         """)
 
         result = self.session.execute(sql, params)
-        rows = result.mappings().all()
-        return [dict(row) for row in rows]
+        return [dict(row) for row in result.mappings().all()]
