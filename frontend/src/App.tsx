@@ -18,7 +18,7 @@ import { AuthLayout } from "./features/auth/components/AuthLayout";
 import AppLayout from "./components/layout/AppLayout/AppLayout";
 
 // Landing
-import LandingPage from "./features/landing/pages/LandingPage";
+import LandingPage from './features/landing/pages/LandingPage';
 
 // Auth pages
 import LoginPage from "./features/auth/pages/LoginPage";
@@ -72,7 +72,28 @@ import { VerificationPage } from "./verification/pages/VerificationPage";
 
 // Marketplace
 import Marketplace from "./features/Market/pages/Marketplace/Marketplace";
-import UserProfilePage from "./features/user_profile/pages/UserProfilePage";
+
+
+// ============================================================
+// PUBLIC ONLY ROUTE
+// ============================================================
+import DashboardPage from './features/dashboard/components/pages/DashboardPage';
+
+// Profile
+import { ProfilePage } from './features/profile';
+
+// Messages
+import { MessagesPage } from './features/messages';
+
+// Discover
+import { DiscoverPage } from './features/discover';
+import { JobsPage   } from './features/jobs';
+
+// Professional Portfolio
+import PortfolioDashboard from './features/portfolio/pages/PortfolioDashboard';
+
+// Users
+import UsersPage from './features/users/pages/UsersPage';
 
 // TODO: Replace these with your actual Professionals page if it exists
 const ProfessionalsPage = UsersPage;
@@ -91,21 +112,10 @@ function PublicOnlyRoute() {
 }
 
 // ============================================================
+// PROFILE ROUTE
 // PROTECTED ROUTE
 // ============================================================
-function ProtectedRoute() {
-  const { isAuthenticated } = useAuth();
 
-  if (!isAuthenticated()) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <Outlet />;
-}
-
-// ============================================================
-// PROFILE ROUTE
-// ============================================================
 function ProfileRoute() {
   const { id } = useParams<{ id: string }>();
 
@@ -115,6 +125,7 @@ function ProfileRoute() {
 // ============================================================
 // MAIN APP
 // ============================================================
+
 function App() {
   return (
     <AuthProvider>
@@ -135,13 +146,19 @@ function App() {
         <AIFloatingWidget />
 
         <Routes>
+
+          {/* ==================================================
+              AUTH ROUTES
+          ================================================== */}
+
           {/* ==================================================
               PUBLIC ROUTES
               ================================================== */}
-
+          
+          {/* Landing Page is the root URL */}
           <Route path="/" element={<LandingPage />} />
 
-          {/* Auth pages */}
+          {/* Auth pages are public but redirect to /home if already logged in */}
           <Route element={<PublicOnlyRoute />}>
             <Route element={<AuthLayout />}>
               <Route path="/login" element={<LoginPage />} />
@@ -207,10 +224,19 @@ function App() {
           </Route>
 
           {/* ==================================================
+              CATCH ALL
+          ================================================== */}
+
+          <Route
+            path="*"
+            element={<Navigate to="/" replace />}
+          />
               CATCH-ALL
               ================================================== */}
-
+          
+          {/* Redirect any unknown URL back to the Landing Page */}
           <Route path="*" element={<Navigate to="/" replace />} />
+
         </Routes>
       </BrowserRouter>
     </AuthProvider>
