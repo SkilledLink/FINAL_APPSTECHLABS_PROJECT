@@ -29,6 +29,7 @@ alembic
 
 pwdlib[argon2]
 PyJWT
+python-jose
 
 
 # ==============================
@@ -55,6 +56,8 @@ openai>=1.0.0
 pgvector>=0.2.0
 
 google-generativeai>=0.8.0
+
+
 # ==============================
 # FILE VALIDATION / UPLOADS
 # ==============================
@@ -72,6 +75,7 @@ websockets
 # ==============================
 # SOCKET.IO
 # ==============================
+
 # Keep only if we decide to use it.
 # Otherwise remove it to avoid unnecessary dependencies.
 
