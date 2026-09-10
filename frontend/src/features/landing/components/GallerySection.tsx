@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Renderer, Camera, Transform, Plane, Mesh, Program, Texture } from 'ogl';
 import { Sparkles } from 'lucide-react';
 
