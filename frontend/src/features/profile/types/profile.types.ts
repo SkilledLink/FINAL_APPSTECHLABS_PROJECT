@@ -25,6 +25,14 @@ export interface User {
   followersCount: number;
   followingCount: number;
   isFollowing: boolean;
+
+  // ── New fields ────────────────────────────────────────────────
+  /** 'public' | 'private' – controls who can see tabs. */
+  visibility?: 'public' | 'private';
+  /** Set when the account is soft‑deleted. */
+  deactivatedAt?: string | null;
+  /** Set when the account is suspended by moderation. */
+  suspendedAt?: string | null;
 }
 
 export interface Professional {
@@ -49,7 +57,43 @@ export interface Professional {
 }
 
 export interface UserProfile extends User {
-  professional?: Professional; // null if standard
+  professional?: Professional;
+  /** Viewer‑specific relationship, populated by useProfile. */
+  viewerRelation?: ViewerRelation;
 }
 
-export type ProfileTab = 'overview' | 'work' | 'services' | 'posts' | 'reviews';
+export type ProfileTab =
+  | 'overview'
+  | 'work'
+  | 'services'
+  | 'posts'
+  | 'reviews';
+
+// ── New: profile page state machine ─────────────────────────────
+export type ProfileStatus =
+  | 'idle'
+  | 'loading'
+  | 'ready'
+  | 'not_found'
+  | 'private'
+  | 'blocked'
+  | 'blocked_by'
+  | 'deactivated'
+  | 'suspended'
+  | 'unauthenticated'
+  | 'error';
+
+// ── New: viewer‑centric relationship flags ──────────────────────
+export interface ViewerRelation {
+  isFollowing: boolean;
+  followsYou: boolean;
+  isMutual: boolean;
+  hasRequestedFollow: boolean;
+  isBlocked: boolean;
+  isBlockedBy: boolean;
+  isMuted: boolean;
+  canFollow: boolean;
+  canMessage: boolean;
+  canRequestService: boolean;
+  canViewWork: boolean;
+}

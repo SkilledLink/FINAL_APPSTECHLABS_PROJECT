@@ -1,111 +1,218 @@
 // src/features/profile/hooks/useProfile.ts
 
-import { useEffect, useState } from 'react';
-import type { UserProfile } from '../types/profile.types';
-import { profileService } from '../services/profileService';
+import { useCallback, useEffect, useState } from 'react';
+import { useAuth } from '../../../providers/AuthProvider';
+import { useUser } from './useUser';
+import { useProfessional } from './useProfessional';
+import { useFollow } from './useFollow';
+import type {
+  ProfileStatus,
+  UserProfile,
+  ViewerRelation,
+} from '../types/profile.types';
 
 interface UseProfileReturn {
   profile: UserProfile | null;
-  loading: boolean;
+  status: ProfileStatus;
   error: string | null;
-  updateProfile: (
-    data: Partial<UserProfile>
-  ) => Promise<UserProfile | undefined>;
+  isOwnProfile: boolean;
+  viewerRelation: ViewerRelation | null;
+  refetch: () => Promise<void>;
+  mutate: (patch: Partial<UserProfile>) => void;
+  setViewerRelation: (
+    updater: (prev: ViewerRelation) => ViewerRelation
+  ) => void;
 }
 
-export const useProfile = (profileId: string): UseProfileReturn => {
+const DEFAULT_RELATION: ViewerRelation = {
+  isFollowing: false,
+  followsYou: false,
+  isMutual: false,
+  hasRequestedFollow: false,
+  isBlocked: false,
+  isBlockedBy: false,
+  isMuted: false,
+  canFollow: true,
+  canMessage: true,
+  canRequestService: true,
+  canViewWork: true,
+};
+
+export const useProfile = (userId?: string): UseProfileReturn => {
+  const { currentUser, loading: authLoading } = useAuth();
+  const { fetchUser } = useUser();
+  const { fetchMyProfessional, fetchProfessionalByUserId } =
+    useProfessional();
+  const { checkViewerRelation } = useFollow();
+
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [status, setStatus] = useState<ProfileStatus>('idle');
   const [error, setError] = useState<string | null>(null);
+  const [viewerRelation, setViewerRelationState] =
+    useState<ViewerRelation | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  const effectiveUserId = userId || currentUser?.id;
+
+  const isOwnProfile =
+    !!currentUser && !!profile && currentUser.id === profile.id;
+
+  const refetch = useCallback(async () => {
+    setReloadKey((k) => k + 1);
+  }, []);
+
+  const mutate = useCallback((patch: Partial<UserProfile>) => {
+    setProfile((prev) => (prev ? { ...prev, ...patch } : prev));
+  }, []);
+
+  const setViewerRelation = useCallback(
+    (updater: (prev: ViewerRelation) => ViewerRelation) => {
+      setViewerRelationState((prev) =>
+        prev ? updater(prev) : updater(DEFAULT_RELATION)
+      );
+    },
+    []
+  );
 
   useEffect(() => {
-    let isMounted = true;
+    if (authLoading) {
+      setStatus('loading');
+      return;
+    }
 
-    const loadProfile = async () => {
-      if (!profileId) {
-        if (isMounted) {
-          setProfile(null);
-          setError('Profile ID is required.');
-          setLoading(false);
-        }
+    if (!currentUser) {
+      setStatus('unauthenticated');
+      setProfile(null);
+      setViewerRelationState(null);
+      return;
+    }
+
+    if (!effectiveUserId) {
+      setStatus('not_found');
+      setProfile(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const load = async () => {
+      setStatus('loading');
+      setError(null);
+      setProfile(null);
+      setViewerRelationState(null);
+
+      const own = effectiveUserId === currentUser.id;
+
+      // 1. Base user
+      const userData = await fetchUser(effectiveUserId);
+      if (cancelled) return;
+
+      if (!userData) {
+        setStatus('not_found');
         return;
       }
 
-      setLoading(true);
-      setError(null);
-
-      try {
-        const data = await profileService.getProfileById(profileId);
-
-        if (!isMounted) {
-          return;
-        }
-
-        setProfile(data);
-      } catch (err: unknown) {
-        if (!isMounted) {
-          return;
-        }
-
-        console.error('Failed to load profile:', err);
-
-        const message =
-          err instanceof Error
-            ? err.message
-            : 'Failed to load profile.';
-
-        setProfile(null);
-        setError(message);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+      // 2. Lifecycle gates
+      if (
+        userData.status === 'deleted' ||
+        userData.deletedAt ||
+        userData.deactivatedAt
+      ) {
+        setStatus('deactivated');
+        return;
       }
+      if (userData.status === 'suspended' || userData.suspendedAt) {
+        setStatus('suspended');
+        return;
+      }
+
+      // 3. Professional data (self vs other)
+      let profData = userData.professional;
+      if (userData.accountType === 'professional') {
+        const fetched = own
+          ? await fetchMyProfessional()
+          : await fetchProfessionalByUserId(effectiveUserId);
+        if (cancelled) return;
+        if (fetched) profData = fetched;
+      }
+
+      // 4. Viewer relation
+      let relation: ViewerRelation = { ...DEFAULT_RELATION };
+      if (own) {
+        relation = {
+          ...relation,
+          canFollow: false,
+          canMessage: false,
+          canRequestService: false,
+        };
+      } else {
+        const fetched = await checkViewerRelation(effectiveUserId);
+        if (cancelled) return;
+        if (fetched) relation = fetched;
+      }
+
+      // 5. Blocked gates (before private gate – blocked always wins)
+      if (relation.isBlockedBy) {
+        setStatus('blocked_by');
+        return;
+      }
+      if (relation.isBlocked) {
+        setStatus('blocked');
+        return;
+      }
+
+      // 6. Private gate – only visible to approved followers
+      if (
+        userData.visibility === 'private' &&
+        !own &&
+        !relation.isFollowing
+      ) {
+        setStatus('private');
+        return;
+      }
+
+      // 7. Ready
+      const completeProfile: UserProfile = {
+        ...userData,
+        professional: profData,
+        viewerRelation: relation,
+      };
+
+      setProfile(completeProfile);
+      setViewerRelationState(relation);
+      setStatus('ready');
     };
 
-    loadProfile();
+    load().catch((err) => {
+      if (cancelled) return;
+      setError(
+        err instanceof Error ? err.message : 'Failed to load profile'
+      );
+      setStatus('error');
+    });
 
     return () => {
-      isMounted = false;
+      cancelled = true;
     };
-  }, [profileId]);
-
-  const updateProfile = async (
-    data: Partial<UserProfile>
-  ): Promise<UserProfile | undefined> => {
-    if (!profile) {
-      return undefined;
-    }
-
-    try {
-      setError(null);
-
-      const updated = await profileService.updateProfile(
-        profile.id,
-        data
-      );
-
-      setProfile(updated);
-
-      return updated;
-    } catch (err: unknown) {
-      console.error('Failed to update profile:', err);
-
-      const message =
-        err instanceof Error
-          ? err.message
-          : 'Failed to update profile.';
-
-      setError(message);
-
-      throw err;
-    }
-  };
+  }, [
+    authLoading,
+    currentUser,
+    effectiveUserId,
+    reloadKey,
+    fetchUser,
+    fetchMyProfessional,
+    fetchProfessionalByUserId,
+    checkViewerRelation,
+  ]);
 
   return {
     profile,
-    loading,
+    status,
     error,
-    updateProfile,
+    isOwnProfile,
+    viewerRelation,
+    refetch,
+    mutate,
+    setViewerRelation,
   };
 };

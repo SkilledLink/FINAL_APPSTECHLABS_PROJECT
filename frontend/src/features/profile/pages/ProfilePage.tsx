@@ -1,12 +1,12 @@
 // src/features/profile/pages/ProfilePage.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '../../../providers/AuthProvider';
+import { useProfile } from '../hooks/useProfile';
 import { useUser } from '../hooks/useUser';
-import { useProfessional } from '../hooks/useProfessional';
 import { useFollow } from '../hooks/useFollow';
 import { useProfileImage } from '../hooks/useProfileImage';
-import { useAuth } from '../../../providers/AuthProvider';
 import { ProfileHeader } from '../components/ProfileHeader';
 import { ProfileTabs } from '../components/ProfileTabs';
 import { ProfileAbout } from '../components/ProfileAbout';
@@ -14,6 +14,7 @@ import { ProfileSkills } from '../components/ProfileSkills';
 import { ProfileExperience } from '../components/ProfileExperience';
 import { ProfileWorkTab } from '../components/ProfileWorkTab';
 import { EditProfileForm } from '../components/EditProfileForm';
+import { ProfileStateView } from '../components/ProfileStateView';
 import { ProfessionalOnboardingModal } from './ProfessionalOnboardingModal';
 import type { ProfileTab, UserProfile } from '../types/profile.types';
 
@@ -21,320 +22,168 @@ export const ProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const {
-    currentUser,
-    loading: authLoading,
-    updateUser,
-  } = useAuth();
+  const { currentUser, updateUser: updateAuthUser } = useAuth();
+  const { updateUser: updateUserAPI, fetchUser } = useUser();
+  const { follow, unfollow } = useFollow();
+  const { uploadProfileImage, uploadBannerImage } = useProfileImage();
 
   const {
-    user,
-    loading: userLoading,
-    error: userError,
-    fetchUser,
-    updateUser: updateUserAPI,
-  } = useUser();
+    profile,
+    status,
+    error,
+    isOwnProfile,
+    viewerRelation,
+    refetch,
+    mutate,
+    setViewerRelation,
+  } = useProfile(id);
 
-  const {
-    professional,
-    loading: profLoading,
-    fetchMyProfessional,
-    createProfessional,
-    updateProfessional,
-  } = useProfessional();
-
-  const {
-    follow,
-    unfollow,
-    checkFollowStatus,
-    loading: followLoading,
-  } = useFollow();
-
-  const {
-    uploadProfileImage,
-    uploadBannerImage,
-    loading: imageLoading,
-  } = useProfileImage();
-
+  // ── ALL hooks first, unconditionally ─────────────────────────
   const [activeTab, setActiveTab] = useState<ProfileTab>('overview');
   const [isEditing, setIsEditing] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [followersCount, setFollowersCount] = useState(0);
-  const [loading, setLoading] = useState(true);
 
-  const userId = id || currentUser?.id;
-
-  // Wait for authentication to finish
-  useEffect(() => {
-    if (authLoading) {
-      return;
-    }
-
-    if (!currentUser) {
-      navigate('/login', { replace: true });
-    }
-  }, [authLoading, currentUser, navigate]);
-
-  // Load the profile
-  useEffect(() => {
-    if (authLoading || !currentUser || !userId) {
-      return;
-    }
-
-    let isMounted = true;
-
-    const loadProfile = async () => {
-      setLoading(true);
-      setProfile(null);
-
-      try {
-        // This waits until the backend response is received
-        const userData = await fetchUser(userId);
-
-        if (!isMounted) {
-          return;
-        }
-
-        if (!userData) {
-          setProfile(null);
-          return;
-        }
-
-        let profData = userData.professional;
-        let followStatus = false;
-
-        const promises: Promise<any>[] = [];
-
-        // Get professional data
-        if (
-          userId === currentUser.id &&
-          userData.accountType === 'professional'
-        ) {
-          promises.push(
-            fetchMyProfessional().then((p) => {
-              if (p) {
-                profData = p;
-              }
-            })
-          );
-        }
-
-        // Get follow status
-        if (userId !== currentUser.id) {
-          promises.push(
-            checkFollowStatus(userId).then((status) => {
-              if (status) {
-                followStatus = status.isFollowing;
-              }
-            })
-          );
-        }
-
-        // Wait for all additional backend requests
-        await Promise.all(promises);
-
-        if (!isMounted) {
-          return;
-        }
-
-        // Only now do we have the complete profile
-        const completeProfile: UserProfile = {
-          ...userData,
-          professional: profData,
-        };
-
-        setProfile(completeProfile);
-        setFollowersCount(userData.followersCount || 0);
-        setIsFollowing(followStatus);
-      } catch (error) {
-        console.error('Failed to load profile:', error);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+  const handleSaveProfile = useCallback(
+    async (data: Partial<UserProfile>) => {
+      if (!profile || !isOwnProfile) return;
+      const updated = await updateUserAPI(data);
+      if (updated) {
+        mutate(updated);
+        updateAuthUser(updated);
       }
-    };
+      setIsEditing(false);
+    },
+    [profile, isOwnProfile, updateUserAPI, mutate, updateAuthUser]
+  );
 
-    loadProfile();
+  const handleFollowToggle = useCallback(async () => {
+    if (!profile || !viewerRelation || isOwnProfile) return;
 
-    return () => {
-      isMounted = false;
-    };
+    const wasFollowing = viewerRelation.isFollowing;
+    const originalFollowers = profile.followersCount ?? 0;
+
+    // Optimistic update
+    setViewerRelation((prev) => ({ ...prev, isFollowing: !wasFollowing }));
+    mutate({
+      followersCount: wasFollowing
+        ? Math.max(0, originalFollowers - 1)
+        : originalFollowers + 1,
+    });
+
+    const success = wasFollowing
+      ? await unfollow(profile.id)
+      : await follow(profile.id);
+
+    if (!success) {
+      // Rollback
+      setViewerRelation((prev) => ({ ...prev, isFollowing: wasFollowing }));
+      mutate({ followersCount: originalFollowers });
+    }
   }, [
-    authLoading,
-    currentUser,
-    userId,
-    fetchUser,
-    fetchMyProfessional,
-    checkFollowStatus,
+    profile,
+    viewerRelation,
+    isOwnProfile,
+    follow,
+    unfollow,
+    mutate,
+    setViewerRelation,
   ]);
 
-  const error = userError;
-
-  // Show skeleton immediately while authentication or profile data is loading
-  if (authLoading || loading || !profile) {
-    return (
-      <div className="w-full max-w-6xl mx-auto px-2.5 sm:px-4 md:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4 animate-pulse pt-16 sm:pt-20 md:pt-24">
-        {/* Skeleton Header */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs">
-          <div className="h-32 sm:h-48 md:h-60 w-full bg-slate-200 dark:bg-slate-800" />
-
-          <div className="p-4 sm:p-6 relative">
-            <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3 sm:gap-4 -mt-14 sm:-mt-20 md:-mt-24">
-              <div className="w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full bg-slate-200 dark:bg-slate-800 ring-4 ring-white dark:ring-slate-900 shrink-0" />
-
-              <div className="space-y-3 w-full">
-                <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded w-48" />
-                <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-32" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Skeleton Tabs */}
-        <div className="flex gap-2 py-2 border-b border-slate-200 dark:border-slate-800">
-          <div className="h-10 w-20 bg-slate-200 dark:bg-slate-800 rounded-xl" />
-          <div className="h-10 w-20 bg-slate-200 dark:bg-slate-800 rounded-xl" />
-          <div className="h-10 w-20 bg-slate-200 dark:bg-slate-800 rounded-xl" />
-        </div>
-
-        {/* Skeleton Content */}
-        <div className="space-y-4">
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800/80">
-            <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded w-32 mb-4" />
-            <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-full mb-2" />
-            <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-3/4" />
-          </div>
-
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800/80">
-            <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded w-40 mb-4" />
-
-            <div className="flex flex-wrap gap-2">
-              <div className="h-8 w-24 bg-slate-200 dark:bg-slate-800 rounded-full" />
-              <div className="h-8 w-28 bg-slate-200 dark:bg-slate-800 rounded-full" />
-              <div className="h-8 w-20 bg-slate-200 dark:bg-slate-800 rounded-full" />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Authentication finished but user is logged out
-  if (!currentUser) {
-    return null;
-  }
-
-  // Backend returned an error
-  if (error) {
-    return (
-      <div className="p-8 text-center text-red-500">
-        Error: {error}
-      </div>
-    );
-  }
-
-  const isOwnProfile = currentUser.id === profile.id;
-  const isProfessional = profile.accountType === 'professional';
-
-  const handleSaveProfile = async (data: Partial<UserProfile>) => {
-    const updated = await updateUserAPI(data);
-
-    if (updated) {
-      setProfile((prev) => ({
-        ...prev!,
-        ...updated,
-      }));
-
-      if (isOwnProfile) {
-        updateUser(updated);
-      }
-    }
-
-    setIsEditing(false);
-  };
-
-  const handleFollowToggle = async () => {
-    if (isFollowing) {
-      const success = await unfollow(profile.id);
-
-      if (success) {
-        setIsFollowing(false);
-        setFollowersCount((prev) => prev - 1);
-      }
-    } else {
-      const success = await follow(profile.id);
-
-      if (success) {
-        setIsFollowing(true);
-        setFollowersCount((prev) => prev + 1);
-      }
-    }
-  };
-
-  const handleUpgradeSuccess = async () => {
+  const handleUpgradeSuccess = useCallback(async () => {
     setShowUpgradeModal(false);
+    if (!profile || !isOwnProfile) return;
 
     const userData = await fetchUser(profile.id);
+    if (!userData) return;
 
-    if (userData) {
-      const profData = await fetchMyProfessional();
+    mutate(userData);
+    updateAuthUser(userData);
+    await refetch();
+  }, [profile, isOwnProfile, fetchUser, mutate, updateAuthUser, refetch]);
 
-      const updatedProfile = {
-        ...userData,
-        professional: profData || userData.professional,
-      };
+  const handleImageUpload = useCallback(
+    async (file: File, type: 'profile' | 'banner') => {
+      if (!profile || !isOwnProfile) return;
 
-      setProfile(updatedProfile);
+      const result =
+        type === 'profile'
+          ? await uploadProfileImage(file)
+          : await uploadBannerImage(file);
 
-      if (isOwnProfile) {
-        updateUser(updatedProfile);
-      }
-    }
-  };
+      if (!result) return;
 
-  const handleImageUpload = async (
-    file: File,
-    type: 'profile' | 'banner'
-  ) => {
-    const result =
-      type === 'profile'
-        ? await uploadProfileImage(file)
-        : await uploadBannerImage(file);
+      const patch: Partial<UserProfile> = {};
+      if (result.profileImageUrl)
+        patch.profileImageUrl = result.profileImageUrl;
+      if (result.bannerImageUrl)
+        patch.bannerImageUrl = result.bannerImageUrl;
 
-    if (result) {
-      setProfile((prev) => ({
-        ...prev!,
-        profileImageUrl:
-          result.profileImageUrl || prev!.profileImageUrl,
-        bannerImageUrl:
-          result.bannerImageUrl || prev!.bannerImageUrl,
-      }));
+      mutate(patch);
+      updateAuthUser({ ...profile, ...patch });
+    },
+    [
+      profile,
+      isOwnProfile,
+      uploadProfileImage,
+      uploadBannerImage,
+      mutate,
+      updateAuthUser,
+    ]
+  );
 
-      if (isOwnProfile) {
-        updateUser({
-          ...profile,
-          ...result,
+  const handleMessage = useCallback(() => {
+    if (!profile || !viewerRelation?.canMessage) return;
+    navigate(`/messages?user=${profile.id}`);
+  }, [profile, viewerRelation, navigate]);
+
+  const handleRequestService = useCallback(() => {
+    if (!profile || !viewerRelation?.canRequestService) return;
+    navigate(`/services/request?professional=${profile.id}`);
+  }, [profile, viewerRelation, navigate]);
+
+  const handleShare = useCallback(async () => {
+    if (!profile) return;
+    const url = `${window.location.origin}/profile/${profile.id}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${profile.firstName} ${profile.lastName}`,
+          url,
         });
+      } catch {
+        /* user cancelled */
       }
+    } else {
+      await navigator.clipboard.writeText(url);
     }
-  };
+  }, [profile]);
+
+  // ── Now it's safe to conditionally return ────────────────────
+  if (status !== 'ready' || !profile) {
+    return <ProfileStateView status={status} error={error} onRetry={refetch} />;
+  }
+
+  // Trust the data, not the accountType flag — some rows say
+  // 'professional' but have no professionals record yet.
+  const isProfessional = !!profile.professional;
 
   return (
     <div className="w-full max-w-6xl mx-auto px-8 sm:px-4 md:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4 pt-16 sm:pt-20 md:pt-24">
       <ProfileHeader
         profile={profile}
         isOwnProfile={isOwnProfile}
-        isFollowing={isFollowing}
-        followersCount={followersCount}
+        isFollowing={viewerRelation?.isFollowing ?? false}
+        followsYou={viewerRelation?.followsYou ?? false}
+        canMessage={viewerRelation?.canMessage ?? false}
+        canRequestService={viewerRelation?.canRequestService ?? false}
+        followersCount={profile.followersCount}
         onFollow={handleFollowToggle}
-        onMessage={() => alert(`Message ${profile.firstName}`)}
-        onRequestService={() => alert('Request service')}
+        onMessage={handleMessage}
+        onRequestService={handleRequestService}
         onUpgrade={() => setShowUpgradeModal(true)}
         onEditProfile={() => setIsEditing(true)}
         onImageUpload={handleImageUpload}
+        onShare={handleShare}
       />
 
       <ProfileTabs
@@ -346,14 +195,9 @@ export const ProfilePage: React.FC = () => {
       {activeTab === 'overview' && (
         <div className="space-y-4">
           <ProfileAbout profile={profile} />
-
           {isProfessional && (
             <>
-              <ProfileSkills
-                profile={profile}
-                isOwnProfile={isOwnProfile}
-              />
-
+              <ProfileSkills profile={profile} isOwnProfile={isOwnProfile} />
               <ProfileExperience profile={profile} />
             </>
           )}
@@ -363,7 +207,7 @@ export const ProfilePage: React.FC = () => {
       {activeTab === 'work' && isProfessional && (
         <ProfileWorkTab
           profile={profile}
-          onRequestService={() => alert('Request service')}
+          onRequestService={handleRequestService}
           onViewAllServices={() => setActiveTab('services')}
         />
       )}
@@ -373,17 +217,17 @@ export const ProfilePage: React.FC = () => {
           <h3 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">
             All Services
           </h3>
-
           <ul className="mt-4 space-y-2">
-            {profile.professional?.services.map(
-              (service, idx) => (
-                <li
-                  key={idx}
-                  className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl"
-                >
-                  {service}
-                </li>
-              )
+            {(profile.professional?.services ?? []).map((service, idx) => (
+              <li
+                key={idx}
+                className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl"
+              >
+                {service}
+              </li>
+            ))}
+            {(profile.professional?.services ?? []).length === 0 && (
+              <li className="text-sm text-slate-400">No services listed.</li>
             )}
           </ul>
         </div>
@@ -394,10 +238,11 @@ export const ProfilePage: React.FC = () => {
           <h3 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">
             Reviews
           </h3>
-
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-            {profile.professional?.totalReviews} reviews • Rating{' '}
-            {profile.professional?.rating.toFixed(1)}
+            {profile.professional?.totalReviews ?? 0} reviews • Rating{' '}
+            {typeof profile.professional?.rating === 'number'
+              ? profile.professional.rating.toFixed(1)
+              : '—'}
           </p>
         </div>
       )}
@@ -407,14 +252,14 @@ export const ProfilePage: React.FC = () => {
           <h3 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">
             Posts
           </h3>
-
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
             No posts yet.
           </p>
         </div>
       )}
 
-      {isEditing && (
+      {/* Modals (self-guarded) */}
+      {isEditing && isOwnProfile && (
         <EditProfileForm
           profile={profile}
           onSave={handleSaveProfile}
@@ -422,7 +267,7 @@ export const ProfilePage: React.FC = () => {
         />
       )}
 
-      {showUpgradeModal && (
+      {showUpgradeModal && isOwnProfile && (
         <ProfessionalOnboardingModal
           userId={profile.id}
           onClose={() => setShowUpgradeModal(false)}
@@ -432,4 +277,3 @@ export const ProfilePage: React.FC = () => {
     </div>
   );
 };
-

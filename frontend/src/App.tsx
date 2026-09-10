@@ -68,6 +68,7 @@ import { VerificationPage } from "./verification/pages/VerificationPage";
 
 // Marketplace
 import Marketplace from "./features/Market/pages/Marketplace/Marketplace";
+import UserProfilePage from "./features/user_profile/pages/UserProfilePage";
 
 
 // ============================================================
@@ -260,6 +261,11 @@ function App() {
             <Route
               path="verification"
               element={<VerificationPage />}
+            />
+
+            <Route 
+            path="user-profile/:id"
+            element={<UserProfilePage />}
             />
 
             {/* Marketplace */}
