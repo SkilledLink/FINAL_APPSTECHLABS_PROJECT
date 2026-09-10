@@ -1,0 +1,57 @@
+// src/features/user_profile/components/UserTabs.tsx
+
+import React from 'react';
+import type { UserTab } from '../types/user.types';
+
+interface UserTabsProps {
+  activeTab: UserTab;
+  onChangeTab: (tab: UserTab) => void;
+  isProfessional: boolean;
+}
+
+export const UserTabs: React.FC<UserTabsProps> = ({
+  activeTab,
+  onChangeTab,
+  isProfessional,
+}) => {
+  const baseTabs: { id: UserTab; label: string }[] = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'posts', label: 'Posts' },
+  ];
+
+  const professionalTabs: { id: UserTab; label: string }[] = [
+    { id: 'work', label: 'Work' },
+    { id: 'services', label: 'Services' },
+    { id: 'reviews', label: 'Reviews' },
+  ];
+
+  const tabs = isProfessional
+    ? [...baseTabs, ...professionalTabs]
+    : baseTabs;
+
+  return (
+    <div className="w-full border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md px-1 sm:px-3 rounded-xl sm:rounded-2xl my-3 sm:my-4 overflow-x-auto no-scrollbar scroll-smooth">
+      <div className="flex items-center min-w-max gap-1 sm:gap-2">
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => onChangeTab(tab.id)}
+              className={`relative py-2.5 sm:py-3 px-3.5 sm:px-5 text-xs sm:text-sm font-bold transition-colors whitespace-nowrap ${
+                isActive
+                  ? 'text-blue-600 dark:text-blue-400'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+              }`}
+            >
+              {tab.label}
+              {isActive && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};

@@ -7,8 +7,14 @@ import { authService } from '../features/auth/services/authService';
 
 interface AuthContextType {
   currentUser: UserProfile | null;
+  loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (data: { email: string; password: string; firstName: string; lastName: string }) => Promise<void>;
+  register: (data: {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+  }) => Promise<void>;
   logout: () => void;
   updateUser: (user: UserProfile) => void;
   isAuthenticated: () => boolean;
@@ -16,7 +22,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -24,29 +32,41 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     const loadUser = async () => {
       const token = localStorage.getItem('access_token');
+
       if (token) {
         try {
           const user = await authService.getCurrentUser();
           setCurrentUser(user);
         } catch {
-          // Token invalid or expired
           localStorage.removeItem('access_token');
           setCurrentUser(null);
         }
       }
+
       setLoading(false);
     };
+
     loadUser();
   }, []);
 
   const login = async (email: string, password: string) => {
-    const response = await authService.login({ email, password });
+    const response = await authService.login({
+      email,
+      password,
+    });
+
     localStorage.setItem('access_token', response.access_token);
     setCurrentUser(response.user);
   };
 
-  const register = async (data: { email: string; password: string; firstName: string; lastName: string }) => {
+  const register = async (data: {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+  }) => {
     const response = await authService.register(data);
+
     localStorage.setItem('access_token', response.access_token);
     setCurrentUser(response.user);
   };
@@ -61,10 +81,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setCurrentUser(user);
   };
 
-  const isAuthenticated = () => !!currentUser && !!localStorage.getItem('access_token');
+  const isAuthenticated = () =>
+    !!currentUser && !!localStorage.getItem('access_token');
 
   return (
-    <AuthContext.Provider value={{ currentUser, login, register, logout, updateUser, isAuthenticated }}>
+    <AuthContext.Provider
+      value={{
+        currentUser,
+        loading,
+        login,
+        register,
+        logout,
+        updateUser,
+        isAuthenticated,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -72,7 +103,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within an AuthProvider');
+
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+
   return context;
 };
-

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Seed the Skillink knowledge base with FAQs and platform knowledge.
+Seed the SkilledLink knowledge base with FAQs and platform knowledge.
 
 Usage:
     python -m scripts.seed_knowledge
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 # ============================================================
-# SKILLINK KNOWLEDGE BASE
+# SKILLEDLINK KNOWLEDGE BASE
 # ============================================================
 
 KNOWLEDGE_DOCUMENTS = [
@@ -35,10 +35,10 @@ KNOWLEDGE_DOCUMENTS = [
     # ========================================================
 
     {
-        "title": "What is Skillink?",
+        "title": "What is SkilledLink?",
         "category": "general",
         "content": """
-Skillink is a platform that connects people who need services with skilled
+SkilledLink is a platform that connects people who need services with skilled
 professionals who can provide those services.
 
 Users can discover professionals based on their skills, services, experience,
@@ -48,20 +48,20 @@ Professionals can create professional profiles, showcase their skills and
 services, build portfolios, receive service requests, communicate with
 customers, and build a reputation through completed work and reviews.
 
-Skillink is designed to make it easier for customers to find trustworthy
+SkilledLink is designed to make it easier for customers to find trustworthy
 skilled workers and for professionals to showcase their abilities and find
 opportunities.
 """
     },
 
     {
-        "title": "Who can use Skillink?",
+        "title": "Who can use SkilledLink?",
         "category": "general",
         "content": """
-Skillink can be used by people looking for skilled services and by people who
-want to offer their professional skills.
+SkilledLink can be used by people looking for skilled services and by people
+who want to offer their professional skills.
 
-A regular user can use Skillink to search for professionals, view profiles,
+A regular user can use SkilledLink to search for professionals, view profiles,
 discover services, request services, communicate with professionals, and
 review completed services.
 
@@ -72,10 +72,10 @@ services, and portfolio.
     },
 
     {
-        "title": "How does Skillink work?",
+        "title": "How does SkilledLink work?",
         "category": "general",
         "content": """
-Skillink works by connecting customers with skilled professionals.
+SkilledLink works by connecting customers with skilled professionals.
 
 A customer describes what they need and searches for professionals who match
 the requested skill or service.
@@ -94,26 +94,26 @@ the platform supports them.
     },
 
     {
-        "title": "What is Skillink's main purpose?",
+        "title": "What is SkilledLink's main purpose?",
         "category": "general",
         "content": """
-Skillink's main purpose is to make it easier for people to discover and
+SkilledLink's main purpose is to make it easier for people to discover and
 connect with skilled professionals.
 
 The platform helps customers find people who can provide services while
 helping professionals showcase their skills, services, experience, and
 previous work.
 
-Skillink combines professional profiles, service discovery, portfolios,
+SkilledLink combines professional profiles, service discovery, portfolios,
 search, communication, and reputation features to support this connection.
 """
     },
 
     {
-        "title": "Is Skillink free to use?",
+        "title": "Is SkilledLink free to use?",
         "category": "pricing",
         "content": """
-Skillink is currently free to use.
+SkilledLink is currently free to use.
 
 Customers can search for professionals and request services without paying
 a platform access fee.
@@ -132,10 +132,10 @@ changes should be communicated to users clearly before they take effect.
     # ========================================================
 
     {
-        "title": "How do I create a Skillink account?",
+        "title": "How do I create a SkilledLink account?",
         "category": "account",
         "content": """
-To use Skillink features that require authentication, create an account
+To use SkilledLink features that require authentication, create an account
 using the registration process.
 
 Provide the information requested by the registration form and create a
@@ -143,9 +143,9 @@ secure password.
 
 After registration, log in to access your account and profile.
 
-The account allows you to use Skillink features such as managing your profile,
-searching for professionals, requesting services, communicating with users,
-and accessing your dashboard.
+The account allows you to use SkilledLink features such as managing your
+profile, searching for professionals, requesting services, communicating
+with users, and accessing your dashboard.
 """
     },
 
@@ -153,7 +153,7 @@ and accessing your dashboard.
         "title": "What is a regular user account?",
         "category": "account",
         "content": """
-A regular Skillink user account is an account for someone who wants to use
+A regular SkilledLink user account is an account for someone who wants to use
 the platform to discover services and professionals.
 
 A regular user can search for professionals, view professional profiles,
@@ -161,7 +161,7 @@ request services, communicate with professionals, and use other features
 available to customers.
 
 A regular user can later choose to become a professional if they want to
-offer services through Skillink.
+offer services through SkilledLink.
 """
     },
 
@@ -184,7 +184,7 @@ profile information, photo, location, and other account details.
         "title": "What should I do if I forget my password?",
         "category": "account",
         "content": """
-If a user forgets their Skillink password, they should use the password
+If a user forgets their SkilledLink password, they should use the password
 recovery process provided by the platform.
 
 The user should follow the instructions sent through the registered account
@@ -204,7 +204,7 @@ credentials with another person.
         "title": "How do I become a professional?",
         "category": "onboarding",
         "content": """
-To become a professional on Skillink:
+To become a professional on SkilledLink:
 
 1. Log in to your account.
 2. Open your profile or account settings.
@@ -218,7 +218,7 @@ To become a professional on Skillink:
 10. Submit your professional profile.
 
 Once the professional profile is available, it can be discovered by customers
-through Skillink search and other professional discovery features.
+through SkilledLink search and other professional discovery features.
 """
     },
 
@@ -286,7 +286,7 @@ Professionals should keep their information accurate and up to date.
     },
 
     {
-        "title": "How can a professional get more customers on Skillink?",
+        "title": "How can a professional get more customers on SkilledLink?",
         "category": "professional",
         "content": """
 Professionals can improve their chances of being discovered by maintaining
@@ -332,7 +332,7 @@ To add services to a professional catalog:
 9. Save the service.
 
 Published services can appear on the professional profile and may be used
-by Skillink search and matching.
+by SkilledLink search and matching.
 """
     },
 
@@ -486,7 +486,7 @@ Verification can increase customer confidence because it provides an
 additional trust signal.
 
 A verified professional may receive better visibility or ranking depending
-on Skillink's search and ranking rules.
+on SkilledLink's search and ranking rules.
 
 Professionals should still maintain accurate profiles, genuine portfolios,
 good service quality, and professional communication.
@@ -503,7 +503,7 @@ confirm a professional's identity or professional qualifications.
 Depending on the verification workflow, this may include identity
 information, professional certificates, qualifications, or evidence of work.
 
-Users should only submit documents through official Skillink verification
+Users should only submit documents through official SkilledLink verification
 channels and should not share sensitive documents with unknown people.
 """
     },
@@ -514,11 +514,11 @@ channels and should not share sensitive documents with unknown people.
     # ========================================================
 
     {
-        "title": "How does Skillink search work?",
+        "title": "How does SkilledLink search work?",
         "category": "search",
         "content": """
-Skillink search is designed to understand what a customer is looking for and
-identify relevant professionals.
+SkilledLink search is designed to understand what a customer is looking for
+and identify relevant professionals.
 
 A customer can describe a need using natural language.
 
@@ -539,7 +539,7 @@ other professional attributes.
         "title": "Can I search for professionals near me?",
         "category": "search",
         "content": """
-Skillink can use professional location information as part of professional
+SkilledLink can use professional location information as part of professional
 discovery.
 
 Customers can search for professionals in a specific city, region, or
@@ -557,7 +557,7 @@ and the features implemented by the platform.
         "title": "How does AI-powered professional matching work?",
         "category": "search",
         "content": """
-Skillink can use AI and semantic search to understand the meaning of a
+SkilledLink can use AI and semantic search to understand the meaning of a
 customer's request instead of relying only on exact keyword matches.
 
 For example, a request such as:
@@ -619,7 +619,7 @@ using relevant location or service filters.
         "title": "What happens if no professional matches my request?",
         "category": "search",
         "content": """
-If Skillink cannot find a sufficiently relevant professional, the system
+If SkilledLink cannot find a sufficiently relevant professional, the system
 should not invent a result.
 
 The customer can try:
@@ -645,7 +645,7 @@ found.
         "title": "How do I request a service?",
         "category": "hiring",
         "content": """
-To request a service on Skillink:
+To request a service on SkilledLink:
 
 1. Search for a professional or service.
 2. Open a professional profile.
@@ -694,7 +694,7 @@ the request.
 The professional may respond, ask for clarification, discuss the project,
 provide a quote when supported, or decline the request.
 
-Customers can track their requests through the appropriate Skillink
+Customers can track their requests through the appropriate SkilledLink
 dashboard or request interface.
 """
     },
@@ -734,8 +734,8 @@ and other important conditions before accepting a quote.
 If something is unclear, the customer should ask the professional for
 clarification before proceeding.
 
-Important agreements should be kept within supported Skillink communication
-or transaction workflows when possible.
+Important agreements should be kept within supported SkilledLink
+communication or transaction workflows when possible.
 """
     },
 
@@ -783,7 +783,7 @@ experience, and verification status.
         "title": "Can customers communicate with professionals?",
         "category": "messaging",
         "content": """
-Skillink can provide communication features that allow customers and
+SkilledLink can provide communication features that allow customers and
 professionals to discuss services.
 
 Communication can be used to clarify requirements, discuss project details,
@@ -856,7 +856,7 @@ support mechanisms when available.
 Users should preserve relevant information about the interaction and avoid
 escalating the situation themselves.
 
-Skillink administrators can review reports according to the platform's
+SkilledLink administrators can review reports according to the platform's
 policies.
 """
     },
@@ -888,53 +888,53 @@ that they do not possess.
     # ========================================================
 
     {
-        "title": "What can the Skillink AI assistant help with?",
+        "title": "What can the SkilledLink AI assistant help with?",
         "category": "ai",
         "content": """
-The Skillink AI assistant can help users understand and navigate the
+The SkilledLink AI assistant can help users understand and navigate the
 platform.
 
-It can answer questions about Skillink features, explain how platform
+It can answer questions about SkilledLink features, explain how platform
 processes work, help users understand professional profiles, and assist with
 professional discovery.
 
-When connected to live Skillink data, the AI can also help identify relevant
-professionals based on skills, services, location, availability, and other
-available information.
+When connected to live SkilledLink data, the AI can also help identify
+relevant professionals based on skills, services, location, availability,
+and other available information.
 
-The AI should use retrieved Skillink information as its source of truth.
+The AI should use retrieved SkilledLink information as its source of truth.
 """
     },
 
     {
-        "title": "How does Skillink RAG work?",
+        "title": "How does SkilledLink RAG work?",
         "category": "ai",
         "content": """
-Skillink uses Retrieval-Augmented Generation, also called RAG, to provide
+SkilledLink uses Retrieval-Augmented Generation, also called RAG, to provide
 grounded AI responses.
 
 When a user asks a question:
 
 1. The user's request is converted into an embedding.
-2. The system searches the Skillink knowledge base and relevant platform
+2. The system searches the SkilledLink knowledge base and relevant platform
    data using semantic similarity.
 3. Relevant information is retrieved from the database.
 4. The retrieved information is provided to the AI model as context.
 5. The AI generates a response based on that context.
 
-The purpose of RAG is to allow the AI to answer using Skillink's actual
+The purpose of RAG is to allow the AI to answer using SkilledLink's actual
 knowledge and data instead of relying only on the model's general knowledge.
 """
     },
 
     {
-        "title": "What is the source of truth for Skillink AI?",
+        "title": "What is the source of truth for SkilledLink AI?",
         "category": "ai",
         "content": """
-Skillink's own database and approved knowledge documents are the primary
+SkilledLink's own database and approved knowledge documents are the primary
 sources of truth for platform-specific information.
 
-The AI should prioritize retrieved Skillink information over assumptions.
+The AI should prioritize retrieved SkilledLink information over assumptions.
 
 For dynamic information such as professional availability, profile details,
 services, ratings, reviews, jobs, and other changing data, the AI should
@@ -946,11 +946,11 @@ availability, reviews, or platform features.
     },
 
     {
-        "title": "How should Skillink AI recommend professionals?",
+        "title": "How should SkilledLink AI recommend professionals?",
         "category": "ai",
         "content": """
-When recommending professionals, Skillink AI should use retrieved platform
-data.
+When recommending professionals, SkilledLink AI should use retrieved
+platform data.
 
 The recommendation should consider the user's actual request and relevant
 professional attributes such as:
@@ -973,10 +973,10 @@ is available unless current platform data supports that statement.
     },
 
     {
-        "title": "What should Skillink AI do when it cannot find an answer?",
+        "title": "What should SkilledLink AI do when it cannot find an answer?",
         "category": "ai",
         "content": """
-If the Skillink AI assistant cannot find enough relevant information to
+If the SkilledLink AI assistant cannot find enough relevant information to
 answer a platform-specific question, it should be transparent.
 
 It should not invent an answer.
@@ -988,10 +988,10 @@ searching for professionals, contacting support, or providing more details.
     },
 
     {
-        "title": "What should Skillink AI never do?",
+        "title": "What should SkilledLink AI never do?",
         "category": "ai",
         "content": """
-Skillink AI should never fabricate platform information.
+SkilledLink AI should never fabricate platform information.
 
 It must not:
 
@@ -1009,7 +1009,7 @@ It must not:
 
 When information is unavailable, the AI should say so instead of guessing.
 
-The AI should prioritize retrieved Skillink data and clearly distinguish
+The AI should prioritize retrieved SkilledLink data and clearly distinguish
 between known platform information and general guidance.
 """
     },
@@ -1023,7 +1023,7 @@ between known platform information and general guidance.
         "title": "Why should users keep their information accurate?",
         "category": "privacy",
         "content": """
-Accurate user and professional information improves the quality of Skillink
+Accurate user and professional information improves the quality of SkilledLink
 search, matching, communication, and recommendations.
 
 Professionals should keep their skills, services, location, availability,
@@ -1044,7 +1044,7 @@ Examples include passwords, authentication tokens, financial credentials,
 private identity information, and other information that could be used to
 compromise an account.
 
-Users should only provide information required for the relevant Skillink
+Users should only provide information required for the relevant SkilledLink
 feature or service.
 """
     },
@@ -1055,13 +1055,13 @@ feature or service.
     # ========================================================
 
     {
-        "title": "Why is location important on Skillink?",
+        "title": "Why is location important on SkilledLink?",
         "category": "search",
         "content": """
 Location can be important because many services need to be performed
 physically near the customer.
 
-Skillink can use location information to help customers discover relevant
+SkilledLink can use location information to help customers discover relevant
 professionals in a particular city, region, or supported geographic area.
 
 A professional's location should be kept accurate so that search results and
@@ -1081,8 +1081,8 @@ accept new service requests.
 
 A professional's availability information should be kept current.
 
-When current availability data is available, Skillink can use it as part of
-professional matching and ranking.
+When current availability data is available, SkilledLink can use it as part
+of professional matching and ranking.
 
 The AI should not guarantee that a professional is available unless current
 platform data confirms it.
@@ -1105,10 +1105,10 @@ should not be fabricated by the AI.
     },
 
     {
-        "title": "How does Skillink help professionals showcase their work?",
+        "title": "How does SkilledLink help professionals showcase their work?",
         "category": "professional",
         "content": """
-Skillink allows professionals to present information about their skills,
+SkilledLink allows professionals to present information about their skills,
 services, experience, and previous work.
 
 Professional profiles and portfolios can act as a digital professional
@@ -1138,7 +1138,7 @@ For example:
 
 "I need an electrician to install solar panels at my house."
 
-Skillink can interpret this request as requiring electrical and solar
+SkilledLink can interpret this request as requiring electrical and solar
 installation skills.
 
 Relevant professionals may have skills or services such as solar
@@ -1160,7 +1160,7 @@ For example:
 
 "My bathroom pipe is leaking and I need someone to repair it."
 
-Skillink can interpret the request as a plumbing repair task.
+SkilledLink can interpret the request as a plumbing repair task.
 
 Relevant professionals may have skills or services such as plumbing repair,
 pipe repair, leak detection, bathroom plumbing, or related services.
@@ -1180,7 +1180,7 @@ For example:
 
 "I need someone to build a wooden wardrobe for my bedroom."
 
-Skillink can interpret this as a carpentry and furniture construction
+SkilledLink can interpret this as a carpentry and furniture construction
 request.
 
 Relevant professionals may have skills or services such as furniture
@@ -1198,13 +1198,13 @@ available attributes.
     # ========================================================
 
     {
-        "title": "How should Skillink AI answer users?",
+        "title": "How should SkilledLink AI answer users?",
         "category": "ai",
         "content": """
-Skillink AI should answer users clearly, directly, and helpfully.
+SkilledLink AI should answer users clearly, directly, and helpfully.
 
-For platform-specific questions, it should use retrieved Skillink knowledge
-and current platform data when available.
+For platform-specific questions, it should use retrieved SkilledLink
+knowledge and current platform data when available.
 
 For professional discovery requests, the AI should explain why the returned
 professionals are relevant when useful.
@@ -1218,10 +1218,10 @@ presenting an assumption as fact.
     },
 
     {
-        "title": "How should Skillink AI handle professional search requests?",
+        "title": "How should SkilledLink AI handle professional search requests?",
         "category": "ai",
         "content": """
-When a user asks Skillink AI to find a professional, the AI should identify
+When a user asks SkilledLink AI to find a professional, the AI should identify
 the important parts of the request.
 
 These may include:
@@ -1244,10 +1244,10 @@ should not invent missing details.
     },
 
     {
-        "title": "How should Skillink AI handle ambiguous requests?",
+        "title": "How should SkilledLink AI handle ambiguous requests?",
         "category": "ai",
         "content": """
-If a user's request is ambiguous, Skillink AI should make a reasonable
+If a user's request is ambiguous, SkilledLink AI should make a reasonable
 interpretation when possible.
 
 For example, if a user says:
@@ -1268,10 +1268,10 @@ options rather than pretending to know exactly what the user needs.
     # ========================================================
 
     {
-        "title": "What information can Skillink AI use for matching?",
+        "title": "What information can SkilledLink AI use for matching?",
         "category": "ai",
         "content": """
-Skillink AI can use multiple types of information when matching customers
+SkilledLink AI can use multiple types of information when matching customers
 with professionals.
 
 Potential information includes:
@@ -1293,22 +1293,22 @@ Potential information includes:
 - Search relevance
 
 The exact information available to the AI depends on the data exposed by
-the Skillink backend and the user's permissions.
+the SkilledLink backend and the user's permissions.
 """
     },
 
     {
-        "title": "How should Skillink protect private information in AI responses?",
+        "title": "How should SkilledLink protect private information in AI responses?",
         "category": "privacy",
         "content": """
-Skillink AI should only expose information that the requesting user is
+SkilledLink AI should only expose information that the requesting user is
 authorized to access.
 
 Private account information, authentication credentials, sensitive personal
 information, and confidential platform data should not be unnecessarily
 included in AI responses.
 
-The AI should follow the access controls implemented by the Skillink
+The AI should follow the access controls implemented by the SkilledLink
 backend.
 
 Retrieval should respect user permissions before information is provided to
@@ -1324,7 +1324,7 @@ the AI model.
 # ============================================================
 
 def seed_knowledge_base():
-    """Seed the Skillink knowledge base."""
+    """Seed the SkilledLink knowledge base."""
 
     embedding_service = EmbeddingService()
     session = Session(engine)
@@ -1349,7 +1349,7 @@ def seed_knowledge_base():
         total = len(KNOWLEDGE_DOCUMENTS)
 
         logger.info(
-            f"Seeding {total} Skillink knowledge documents..."
+            f"Seeding {total} SkilledLink knowledge documents..."
         )
 
         for index, document in enumerate(KNOWLEDGE_DOCUMENTS, start=1):
@@ -1396,3 +1396,4 @@ def seed_knowledge_base():
 
 if __name__ == "__main__":
     seed_knowledge_base()
+

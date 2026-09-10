@@ -44,9 +44,9 @@ import { ProfilePage } from "./features/profile";
 import { MessagesPage } from "./features/messages";
 import { DiscoverPage } from "./features/discover";
 
-// Portfolio
-import PortfolioDashboard from "./features/portfolio/pages/PortfolioDashboard";
-import UsersPage from "./features/users/pages/UsersPage";
+// ─── Professional Portfolio ────────────────────────────────
+import PortfolioDashboard from './features/portfolio/pages/PortfolioDashboard';
+import UsersPage from './features/users/pages/UsersPage';
 
 // Admin
 import AdminLogin from "./features/dash_board/AdminDahboard/AdminLogin";
@@ -68,6 +68,7 @@ import { VerificationPage } from "./verification/pages/VerificationPage";
 
 // Marketplace
 import Marketplace from "./features/Market/pages/Marketplace/Marketplace";
+import UserProfilePage from "./features/user_profile/pages/UserProfilePage";
 
 
 // ============================================================
@@ -229,15 +230,8 @@ function App() {
             <Route path="jobs" element={<JobsPage />} />
 
             {/* Profile */}
-            <Route
-              path="profile"
-              element={<ProfileRoute />}
-            />
-
-            <Route
-              path="profile/:id"
-              element={<ProfileRoute />}
-            />
+            <Route path="profile" element={<ProfileRoute />} />
+            <Route path="profile/:id" element={<ProfileRoute />} />
 
             {/* Messages */}
             <Route
@@ -267,6 +261,11 @@ function App() {
             <Route
               path="verification"
               element={<VerificationPage />}
+            />
+
+            <Route 
+            path="user-profile/:id"
+            element={<UserProfilePage />}
             />
 
             {/* Marketplace */}

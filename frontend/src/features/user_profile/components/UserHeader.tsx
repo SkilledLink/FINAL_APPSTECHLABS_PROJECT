@@ -1,4 +1,4 @@
-// src/features/profile/components/ProfileHeader.tsx
+// src/features/user_profile/components/UserHeader.tsx
 
 import React, { useRef } from 'react';
 import {
@@ -9,15 +9,12 @@ import {
   Share2,
   MoreHorizontal,
 } from 'lucide-react';
-import type { UserProfile } from '../types/profile.types';
+import type { UserProfile } from '../types/user.types';
 
-interface ProfileHeaderProps {
+interface UserHeaderProps {
   profile: UserProfile;
   isOwnProfile: boolean;
   isFollowing?: boolean;
-  followsYou?: boolean;
-  canMessage?: boolean;
-  canRequestService?: boolean;
   followersCount?: number;
   onFollow?: () => void;
   onMessage?: () => void;
@@ -28,13 +25,10 @@ interface ProfileHeaderProps {
   onShare?: () => void;
 }
 
-export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
+export const UserHeader: React.FC<UserHeaderProps> = ({
   profile,
   isOwnProfile,
   isFollowing = false,
-  followsYou = false,
-  canMessage = true,
-  canRequestService = true,
   followersCount: propFollowersCount,
   onFollow,
   onMessage,
@@ -47,6 +41,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const profileInputRef = useRef<HTMLInputElement>(null);
 
+  // Support both camelCase and snake_case API responses
   const profileData = profile as UserProfile & {
     first_name?: string;
     last_name?: string;
@@ -56,9 +51,12 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     account_type?: string;
   };
 
-  const firstName = profileData.firstName ?? profileData.first_name ?? '';
+  const firstName =
+    profileData.firstName ?? profileData.first_name ?? '';
   const lastName = profileData.lastName ?? profileData.last_name ?? '';
+
   const fullName = `${firstName} ${lastName}`.trim() || 'User';
+
   const tradeTitle = profile.professional?.profession || '';
 
   const displayFollowers =
@@ -69,13 +67,11 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 
   const profileImageUrl =
     profile.profileImageUrl ?? profileData.profile_image_url ?? '';
+
   const bannerImageUrl =
     profile.bannerImageUrl ?? profileData.banner_image_url ?? '';
-  const accountType = profile.accountType ?? profileData.account_type;
 
-  // Normalise both 'standard' and legacy 'user' values.
-  const isStandardAccount =
-    accountType === 'standard' || accountType === 'user';
+  const accountType = profile.accountType ?? profileData.account_type;
 
   const handleImageChange = (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -89,52 +85,74 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
       event.target.value = '';
       return;
     }
+
     if (file.size > 10 * 1024 * 1024) {
       alert('Image must be smaller than 10MB.');
       event.target.value = '';
       return;
     }
 
-    onImageUpload?.(file, type);
+    console.log(`Selected ${type} image:`, file.name);
+
+    if (onImageUpload) {
+      onImageUpload(file, type);
+    }
+
     event.target.value = '';
   };
 
   const openBannerPicker = () => {
-    if (!onImageUpload) return;
+    if (!onImageUpload) {
+      console.warn('UserHeader: onImageUpload is not provided.');
+      return;
+    }
     bannerInputRef.current?.click();
   };
+
   const openProfilePicker = () => {
-    if (!onImageUpload) return;
+    if (!onImageUpload) {
+      console.warn('UserHeader: onImageUpload is not provided.');
+      return;
+    }
     profileInputRef.current?.click();
   };
 
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl sm:rounded-3xl overflow-hidden shadow-xs">
+      {/* Hidden Banner File Input */}
       <input
         ref={bannerInputRef}
         type="file"
         accept="image/jpeg,image/png,image/webp,image/gif"
         className="hidden"
-        onChange={(e) => handleImageChange(e, 'banner')}
+        onChange={(event) => handleImageChange(event, 'banner')}
       />
+
+      {/* Hidden Profile File Input */}
       <input
         ref={profileInputRef}
         type="file"
         accept="image/jpeg,image/png,image/webp,image/gif"
         className="hidden"
-        onChange={(e) => handleImageChange(e, 'profile')}
+        onChange={(event) => handleImageChange(event, 'profile')}
       />
 
       {/* Banner */}
       <div className="h-32 sm:h-48 md:h-60 w-full relative bg-slate-800">
         {bannerImageUrl ? (
-          <img src={bannerImageUrl} alt="Cover" className="w-full h-full object-cover" />
+          <img
+            src={bannerImageUrl}
+            alt="Cover"
+            className="w-full h-full object-cover"
+          />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-slate-400">
             <span className="text-sm">No banner image</span>
           </div>
         )}
+
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent pointer-events-none" />
+
         {isOwnProfile && onImageUpload && (
           <button
             type="button"
@@ -146,10 +164,12 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         )}
       </div>
 
-      {/* Profile details */}
+      {/* Profile Details */}
       <div className="p-4 sm:p-6 relative">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 -mt-14 sm:-mt-20 md:-mt-24 mb-3 sm:mb-4">
+          {/* Avatar + Name */}
           <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3 sm:gap-4">
+            {/* Avatar */}
             <div className="relative shrink-0 group">
               <img
                 src={
@@ -161,11 +181,13 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 alt={fullName}
                 className="w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full object-cover ring-4 ring-white dark:ring-slate-900 shadow-xl"
               />
+
               {profile.professional?.isVerified && (
                 <span className="absolute bottom-0 right-0 bg-blue-600 text-white p-1 rounded-full ring-2 ring-white dark:ring-slate-900">
                   <BadgeCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </span>
               )}
+
               {isOwnProfile && onImageUpload && (
                 <button
                   type="button"
@@ -177,25 +199,23 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               )}
             </div>
 
+            {/* Name + Stats */}
             <div className="pb-0.5 space-y-1">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <h1 className="text-lg sm:text-2xl font-black text-slate-900 dark:text-slate-100 leading-tight">
                   {fullName}
                   {tradeTitle && `, ${tradeTitle}`}
                 </h1>
+
                 {profile.professional?.isVerified && (
                   <BadgeCheck className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500 fill-blue-500/10 shrink-0" />
                 )}
-                {/* NEW – "Follows you" badge */}
-                {!isOwnProfile && followsYou && (
-                  <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-full border border-slate-200 dark:border-slate-700">
-                    Follows you
-                  </span>
-                )}
               </div>
 
+              {/* Stats */}
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
                 <span>{displayFollowers} Followers</span>
+
                 {profile.professional && (
                   <>
                     <span className="hidden xs:inline">•</span>
@@ -206,7 +226,8 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                     </span>
                     <span>•</span>
                     <span>
-                      {profile.professional.yearsOfExperience || 0} Years in Trade
+                      {profile.professional.yearsOfExperience || 0} Years in
+                      Trade
                     </span>
                     <span>•</span>
                     <span>
@@ -221,9 +242,9 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             </div>
           </div>
 
-          {/* Actions */}
+          {/* Action Buttons */}
           <div className="grid grid-cols-2 xs:grid-cols-3 sm:flex items-center gap-2 pt-2 md:pt-0 w-full md:w-auto">
-            {isOwnProfile && isStandardAccount && (
+            {isOwnProfile && accountType === 'standard' && (
               <button
                 type="button"
                 onClick={onUpgrade}
@@ -262,9 +283,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 <button
                   type="button"
                   onClick={onMessage}
-                  disabled={!canMessage}
-                  title={!canMessage ? 'Messaging is unavailable' : undefined}
-                  className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 text-xs font-bold rounded-xl sm:rounded-2xl transition active:scale-[0.98]"
+                  className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 text-xs font-bold rounded-xl sm:rounded-2xl transition active:scale-[0.98]"
                 >
                   <MessageSquare className="w-3.5 h-3.5 shrink-0" />
                   <span>Message</span>
@@ -276,13 +295,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               <button
                 type="button"
                 onClick={onRequestService}
-                disabled={!canRequestService}
-                title={
-                  !canRequestService
-                    ? 'Requesting services is unavailable'
-                    : undefined
-                }
-                className="col-span-2 xs:col-span-1 flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed text-white dark:text-slate-900 text-xs font-bold rounded-xl sm:rounded-2xl transition shadow-xs active:scale-[0.98]"
+                className="col-span-2 xs:col-span-1 flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 text-xs font-bold rounded-xl sm:rounded-2xl transition shadow-xs active:scale-[0.98]"
               >
                 <Wrench className="w-3.5 h-3.5 shrink-0" />
                 <span className="whitespace-nowrap">Request Service</span>
@@ -314,4 +327,4 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   );
 };
 
-export default ProfileHeader;
+export default UserHeader;

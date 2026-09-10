@@ -1,3 +1,5 @@
+# app/services/user_service.py
+
 from uuid import UUID
 from typing import Optional
 
@@ -46,7 +48,6 @@ class UserService:
         users, total = self.repo.get_all(skip, limit, search=search)
         items = []
         for user in users:
-            # Enrich each user with follow stats
             resp = self._build_user_response(user, current_user)
             items.append(resp)
         return UserListResponse(
@@ -56,27 +57,59 @@ class UserService:
             size=limit,
         )
 
-    # ─── GET USER BY ID (with permissions) ─────────────────────
+    # ─── GET USER BY ID (public read, private fields stripped) ─
     def get_user_by_id(self, user_id: UUID, current_user: User) -> UserResponse:
+        """
+        Fetch any user's profile.
+
+        • Any authenticated user may read another user's public profile.
+        • Soft‑deleted accounts are surfaced as 404 (do not leak that they exist).
+        • Private fields (email, is_admin, is_moderator, is_email_verified)
+          are only visible to the owner and to admins.
+        """
         user = self.repo.get_by_id(user_id)
         if not user:
             raise HTTPException(404, "User not found")
-        if current_user.id != user_id and not current_user.is_admin:
-            raise HTTPException(403, "Not enough permissions")
-        return self._build_user_response(user, current_user)
+
+        # Treat deactivated / soft-deleted users as gone.
+        if getattr(user, "deleted_at", None) is not None:
+            raise HTTPException(404, "User not found")
+
+        is_self = current_user.id == user_id
+        is_admin = bool(getattr(current_user, "is_admin", False))
+
+        response = self._build_user_response(user, current_user)
+
+        if not (is_self or is_admin):
+            # Strip fields the viewer shouldn't see.
+            # If any of these are required in your UserResponse schema,
+            # make them Optional first — see note below.
+            response.email = None
+            response.is_email_verified = False
+            response.is_admin = False
+            response.is_moderator = False
+            response.last_login_at = None
+
+        return response
 
     # ─── BUILD USER RESPONSE ────────────────────────────────────
     def _build_user_response(self, user: User, current_user: User) -> UserResponse:
         followers_count = self.follow_repo.get_follow_count(user.id, "followers")
         following_count = self.follow_repo.get_follow_count(user.id, "following")
-        is_following = self.follow_repo.is_following(current_user.id, user.id)
+
+        # Don't ask "do I follow myself?" — it's meaningless and hits the DB.
+        if current_user.id == user.id:
+            is_following = False
+        else:
+            is_following = self.follow_repo.is_following(current_user.id, user.id)
+
         response = UserResponse.model_validate(user)
         response.followers_count = followers_count
         response.following_count = following_count
         response.is_following = is_following
         return response
 
-    # ─── UPDATE USER ─────────────────────────────────────────────
+    # ─── UPDATE USER (owner or admin only) ──────────────────────
     def update_user(self, user_id: UUID, data: UserUpdate, current_user: User) -> User:
         user = self.repo.get_by_id(user_id)
         if not user:
@@ -90,7 +123,7 @@ class UserService:
             update_data.pop("email", None)
         return self.repo.update(user, update_data)
 
-    # ─── DELETE USER ─────────────────────────────────────────────
+    # ─── DELETE USER (owner or admin only) ──────────────────────
     def delete_user(self, user_id: UUID, current_user: User, hard: bool = False) -> None:
         user = self.repo.get_by_id(user_id)
         if not user:
