@@ -1,47 +1,53 @@
-import { BrowserRouter, Routes, Route, Navigate, Outlet, useParams } from 'react-router-dom';
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  Outlet,
+  useParams,
+} from "react-router-dom";
 
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 // Providers
-import { AuthProvider } from './providers/AuthProvider';
+import { AuthProvider } from "./providers/AuthProvider";
 
 // Layouts
-import { AuthLayout } from './features/auth/components/AuthLayout';
-import AppLayout from './components/layout/AppLayout/AppLayout';
+import { AuthLayout } from "./features/auth/components/AuthLayout";
+import AppLayout from "./components/layout/AppLayout/AppLayout";
 
 // Auth pages
-import LoginPage from './features/auth/pages/LoginPage';
-import RegisterPage from './features/auth/pages/RegisterPage';
-import ForgotPasswordPage from './features/auth/pages/ForgotPasswordPage';
-import ResetPasswordPage from './features/auth/pages/ResetPasswordPage';
-import VerifyEmailPage from './features/auth/pages/VerifyEmailPage';
+import LoginPage from "./features/auth/pages/LoginPage";
+import RegisterPage from "./features/auth/pages/RegisterPage";
+import ForgotPasswordPage from "./features/auth/pages/ForgotPasswordPage";
+import ResetPasswordPage from "./features/auth/pages/ResetPasswordPage";
+import VerifyEmailPage from "./features/auth/pages/VerifyEmailPage";
 
 // Main pages
-import HomePage from './features/home/pages/HomePage';
-import Feed from './features/posts/components/Feed';
+import HomePage from "./features/home/pages/HomePage";
+import Feed from "./features/posts/components/Feed";
 
 // Auth hook
-import { useAuth } from './features/auth/hooks/useAuth';
+import { useAuth } from "./features/auth/hooks/useAuth";
 
-// ai assistant
-import { AIFloatingWidget } from './features/ai/components/AIFloatingWidget';
+// AI assistant
+import { AIFloatingWidget } from "./features/ai/components/AIFloatingWidget";
 
 // Dashboard
-import DashboardPage from './features/dashboard/components/pages/DashboardPage';
-import { ProfilePage } from './features/profile';
-import { MessagesPage } from './features/messages';
-import { DiscoverPage } from './features/discover';
+import DashboardPage from "./features/dashboard/components/pages/DashboardPage";
+import { ProfilePage } from "./features/profile";
+import { MessagesPage } from "./features/messages";
+import { DiscoverPage } from "./features/discover";
 
-// ─── Professional Portfolio ────────────────────────────────
-import PortfolioDashboard from './features/portfolio/pages/PortfolioDashboard';
-import UsersPage from './features/users/pages/UsersPage';
+// Portfolio
+import PortfolioDashboard from "./features/portfolio/pages/PortfolioDashboard";
+import UsersPage from "./features/users/pages/UsersPage";
 
-// admindashboard
+// Admin
 import AdminLogin from "./features/dash_board/AdminDahboard/AdminLogin";
 import AdminDashboard from "./features/dash_board/AdminDahboard/AdminDashboard";
 import ProtectedAdminRoute from "./features/dash_board/AdminDahboard/ProtectedAdminRoute";
-
 
 import Jobs from "./features/dash_board/Outlet/Jobs";
 import Workers from "./features/dash_board/Outlet/Workers";
@@ -54,16 +60,14 @@ import SystemCenter from "./features/dash_board/Outlet/SystemCenter";
 import Overview from "./features/dash_board/Outlet/Overview";
 
 // Verification
-
 import { VerificationPage } from "./verification/pages/VerificationPage";
 
 // Marketplace
-import Marketplace  from'./features/Market/pages/Marketplace/Marketplace';
-
+import Marketplace from "./features/Market/pages/Marketplace/Marketplace";
 
 
 // ============================================================
-// Route guards
+// PUBLIC ONLY ROUTE
 // ============================================================
 
 function PublicOnlyRoute() {
@@ -76,24 +80,27 @@ function PublicOnlyRoute() {
   return <Outlet />;
 }
 
+
 // ============================================================
-// Profile route
+// PROFILE ROUTE
 // ============================================================
 
 function ProfileRoute() {
   const { id } = useParams<{ id: string }>();
 
-  return <ProfilePage userId={id ?? ''} />;
+  return <ProfilePage userId={id ?? ""} />;
 }
 
+
 // ============================================================
-// Main App
+// MAIN APP
 // ============================================================
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+
         <ToastContainer
           position="top-right"
           autoClose={3000}
@@ -107,111 +114,204 @@ function App() {
           theme="light"
         />
 
+        {/* AI Widget must be OUTSIDE Routes */}
+        <AIFloatingWidget />
+
         <Routes>
+
           {/* ==================================================
               AUTH ROUTES
-              ================================================== */}
+          ================================================== */}
 
           <Route element={<PublicOnlyRoute />}>
             <Route element={<AuthLayout />}>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/verify-email" element={<VerifyEmailPage />} />
-              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+              <Route
+                path="/login"
+                element={<LoginPage />}
+              />
+
+              <Route
+                path="/register"
+                element={<RegisterPage />}
+              />
+
+              <Route
+                path="/verify-email"
+                element={<VerifyEmailPage />}
+              />
+
+              <Route
+                path="/forgot-password"
+                element={<ForgotPasswordPage />}
+              />
+
+              <Route
+                path="/reset-password"
+                element={<ResetPasswordPage />}
+              />
+
             </Route>
           </Route>
 
+
           {/* ==================================================
-              MAIN APPLICATION (protected)
-              ================================================== */}
+              MAIN APPLICATION
+          ================================================== */}
 
           <Route path="/" element={<AppLayout />}>
-            <Route index element={<HomePage />} />
-            <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="feed" element={<Feed />} />
+
+            <Route
+              index
+              element={<HomePage />}
+            />
+
+            <Route
+              path="dashboard"
+              element={<DashboardPage />}
+            />
+
+            <Route
+              path="feed"
+              element={<Feed />}
+            />
 
             {/* Profile */}
-            <Route path="profile" element={<ProfileRoute />} />
-            <Route path="profile/:id" element={<ProfileRoute />} />
+            <Route
+              path="profile"
+              element={<ProfileRoute />}
+            />
+
+            <Route
+              path="profile/:id"
+              element={<ProfileRoute />}
+            />
 
             {/* Messages */}
-            <Route path="messages" element={<MessagesPage />} />
-            <Route path="discover" element={<DiscoverPage />} />
+            <Route
+              path="messages"
+              element={<MessagesPage />}
+            />
 
-            {/* ─── Professional Portfolio ─── */}
-            <Route path="portfolio" element={<PortfolioDashboard />} />
-            <Route path="users" element={<UsersPage />} />
+            {/* Discover */}
+            <Route
+              path="discover"
+              element={<DiscoverPage />}
+            />
+
+            {/* Portfolio */}
+            <Route
+              path="portfolio"
+              element={<PortfolioDashboard />}
+            />
+
+            {/* Users */}
+            <Route
+              path="users"
+              element={<UsersPage />}
+            />
+
+            {/* Verification */}
+            <Route
+              path="verification"
+              element={<VerificationPage />}
+            />
+
+            {/* Marketplace */}
+            <Route
+              path="marketplace"
+              element={<Marketplace />}
+            />
+
           </Route>
 
-          {/* ==================================================
-              CATCH-ALL
-              ================================================== */}
 
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-        <AIFloatingWidget />
+          {/* ==================================================
+              ADMIN LOGIN
+          ================================================== */}
+
+          <Route
+            path="/admin/login"
+            element={<AdminLogin />}
+          />
+
+
+          {/* ==================================================
+              PROTECTED ADMIN AREA
+          ================================================== */}
+
+          <Route element={<ProtectedAdminRoute />}>
+
+            <Route
+              path="/admin"
+              element={<AdminDashboard />}
+            >
+
+              <Route
+                index
+                element={<Overview />}
+              />
+
+              <Route
+                path="overview"
+                element={<Overview />}
+              />
+
+              <Route
+                path="jobs"
+                element={<Jobs />}
+              />
+
+              <Route
+                path="workers"
+                element={<Workers />}
+              />
+
+              <Route
+                path="users"
+                element={<Users />}
+              />
+
+              <Route
+                path="posts"
+                element={<Posts />}
+              />
+
+              <Route
+                path="verification"
+                element={<Verification />}
+              />
+
+              <Route
+                path="reports"
+                element={<Reports />}
+              />
+
+              <Route
+                path="settings"
+                element={<Settings />}
+              />
+
+              <Route
+                path="system-center"
+                element={<SystemCenter />}
+              />
+
+            </Route>
+
+          </Route>
+
+
+          {/* ==================================================
+              CATCH ALL
+          ================================================== */}
+
           <Route
             path="*"
             element={<Navigate to="/" replace />}
           />
-           
-              
-            {/* ADMIN LOGIN */}
-        <Route
-          path="/admin/login"
-          element={<AdminLogin />}
-        />
 
-        {/* PROTECTED ADMIN AREA */}
-        <Route element={<ProtectedAdminRoute />}>
-          <Route
-            path="/admin"
-            element={<AdminDashboard />}
-          >
-        
-
-            <Route
-              path="jobs"
-              element={<Jobs />}
-            />
-
-            <Route
-              path="workers"
-              element={<Workers />}
-            />
-
-            <Route
-              path="users"
-              element={<Users />}
-            />
-
-            <Route
-              path="posts"
-              element={<Posts />}
-            />
-              <Route path="verification" element={<Verification />} />
-               <Route path="reports" element={<Reports />} />
-               <Route path="settings" element={<Settings />} />
-               <Route path="system-center" element={<SystemCenter />} />
-                <Route path="Overview" element={<Overview />} />
-
-                {/*==============================================
-                                Verification
-                 ================================================== */}
-            <Route path="VerificationPage" element={<VerificationPage />} />
-
-            {/*================================== Marketplace============================================= */}
-            <Route path="Marketplace" element={<Marketplace />} />
-
-          </Route>
-        </Route>
-    
-          
         </Routes>
-  
-
-
 
       </BrowserRouter>
     </AuthProvider>
