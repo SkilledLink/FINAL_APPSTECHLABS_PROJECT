@@ -83,6 +83,7 @@ import { MessagesPage } from './features/messages';
 
 // Discover
 import { DiscoverPage } from './features/discover';
+import { JobsPage   } from './features/jobs';
 
 // Professional Portfolio
 import PortfolioDashboard from './features/portfolio/pages/PortfolioDashboard';
@@ -222,6 +223,10 @@ function App() {
               path="feed"
               element={<Feed />}
             />
+            <Route index element={<HomePage />} />
+            <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="feed" element={<Feed />} />
+            <Route path="jobs" element={<JobsPage />} />
 
             {/* Profile */}
             <Route
@@ -290,6 +295,11 @@ function App() {
               <Route path="profile" element={<ProfileRoute />} />
               <Route path="profile/:id" element={<ProfileRoute />} />
             </Route>
+            <Route path="messages" element={<MessagesPage />} />
+            <Route path="discover" element={<DiscoverPage />} />
+            
+            {/* ─── Professional Portfolio ─── */}
+            <Route path="portfolio" element={<PortfolioDashboard />} />
           </Route>
 
 
