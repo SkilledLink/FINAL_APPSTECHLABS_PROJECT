@@ -21,6 +21,8 @@ from app.api.v1.professional_portfolio import router as professional_portfolio_r
 from app.api.v1.feeds import router as feeds_router                            # ✅ NEW
 from app.webhooks import router as webhooks_router
 from app.api.v1 import chat
+from app.api.v1.chat import router as chat_router
+
 
 
 from app.database.session import engine
@@ -106,6 +108,7 @@ app.include_router(feeds_router)                         # /feeds ✅ NEW
 
 app.include_router(search.router, prefix="/api/v1")
 app.include_router(chat.router, prefix="/api/v1")
+app.include_router(chat_router)
 
 
 

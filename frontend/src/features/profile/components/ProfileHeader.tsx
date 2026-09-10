@@ -22,6 +22,7 @@ interface ProfileHeaderProps {
   onUpgrade?: () => void;
   onEditProfile?: () => void;
   onImageUpload?: (file: File, type: 'profile' | 'banner') => void;
+  onShare?: () => void;
 }
 
 export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
@@ -35,6 +36,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   onUpgrade,
   onEditProfile,
   onImageUpload,
+  onShare,
 }) => {
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const profileInputRef = useRef<HTMLInputElement>(null);
@@ -383,6 +385,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 
               <button
                 type="button"
+                onClick={onShare}
                 className="p-2.5 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-[0.98]"
                 aria-label="Share"
               >
