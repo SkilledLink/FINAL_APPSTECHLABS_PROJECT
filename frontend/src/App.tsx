@@ -37,6 +37,31 @@ import { DiscoverPage } from './features/discover';
 import PortfolioDashboard from './features/portfolio/pages/PortfolioDashboard';
 import UsersPage from './features/users/pages/UsersPage';
 
+// admindashboard
+import AdminLogin from "./features/dash_board/AdminDahboard/AdminLogin";
+import AdminDashboard from "./features/dash_board/AdminDahboard/AdminDashboard";
+import ProtectedAdminRoute from "./features/dash_board/AdminDahboard/ProtectedAdminRoute";
+
+
+import Jobs from "./features/dash_board/Outlet/Jobs";
+import Workers from "./features/dash_board/Outlet/Workers";
+import Users from "./features/dash_board/Outlet/Users";
+import Posts from "./features/dash_board/Outlet/Posts";
+import Verification from "./features/dash_board/Outlet/Verification";
+import Reports from "./features/dash_board/Outlet/Reports";
+import Settings from "./features/dash_board/Outlet/Settings";
+import SystemCenter from "./features/dash_board/Outlet/SystemCenter";
+import Overview from "./features/dash_board/Outlet/Overview";
+
+// Verification
+
+import { VerificationPage } from "./verification/pages/VerificationPage";
+
+// Marketplace
+import Marketplace  from'./features/Market/pages/Marketplace/Marketplace';
+
+
+
 // ============================================================
 // Route guards
 // ============================================================
@@ -126,6 +151,68 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <AIFloatingWidget />
+          <Route
+            path="*"
+            element={<Navigate to="/" replace />}
+          />
+           
+              
+            {/* ADMIN LOGIN */}
+        <Route
+          path="/admin/login"
+          element={<AdminLogin />}
+        />
+
+        {/* PROTECTED ADMIN AREA */}
+        <Route element={<ProtectedAdminRoute />}>
+          <Route
+            path="/admin"
+            element={<AdminDashboard />}
+          >
+        
+
+            <Route
+              path="jobs"
+              element={<Jobs />}
+            />
+
+            <Route
+              path="workers"
+              element={<Workers />}
+            />
+
+            <Route
+              path="users"
+              element={<Users />}
+            />
+
+            <Route
+              path="posts"
+              element={<Posts />}
+            />
+              <Route path="verification" element={<Verification />} />
+               <Route path="reports" element={<Reports />} />
+               <Route path="settings" element={<Settings />} />
+               <Route path="system-center" element={<SystemCenter />} />
+                <Route path="Overview" element={<Overview />} />
+
+                {/*==============================================
+                                Verification
+                 ================================================== */}
+            <Route path="VerificationPage" element={<VerificationPage />} />
+
+            {/*================================== Marketplace============================================= */}
+            <Route path="Marketplace" element={<Marketplace />} />
+
+          </Route>
+        </Route>
+    
+          
+        </Routes>
+  
+
+
+
       </BrowserRouter>
     </AuthProvider>
   );
