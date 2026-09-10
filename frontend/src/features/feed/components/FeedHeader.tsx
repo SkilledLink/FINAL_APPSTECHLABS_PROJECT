@@ -1,42 +1,46 @@
 import React from 'react';
+import { Flame, Hash } from 'lucide-react';
 
-interface HighlightProps {
-  label: string;
-  active?: boolean;
+interface FeedHeaderProps {
+  onSelectHashtag?: (hashtag: string) => void;
 }
 
-const HighlightItem: React.FC<HighlightProps> = ({ label, active = false }) => {
-  return (
-    <button
-      className={`
-        px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap
-        transition-all duration-200
-        ${active 
-          ? 'bg-blue-600 text-white hover:bg-blue-700' 
-          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-        }
-      `}
-    >
-      {label}
-    </button>
-  );
-};
+const FeedHeader: React.FC<FeedHeaderProps> = ({ onSelectHashtag }) => {
+  const [trending, setTrending] = React.useState<
+    { id: string; name: string; usage_count: number }[]
+  >([]);
 
-const FeedHeader: React.FC = () => {
-  const highlights = ['Cabinetry', 'Pipe Fix', 'Painting'];
-  
+  React.useEffect(() => {
+    // Lazy-load trending hashtags
+    import('../api/feedApi').then(({ feedApi }) => {
+      feedApi
+        .getTrendingHashtags(10)
+        .then(data => setTrending(data))
+        .catch(() => setTrending([]));
+    });
+  }, []);
+
   return (
-    <div className="flex items-center gap-3 py-3 px-4 border-b border-gray-200 bg-white overflow-x-auto">
-      <button className="flex items-center gap-2 px-4 py-2 rounded-full bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors whitespace-nowrap">
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-        </svg>
-        Add Highlight
-      </button>
-      
-      {highlights.map((item) => (
-        <HighlightItem key={item} label={item} />
+    <div className="flex items-center gap-3 py-3 border-b border-gray-200 dark:border-slate-700 overflow-x-auto">
+      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 dark:bg-orange-900/30 rounded-full shrink-0">
+        <Flame className="w-4 h-4 text-orange-500" />
+        <span className="text-xs font-bold text-orange-600 dark:text-orange-400">Trending</span>
+      </div>
+
+      {trending.map(tag => (
+        <button
+          key={tag.id}
+          onClick={() => onSelectHashtag?.(tag.name)}
+          className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 dark:bg-slate-700 rounded-full text-xs font-medium text-gray-700 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 whitespace-nowrap transition"
+        >
+          <Hash className="w-3 h-3" />
+          {tag.name}
+        </button>
       ))}
+
+      {trending.length === 0 && (
+        <span className="text-xs text-gray-400 dark:text-slate-500">No trending hashtags yet</span>
+      )}
     </div>
   );
 };

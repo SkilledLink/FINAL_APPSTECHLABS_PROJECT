@@ -6,6 +6,7 @@ import {
   Outlet,
   useParams,
 } from "react-router-dom";
+} from 'react-router-dom';
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -16,6 +17,9 @@ import { AuthProvider } from "./providers/AuthProvider";
 // Layouts
 import { AuthLayout } from "./features/auth/components/AuthLayout";
 import AppLayout from "./components/layout/AppLayout/AppLayout";
+
+// Landing
+import LandingPage from './features/landing/pages/LandingPage';
 
 // Auth pages
 import LoginPage from "./features/auth/pages/LoginPage";
@@ -69,7 +73,30 @@ import Marketplace from "./features/Market/pages/Marketplace/Marketplace";
 // ============================================================
 // PUBLIC ONLY ROUTE
 // ============================================================
+import DashboardPage from './features/dashboard/components/pages/DashboardPage';
 
+// Profile
+import { ProfilePage } from './features/profile';
+
+// Messages
+import { MessagesPage } from './features/messages';
+
+// Discover
+import { DiscoverPage } from './features/discover';
+
+// Professional Portfolio
+import PortfolioDashboard from './features/portfolio/pages/PortfolioDashboard';
+
+// Users
+import UsersPage from './features/users/pages/UsersPage';
+
+// TODO: Replace these with your actual Jobs and Professionals pages if they exist
+const JobsPage = DiscoverPage; 
+const ProfessionalsPage = UsersPage;
+
+// ============================================================
+// PUBLIC-ONLY ROUTE
+// ============================================================
 function PublicOnlyRoute() {
   const { isAuthenticated } = useAuth();
 
@@ -83,8 +110,21 @@ function PublicOnlyRoute() {
 
 // ============================================================
 // PROFILE ROUTE
+// PROTECTED ROUTE
 // ============================================================
+function ProtectedRoute() {
+  const { isAuthenticated } = useAuth();
 
+  if (!isAuthenticated()) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <Outlet />;
+}
+
+// ============================================================
+// PROFILE ROUTE
+// ============================================================
 function ProfileRoute() {
   const { id } = useParams<{ id: string }>();
 
@@ -95,7 +135,6 @@ function ProfileRoute() {
 // ============================================================
 // MAIN APP
 // ============================================================
-
 function App() {
   return (
     <AuthProvider>
@@ -123,6 +162,14 @@ function App() {
               AUTH ROUTES
           ================================================== */}
 
+          {/* ==================================================
+              PUBLIC ROUTES
+              ================================================== */}
+          
+          {/* Landing Page is the root URL */}
+          <Route path="/" element={<LandingPage />} />
+
+          {/* Auth pages are public but redirect to /home if already logged in */}
           <Route element={<PublicOnlyRoute />}>
             <Route element={<AuthLayout />}>
 
@@ -223,6 +270,26 @@ function App() {
               element={<Marketplace />}
             />
 
+              AUTHENTICATED APPLICATION
+              ================================================== */}
+          
+          <Route element={<ProtectedRoute />}>
+            {/* All authenticated routes live under /home */}
+            <Route path="/home" element={<AppLayout />}>
+              
+              <Route index element={<HomePage />} />
+              <Route path="dashboard" element={<DashboardPage />} />
+              <Route path="feed" element={<Feed />} />
+              <Route path="discover" element={<DiscoverPage />} />
+              <Route path="jobs" element={<JobsPage />} />
+              <Route path="portfolio" element={<PortfolioDashboard />} />
+              <Route path="messages" element={<MessagesPage />} />
+              <Route path="professionals" element={<ProfessionalsPage />} />
+              <Route path="users" element={<UsersPage />} />
+
+              <Route path="profile" element={<ProfileRoute />} />
+              <Route path="profile/:id" element={<ProfileRoute />} />
+            </Route>
           </Route>
 
 
@@ -310,6 +377,11 @@ function App() {
             path="*"
             element={<Navigate to="/" replace />}
           />
+              CATCH-ALL
+              ================================================== */}
+          
+          {/* Redirect any unknown URL back to the Landing Page */}
+          <Route path="*" element={<Navigate to="/" replace />} />
 
         </Routes>
 

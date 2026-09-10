@@ -1,103 +1,189 @@
-import React, { useState } from 'react';
-import PostComposer from '../../posts/components/PostComposer';
-import PostCard from '../../posts/components/PostCard';
-import PostCreationModal from '../../posts/components/PostCreationModal';
-import Highlights from '../../home/components/Highlights';
-import { mockHighlights, mockPosts } from '../../../data/mockData';
-import type { Post } from '../../posts/types/post.types';
+import React, { useState, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import FeedHeader from './FeedHeader';
+import PostComposer from './PostComposer';
+import PostCard from './PostCard';
+import { FeedSkeleton } from './FeedSkeleton';
+import { useInfiniteFeed } from '../hooks/useInfiniteFeed';
+import { useFeedMutations } from '../hooks/useFeedMutations';
+import { useFeedFilters } from '../hooks/useFeedFilters';
+import type { Feed as FeedType } from '../types/feed.types';
 
 const Feed: React.FC = () => {
-  const [posts, setPosts] = useState<Post[]>(mockPosts);
+  const navigate = useNavigate();
+  const { filters, setHashtag } = useFeedFilters();
+  const {
+    feeds,
+    loading,
+    loadingMore,
+    error,
+    hasMore,
+    loadMore,
+    refresh,
+    prependFeed,
+    removeFeed,
+    updateFeedInList,
+  } = useInfiniteFeed({ ...filters, limit: 10 });
 
-  // Modal State
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [initialMediaType, setInitialMediaType] = useState<'image' | 'video' | null>(null);
+  const { deleteFeed, toggleLike, createComment, deleteComment } = useFeedMutations();
 
-  // Handle post from composer (text only) or modal (with media)
-  const handlePost = (data: { 
-    title: string; 
-    content: string; 
-    hashtags: string[]; 
-    mediaUrl?: string; 
-    mediaType?: 'image' | 'video'; 
-    thumbnailUrl?: string;
-    location?: string; 
-  }) => {
-    const newPost: Post = {
-      id: `post-${Date.now()}`,
-      author: {
-        id: 'user-me',
-        name: 'John Doe',
-        title: 'Plumber',
-        avatarUrl: 'https://i.pravatar.cc/150?img=12',
-        isVerified: false,
-      },
-      title: data.title,
-      content: data.content,
-      hashtags: data.hashtags,
-      location: data.location, // 👈 THIS IS CRITICAL
-      createdAt: 'Now',
-      initialLikes: 0,
-      initialComments: 0,
-      isLiked: false,
-      isAppreciated: false,
-      isRequested: false,
-      imageUrl: data.mediaUrl,
-      mediaType: data.mediaType,
-      thumbnailUrl: data.thumbnailUrl,
-    };
-    setPosts([newPost, ...posts]);
+  // ─── Post new feed ───────────────────────────────────────
+  const handlePost = async () => {
+    try {
+      // The composer will call createFeed directly and return the feed
+      // The parent refreshes to show the new feed
+      await refresh();
+    } catch (err: any) {
+      console.error(err);
+    }
   };
 
-  const handleOpenModal = (type: 'image' | 'video') => {
-    setInitialMediaType(type);
-    setIsModalOpen(true);
+  // ─── Like toggle ─────────────────────────────────────────
+  const handleLike = async (feedId: string) => {
+    try {
+      const result = await toggleLike(feedId);
+      // Optimistic update
+      const feed = feeds.find((f) => f.id === feedId);
+      if (feed) {
+        updateFeedInList({
+          ...feed,
+          is_liked: result.liked,
+          likes_count: feed.likes_count + (result.liked ? 1 : -1),
+        });
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to like');
+    }
   };
 
-  // ... (Rest of handlers like Like, Appreciate, etc.)
-  const handleLike = (id: string) => {
-    setPosts(posts.map(p => p.id === id ? { ...p, isLiked: !p.isLiked } : p));
+  // ─── Delete feed ─────────────────────────────────────────
+  const handleDelete = async (feedId: string) => {
+    if (!window.confirm('Delete this post?')) return;
+    try {
+      await deleteFeed(feedId);
+      removeFeed(feedId);
+      toast.success('Post deleted');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete');
+    }
   };
 
-  const handleAppreciate = (id: string) => {
-    setPosts(posts.map(p => p.id === id ? { ...p, isAppreciated: !p.isAppreciated } : p));
+  // ─── Comment ─────────────────────────────────────────────
+  const handleComment = async (feedId: string, content: string) => {
+    try {
+      const comment = await createComment(feedId, { content });
+      const feed = feeds.find((f) => f.id === feedId);
+      if (feed) {
+        updateFeedInList({
+          ...feed,
+          comments: [...feed.comments, comment],
+          comments_count: feed.comments_count + 1,
+        });
+      }
+      toast.success('Comment added');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to comment');
+    }
   };
 
-  const handleRequestService = (id: string) => {
-    setPosts(posts.map(p => p.id === id ? { ...p, isRequested: !p.isRequested } : p));
-    alert('Service request sent (Mock)');
+  const handleDeleteComment = async (feedId: string, commentId: string) => {
+    try {
+      await deleteComment(commentId);
+      const feed = feeds.find((f) => f.id === feedId);
+      if (feed) {
+        updateFeedInList({
+          ...feed,
+          comments: feed.comments.filter((c) => c.id !== commentId),
+          comments_count: Math.max(0, feed.comments_count - 1),
+        });
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete comment');
+    }
   };
 
-  const handleVideoClick = () => {
-    // Video playback is handled by PostCard.
-  };
+  // ─── Load more (infinite scroll) ─────────────────────────
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadMoreRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (loading || loadingMore) return;
+      if (observerRef.current) observerRef.current.disconnect();
 
-  const handleAddHighlight = () => {
-    alert('Open Image Uploader Modal (Mock)');
-  };
+      observerRef.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasMore) {
+          loadMore();
+        }
+      });
 
+      if (node) observerRef.current.observe(node);
+    },
+    [loading, loadingMore, hasMore, loadMore]
+  );
+
+  // ─── Render ──────────────────────────────────────────────
   return (
     <div className="max-w-xl mx-auto p-4">
-      <Highlights highlights={mockHighlights} onAddHighlight={handleAddHighlight} />
-      <PostComposer onPost={handlePost} onOpenModal={handleOpenModal} />
-      
-      {posts.map(post => (
-        <PostCard 
-          key={post.id} 
-          post={post} 
-          onLike={handleLike}
-          onAppreciate={handleAppreciate}
-          onRequestService={handleRequestService}
-          onVideoClick={handleVideoClick}
-        />
-      ))}
+      <FeedHeader onSelectHashtag={setHashtag} />
 
-      <PostCreationModal 
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onPublish={handlePost}
-        initialMediaType={initialMediaType}
-      />
+      <PostComposer onPosted={handlePost} />
+
+      {loading && feeds.length === 0 && (
+        <>
+          <FeedSkeleton />
+          <FeedSkeleton />
+          <FeedSkeleton />
+        </>
+      )}
+
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 text-center">
+          <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
+          <button
+            onClick={refresh}
+            className="mt-2 px-4 py-1.5 bg-red-600 text-white text-xs rounded-full hover:bg-red-700"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {!loading && feeds.length === 0 && !error && (
+        <div className="bg-white dark:bg-slate-800 rounded-xl p-8 text-center border border-gray-200 dark:border-slate-700">
+          <p className="text-gray-500 dark:text-slate-400 text-sm">
+            No posts yet. Be the first to post!
+          </p>
+        </div>
+      )}
+
+      <div className="space-y-4 mt-4">
+        {feeds.map((feed) => (
+          <PostCard
+            key={feed.id}
+            feed={feed}
+            onLike={handleLike}
+            onDelete={handleDelete}
+            onComment={handleComment}
+            onDeleteComment={handleDeleteComment}
+            onHashtagClick={setHashtag}
+          />
+        ))}
+      </div>
+
+      {/* Infinite scroll trigger */}
+      {hasMore && (
+        <div ref={loadMoreRef} className="py-6 flex justify-center">
+          {loadingMore && (
+            <div className="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+          )}
+        </div>
+      )}
+
+      {!hasMore && feeds.length > 0 && (
+        <p className="text-center text-xs text-gray-400 dark:text-slate-500 py-6">
+          You've reached the end
+        </p>
+      )}
     </div>
   );
 };

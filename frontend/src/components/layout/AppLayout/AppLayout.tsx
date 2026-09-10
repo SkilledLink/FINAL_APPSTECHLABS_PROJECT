@@ -5,52 +5,54 @@ import Sidebar from "../Sidebar/Sidebar";
 import MobileNavigation from "../MobileNavigation/MobileNavigation";
 
 export default function AppLayout() {
-  const [isDark, setIsDark] = useState(() => {
-    return document.documentElement.classList.contains("dark");
-  });
+  const [isDark, setIsDark] = useState(() => 
+    document.documentElement.classList.contains("dark")
+  );
 
   const toggleTheme = () => {
     setIsDark((prev) => {
       const nextTheme = !prev;
-      if (nextTheme) {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
+      document.documentElement.classList.toggle("dark", nextTheme);
       return nextTheme;
     });
   };
 
   useEffect(() => {
-    if (isDark) {
-      document.documentElement.classList.add("dark");
-    }
+    document.documentElement.classList.toggle("dark", isDark);
   }, [isDark]);
 
   return (
-    <div className="flex flex-col h-[100dvh] w-full bg-[#f0f4f8] dark:bg-[#0b1329] text-slate-800 dark:text-slate-100 overflow-hidden font-sans transition-colors duration-300 relative">
-      {/* AMBIENT BACKGROUND GLOWS */}
-      <div className="absolute top-1/4 -left-32 w-[30rem] h-[30rem] bg-blue-400/10 dark:bg-blue-600/15 rounded-full blur-3xl pointer-events-none z-0" />
-      <div className="absolute bottom-1/4 -right-32 w-[30rem] h-[30rem] bg-sky-400/10 dark:bg-blue-900/20 rounded-full blur-3xl pointer-events-none z-0" />
+    <div className="flex flex-col h-screen w-screen bg-[#f0f4f8] dark:bg-[#0b1329] text-slate-800 dark:text-slate-100 font-sans transition-colors duration-300 overflow-hidden">
+      
+      {/* Ambient Background Glows */}
+      <div className="fixed top-1/4 -left-32 w-[30rem] h-[30rem] bg-blue-400/10 dark:bg-blue-600/15 rounded-full blur-3xl pointer-events-none z-0" />
+      <div className="fixed bottom-1/4 -right-32 w-[30rem] h-[30rem] bg-sky-400/10 dark:bg-blue-900/20 rounded-full blur-3xl pointer-events-none z-0" />
 
-      {/* TOP HEADER */}
-      <Header isDark={isDark} toggleTheme={toggleTheme} />
+      {/* 1. FIXED TOP HEADER (Never scrolls) */}
+      <header className="z-40 w-full shrink-0">
+        <Header isDark={isDark} toggleTheme={toggleTheme} />
+      </header>
 
-      {/* MAIN LAYOUT BODY */}
-      <div className="flex flex-1 w-full overflow-hidden relative z-10 gap-4 md:gap-6 pl-0 pr-4 md:pr-6">
-        {/* ✅ Pass isDark and toggleTheme to Sidebar */}
-        <Sidebar isDark={isDark} toggleTheme={toggleTheme} />
+      {/* 2. MAIN BODY WRAPPER */}
+      <div className="relative z-10 flex flex-1 w-full min-h-0 overflow-hidden">
+        
+        {/* FIXED LEFT SIDEBAR (Never scrolls with page, has independent scroll if long) */}
+        <aside className="hidden md:flex flex-col shrink-0 h-full overflow-y-auto z-20 border-r border-slate-200/50 dark:border-slate-800/50">
+          <Sidebar isDark={isDark} toggleTheme={toggleTheme} />
+        </aside>
 
-        {/* Removed transition-all duration-300 to stop competing with Framer Motion */}
-        <main className="flex-1 overflow-y-auto py-4 pb-24 md:pb-6 w-full min-w-0">
-          <div className="w-full">
+        {/* SCROLLABLE PAGE CONTENT CONTAINER */}
+        <main className="flex-1 h-full overflow-y-auto overflow-x-hidden min-w-0 pb-20 md:pb-6">
+          <div className="w-full min-h-full">
             <Outlet />
           </div>
         </main>
       </div>
 
-      {/* ✅ Pass isDark and toggleTheme to MobileNavigation */}
-      <MobileNavigation isDark={isDark} toggleTheme={toggleTheme} />
+      {/* 3. MOBILE BOTTOM NAVIGATION */}
+      <div className="md:hidden z-40 shrink-0">
+        <MobileNavigation isDark={isDark} toggleTheme={toggleTheme} />
+      </div>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+// src/components/layout/Sidebar/Sidebar.tsx
 import React, { useState, useRef, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -25,12 +26,12 @@ interface SidebarProps {
 }
 
 const navItems = [
-  { icon: Home, label: "Home", path: "/" },
-  { icon: Compass, label: "Discover", path: "/discover" },
-  { icon: Briefcase, label: "Jobs", path: "/jobs" },
-  { icon: LayoutDashboard, label: "Portfolio", path: "/portfolio" },
-  { icon: MessageSquareMore, label: "Messages", path: "/messages" },
-  { icon: Users, label: "Network", path: "/professionals" },
+  { icon: Home, label: "Home", path: "/home", end: true },
+  { icon: Compass, label: "Discover", path: "/home/discover" },
+  { icon: Briefcase, label: "Jobs", path: "/home/jobs" },
+  { icon: LayoutDashboard, label: "Portfolio", path: "/home/portfolio" },
+  { icon: MessageSquareMore, label: "Messages", path: "/home/messages" },
+  { icon: Users, label: "Network", path: "/home/professionals" },
 ];
 
 export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
@@ -77,9 +78,9 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       transition={{ type: "tween", ease: [0.4, 0, 0.2, 1], duration: 0.22 }}
-      className="hidden md:flex flex-col h-[calc(100vh-5rem)] sticky top-4 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl text-slate-800 dark:text-slate-100 border border-blue-400/20 dark:border-blue-400/20 z-20 shadow-xl shrink-0 overflow-hidden will-change-[width] transform-gpu"
+      className="hidden md:flex flex-col h-full bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl text-slate-800 dark:text-slate-100 border-r border-slate-200/60 dark:border-slate-800/60 z-20 shadow-xl shrink-0 overflow-hidden will-change-[width] transform-gpu"
     >
-      {/* Background lightning (same as before) */}
+      {/* Background lightning */}
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden transform-gpu">
         <svg className="w-[240px] h-full opacity-35 dark:opacity-45" viewBox="0 0 240 800" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -108,6 +109,7 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
           <NavLink
             key={item.path}
             to={item.path}
+            end={item.end}
             className={({ isActive }) =>
               `relative flex items-center px-3.5 py-3 rounded-xl font-semibold text-sm transition-colors duration-150 group ${
                 isActive
@@ -121,7 +123,7 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
                 {isActive && (
                   <motion.div
                     layoutId="sidebarActivePill"
-                    className="absolute inset-0 bg-blue-500/10 dark:bg-blue-400/15 rounded-xl border border-blue-500/20 dark:border-blue-400/20 shadow-sm"
+                    className="absolute inset-0 bg-blue-500/10 dark:bg-blue-400/15 rounded-xl border border-blue-500/20 dark:border-blue-400/20 shadow-xs"
                     transition={{ type: "tween", duration: 0.2 }}
                   >
                     <span className="absolute left-0 top-2 bottom-2 w-1 bg-blue-600 dark:bg-blue-400 rounded-r-full shadow-[0_0_10px_rgba(37,99,235,0.7)]" />
@@ -152,7 +154,7 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
         <div ref={dropdownRef} className="relative">
           <button
             onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-            className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl hover:bg-blue-500/10 dark:hover:bg-blue-400/10 transition-colors group"
+            className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl hover:bg-blue-500/10 dark:hover:bg-blue-400/10 transition-colors group cursor-pointer"
           >
             {/* Avatar */}
             <div className="h-9 w-9 rounded-full bg-blue-600 shadow-md shadow-blue-600/20 overflow-hidden border border-white/40 dark:border-slate-700/60 flex items-center justify-center shrink-0">
@@ -211,22 +213,22 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
                 </div>
                 <div className="py-1">
                   <button
-                    onClick={() => { navigate("/profile"); setIsProfileDropdownOpen(false); }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                    onClick={() => { navigate("/home/profile"); setIsProfileDropdownOpen(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer"
                   >
                     <User size={16} className="text-slate-500 dark:text-slate-400" />
                     My Profile
                   </button>
                   <button
                     onClick={() => { fileInputRef.current?.click(); }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer"
                   >
                     <ImagePlus size={16} className="text-slate-500 dark:text-slate-400" />
                     Upload Avatar
                   </button>
                   <button
-                    onClick={() => { navigate("/settings"); setIsProfileDropdownOpen(false); }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                    onClick={() => { navigate("/home/settings"); setIsProfileDropdownOpen(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer"
                   >
                     <Settings size={16} className="text-slate-500 dark:text-slate-400" />
                     Settings
@@ -234,16 +236,16 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
                   {/* Theme Toggle inside dropdown */}
                   <button
                     onClick={() => { toggleTheme(); setIsProfileDropdownOpen(false); }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer"
                   >
-                    {isDark ? <Sun size={16} className="text-yellow-500" /> : <Moon size={16} className="text-blue-500" />}
+                    {isDark ? <Sun size={16} className="text-amber-500" /> : <Moon size={16} className="text-blue-500" />}
                     {isDark ? "Light Mode" : "Dark Mode"}
                   </button>
                 </div>
                 <div className="py-1 border-t border-slate-100 dark:border-slate-700">
                   <button
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer"
                   >
                     <LogOut size={16} />
                     Logout
