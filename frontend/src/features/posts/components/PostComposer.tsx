@@ -1,92 +1,367 @@
-// src/features/posts/components/PostComposer.tsx
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  ImagePlus,
+  Video,
+  X,
+  Hash,
+  Loader2,
+  Sparkles,
+  Upload,
+  Globe,
+} from 'lucide-react';
+import { toast } from 'react-toastify';
+import { useFeedMutations } from '../hooks/useFeedMutations';
 
 interface PostComposerProps {
-  onPost: (data: {
-    title: string;
-    content: string;
-    hashtags: string[];
-    mediaUrl?: string;
-    mediaType?: 'image' | 'video';
-    thumbnailUrl?: string;
-    location?: string;
-  }) => void;
-  onOpenModal: (type: 'image' | 'video') => void;
+  onPosted?: () => void;
 }
 
-const PostComposer: React.FC<PostComposerProps> = ({ onPost, onOpenModal }) => {
-  const [content, setContent] = useState('');
+export const PostComposer: React.FC<PostComposerProps> = ({ onPosted }) => {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [hashtagsInput, setHashtagsInput] = useState('');
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+  const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
-  const handleDirectPost = () => {
-    if (content.trim()) {
-      onPost({
-        title: '',
-        content: content.trim(),
-        hashtags: [],
-        location: 'Austin, TX',
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+
+  const { createPost, loading } = useFeedMutations();
+
+  const validateAndSetFile = (file: File) => {
+    if (file.type.startsWith('image/')) {
+      setMediaType('image');
+    } else if (file.type.startsWith('video/')) {
+      setMediaType('video');
+    } else {
+      toast.error('Unsupported file format. Please select an image or video.');
+      return;
+    }
+
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error('File too large. Maximum size is 50MB.');
+      return;
+    }
+
+    if (mediaPreview) URL.revokeObjectURL(mediaPreview);
+    setMediaFile(file);
+    setMediaPreview(URL.createObjectURL(file));
+    setIsExpanded(true);
+  };
+
+  const handleMediaSelect = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    type: 'image' | 'video'
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (type === 'image' && !file.type.startsWith('image/')) {
+      toast.error('Please select a valid image file');
+      return;
+    }
+    if (type === 'video' && !file.type.startsWith('video/')) {
+      toast.error('Please select a valid video file');
+      return;
+    }
+
+    validateAndSetFile(file);
+    e.target.value = '';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      validateAndSetFile(file);
+    }
+  };
+
+  const removeMedia = () => {
+    if (mediaPreview) URL.revokeObjectURL(mediaPreview);
+    setMediaFile(null);
+    setMediaPreview(null);
+    setMediaType(null);
+  };
+
+  const resetForm = () => {
+    setTitle('');
+    setDescription('');
+    setHashtagsInput('');
+    removeMedia();
+    setIsExpanded(false);
+  };
+
+  const parsedHashtags = hashtagsInput
+    .split(/[,\s]+/)
+    .map((h) => h.replace(/^#/, '').trim())
+    .filter(Boolean);
+
+  const handleSubmit = async () => {
+    if (!description.trim()) {
+      toast.error('Please write something');
+      return;
+    }
+
+    try {
+      await createPost({
+        title: title.trim() || description.trim().slice(0, 80),
+        description: description.trim(),
+        hashtags: parsedHashtags,
+        media: mediaFile,
+        is_public: true,
       });
-      setContent('');
+
+      toast.success('Post published!');
+      resetForm();
+      onPosted?.();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to create post');
     }
   };
 
   return (
-    <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-xl shadow-sm border border-slate-200/80 dark:border-slate-800/80 p-4">
-      <div className="flex items-start gap-3 mb-3">
-        <img
-          src="https://i.pravatar.cc/150?img=12"
-          alt="User"
-          className="w-10 h-10 rounded-full"
-        />
-        <input
-          type="text"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && content.trim() && handleDirectPost()}
+    <div
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className={`relative rounded-2xl border transition-all duration-300 backdrop-blur-2xl p-4 sm:p-5 ${
+        isDragging
+          ? 'border-blue-500 bg-blue-50/20 dark:bg-blue-950/20 ring-4 ring-blue-500/10'
+          : 'border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/80 shadow-xs hover:border-slate-300 dark:hover:border-slate-700/80'
+      }`}
+    >
+      {/* Drag & Drop Visual Overlay */}
+      <AnimatePresence>
+        {isDragging && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-20 flex flex-col items-center justify-center rounded-2xl bg-blue-600/10 dark:bg-blue-500/10 backdrop-blur-md border-2 border-dashed border-blue-500 pointer-events-none"
+          >
+            <Upload className="w-8 h-8 text-blue-600 dark:text-blue-400 animate-bounce mb-2" />
+            <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+              Drop media file to attach
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Expanded Header Context */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100 dark:border-slate-800/60"
+          >
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
+              <Globe className="w-3.5 h-3.5 text-blue-500" />
+              <span>Public Post</span>
+            </div>
+            <button
+              type="button"
+              onClick={resetForm}
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-xs font-medium transition-colors"
+            >
+              Cancel
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Title Field (Optional) */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mb-2"
+          >
+            <input
+              type="text"
+              placeholder="Title (optional)"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full px-3.5 py-2 text-sm font-bold bg-slate-50/50 dark:bg-slate-800/40 rounded-xl border border-slate-200/50 dark:border-slate-700/50 outline-none text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-blue-500 dark:focus:border-blue-500 transition-all"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Main Textarea Description */}
+      <div className="relative">
+        <textarea
           placeholder="What are you working on?"
-          className="flex-1 bg-gray-100/80 dark:bg-slate-700/80 rounded-full px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-800 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          onFocus={() => setIsExpanded(true)}
+          rows={isExpanded ? 4 : 2}
+          className="w-full px-3.5 py-2.5 text-sm bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200/60 dark:border-slate-800/80 outline-none text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-blue-500/80 dark:focus:border-blue-500/80 focus:ring-2 focus:ring-blue-500/10 transition-all resize-none"
         />
       </div>
 
-      <hr className="border-slate-200/80 dark:border-slate-700/80 mb-3" />
+      {/* Media Preview Stage */}
+      <AnimatePresence>
+        {mediaPreview && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, height: 0 }}
+            animate={{ opacity: 1, scale: 1, height: 'auto' }}
+            exit={{ opacity: 0, scale: 0.96, height: 0 }}
+            className="mt-3 relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-black/90 shadow-sm"
+          >
+            {mediaType === 'video' ? (
+              <video
+                src={mediaPreview}
+                controls
+                className="w-full max-h-80 object-cover"
+              />
+            ) : (
+              <img
+                src={mediaPreview}
+                alt="Upload preview"
+                className="w-full max-h-80 object-cover"
+              />
+            )}
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={removeMedia}
+              type="button"
+              className="absolute top-2.5 right-2.5 flex h-7 w-7 items-center justify-center bg-black/70 hover:bg-black text-white rounded-full backdrop-blur-md border border-white/20 transition-all shadow-lg"
+              aria-label="Remove media"
+            >
+              <X className="w-4 h-4" />
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
+      {/* Hashtags Section with Dynamic Pill Previews */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mt-3 space-y-2"
+          >
+            <div className="flex items-center gap-2 rounded-xl bg-slate-50 dark:bg-slate-800/40 px-3 py-1.5 border border-slate-200/50 dark:border-slate-700/50">
+              <Hash className="w-4 h-4 text-blue-500 shrink-0" />
+              <input
+                type="text"
+                placeholder="Add hashtags (comma separated)..."
+                value={hashtagsInput}
+                onChange={(e) => setHashtagsInput(e.target.value)}
+                className="w-full bg-transparent text-xs outline-none text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+              />
+            </div>
+
+            {parsedHashtags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 px-1">
+                {parsedHashtags.map((tag, idx) => (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center rounded-full bg-blue-50 dark:bg-blue-950/50 px-2.5 py-0.5 text-[11px] font-medium text-blue-600 dark:text-blue-400 border border-blue-200/50 dark:border-blue-800/50"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <hr className="border-slate-100 dark:border-slate-800 my-3.5" />
+
+      {/* Bottom Action Toolbar */}
       <div className="flex items-center justify-between">
-        <div className="flex gap-4">
-          <button
-            onClick={() => onOpenModal('image')}
-            className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400"
+        <div className="flex items-center gap-1.5">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            type="button"
+            onClick={() => imageInputRef.current?.click()}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/50 transition-all border border-transparent hover:border-blue-200 dark:hover:border-blue-900/50 disabled:opacity-50"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-blue-600 dark:text-blue-400">
-              <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
-            </svg>
-            Photo
-          </button>
+            <ImagePlus className="w-4 h-4 text-blue-500" />
+            <span>Photo</span>
+          </motion.button>
 
-          <button
-            onClick={() => onOpenModal('video')}
-            className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400"
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            type="button"
+            onClick={() => videoInputRef.current?.click()}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/50 transition-all border border-transparent hover:border-purple-200 dark:hover:border-purple-900/50 disabled:opacity-50"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-blue-600 dark:text-blue-400">
-              <path strokeLinecap="round" strokeLinejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" />
-            </svg>
-            Video
-          </button>
-
-          <button className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-blue-600 dark:text-blue-400">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 0 0 4.486-6.336l-3.276 3.277a3.004 3.004 0 0 1-2.25-2.25l3.276-3.276a4.5 4.5 0 0 0-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437 1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008Z" />
-            </svg>
-            Project
-          </button>
+            <Video className="w-4 h-4 text-purple-500" />
+            <span>Video</span>
+          </motion.button>
         </div>
 
-        <button
-          onClick={handleDirectPost}
-          disabled={!content.trim()}
-          className="bg-blue-600 text-white text-sm font-semibold px-6 py-2 rounded-full hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        <motion.button
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
+          type="button"
+          onClick={handleSubmit}
+          disabled={loading || !description.trim()}
+          className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold px-5 py-2 rounded-full shadow-md shadow-blue-500/20 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed transition-all"
         >
-          Post
-        </button>
+          {loading ? (
+            <>
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <span>Posting...</span>
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Post</span>
+            </>
+          )}
+        </motion.button>
       </div>
+
+      {/* Hidden File Input Fields */}
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => handleMediaSelect(e, 'image')}
+      />
+      <input
+        ref={videoInputRef}
+        type="file"
+        accept="video/*"
+        className="hidden"
+        onChange={(e) => handleMediaSelect(e, 'video')}
+      />
     </div>
   );
 };

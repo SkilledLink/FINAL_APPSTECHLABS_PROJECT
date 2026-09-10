@@ -1,153 +1,519 @@
-// src/features/posts/components/PostCard.tsx
-import React, { useEffect, useRef, useState } from 'react';
-import type { Post } from '../types/post.types';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  MoreHorizontal,
+  Trash2,
+  Send,
+  X,
+  Maximize2,
+  Volume2,
+  VolumeX,
+  MessageCircle,
+  Sparkles,
+  Heart,
+  CheckCircle2,
+  Smile,
+  Globe,
+} from 'lucide-react';
 import PostActions from './PostActions';
 import ShareModal from './ShareModal';
+import type { Post } from '../types/post.types';
 
 interface PostCardProps {
   post: Post;
   onLike: (id: string) => void;
-  onAppreciate: (id: string) => void;
-  onRequestService: (id: string) => void;
+  onDelete?: (id: string) => void;
+  onComment?: (postId: string, content: string) => void;
+  onDeleteComment?: (postId: string, commentId: string) => void;
+  onHashtagClick?: (hashtag: string) => void;
 }
 
-const AutoPlayVideo: React.FC<{ src: string; poster?: string; onClick: () => void }> = ({ src, poster, onClick }) => {
+// ─── Auto-Playing Video Component ───
+const AutoPlayVideo: React.FC<{
+  src: string;
+  onClick: () => void;
+  onDoubleTap: (e: React.MouseEvent) => void;
+}> = ({ src, onClick, onDoubleTap }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [isMuted, setIsMuted] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          video.play().catch(() => {
-            video.muted = true;
-            video.play().catch(() => {});
-          });
-        } else {
-          video.pause();
-        }
-      });
-    }, { threshold: 0.6 });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            video
+              .play()
+              .then(() => setIsPlaying(true))
+              .catch(() => {
+                video.muted = true;
+                setIsMuted(true);
+                video.play().then(() => setIsPlaying(true)).catch(() => {});
+              });
+          } else {
+            video.pause();
+            setIsPlaying(false);
+          }
+        });
+      },
+      { threshold: 0.6 }
+    );
 
     observer.observe(video);
     return () => observer.disconnect();
   }, []);
 
+  const toggleMute = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (videoRef.current) {
+      videoRef.current.muted = !isMuted;
+      setIsMuted(!isMuted);
+    }
+  };
+
   return (
-    <div className="relative w-full h-auto rounded-lg overflow-hidden cursor-pointer group" onClick={onClick}>
-      <video ref={videoRef} src={src} poster={poster} loop muted playsInline className="w-full h-auto object-cover bg-black" />
-      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 pointer-events-none">
-        <div className="bg-black/60 rounded-full p-3">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-white">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
-          </svg>
+    <div
+      onClick={onClick}
+      onDoubleClick={onDoubleTap}
+      className="group relative w-full overflow-hidden rounded-2xl bg-slate-950 aspect-[4/5] sm:aspect-[16/10] max-h-[520px] flex items-center justify-center cursor-pointer select-none"
+    >
+      <video
+        ref={videoRef}
+        src={src}
+        loop
+        muted={isMuted}
+        playsInline
+        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.01]"
+      />
+
+      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
+      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none">
+        <div className="flex items-center gap-2 rounded-full bg-slate-900/80 px-4 py-2 text-xs font-semibold text-white backdrop-blur-md border border-white/15 shadow-xl group-hover:scale-105 transition-transform">
+          <Maximize2 className="w-3.5 h-3.5 text-blue-400" />
+          <span>Expand Media</span>
         </div>
       </div>
+
+      <button
+        type="button"
+        onClick={toggleMute}
+        aria-label={isMuted ? 'Unmute video' : 'Mute video'}
+        className="absolute bottom-3.5 right-3.5 flex h-8 w-8 items-center justify-center rounded-full bg-slate-900/80 text-white backdrop-blur-md border border-white/15 hover:bg-slate-900 hover:scale-110 active:scale-95 transition-all z-10 shadow-lg"
+      >
+        {isMuted ? (
+          <VolumeX className="w-4 h-4 text-rose-400" />
+        ) : (
+          <Volume2 className="w-4 h-4 text-emerald-400" />
+        )}
+      </button>
+
+      {isPlaying && (
+        <div className="absolute top-3.5 left-3.5 flex items-center gap-1.5 rounded-full bg-slate-900/80 px-3 py-1 text-[10px] font-bold tracking-wider text-white backdrop-blur-md border border-white/15 shadow-sm">
+          <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse" />
+          <span className="uppercase">Playing</span>
+        </div>
+      )}
     </div>
   );
 };
 
-const PostCard: React.FC<PostCardProps> = ({ post, onLike, onAppreciate, onRequestService }) => {
+// ─── Main Upgraded PostCard ───
+export const PostCard: React.FC<PostCardProps> = ({
+  post,
+  onLike,
+  onDelete,
+  onComment,
+  onDeleteComment,
+  onHashtagClick,
+}) => {
   const [isMediaOpen, setIsMediaOpen] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  const [commentText, setCommentText] = useState('');
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [showHeartAnimation, setShowHeartAnimation] = useState(false);
+
+  const user = post.user;
+  const displayName = user
+    ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'User'
+    : 'Unknown User';
+  const username = user?.first_name
+    ? `@${user.first_name.toLowerCase()}${user.last_name ? user.last_name.toLowerCase() : ''}`
+    : '@user';
+
+  const avatarUrl = user?.profile_image_url || '/default-avatar.png';
+  const primaryMedia = post.media?.[0];
+
+  const formatTimeAgo = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d ago`;
+    return new Date(dateStr).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  const handleDoubleTap = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onLike(post.id);
+      setShowHeartAnimation(true);
+      setTimeout(() => setShowHeartAnimation(false), 800);
+    },
+    [onLike, post.id]
+  );
+
+  const handleCommentSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!commentText.trim() || !onComment) return;
+    onComment(post.id, commentText.trim());
+    setCommentText('');
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isMediaOpen) setIsMediaOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isMediaOpen]);
 
   return (
     <>
-      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-xl shadow-sm border border-slate-200/80 dark:border-slate-800/80 p-4 hover:bg-gray-50/80 dark:hover:bg-slate-800/80 transition-colors">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-2">
-          <div className="flex items-center gap-3">
-            <img src={post.author.avatarUrl} alt={post.author.name} className="w-10 h-10 rounded-full" />
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-gray-900 dark:text-white text-sm">{post.author.name}</h3>
-                {post.author.isVerified && (
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-gray-800 dark:text-gray-200">
-                    <path fillRule="evenodd" d="M8.603 3.799A4.49 4.49 0 0 1 12 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 0 1 3.498 1.307 4.491 4.491 0 0 1 1.307 3.497A4.49 4.49 0 0 1 21.75 12a4.49 4.49 0 0 1-1.549 3.397 4.491 4.491 0 0 1-1.307 3.497 4.491 4.491 0 0 1-3.497 1.307A4.49 4.49 0 0 1 12 21.75a4.49 4.49 0 0 1-3.397-1.549 4.49 4.49 0 0 1-3.498-1.306 4.491 4.491 0 0 1-1.307-3.498A4.49 4.49 0 0 1 2.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 0 1 1.307-3.497 4.49 4.49 0 0 1 3.497-1.307Zm7.007 6.387a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
-                  </svg>
+      <article className="group/card relative w-full overflow-hidden rounded-3xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-sm transition-all duration-300 hover:shadow-xl hover:shadow-slate-200/50 dark:hover:shadow-none hover:border-slate-300 dark:hover:border-slate-700 mb-5">
+        
+        {/* ─── CARD HEADER ─── */}
+        <div className="flex items-center justify-between p-4 sm:p-5 pb-3">
+          <div className="flex items-center gap-3.5">
+            <div className="relative group/avatar cursor-pointer">
+              <img
+                src={avatarUrl}
+                alt={displayName}
+                className="h-11 w-11 rounded-full object-cover ring-2 ring-slate-100 dark:ring-slate-800 transition-transform duration-300 group-hover/avatar:scale-105"
+              />
+              <span className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900" />
+            </div>
+
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-extrabold text-slate-900 dark:text-slate-100 text-base tracking-tight hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer">
+                  {displayName}
+                </span>
+
+                {user?.account_type === 'professional' ? (
+                  <span className="inline-flex items-center gap-1 rounded-md bg-gradient-to-r from-blue-600 to-indigo-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-xs">
+                    <Sparkles className="w-2.5 h-2.5" />
+                    PRO
+                  </span>
+                ) : (
+                  <CheckCircle2 className="w-4 h-4 text-blue-500 fill-blue-500/10" />
                 )}
               </div>
-              <p className="text-xs text-gray-500 dark:text-slate-400">
-                {post.author.title} <span className="text-gray-400 dark:text-slate-500">• {post.createdAt}</span>
-              </p>
+
+              <div className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 font-medium mt-0.5">
+                <span>{username}</span>
+                <span>•</span>
+                <span>{formatTimeAgo(post.created_at)}</span>
+                <span>•</span>
+                <span className="inline-flex items-center gap-0.5">
+                  <Globe className="w-3 h-3 text-slate-400" />
+                </span>
+              </div>
             </div>
           </div>
 
-          <button className="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM12.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM18.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
-            </svg>
-          </button>
-        </div>
+          {onDelete && (
+            <div className="relative">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowMenu(!showMenu)}
+                className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                aria-label="Post settings"
+              >
+                <MoreHorizontal className="w-5 h-5" />
+              </motion.button>
 
-        {/* Content */}
-        <div className="mb-3">
-          {post.title && (
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">{post.title}</h2>
-          )}
-          <p className="text-gray-700 dark:text-slate-300 text-sm leading-relaxed">{post.content}</p>
-
-          {post.location && (
-            <div className="flex items-center gap-1 mt-2 text-xs text-gray-500 dark:text-slate-400">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
-              </svg>
-              {post.location}
+              <AnimatePresence>
+                {showMenu && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-20"
+                      onClick={() => setShowMenu(false)}
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.92, y: 6 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.92, y: 6 }}
+                      transition={{ duration: 0.15, ease: 'easeOut' }}
+                      className="absolute right-0 top-10 z-30 min-w-[170px] overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 p-1.5 shadow-xl backdrop-blur-xl"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowMenu(false);
+                          onDelete(post.id);
+                        }}
+                        className="flex w-full items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4 text-rose-500" />
+                        <span>Delete post</span>
+                      </button>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
             </div>
           )}
-
-          <div className="flex items-center gap-2 mt-2">
-            {post.hashtags.map(tag => (
-              <span key={tag} className="text-blue-600 dark:text-blue-400 text-sm font-medium bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-full">
-                {tag}
-              </span>
-            ))}
-          </div>
         </div>
 
-        {/* Media */}
-        {post.imageUrl && (
-          <div className="w-full mb-3">
-            {post.mediaType === 'video' ? (
-              <AutoPlayVideo src={post.imageUrl} poster={post.thumbnailUrl} onClick={() => setIsMediaOpen(true)} />
+        {/* ─── POST TEXT CONTENT & HASHTAGS ─── */}
+        <div className="px-4 pb-3 sm:px-5 space-y-2">
+          {post.title && post.title !== post.description && (
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight leading-snug">
+              {post.title}
+            </h2>
+          )}
+
+          {post.description && (
+            <p className="text-sm sm:text-[15px] text-slate-800 dark:text-slate-200 leading-relaxed font-normal whitespace-pre-wrap">
+              {post.description}
+            </p>
+          )}
+
+          {post.hashtags && post.hashtags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {post.hashtags.map((tag) => (
+                <button
+                  key={tag.id}
+                  type="button"
+                  onClick={() => onHashtagClick?.(tag.name)}
+                  className="rounded-lg bg-blue-50 dark:bg-blue-950/40 px-2.5 py-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+                >
+                  #{tag.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ─── MEDIA ATTACHMENT SECTION ─── */}
+        {primaryMedia && (
+          <div className="relative w-full px-3 sm:px-4">
+            {primaryMedia.media_type === 'video' ? (
+              <AutoPlayVideo
+                src={primaryMedia.media_url}
+                onClick={() => setIsMediaOpen(true)}
+                onDoubleTap={handleDoubleTap}
+              />
             ) : (
-              <div className="cursor-pointer" onClick={() => setIsMediaOpen(true)}>
-                <img src={post.imageUrl} alt={post.title} className="w-full h-auto rounded-lg object-cover" />
+              <div
+                className="group relative cursor-pointer overflow-hidden rounded-2xl aspect-[4/5] sm:aspect-[16/10] max-h-[520px] flex items-center justify-center bg-slate-950"
+                onClick={() => setIsMediaOpen(true)}
+                onDoubleClick={handleDoubleTap}
+              >
+                <img
+                  src={primaryMedia.media_url}
+                  alt={post.title || 'Post attachment'}
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.01]"
+                />
+
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
+                <div className="absolute bottom-3.5 right-3.5 flex items-center gap-1.5 rounded-full bg-slate-900/80 px-3 py-1.5 text-[11px] font-semibold text-white backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 border border-white/10 shadow-lg">
+                  <Maximize2 className="w-3.5 h-3.5 text-blue-400" />
+                  <span>View full</span>
+                </div>
               </div>
             )}
+
+            <AnimatePresence>
+              {showHeartAnimation && (
+                <motion.div
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1.25, opacity: 1 }}
+                  exit={{ scale: 1.6, opacity: 0 }}
+                  transition={{ duration: 0.45, ease: 'backOut' }}
+                  className="absolute inset-0 flex items-center justify-center pointer-events-none z-20"
+                >
+                  <Heart className="w-24 h-24 text-rose-500 fill-rose-500 drop-shadow-2xl" />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
 
-        {/* Actions */}
-        <PostActions
-          post={post}
-          onLike={onLike}
-          onAppreciate={onAppreciate}
-          onRequestService={onRequestService}
-          onShare={() => setIsShareModalOpen(true)}
-        />
-      </div>
-
-      {/* Lightbox for Image/Video */}
-      {isMediaOpen && (
-        <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4">
-          <button onClick={() => setIsMediaOpen(false)} className="absolute top-4 right-4 text-white hover:text-gray-300 z-10">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-8 h-8">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-            </svg>
-          </button>
-          {post.mediaType === 'video' ? (
-            <video src={post.imageUrl} poster={post.thumbnailUrl} controls autoPlay className="max-w-full max-h-full object-contain rounded-lg" />
-          ) : (
-            <img src={post.imageUrl} alt={post.title} className="max-w-full max-h-full object-contain rounded-lg" />
-          )}
+        {/* ─── POST ACTIONS BAR ─── */}
+        <div className="px-3 py-2 sm:px-4 mt-1 border-t border-slate-100 dark:border-slate-800/60">
+          <PostActions
+            post={post}
+            onLike={() => onLike(post.id)}
+            onCommentToggle={() => setShowComments(!showComments)}
+            onShare={() => setIsShareModalOpen(true)}
+          />
         </div>
-      )}
 
-      {/* Share Modal */}
+        {/* ─── CLEAN INTEGRATED COMMENTS SECTION ─── */}
+        <AnimatePresence>
+          {showComments && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
+              className="border-t border-slate-100 dark:border-slate-800/80 px-4 pt-3 pb-4 space-y-3"
+            >
+              {/* Comment Thread List */}
+              <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1 scrollbar-thin">
+                {post.comments?.map((comment) => (
+                  <motion.div
+                    key={comment.id}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="group/comment flex items-start justify-between gap-2.5 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-2xl border border-slate-100 dark:border-slate-800"
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <img
+                        src={
+                          comment.user?.profile_image_url ||
+                          '/default-avatar.png'
+                        }
+                        alt=""
+                        className="h-7 w-7 rounded-full object-cover ring-1 ring-slate-200 dark:ring-slate-700 mt-0.5 shrink-0"
+                      />
+                      <div className="flex-1">
+                        <span className="font-bold text-slate-900 dark:text-slate-100 text-xs">
+                          {comment.user?.first_name} {comment.user?.last_name}
+                        </span>
+                        <p className="text-xs text-slate-700 dark:text-slate-300 mt-0.5 leading-relaxed">
+                          {comment.content}
+                        </p>
+                      </div>
+                    </div>
+
+                    {onDeleteComment && (
+                      <button
+                        type="button"
+                        onClick={() => onDeleteComment(post.id, comment.id)}
+                        className="opacity-0 group-hover/comment:opacity-100 p-1 text-slate-400 hover:text-rose-500 transition-opacity shrink-0"
+                        aria-label="Delete comment"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </motion.div>
+                ))}
+
+                {(!post.comments || post.comments.length === 0) && (
+                  <div className="py-3 text-center">
+                    <MessageCircle className="w-5 h-5 mx-auto mb-1 text-slate-300 dark:text-slate-600" />
+                    <p className="text-xs text-slate-400 dark:text-slate-500">
+                      No comments yet. Write the first response!
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Seamless Comment Input Form */}
+              <form
+                onSubmit={handleCommentSubmit}
+                className="flex items-center gap-2 pt-1"
+              >
+                <div className="relative flex-1 flex items-center">
+                  <input
+                    type="text"
+                    placeholder="Write a comment..."
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    className="w-full rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-4 py-2 pr-9 text-xs font-medium text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all shadow-2xs"
+                  />
+                  <Smile className="absolute right-3 w-4 h-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer transition-colors" />
+                </div>
+
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  type="submit"
+                  disabled={!commentText.trim()}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white shadow-md shadow-blue-500/20 disabled:opacity-40 hover:bg-blue-700 transition-all shrink-0"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                </motion.button>
+              </form>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </article>
+
+      {/* ─── MEDIA LIGHTBOX OVERLAY ─── */}
+      <AnimatePresence>
+        {isMediaOpen && primaryMedia && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setIsMediaOpen(false)}
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/90 backdrop-blur-2xl p-4 sm:p-6 md:p-10 select-none overflow-hidden"
+          >
+            <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-50 flex items-center gap-2.5">
+              <span className="hidden sm:inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/10 px-2.5 py-1 text-[11px] font-medium text-white/70 backdrop-blur-md">
+                Press <kbd className="font-mono text-white">ESC</kbd>
+              </span>
+
+              <motion.button
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.92 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsMediaOpen(false);
+                }}
+                aria-label="Close lightbox"
+                className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white/90 shadow-xl backdrop-blur-xl hover:bg-white/20 hover:text-white transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </motion.button>
+            </div>
+
+            <motion.div
+              initial={{ scale: 0.92, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative flex items-center justify-center w-full max-w-5xl max-h-[85vh] sm:max-h-[90vh] rounded-3xl border border-white/10 bg-black/60 shadow-2xl overflow-hidden backdrop-blur-md"
+            >
+              {primaryMedia.media_type === 'video' ? (
+                <video
+                  src={primaryMedia.media_url}
+                  controls
+                  autoPlay
+                  className="w-full h-full max-h-[85vh] sm:max-h-[90vh] object-contain rounded-3xl"
+                />
+              ) : (
+                <img
+                  src={primaryMedia.media_url}
+                  alt={post.title || 'Lightbox view'}
+                  className="w-full h-full max-h-[85vh] sm:max-h-[90vh] object-contain rounded-3xl"
+                />
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ─── SHARE MODAL ─── */}
       <ShareModal
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}

@@ -10,6 +10,7 @@ from app.models.professional import Professional
 if TYPE_CHECKING:
     from app.models.job import Job
     from app.models.professional_portfolio import ProfessionalPortfolio
+    from app.models.feed import Feed
 
 
 class RefreshToken:
@@ -170,4 +171,10 @@ class User(SQLModel, table=True):
     portfolio: Optional["ProfessionalPortfolio"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"uselist": False},
+    )
+
+    # ✅ Feeds (one-to-many)
+    feeds: list["Feed"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )

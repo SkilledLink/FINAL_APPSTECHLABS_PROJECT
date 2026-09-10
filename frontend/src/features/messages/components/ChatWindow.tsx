@@ -1,6 +1,13 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, Sparkles, ShieldCheck, ArrowDown, Lock, Users } from 'lucide-react';
+import {
+  MessageSquare,
+  Sparkles,
+  ShieldCheck,
+  Lock,
+  Users,
+  Compass,
+} from 'lucide-react';
 import type { Conversation, Message } from '../types/message.types';
 import { ChatHeader } from './ChatHeader';
 import { MessageBubble } from './MessageBubble';
@@ -21,6 +28,125 @@ interface ChatWindowProps {
   onReactMessage?: (messageId: string, emoji: string) => void;
 }
 
+// ─── 🌌 Canvas Universe Animated Background (Active in Dark Mode) ───
+const UniverseBackground: React.FC = () => {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let animationFrameId: number;
+    let width = 0;
+    let height = 0;
+
+    const updateSize = () => {
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      width = canvas.width = rect.width || window.innerWidth;
+      height = canvas.height = rect.height || window.innerHeight;
+    };
+
+    updateSize();
+    window.addEventListener('resize', updateSize);
+
+    // Generate Stars
+    const starCount = 140;
+    const stars = Array.from({ length: starCount }, () => ({
+      x: Math.random() * (width || 1000),
+      y: Math.random() * (height || 1000),
+      size: Math.random() * 2 + 0.4,
+      alpha: Math.random(),
+      speed: Math.random() * 0.25 + 0.08,
+      twinkleSpeed: Math.random() * 0.02 + 0.005,
+      color: Math.random() > 0.7 ? '#93c5fd' : Math.random() > 0.4 ? '#c084fc' : '#ffffff',
+    }));
+
+    // Draw Loop
+    const render = () => {
+      if (width === 0 || height === 0) updateSize();
+      ctx.clearRect(0, 0, width, height);
+
+      stars.forEach((star) => {
+        star.y -= star.speed;
+        if (star.y < 0) {
+          star.y = height || 1000;
+          star.x = Math.random() * (width || 1000);
+        }
+
+        star.alpha += star.twinkleSpeed;
+        if (star.alpha > 1 || star.alpha < 0.2) {
+          star.twinkleSpeed = -star.twinkleSpeed;
+        }
+
+        ctx.fillStyle = star.color;
+        ctx.globalAlpha = Math.abs(star.alpha);
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      animationFrameId = requestAnimationFrame(render);
+    };
+
+    render();
+
+    return () => {
+      window.removeEventListener('resize', updateSize);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, []);
+
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 hidden dark:block">
+      {/* Dynamic Animated Ambient Space Nebulae */}
+      <motion.div
+        animate={{
+          scale: [1, 1.3, 1],
+          opacity: [0.35, 0.6, 0.35],
+          x: [0, 40, 0],
+          y: [0, -30, 0],
+        }}
+        transition={{ duration: 16, repeat: Infinity, ease: 'easeInOut' }}
+        className="absolute -top-32 -left-32 w-[30rem] h-[30rem] bg-gradient-to-tr from-indigo-600/40 via-purple-600/30 to-blue-500/10 rounded-full blur-3xl"
+      />
+      <motion.div
+        animate={{
+          scale: [1.1, 1, 1.1],
+          opacity: [0.3, 0.55, 0.3],
+          x: [0, -50, 0],
+          y: [0, 40, 0],
+        }}
+        transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
+        className="absolute top-1/2 -right-32 w-[32rem] h-[32rem] bg-gradient-to-bl from-blue-600/35 via-violet-600/30 to-cyan-500/10 rounded-full blur-3xl"
+      />
+      <motion.div
+        animate={{
+          scale: [1, 1.25, 1],
+          opacity: [0.25, 0.5, 0.25],
+        }}
+        transition={{ duration: 14, repeat: Infinity, ease: 'easeInOut', delay: 4 }}
+        className="absolute -bottom-40 left-1/3 w-[28rem] h-[28rem] bg-gradient-to-t from-fuchsia-600/30 via-indigo-600/20 to-transparent rounded-full blur-3xl"
+      />
+
+      {/* Canvas Starfield */}
+      <canvas ref={canvasRef} className="w-full h-full block opacity-100" />
+    </div>
+  );
+};
+
+// ─── ☀️ Light Mode Ambient Blue Glow Background ─────────────────────
+const LightAmbientGlow: React.FC = () => (
+  <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 dark:hidden">
+    <div className="absolute -top-24 -left-24 w-96 h-96 bg-gradient-to-br from-blue-400/20 via-indigo-300/15 to-transparent rounded-full blur-3xl" />
+    <div className="absolute top-1/3 -right-24 w-[30rem] h-[30rem] bg-gradient-to-bl from-sky-400/20 via-blue-200/15 to-transparent rounded-full blur-3xl" />
+    <div className="absolute -bottom-24 left-1/4 w-96 h-96 bg-gradient-to-t from-blue-500/15 via-sky-300/10 to-transparent rounded-full blur-3xl" />
+  </div>
+);
+
+// ─── 💬 Main ChatWindow Component ──────────────────────────────────
 export const ChatWindow: React.FC<ChatWindowProps> = ({
   conversation,
   messages,
@@ -37,58 +163,98 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [showScrollBottomButton, setShowScrollBottomButton] = useState(false);
+  const [isUserScrolling, setIsUserScrolling] = useState(false);
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     messagesEndRef.current?.scrollIntoView({ behavior });
+    setIsUserScrolling(false);
   };
 
   useEffect(() => {
-    scrollToBottom('auto');
+    if (!isUserScrolling) {
+      scrollToBottom('auto');
+    }
   }, [conversation?.id]);
 
   useEffect(() => {
-    scrollToBottom('smooth');
+    if (!isUserScrolling) {
+      scrollToBottom('smooth');
+    }
   }, [messages]);
 
   const handleScroll = () => {
     if (!scrollContainerRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
-    const isUp = scrollHeight - scrollTop - clientHeight > 200;
-    setShowScrollBottomButton(isUp);
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+
+    if (distanceFromBottom > 60) {
+      setIsUserScrolling(true);
+    } else {
+      setIsUserScrolling(false);
+    }
   };
 
+  // Group messages by sender within 1 minute
+  const groupedMessages = messages.reduce((acc, msg, index) => {
+    const prev = messages[index - 1];
+    const isSameSender = prev && prev.sender_id === msg.sender_id;
+    const timeDiff = prev ? new Date(msg.created_at).getTime() - new Date(prev.created_at).getTime() : Infinity;
+    const isSameGroup = isSameSender && timeDiff < 60000;
+    if (isSameGroup) {
+      acc[acc.length - 1].push(msg);
+    } else {
+      acc.push([msg]);
+    }
+    return acc;
+  }, [] as Message[][]);
+
+  // ── EMPTY WORKSPACE STATE ──
   if (!conversation) {
     return (
-      <div className="hidden lg:flex flex-1 flex-col items-center justify-center relative overflow-hidden bg-gradient-to-br from-slate-50/80 via-white to-slate-100/80 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-8 text-center select-none">
-        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-500/5 via-transparent to-transparent pointer-events-none" />
+      <div className="hidden lg:flex flex-1 flex-col items-center justify-center relative overflow-hidden bg-white dark:bg-slate-950 p-8 text-center select-none h-full">
+        <LightAmbientGlow />
+        <UniverseBackground />
+
         <motion.div
-          initial={{ opacity: 0, scale: 0.92, y: 20 }}
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          className="relative z-10 flex flex-col items-center max-w-sm"
+          transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+          className="relative z-10 flex flex-col items-center max-w-md p-8 rounded-3xl bg-white/80 dark:bg-slate-900/40 border border-blue-100/80 dark:border-slate-800/80 backdrop-blur-2xl shadow-xl shadow-blue-500/10 dark:shadow-indigo-950/40"
         >
           <div className="relative mb-6">
-            <div className="w-20 h-20 bg-gradient-to-tr from-blue-500/10 via-indigo-500/10 to-violet-500/10 dark:from-blue-500/20 dark:via-indigo-500/20 dark:to-violet-500/20 text-indigo-600 dark:text-indigo-400 rounded-3xl flex items-center justify-center border border-indigo-500/20 dark:border-indigo-400/20 shadow-xl shadow-indigo-500/5 backdrop-blur-xl">
+            <div className="w-20 h-20 bg-blue-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-3xl flex items-center justify-center border border-blue-200/80 dark:border-indigo-500/30 shadow-lg shadow-blue-500/10 backdrop-blur-md">
               <MessageSquare className="w-9 h-9 stroke-[1.5]" />
             </div>
             <motion.div
-              animate={{ rotate: [0, 12, -12, 0] }}
+              animate={{ rotate: [0, 15, -15, 0] }}
               transition={{ repeat: Infinity, duration: 6, ease: 'easeInOut' }}
-              className="absolute -top-1 -right-1 p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-md text-amber-500"
+              className="absolute -top-1.5 -right-1.5 p-2 bg-white dark:bg-slate-900 border border-blue-100 dark:border-slate-700/60 rounded-2xl shadow-md text-amber-500"
             >
               <Sparkles className="w-4 h-4 fill-amber-400/20" />
             </motion.div>
           </div>
-          <h3 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 mb-2">Your Workspace Messages</h3>
+
+          <motion.h3
+            className="text-2xl font-black tracking-tight text-slate-900 dark:text-white mb-2"
+            animate={{ y: [0, -3, 0] }}
+            transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+          >
+            Workspace Messages
+          </motion.h3>
+
           <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
-            Select a contact to collaborate, review project updates, or exchange quick audio memos.
+            Select a contact to start messaging, share media files, or exchange high-fidelity voice notes in real time.
           </p>
+
           <div className="flex flex-wrap items-center justify-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300 shadow-sm">
-              <Lock className="w-3.5 h-3.5 text-indigo-500" /> Encrypted
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 dark:bg-slate-800/60 border border-blue-100/80 dark:border-slate-700/60 text-xs font-semibold text-slate-700 dark:text-slate-300 shadow-sm backdrop-blur-md">
+              <Lock className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" /> End-to-End Encrypted
             </span>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300 shadow-sm">
-              <Users className="w-3.5 h-3.5 text-emerald-500" /> Team Chat
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 dark:bg-slate-800/60 border border-blue-100/80 dark:border-slate-700/60 text-xs font-semibold text-slate-700 dark:text-slate-300 shadow-sm backdrop-blur-md">
+              <Users className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" /> Live Collaboration
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 dark:bg-slate-800/60 border border-blue-100/80 dark:border-slate-700/60 text-xs font-semibold text-slate-700 dark:text-slate-300 shadow-sm backdrop-blur-md">
+              <Compass className="w-3.5 h-3.5 text-cyan-500 dark:text-cyan-400" /> Dynamic Space
             </span>
           </div>
         </motion.div>
@@ -96,62 +262,83 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     );
   }
 
+  // ── ACTIVE CONVERSATION WINDOW ──
   return (
-    <div className="flex-1 flex flex-col h-full bg-gradient-to-b from-slate-50/60 via-white to-slate-100/60 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950/90 relative overflow-hidden">
-      {conversation.participant && (
+    <div className="flex flex-col h-[100dvh] lg:h-full max-h-[100dvh] lg:max-h-full w-full min-h-0 overflow-hidden bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 relative">
+      {/* Light Mode Soft Blue Background Glow */}
+      <LightAmbientGlow />
+
+      {/* Dark Mode Galaxy Universe Canvas & Nebulae */}
+      <UniverseBackground />
+
+      {/* ── PERMANENTLY FIXED TOP HEADER ── */}
+      <header className="flex-none shrink-0 w-full relative z-30 bg-white/95 dark:bg-slate-950/90 backdrop-blur-xl border-b border-blue-100/80 dark:border-slate-800/80 shadow-xs shadow-blue-500/5 pt-safe">
         <ChatHeader user={conversation.participant} onBack={onBack} />
-      )}
 
-      <div className="flex items-center justify-center gap-2 py-1.5 px-4 bg-slate-100/60 dark:bg-slate-900/50 border-b border-slate-200/40 dark:border-slate-800/40 text-[11px] font-semibold text-slate-500 dark:text-slate-400 backdrop-blur-sm">
-        <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-        <span>End-to-end encrypted session with</span>
-        <span className="text-slate-700 dark:text-slate-300 font-bold">
-          {conversation.participant?.name || 'User'}
-        </span>
-      </div>
+        {/* Security Badge Sub-header */}
+        <div className="flex items-center justify-center gap-2 py-1 px-4 bg-blue-50/50 dark:bg-indigo-950/40 border-t border-blue-100/60 dark:border-slate-800/40 text-[11px] font-semibold text-slate-500 dark:text-slate-400 backdrop-blur-sm">
+          <motion.div
+            animate={{ scale: [1, 1.25, 1] }}
+            transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut' }}
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
+          </motion.div>
+          <span>Encrypted session with</span>
+          <span className="text-slate-800 dark:text-slate-200 font-bold">
+            {conversation.participant?.name || 'User'}
+          </span>
+        </div>
+      </header>
 
-      <div
+      {/* ── ISOLATED SCROLLABLE MESSAGES CONTAINER ── */}
+      <main
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-2 relative scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700"
+        className="flex-1 min-h-0 w-full overflow-y-auto p-4 sm:p-6 space-y-3 relative z-10 scroll-smooth scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-800 scrollbar-track-transparent"
+        style={{ WebkitOverflowScrolling: 'touch' }}
       >
-        <div className="absolute inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.05] bg-[radial-gradient(#0f172a_1px,transparent_1px)] [background-size:16px_16px]" />
-        <AnimatePresence initial={false}>
-          {messages.map((msg) => (
-            <MessageBubble
-              key={msg.id}
-              message={msg}
-              isSender={msg.sender_id === currentUserId}
-              onReply={onReplyMessage}
-              onReact={onReactMessage}
-            />
-          ))}
+        <AnimatePresence initial={false} mode="popLayout">
+          {groupedMessages.map((group, groupIndex) => {
+            const firstMsg = group[0];
+            const isSender = firstMsg.sender_id === currentUserId;
+            return (
+              <motion.div
+                key={groupIndex}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 30, delay: groupIndex * 0.02 }}
+                className={`flex flex-col ${isSender ? 'items-end' : 'items-start'} gap-1`}
+              >
+                {group.map((msg, idx) => (
+                  <MessageBubble
+                    key={msg.id}
+                    message={msg}
+                    isSender={msg.sender_id === currentUserId}
+                    isFirstInGroup={idx === 0}
+                    isLastInGroup={idx === group.length - 1}
+                    onReply={onReplyMessage}
+                    onReact={onReactMessage}
+                  />
+                ))}
+              </motion.div>
+            );
+          })}
         </AnimatePresence>
         <div ref={messagesEndRef} />
-      </div>
+      </main>
 
-      <AnimatePresence>
-        {showScrollBottomButton && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.8, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: 10 }}
-            onClick={() => scrollToBottom('smooth')}
-            className="absolute bottom-24 right-6 z-30 p-3 bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 rounded-full shadow-lg shadow-indigo-500/20 border border-indigo-200/50 dark:border-indigo-800/50 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-all duration-200"
-          >
-            <ArrowDown className="w-4 h-4" />
-          </motion.button>
-        )}
-      </AnimatePresence>
-
-      <MessageInput
-        onSendMessage={onSendMessage}
-        onSendVoiceNote={onSendVoiceNote}
-        onSendFile={onSendFile}
-        onSendImage={onSendImage}
-        uploading={uploading}
-        uploadProgress={uploadProgress}
-      />
+      {/* ── PERMANENTLY FIXED BOTTOM INPUT ── */}
+      <footer className="flex-none shrink-0 w-full relative z-30 bg-white/95 dark:bg-slate-950/90 backdrop-blur-xl border-t border-blue-100/80 dark:border-slate-800/80 pb-safe shadow-lg shadow-blue-500/5">
+        <MessageInput
+          onSendMessage={onSendMessage}
+          onSendVoiceNote={onSendVoiceNote}
+          onSendFile={onSendFile}
+          onSendImage={onSendImage}
+          uploading={uploading}
+          uploadProgress={uploadProgress}
+        />
+      </footer>
     </div>
   );
 };

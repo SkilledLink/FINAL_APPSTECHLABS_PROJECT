@@ -1,14 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Play, Pause, Check, CheckCheck, Mic, Reply, Smile, Copy,
-  File, FileImage, FileText, Download,
+  Play,
+  Pause,
+  Check,
+  CheckCheck,
+  Mic,
+  Reply,
+  Smile,
+  Copy,
+  File,
+  FileImage,
+  FileText,
+  Download,
+  X,
+  Maximize2,
 } from 'lucide-react';
 import type { Message } from '../types/message.types';
 
 interface MessageBubbleProps {
   message: Message;
   isSender: boolean;
+  isFirstInGroup?: boolean;
+  isLastInGroup?: boolean;
   onReply?: (message: Message) => void;
   onReact?: (messageId: string, emoji: string) => void;
 }
@@ -16,12 +30,17 @@ interface MessageBubbleProps {
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
   message,
   isSender,
+  isFirstInGroup = true,
+  isLastInGroup = true,
   onReply,
   onReact,
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackProgress, setPlaybackProgress] = useState(35);
   const [hoveredBar, setHoveredBar] = useState<number | null>(null);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState('');
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -34,246 +53,300 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   }, [isPlaying]);
 
   const handleCopyText = () => {
-    if (message.text) {
-      navigator.clipboard.writeText(message.text);
+    if (message.text || message.content) {
+      navigator.clipboard.writeText(message.text || message.content || '');
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
   const getFileUrl = (path?: string) => {
     if (!path) return '';
-    // If it's already a full URL (starts with http), return it as is
     if (path.startsWith('http')) return path;
-    // Otherwise, assume it's a Supabase path
     return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/messages/${path}`;
   };
 
-  const getStatusLabel = () => {
-    if (!isSender) return null;
-    if (message.status === 'sending') return 'Sending...';
-    if (message.status === 'failed') return 'Failed';
-    return 'Sent';
+  const imageUrl = message.type === 'image' && message.attachment_path ? getFileUrl(message.attachment_path) : '';
+
+  const openImagePreview = () => {
+    if (imageUrl) {
+      setPreviewImageUrl(imageUrl);
+      setImageModalOpen(true);
+    }
   };
 
-  const statusLabel = getStatusLabel();
+  // Format timestamp
+  const timestamp = new Date(message.created_at || Date.now()).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  // Dynamic bubble corner rounding logic
+  const getBubbleRadius = () => {
+    if (isSender) {
+      if (isFirstInGroup && isLastInGroup) return 'rounded-3xl rounded-br-lg';
+      if (isFirstInGroup) return 'rounded-3xl rounded-tr-md rounded-br-md';
+      if (isLastInGroup) return 'rounded-3xl rounded-tr-md rounded-br-lg';
+      return 'rounded-3xl rounded-tr-md rounded-br-md';
+    } else {
+      if (isFirstInGroup && isLastInGroup) return 'rounded-3xl rounded-bl-lg';
+      if (isFirstInGroup) return 'rounded-3xl rounded-tl-md rounded-bl-md';
+      if (isLastInGroup) return 'rounded-3xl rounded-tl-md rounded-bl-lg';
+      return 'rounded-3xl rounded-tl-md rounded-bl-md';
+    }
+  };
+
+  // Render Status Checkmarks
+  const renderStatus = () => {
+    if (!isSender) return null;
+
+    if (message.status === 'sending') {
+      return <div className="w-2.5 h-2.5 border-2 border-blue-400/50 border-t-transparent rounded-full animate-spin shrink-0" />;
+    }
+    if (message.status === 'failed') {
+      return <span className="text-[10px] font-bold text-red-400">Failed</span>;
+    }
+    return <CheckCheck className={`w-3.5 h-3.5 ${isSender ? 'text-blue-200' : 'text-blue-500'}`} />;
+  };
+
+  // Hover Quick Actions Menu
+  const renderActionMenu = () => (
+    <div className="flex items-center gap-0.5 p-1 bg-white/95 dark:bg-slate-800/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-700/80 rounded-full shadow-lg shadow-black/10 text-slate-600 dark:text-slate-300">
+      {onReply && (
+        <button
+          type="button"
+          onClick={() => onReply(message)}
+          title="Reply"
+          className="p-1.5 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-full transition-colors"
+        >
+          <Reply className="w-3.5 h-3.5" />
+        </button>
+      )}
+      {(message.text || message.content) && (
+        <button
+          type="button"
+          onClick={handleCopyText}
+          title="Copy text"
+          className="p-1.5 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-700/60 rounded-full transition-colors"
+        >
+          {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+        </button>
+      )}
+      {onReact && (
+        <button
+          type="button"
+          onClick={() => onReact(message.id, '❤️')}
+          title="React"
+          className="p-1.5 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-full transition-colors"
+        >
+          <Smile className="w-3.5 h-3.5" />
+        </button>
+      )}
+    </div>
+  );
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 15, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ type: 'spring', stiffness: 450, damping: 30 }}
-      className={`group relative flex flex-col ${isSender ? 'items-end' : 'items-start'} my-2 px-2`}
-    >
-      <div
-        className={`absolute z-20 -top-3.5 ${isSender ? 'right-4' : 'left-4'} 
-          opacity-0 group-hover:opacity-100 transition-all duration-200 ease-out 
-          transform group-hover:translate-y-0 translate-y-1 pointer-events-none group-hover:pointer-events-auto`}
+    <>
+      <motion.div
+        initial={{ opacity: 0, y: 10, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+        className={`group relative flex flex-col ${isSender ? 'items-end' : 'items-start'} my-1 w-full`}
       >
-        <div className="flex items-center gap-0.5 p-1 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border border-slate-200/60 dark:border-slate-700/60 rounded-full shadow-lg shadow-black/5 text-slate-500 dark:text-slate-400">
-          {onReply && (
-            <button
-              type="button"
-              onClick={() => onReply(message)}
-              className="p-1.5 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-full transition"
-            >
-              <Reply className="w-3.5 h-3.5" />
-            </button>
-          )}
-          {message.text && (
-            <button
-              type="button"
-              onClick={handleCopyText}
-              className="p-1.5 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-full transition"
-            >
-              <Copy className="w-3.5 h-3.5" />
-            </button>
-          )}
-          {onReact && (
-            <button
-              type="button"
-              onClick={() => onReact(message.id, '❤️')}
-              className="p-1.5 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-full transition"
-            >
-              <Smile className="w-3.5 h-3.5" />
-            </button>
-          )}
+        {/* Hover Action Menu */}
+        <div
+          className={`absolute z-30 -top-3 ${
+            isSender ? 'right-2' : 'left-2'
+          } opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none group-hover:pointer-events-auto shadow-md`}
+        >
+          {renderActionMenu()}
         </div>
-      </div>
 
-      <div
-        className={`relative max-w-[85%] sm:max-w-[70%] px-5 py-3.5 text-[15px] leading-relaxed transition-all duration-200 ${
-          isSender
-            ? 'bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 text-white rounded-2xl rounded-tr-sm shadow-md shadow-blue-500/20'
-            : 'bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm text-slate-800 dark:text-slate-100 border border-slate-200/70 dark:border-slate-700/70 rounded-2xl rounded-tl-sm shadow-sm shadow-slate-200/50 dark:shadow-slate-900/30'
-        }`}
-      >
-        {/* IMAGE */}
-        {message.type === 'image' && message.attachment_path && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="rounded-lg overflow-hidden max-w-[300px] cursor-pointer"
-            onClick={() => {
-              const url = getFileUrl(message.attachment_path);
-              if (url) window.open(url, '_blank');
-            }}
-          >
-            <img
-              src={getFileUrl(message.attachment_path)}
-              alt={message.fileDetails?.name || 'Image'}
-              className="w-full h-auto object-cover rounded-lg hover:scale-[1.02] transition-transform duration-200"
-              loading="lazy"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-                const parent = target.parentElement;
-                if (parent) {
-                  const fallback = document.createElement('div');
-                  fallback.textContent = 'Image failed to load';
-                  fallback.className = 'p-4 text-sm text-slate-500 dark:text-slate-400';
-                  parent.appendChild(fallback);
-                }
-              }}
-            />
-          </motion.div>
-        )}
-
-        {/* FILE */}
-        {message.type === 'file' && message.attachment_path && (
-          <div className="flex items-center gap-3 p-2 min-w-[180px]">
-            <div className={`p-2 rounded-lg ${isSender ? 'bg-white/20' : 'bg-slate-100 dark:bg-slate-700'}`}>
-              {message.fileDetails?.icon === 'file-image' && <FileImage className="w-5 h-5" />}
-              {message.fileDetails?.icon === 'file-pdf' && <FilePdf className="w-5 h-5" />}
-              {message.fileDetails?.icon === 'file-word' && <FileText className="w-5 h-5" />}
-              {!message.fileDetails?.icon && <File className="w-5 h-5" />}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className={`text-sm font-semibold truncate ${isSender ? 'text-white' : 'text-slate-800 dark:text-slate-200'}`}>
-                {message.fileDetails?.name || message.attachment_name || 'File'}
-              </p>
-              <p className={`text-xs ${isSender ? 'text-white/70' : 'text-slate-500 dark:text-slate-400'}`}>
-                {message.fileDetails?.size || (message.attachment_size ? `${(message.attachment_size / 1024).toFixed(1)} KB` : 'Unknown size')}
-              </p>
-            </div>
-            <a
-              href={getFileUrl(message.attachment_path)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`p-2 rounded-full transition ${isSender ? 'hover:bg-white/20 text-white/80' : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400'}`}
+        {/* ─── IMAGE MESSAGE TYPE ────────────────────────────── */}
+        {message.type === 'image' && imageUrl ? (
+          <div className="max-w-[280px] sm:max-w-[340px] space-y-1">
+            <div
+              className="relative rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/60 shadow-sm cursor-pointer group/image"
+              onClick={openImagePreview}
             >
-              <Download className="w-4 h-4" />
-            </a>
-          </div>
-        )}
-
-        {/* VOICE */}
-        {message.type === 'audio' && message.audioDetails && (
-          <div className="flex items-center gap-4 min-w-[220px] sm:min-w-[260px]">
-            <div className="relative">
-              {isPlaying && (
-                <motion.span
-                  animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }}
-                  transition={{ repeat: Infinity, duration: 1.2, ease: 'easeInOut' }}
-                  className={`absolute inset-0 rounded-full ${isSender ? 'bg-white/30' : 'bg-blue-500/30'}`}
-                />
-              )}
-              <motion.button
-                whileHover={{ scale: 1.08 }}
-                whileTap={{ scale: 0.92 }}
-                type="button"
-                onClick={() => setIsPlaying(!isPlaying)}
-                className={`relative z-10 p-2.5 rounded-full shrink-0 transition-shadow shadow-md ${
-                  isSender
-                    ? 'bg-white text-blue-600 hover:bg-blue-50 shadow-white/20'
-                    : 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white hover:opacity-90 shadow-indigo-500/30'
-                }`}
-              >
-                {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
-              </motion.button>
-            </div>
-            <div className="flex-1 space-y-1">
-              <div className="flex items-center justify-between text-[11px] font-semibold">
-                <span className={`flex items-center gap-1.5 ${isSender ? 'text-blue-100' : 'text-slate-500 dark:text-slate-400'}`}>
-                  <Mic className={`w-3.5 h-3.5 ${isSender ? 'text-blue-200' : 'text-blue-500'}`} />
-                  Voice Note
-                </span>
-                <span className={`font-mono text-[10px] ${isSender ? 'text-blue-200' : 'text-slate-400'}`}>
-                  {message.audioDetails.duration}
-                </span>
+              <img
+                src={imageUrl}
+                alt={message.fileDetails?.name || 'Attachment'}
+                className="w-full max-h-[300px] object-cover group-hover/image:scale-105 transition-transform duration-300 ease-out"
+                loading="lazy"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                }}
+              />
+              <div className="absolute inset-0 bg-slate-950/30 opacity-0 group-hover/image:opacity-100 transition-opacity flex items-center justify-center">
+                <div className="p-2.5 bg-white/20 backdrop-blur-md rounded-full text-white shadow-lg">
+                  <Maximize2 className="w-4 h-4" />
+                </div>
               </div>
-              <div className="flex items-center gap-1 h-6 pt-1 cursor-pointer">
-                {message.audioDetails.waveform.map((height, i) => {
-                  const barPercentage = ((i + 1) / message.audioDetails.waveform.length) * 100;
-                  const isPassed = barPercentage <= playbackProgress;
-                  return (
-                    <motion.button
-                      key={i}
-                      type="button"
-                      onClick={() => setPlaybackProgress(barPercentage)}
-                      onMouseEnter={() => setHoveredBar(i)}
-                      onMouseLeave={() => setHoveredBar(null)}
-                      animate={
-                        isPlaying
-                          ? {
-                              height: [
-                                `${height}%`,
-                                `${Math.max(20, (height + 50) % 100)}%`,
-                                `${height}%`,
-                              ],
-                            }
-                          : { height: `${height}%` }
-                      }
-                      transition={{
-                        repeat: isPlaying ? Infinity : 0,
-                        duration: 0.6,
-                        delay: i * 0.04,
-                      }}
-                      className={`w-1 rounded-full transition-colors ${
-                        hoveredBar === i
-                          ? isSender
-                            ? 'bg-white'
-                            : 'bg-blue-600 dark:bg-blue-400'
-                          : isPassed
-                          ? isSender
-                            ? 'bg-white'
-                            : 'bg-blue-600 dark:bg-blue-400'
-                          : isSender
-                          ? 'bg-white/40'
-                          : 'bg-slate-300 dark:bg-slate-600'
-                      }`}
-                    />
-                  );
-                })}
+            </div>
+
+            {/* Image Meta & Timestamp */}
+            <div className={`flex items-center justify-between px-1 text-[10px] ${isSender ? 'flex-row-reverse' : ''} text-slate-400 dark:text-slate-500 font-medium`}>
+              <span className="truncate max-w-[180px]">
+                {message.fileDetails?.name || message.attachment_name || 'Image'}
+              </span>
+              <div className="flex items-center gap-1 shrink-0">
+                <span>{timestamp}</span>
+                {renderStatus()}
               </div>
             </div>
           </div>
-        )}
-
-        {/* TEXT */}
-        {message.type === 'text' && (
-          <p className="break-words font-medium leading-relaxed">{message.text || message.content}</p>
-        )}
-
-        {/* Timestamp & status */}
-        <div className={`flex items-center justify-end gap-1.5 mt-1.5 text-[10px] font-medium ${isSender ? 'text-blue-100/80' : 'text-slate-400 dark:text-slate-500'}`}>
-          <span className="font-mono tracking-wide">
-            {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </span>
-          {isSender && message.status === 'sent' && <CheckCheck className="w-3.5 h-3.5 text-blue-300" />}
-          {isSender && message.status === 'sending' && (
-            <div className="w-3.5 h-3.5 border-2 border-blue-300/50 border-t-transparent rounded-full animate-spin" />
-          )}
-        </div>
-
-        {isSender && statusLabel && (
+        ) : (
+          /* ─── TEXT / FILE / AUDIO BUBBLE TYPE ──────────────── */
           <div
-            className={`mt-1 text-right text-[10px] font-medium ${
-              statusLabel === 'Failed' ? 'text-red-300' : statusLabel === 'Sending...' ? 'text-blue-200/70' : 'text-blue-200/80'
+            className={`relative max-w-[85%] sm:max-w-[75%] px-4 py-3 text-sm transition-all duration-200 ${getBubbleRadius()} ${
+              isSender
+                ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/15'
+                : 'bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-slate-900 dark:text-slate-100 border border-slate-200/80 dark:border-slate-800/80 shadow-xs'
             }`}
           >
-            {statusLabel}
+            {/* FILE ATTACHMENT */}
+            {message.type === 'file' && message.attachment_path && (
+              <div className="flex items-center gap-3 mb-2 p-2 rounded-xl bg-slate-900/5 dark:bg-white/5 border border-slate-900/10 dark:border-white/10">
+                <div className={`p-2.5 rounded-lg shrink-0 ${isSender ? 'bg-white/20 text-white' : 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400'}`}>
+                  {message.fileDetails?.icon === 'file-image' ? (
+                    <FileImage className="w-5 h-5" />
+                  ) : message.fileDetails?.icon === 'file-word' ? (
+                    <FileText className="w-5 h-5" />
+                  ) : (
+                    <File className="w-5 h-5" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold truncate">
+                    {message.fileDetails?.name || message.attachment_name || 'Attached File'}
+                  </p>
+                  <p className={`text-[10px] ${isSender ? 'text-blue-100' : 'text-slate-500 dark:text-slate-400'}`}>
+                    {message.fileDetails?.size || (message.attachment_size ? `${(message.attachment_size / 1024).toFixed(1)} KB` : 'File')}
+                  </p>
+                </div>
+                <a
+                  href={getFileUrl(message.attachment_path)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`p-2 rounded-lg transition-colors ${
+                    isSender
+                      ? 'hover:bg-white/20 text-white'
+                      : 'hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'
+                  }`}
+                >
+                  <Download className="w-4 h-4" />
+                </a>
+              </div>
+            )}
+
+            {/* AUDIO / VOICE NOTE */}
+            {message.type === 'audio' && message.audioDetails && (
+              <div className="flex items-center gap-3 min-w-[200px] sm:min-w-[240px] mb-1">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  type="button"
+                  onClick={() => setIsPlaying(!isPlaying)}
+                  className={`p-2.5 rounded-full shrink-0 shadow-md ${
+                    isSender
+                      ? 'bg-white text-blue-600 hover:bg-blue-50'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                  }`}
+                >
+                  {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
+                </motion.button>
+
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-center justify-between text-[11px] font-bold">
+                    <span className={`flex items-center gap-1 ${isSender ? 'text-blue-100' : 'text-slate-500 dark:text-slate-400'}`}>
+                      <Mic className="w-3 h-3" /> Voice Note
+                    </span>
+                    <span className={`font-mono text-[10px] ${isSender ? 'text-blue-100' : 'text-slate-400'}`}>
+                      {message.audioDetails.duration}
+                    </span>
+                  </div>
+
+                  {/* Waveform Bars */}
+                  <div className="flex items-center gap-1 h-5 cursor-pointer">
+                    {message.audioDetails.waveform.map((height, i) => {
+                      const barPercentage = ((i + 1) / message.audioDetails.waveform.length) * 100;
+                      const isPassed = barPercentage <= playbackProgress;
+                      return (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => setPlaybackProgress(barPercentage)}
+                          onMouseEnter={() => setHoveredBar(i)}
+                          onMouseLeave={() => setHoveredBar(null)}
+                          style={{ height: `${height}%` }}
+                          className={`w-1 rounded-full transition-all ${
+                            hoveredBar === i || isPassed
+                              ? isSender
+                                ? 'bg-white'
+                                : 'bg-blue-600 dark:bg-blue-400'
+                              : isSender
+                              ? 'bg-white/40'
+                              : 'bg-slate-300 dark:bg-slate-700'
+                          }`}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TEXT CONTENT */}
+            {(message.type === 'text' || message.text || message.content) && (
+              <p className="break-words font-normal leading-relaxed text-sm whitespace-pre-wrap">
+                {message.text || message.content}
+              </p>
+            )}
+
+            {/* TIMESTAMP AND STATUS INLINE FOOTER */}
+            <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] font-medium ${isSender ? 'text-blue-100' : 'text-slate-400 dark:text-slate-500'}`}>
+              <span>{timestamp}</span>
+              {renderStatus()}
+            </div>
           </div>
         )}
-      </div>
-    </motion.div>
+      </motion.div>
+
+      {/* ─── FULL-SCREEN IMAGE PREVIEW MODAL ───────────────────────── */}
+      <AnimatePresence>
+        {imageModalOpen && previewImageUrl && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-lg flex items-center justify-center p-4 sm:p-6"
+            onClick={() => setImageModalOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative max-w-5xl w-full max-h-[90vh] rounded-3xl overflow-hidden bg-slate-900 border border-slate-800 shadow-2xl flex items-center justify-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                className="absolute top-4 right-4 z-10 p-2.5 bg-slate-950/60 hover:bg-slate-950/90 rounded-full text-white backdrop-blur-md transition-all border border-white/10"
+                onClick={() => setImageModalOpen(false)}
+                aria-label="Close preview"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <img
+                src={previewImageUrl}
+                alt="Full Preview"
+                className="w-full h-auto max-h-[85vh] object-contain"
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 };

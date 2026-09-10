@@ -1,9 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Search, Bell, Sun, Moon, ChevronDown, User, Settings, LogOut, ImagePlus } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, Bell, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../../features/auth/hooks/useAuth';
-import { useUser } from '../../../features/profile/hooks/useUser';
 import { Link } from 'react-router-dom';
 
 interface HeaderProps {
@@ -17,15 +14,14 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    // Implement search logic
     console.log("Searching for:", searchQuery);
     setIsSearchOpen(false);
   };
 
   return (
     <>
-      <header className="h-20 w-full bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border-b border-blue-400/20 dark:border-blue-400/20 flex items-center justify-between px-6 sm:px-8 z-30 shadow-sm transition-colors duration-300 shrink-0 relative overflow-hidden">
-        {/* Background lightning (keep as is) */}
+      <header className="sticky top-0 h-16 sm:h-20 w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-blue-400/20 dark:border-blue-400/20 flex items-center justify-between px-4 sm:px-8 z-40 shadow-xs transition-colors duration-300 shrink-0 overflow-hidden">
+        {/* Background lightning animation */}
         <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
           <svg className="w-full h-full opacity-35 dark:opacity-45" viewBox="0 0 1200 80" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -50,14 +46,13 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
 
         {/* Logo */}
         <div className="flex items-center gap-6 flex-1 z-10 relative">
-          <Link to="/" className="text-2xl font-black tracking-tight text-slate-900 dark:text-white shrink-0 select-none">
+          <Link to="/" className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white shrink-0 select-none">
             Skilled<span className="text-blue-600 dark:text-blue-400">Link</span>
           </Link>
         </div>
 
         {/* Right side: Search icon + Bell */}
-        <div className="flex items-center gap-2.5 sm:gap-3 z-10 relative shrink-0">
-          {/* Search Icon */}
+        <div className="flex items-center gap-2 sm:gap-3 z-10 relative shrink-0">
           <button
             onClick={() => setIsSearchOpen(true)}
             className="p-2 text-slate-700 dark:text-slate-200 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-all relative border border-transparent hover:border-white/50 dark:hover:border-slate-700/50"
@@ -65,7 +60,6 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
             <Search size={20} />
           </button>
 
-          {/* Bell */}
           <button className="p-2 text-slate-700 dark:text-slate-200 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-all relative border border-transparent hover:border-white/50 dark:hover:border-slate-700/50">
             <Bell size={20} />
             <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-600 rounded-full ring-2 ring-white dark:ring-slate-900"></span>
@@ -73,7 +67,7 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
         </div>
       </header>
 
-      {/* ─── Full‑screen Search Modal ─── */}
+      {/* Full-screen Search Modal */}
       <AnimatePresence>
         {isSearchOpen && (
           <motion.div
@@ -111,7 +105,6 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
                 </button>
               </form>
 
-              {/* Optional: Recent searches / suggestions */}
               <div className="mt-8 text-slate-500 dark:text-slate-400 text-sm">
                 <p className="font-semibold mb-2">Recent searches</p>
                 <div className="flex flex-wrap gap-2">
