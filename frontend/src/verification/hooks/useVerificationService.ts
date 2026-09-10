@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { VerificationDocument } from '../types/verification.types';
-import { verificationService } from '../services/verificationService';
+import { VerificationDocument } from '../types/Verification.types';
+import { verificationService } from '../services/VerificationService';
 
 // ...existing code...
 export function useVerification() {
