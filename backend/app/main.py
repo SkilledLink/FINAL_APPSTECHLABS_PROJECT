@@ -20,6 +20,8 @@ from app.api.v1 import search
 from app.api.v1.professional_kyc import router as professional_kyc_router
 from app.api.v1.professional_portfolio import router as professional_portfolio_router
 from app.webhooks import router as webhooks_router
+from app.api.v1 import chat
+
 
 from app.database.session import engine
 
@@ -82,10 +84,10 @@ app.include_router(users_router)                        # /users
 app.include_router(professional_portfolio_router)       # /professionals/portfolio (static)
 app.include_router(professionals_router)                # /professionals (dynamic routes like /{professional_id})
 app.include_router(professional_kyc_router)             # /professionals/kyc
-
 app.include_router(jobs_router)                         # /jobs
-
 app.include_router(search.router, prefix="/api/v1")
+app.include_router(chat.router, prefix="/api/v1")
+
 
 
 # ─── Webhooks (global, not versioned) ──────────────────

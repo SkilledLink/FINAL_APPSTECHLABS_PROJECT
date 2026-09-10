@@ -1,43 +1,41 @@
 import logging
 from typing import List
-import openai
-from openai import OpenAI
+from google import genai
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+
 class EmbeddingService:
+    """
+    Shared embedding service used by both AI Search (indexing + query)
+    and the Chatbot (RAG). Do not change without testing both.
+    """
     def __init__(self):
-        self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
-        self.model = settings.EMBEDDING_MODEL
-        self.timeout = 5.0  # seconds
+        self.client = genai.Client(
+            api_key=settings.GEMINI_API_KEY,
+            http_options={"timeout": 60000}  # 60 seconds
+        )
+        self.model = "models/gemini-embedding-2"
+        self.dimension = 768
 
     def generate_embedding(self, text: str) -> List[float]:
         """
-        Convert text to a vector embedding using OpenAI.
-        Raises Exception if the API call fails or times out.
+        Convert text to a 768-dim vector using Gemini.
+        Raises Exception if the API call fails.
         """
         if not text or not text.strip():
-            # Return a zero vector? Better to raise or handle upstream.
-            # We'll raise a ValueError so the caller can handle it.
             raise ValueError("Cannot embed empty text")
 
         try:
-            response = self.client.embeddings.create(
+            response = self.client.models.embed_content(
                 model=self.model,
-                input=text,
-                timeout=self.timeout
+                contents=text,
+                config={"output_dimensionality": self.dimension}
             )
-            # Extract the embedding list
-            embedding = response.data[0].embedding
+            embedding = response.embeddings[0].values
             logger.debug(f"Generated embedding of length {len(embedding)}")
             return embedding
-        except openai.APIError as e:
-            logger.error(f"OpenAI API error: {e}")
-            raise
-        except openai.APITimeoutError as e:
-            logger.error(f"OpenAI timeout: {e}")
-            raise
         except Exception as e:
-            logger.error(f"Unexpected error generating embedding: {e}")
+            logger.error(f"Gemini embedding error: {e}")
             raise

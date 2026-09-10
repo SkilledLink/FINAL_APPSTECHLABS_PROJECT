@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, ConfigDict
 
 
 class SearchResultResponse(BaseModel):
-    # Professional fields (same as ProfessionalResponse)
+    # Professional fields
     id: UUID
     user_id: UUID
     profession: str
@@ -25,12 +25,12 @@ class SearchResultResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    # User fields (flattened)
+    # Flattened user fields
     first_name: str
     last_name: str
     profile_image_url: Optional[str] = None
 
-    # Search-specific score
+    # Score
     relevance_score: float = Field(..., ge=0.0, le=1.0)
 
     model_config = ConfigDict(from_attributes=True)

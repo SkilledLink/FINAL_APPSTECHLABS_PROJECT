@@ -8,22 +8,18 @@ from app.schemas.search import SearchResultResponse
 
 router = APIRouter(prefix="/search", tags=["Search"])
 
+
 @router.get("/professionals", response_model=List[SearchResultResponse])
 def search_professionals(
-    q: str = Query(..., min_length=1, description="Search query (e.g., 'plumber for leak')"),
-    city: Optional[str] = Query(None, description="Filter by city (exact match)"),
-    region: Optional[str] = Query(None, description="Filter by region (exact match)"),
-    limit: int = Query(20, ge=1, le=100, description="Max number of results"),
+    q: str = Query(..., min_length=1, description="Search query"),
+    city: Optional[str] = Query(None, description="Filter by city (case-insensitive)"),
+    region: Optional[str] = Query(None, description="Filter by region (case-insensitive)"),
+    limit: int = Query(20, ge=1, le=100, description="Max results"),
     session: Session = Depends(get_session),
 ):
-    """
-    Semantic search for professionals using AI embeddings.
-    Returns results sorted by relevance (cosine similarity).
-    """
     service = SearchService(session)
     try:
-        results = service.search_professionals(q, city, region, limit)
-        return results
+        return service.search_professionals(q, city, region, limit)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

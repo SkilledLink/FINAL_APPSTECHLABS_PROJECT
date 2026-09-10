@@ -1,23 +1,24 @@
+import logging
 from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
-from fastapi import HTTPException, logger, status
+from fastapi import HTTPException, status
 from sqlmodel import Session
 
 from app.models.professional import Professional
 from app.models.user import User
 from app.repositories.professional_repository import ProfessionalRepository
-from app.enums.user import AccountType
 from app.services.indexing_service import IndexingService
+from app.enums.user import AccountType
+
+logger = logging.getLogger(__name__)
 
 
 class ProfessionalService:
     def __init__(self, session: Session):
         self.session = session
         self.repo = ProfessionalRepository(session)
-
-    # ─── Existing methods ──────────────────────────────
 
     def create_professional(self, user: User, data: dict) -> Professional:
         existing = self.repo.get_by_user_id(user.id)
@@ -50,6 +51,13 @@ class ProfessionalService:
         self.repo.create(professional)
         self.session.commit()
         self.session.refresh(professional)
+
+        # Trigger AI indexing (never raises)
+        try:
+            IndexingService(self.session).regenerate_vector(user.id)
+        except Exception as e:
+            logger.error(f"Indexing failed after professional creation for {user.id}: {e}")
+
         return professional
 
     def get_by_user(self, user: User) -> Optional[Professional]:
@@ -83,22 +91,18 @@ class ProfessionalService:
 
         self.session.add(professional)
         self.session.commit()
+        self.session.refresh(professional)
 
-                # After commit, check if relevant search fields changed
-        if any(field in update_data for field in {"profession", "bio", "skills", "services"}):
+        # Trigger reindex only if searchable fields changed
+        if any(f in update_data for f in {"profession", "bio", "skills", "services"}):
             try:
                 IndexingService(self.session).regenerate_vector(user.id)
             except Exception as e:
-                logger.error(f"Failed to reindex professional {user.id}: {e}")
-                # We don't raise; the update already succeeded
-                
-        self.session.refresh(professional)
+                logger.error(f"Indexing failed after professional update for {user.id}: {e}")
+
         return professional
 
-    # ─── NEW methods for KYC ──────────────────────────
-
     def get_by_user_id(self, user_id: str | UUID) -> Optional[Professional]:
-        """Fetch a professional profile by the user's UUID (string or UUID)."""
         if isinstance(user_id, str):
             try:
                 user_id = UUID(user_id)
@@ -109,14 +113,12 @@ class ProfessionalService:
     def update_verification_status(
         self,
         user_id: str | UUID,
-        status: str,          # "approved", "declined", "review", ...
+        status: str,
         decision: dict,
         verified_at: Optional[datetime] = None,
     ) -> Optional[Professional]:
-        """Update KYC status after receiving a webhook from Didit."""
         professional = self.get_by_user_id(user_id)
         if not professional:
-            # Log this – unknown user received a webhook
             return None
 
         professional.verification_status = status
