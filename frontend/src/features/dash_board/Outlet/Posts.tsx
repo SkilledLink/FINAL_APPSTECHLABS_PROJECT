@@ -317,21 +317,19 @@ export default function Posts() {
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
 
         <div>
-          <p className="text-sm font-medium text-blue-600">
+          <p className="text-sm font-medium text-blue-600 dark:text-blue-400">
             Content Management
           </p>
 
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
             Posts
           </h1>
 
-          <p className="mt-1 max-w-2xl text-sm text-slate-500">
+          <p className="mt-1 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
             Review, moderate and manage jobs and posts
             published on the platform.
           </p>
         </div>
-
-       
 
       </div>
 
@@ -385,24 +383,24 @@ export default function Posts() {
 
         {/* SEARCH */}
 
-        <div className="flex flex-1 items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 shadow-sm focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10">
+        <div className="flex flex-1 items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 shadow-sm focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-900 dark:focus-within:border-blue-400">
 
           <Search
             size={18}
-            className="shrink-0 text-slate-400"
+            className="shrink-0 text-slate-400 dark:text-slate-500"
           />
 
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search posts, jobs, categories or authors..."
-            className="w-full py-3.5 text-sm outline-none"
+            className="w-full bg-transparent py-3.5 text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500"
           />
 
           {search && (
             <button
               onClick={() => setSearch("")}
-              className="text-slate-400 hover:text-slate-700"
+              className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
             >
               <X size={16} />
             </button>
@@ -423,21 +421,21 @@ export default function Posts() {
                 | "Reported"
             )
           }
-          className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 outline-none focus:border-blue-500"
+          className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 outline-none focus:border-blue-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:focus:border-blue-400"
         >
-          <option value="All">
+          <option value="All" className="dark:bg-slate-900">
             All Posts
           </option>
 
-          <option value="Published">
+          <option value="Published" className="dark:bg-slate-900">
             Published
           </option>
 
-          <option value="Hidden">
+          <option value="Hidden" className="dark:bg-slate-900">
             Hidden
           </option>
 
-          <option value="Reported">
+          <option value="Reported" className="dark:bg-slate-900">
             Reported
           </option>
         </select>
@@ -448,16 +446,16 @@ export default function Posts() {
           POSTS TABLE
       ================================================= */}
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
 
-        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 dark:border-slate-800">
 
           <div>
-            <h2 className="font-semibold text-slate-900">
+            <h2 className="font-semibold text-slate-900 dark:text-white">
               All Posts
             </h2>
 
-            <p className="mt-1 text-xs text-slate-400">
+            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
               {filteredPosts.length} posts displayed
             </p>
           </div>
@@ -470,33 +468,33 @@ export default function Posts() {
 
             <thead>
 
-              <tr className="border-b border-slate-100 bg-slate-50/70">
+              <tr className="border-b border-slate-100 bg-slate-50/70 dark:border-slate-800 dark:bg-slate-800/50">
 
-                <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   Post
                 </th>
 
-                <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   Created By
                 </th>
 
-                <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   Category
                 </th>
 
-                <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   Location
                 </th>
 
-                <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   Status
                 </th>
 
-                <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   Reports
                 </th>
 
-                <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   Actions
                 </th>
 
@@ -510,7 +508,7 @@ export default function Posts() {
 
                 <tr
                   key={post.id}
-                  className="border-b border-slate-100 last:border-0 transition hover:bg-slate-50/70"
+                  className="border-b border-slate-100 last:border-0 transition hover:bg-slate-50/70 dark:border-slate-800 dark:hover:bg-slate-800/40"
                 >
 
                   {/* POST */}
@@ -519,17 +517,17 @@ export default function Posts() {
 
                     <div className="flex max-w-[280px] items-center gap-3">
 
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400">
                         <FileText size={17} />
                       </div>
 
                       <div className="min-w-0">
 
-                        <p className="truncate text-sm font-semibold text-slate-900">
+                        <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">
                           {post.title}
                         </p>
 
-                        <p className="mt-1 truncate text-xs text-slate-400">
+                        <p className="mt-1 truncate text-xs text-slate-400 dark:text-slate-500">
                           {post.date}
                         </p>
 
@@ -545,20 +543,20 @@ export default function Posts() {
 
                     <div className="flex items-center gap-2">
 
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
                         <User
                           size={14}
-                          className="text-slate-500"
+                          className="text-slate-500 dark:text-slate-400"
                         />
                       </div>
 
                       <div>
 
-                        <p className="text-xs font-semibold text-slate-800">
+                        <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
                           {post.author}
                         </p>
 
-                        <p className="text-[11px] text-slate-400">
+                        <p className="text-[11px] text-slate-400 dark:text-slate-500">
                           {post.authorEmail}
                         </p>
 
@@ -572,7 +570,7 @@ export default function Posts() {
 
                   <td className="px-5 py-4">
 
-                    <span className="rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-600">
+                    <span className="rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-600 dark:bg-blue-950/60 dark:text-blue-400">
                       {post.category}
                     </span>
 
@@ -582,7 +580,7 @@ export default function Posts() {
 
                   <td className="px-5 py-4">
 
-                    <span className="flex items-center gap-1 text-xs text-slate-500">
+                    <span className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
                       <MapPin size={13} />
                       {post.location}
                     </span>
@@ -596,8 +594,8 @@ export default function Posts() {
                     <span
                       className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
                         post.status === "Published"
-                          ? "bg-emerald-50 text-emerald-600"
-                          : "bg-slate-100 text-slate-600"
+                          ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400"
+                          : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
                       }`}
                     >
 
@@ -621,14 +619,14 @@ export default function Posts() {
 
                     {post.reported ? (
 
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-600">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-600 dark:bg-red-950/60 dark:text-red-400">
                         <Flag size={12} />
                         Reported
                       </span>
 
                     ) : (
 
-                      <span className="text-xs text-slate-400">
+                      <span className="text-xs text-slate-400 dark:text-slate-600">
                         None
                       </span>
 
@@ -650,7 +648,7 @@ export default function Posts() {
                           setShowComments(false);
                         }}
                         title="View post"
-                        className="rounded-lg p-2 text-blue-600 transition hover:bg-blue-50"
+                        className="rounded-lg p-2 text-blue-600 transition hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/50"
                       >
                         <Eye size={17} />
                       </button>
@@ -663,7 +661,7 @@ export default function Posts() {
                           setShowComments(true);
                         }}
                         title="View comments"
-                        className="rounded-lg p-2 text-slate-600 transition hover:bg-slate-100"
+                        className="rounded-lg p-2 text-slate-600 transition hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
                       >
                         <MessageCircle size={17} />
                       </button>
@@ -677,7 +675,7 @@ export default function Posts() {
                             hidePost(post.id)
                           }
                           title="Hide post"
-                          className="rounded-lg p-2 text-amber-600 transition hover:bg-amber-50"
+                          className="rounded-lg p-2 text-amber-600 transition hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/50"
                         >
                           <EyeOff size={17} />
                         </button>
@@ -689,7 +687,7 @@ export default function Posts() {
                             restorePost(post.id)
                           }
                           title="Restore post"
-                          className="rounded-lg p-2 text-emerald-600 transition hover:bg-emerald-50"
+                          className="rounded-lg p-2 text-emerald-600 transition hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
                         >
                           <RotateCcw size={17} />
                         </button>
@@ -703,7 +701,7 @@ export default function Posts() {
                           deletePost(post.id)
                         }
                         title="Delete post"
-                        className="rounded-lg p-2 text-red-500 transition hover:bg-red-50"
+                        className="rounded-lg p-2 text-red-500 transition hover:bg-red-50 dark:hover:bg-red-950/50"
                       >
                         <Trash2 size={17} />
                       </button>
@@ -730,14 +728,14 @@ export default function Posts() {
 
             <FileText
               size={32}
-              className="mx-auto text-slate-300"
+              className="mx-auto text-slate-300 dark:text-slate-700"
             />
 
-            <h3 className="mt-4 font-semibold text-slate-900">
+            <h3 className="mt-4 font-semibold text-slate-900 dark:text-white">
               No posts found
             </h3>
 
-            <p className="mt-1 text-sm text-slate-400">
+            <p className="mt-1 text-sm text-slate-400 dark:text-slate-500">
               Try changing your search or filter.
             </p>
 
@@ -755,19 +753,19 @@ export default function Posts() {
 
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
 
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:border dark:border-slate-800">
 
             {/* HEADER */}
 
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-6 py-5">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-6 py-5 dark:border-slate-800 dark:bg-slate-900">
 
               <div>
 
-                <p className="text-xs font-medium text-blue-600">
+                <p className="text-xs font-medium text-blue-600 dark:text-blue-400">
                   Post Management
                 </p>
 
-                <h2 className="mt-1 font-bold text-slate-900">
+                <h2 className="mt-1 font-bold text-slate-900 dark:text-white">
                   {showComments
                     ? "Comments"
                     : "Post Details"}
@@ -780,7 +778,7 @@ export default function Posts() {
                   setSelectedPost(null);
                   setShowComments(false);
                 }}
-                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
               >
                 <X size={18} />
               </button>
@@ -795,17 +793,17 @@ export default function Posts() {
 
                 <div className="flex items-start gap-4">
 
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400">
                     <FileText size={21} />
                   </div>
 
                   <div className="min-w-0 flex-1">
 
-                    <h3 className="text-xl font-bold text-slate-900">
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">
                       {selectedPost.title}
                     </h3>
 
-                    <p className="mt-1 text-xs text-slate-400">
+                    <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
                       Posted {selectedPost.date}
                     </p>
 
@@ -815,9 +813,9 @@ export default function Posts() {
 
                 {/* CONTENT */}
 
-                <div className="mt-6 rounded-xl bg-slate-50 p-4">
+                <div className="mt-6 rounded-xl bg-slate-50 p-4 dark:bg-slate-800/50">
 
-                  <p className="text-sm leading-7 text-slate-600">
+                  <p className="text-sm leading-7 text-slate-600 dark:text-slate-300">
                     {selectedPost.content}
                   </p>
 
@@ -863,22 +861,22 @@ export default function Posts() {
 
                 {selectedPost.reported && (
 
-                  <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4">
+                  <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/30">
 
                     <div className="flex gap-3">
 
                       <AlertTriangle
                         size={19}
-                        className="shrink-0 text-red-600"
+                        className="shrink-0 text-red-600 dark:text-red-400"
                       />
 
                       <div>
 
-                        <p className="text-sm font-semibold text-red-700">
+                        <p className="text-sm font-semibold text-red-700 dark:text-red-300">
                           This post has been reported
                         </p>
 
-                        <p className="mt-1 text-xs text-red-600">
+                        <p className="mt-1 text-xs text-red-600 dark:text-red-400">
                           Reason:{" "}
                           {selectedPost.reportReason}
                         </p>
@@ -893,7 +891,7 @@ export default function Posts() {
 
                 {/* ACTIONS */}
 
-                <div className="mt-6 flex flex-wrap gap-2 border-t border-slate-100 pt-5">
+                <div className="mt-6 flex flex-wrap gap-2 border-t border-slate-100 pt-5 dark:border-slate-800">
 
                   {selectedPost.status ===
                   "Published" ? (
@@ -902,7 +900,7 @@ export default function Posts() {
                       onClick={() =>
                         hidePost(selectedPost.id)
                       }
-                      className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                      className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                     >
                       <EyeOff size={16} />
                       Hide Post
@@ -914,7 +912,7 @@ export default function Posts() {
                       onClick={() =>
                         restorePost(selectedPost.id)
                       }
-                      className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700"
+                      className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-400"
                     >
                       <RotateCcw size={16} />
                       Restore Post
@@ -926,7 +924,7 @@ export default function Posts() {
                     onClick={() => {
                       setShowComments(true);
                     }}
-                    className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                   >
                     <MessageCircle size={16} />
                     Comments ({selectedPost.comments.length})
@@ -938,7 +936,7 @@ export default function Posts() {
                       onClick={() =>
                         setShowReportModal(true)
                       }
-                      className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-600"
+                      className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-700"
                     >
                       <Flag size={16} />
                       Handle Report
@@ -950,7 +948,7 @@ export default function Posts() {
                     onClick={() =>
                       deletePost(selectedPost.id)
                     }
-                    className="flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700"
+                    className="flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700"
                   >
                     <Trash2 size={16} />
                     Delete Post
@@ -974,10 +972,10 @@ export default function Posts() {
 
                     <MessageCircle
                       size={32}
-                      className="mx-auto text-slate-300"
+                      className="mx-auto text-slate-300 dark:text-slate-700"
                     />
 
-                    <p className="mt-3 text-sm font-medium text-slate-600">
+                    <p className="mt-3 text-sm font-medium text-slate-600 dark:text-slate-400">
                       No comments yet
                     </p>
 
@@ -992,22 +990,22 @@ export default function Posts() {
 
                         <div
                           key={comment.id}
-                          className="rounded-xl border border-slate-100 bg-slate-50 p-4"
+                          className="rounded-xl border border-slate-100 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/50"
                         >
 
                           <div className="flex items-center gap-3">
 
-                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400">
                               <User size={15} />
                             </div>
 
                             <div>
 
-                              <p className="text-sm font-semibold text-slate-800">
+                              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
                                 {comment.author}
                               </p>
 
-                              <p className="text-[11px] text-slate-400">
+                              <p className="text-[11px] text-slate-400 dark:text-slate-500">
                                 {comment.date}
                               </p>
 
@@ -1015,7 +1013,7 @@ export default function Posts() {
 
                           </div>
 
-                          <p className="mt-3 text-sm leading-6 text-slate-600">
+                          <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
                             {comment.content}
                           </p>
 
@@ -1046,21 +1044,21 @@ export default function Posts() {
 
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
 
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900 dark:border dark:border-slate-800">
 
             <div className="flex items-center gap-3">
 
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400">
                 <Flag size={19} />
               </div>
 
               <div>
 
-                <h2 className="font-bold text-slate-900">
+                <h2 className="font-bold text-slate-900 dark:text-white">
                   Handle Report
                 </h2>
 
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-400 dark:text-slate-500">
                   Review the reported post.
                 </p>
 
@@ -1068,13 +1066,13 @@ export default function Posts() {
 
             </div>
 
-            <div className="mt-5 rounded-xl bg-slate-50 p-4">
+            <div className="mt-5 rounded-xl bg-slate-50 p-4 dark:bg-slate-800/50">
 
-              <p className="text-sm font-semibold text-slate-800">
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
                 {selectedPost.title}
               </p>
 
-              <p className="mt-2 text-sm text-slate-500">
+              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                 {selectedPost.reportReason}
               </p>
 
@@ -1087,7 +1085,7 @@ export default function Posts() {
                   hidePost(selectedPost.id);
                   setShowReportModal(false);
                 }}
-                className="flex items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 py-3 text-sm font-semibold text-amber-700 hover:bg-amber-100"
+                className="flex items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 py-3 text-sm font-semibold text-amber-700 hover:bg-amber-100 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-400 dark:hover:bg-amber-950/60"
               >
                 <EyeOff size={16} />
                 Hide Post & Resolve
@@ -1097,7 +1095,7 @@ export default function Posts() {
                 onClick={() =>
                   deletePost(selectedPost.id)
                 }
-                className="flex items-center justify-center gap-2 rounded-xl bg-red-600 py-3 text-sm font-semibold text-white hover:bg-red-700"
+                className="flex items-center justify-center gap-2 rounded-xl bg-red-600 py-3 text-sm font-semibold text-white hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700"
               >
                 <Trash2 size={16} />
                 Delete Post
@@ -1107,7 +1105,7 @@ export default function Posts() {
                 onClick={() =>
                   handleReport(selectedPost.id)
                 }
-                className="rounded-xl border border-slate-200 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                className="rounded-xl border border-slate-200 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
               >
                 Dismiss Report
               </button>
@@ -1128,17 +1126,17 @@ export default function Posts() {
 
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
 
-          <div className="w-full max-w-xl rounded-2xl bg-white shadow-2xl">
+          <div className="w-full max-w-xl rounded-2xl bg-white shadow-2xl dark:bg-slate-900 dark:border dark:border-slate-800">
 
-            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5 dark:border-slate-800">
 
               <div>
 
-                <p className="text-xs font-medium text-blue-600">
+                <p className="text-xs font-medium text-blue-600 dark:text-blue-400">
                   Content Management
                 </p>
 
-                <h2 className="mt-1 font-bold text-slate-900">
+                <h2 className="mt-1 font-bold text-slate-900 dark:text-white">
                   Post a Job
                 </h2>
 
@@ -1148,7 +1146,7 @@ export default function Posts() {
                 onClick={() =>
                   setShowCreateModal(false)
                 }
-                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
               >
                 <X size={18} />
               </button>
@@ -1169,7 +1167,7 @@ export default function Posts() {
                     title: e.target.value,
                   })
                 }
-                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-400"
                 required
               />
 
@@ -1183,47 +1181,51 @@ export default function Posts() {
                   })
                 }
                 rows={5}
-                className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                className="w-full resize-none rounded-xl border border-slate-200 bg-transparent px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-400"
                 required
               />
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <input
+                placeholder="Category (e.g. Electrician, Plumber)"
+                value={form.category}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    category: e.target.value,
+                  })
+                }
+                className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-400"
+                required
+              />
 
-                <input
-                  placeholder="Category e.g. Electrician"
-                  value={form.category}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      category: e.target.value,
-                    })
-                  }
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500"
-                  required
-                />
+              <input
+                placeholder="Location (e.g. Douala, Yaoundé)"
+                value={form.location}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    location: e.target.value,
+                  })
+                }
+                className="w-full rounded-xl border border-slate-200 bg-transparent px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-slate-700 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-400"
+                required
+              />
 
-                <input
-                  placeholder="Location e.g. Douala"
-                  value={form.location}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      location: e.target.value,
-                    })
-                  }
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500"
-                  required
-                />
-
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700"
+                >
+                  Publish Job
+                </button>
               </div>
-
-              <button
-                type="submit"
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700"
-              >
-                <Plus size={17} />
-                Publish Job
-              </button>
 
             </form>
 
@@ -1237,74 +1239,35 @@ export default function Posts() {
   );
 }
 
-
-/* ============================================================
-   STAT COMPONENT
-============================================================ */
-
-interface StatProps {
-  label: string;
-  value: number;
-  icon: React.ReactNode;
-}
-
 function Stat({
   label,
   value,
   icon,
-}: StatProps) {
+}: {
+  label: string;
+  value: number;
+  icon: React.ReactNode;
+}) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <div className="flex items-center justify-between">
-
-        <div>
-
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-            {label}
-          </p>
-
-          <p className="mt-2 text-2xl font-bold text-slate-900">
-            {value}
-          </p>
-
-        </div>
-
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+        <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{label}</p>
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400">
           {icon}
         </div>
-
       </div>
-
+      <p className="mt-3 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+        {value}
+      </p>
     </div>
   );
 }
 
-
-/* ============================================================
-   DETAIL COMPONENT
-============================================================ */
-
-interface DetailProps {
-  label: string;
-  value: string;
-}
-
-function Detail({
-  label,
-  value,
-}: DetailProps) {
+function Detail({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-slate-100 p-4">
-
-      <p className="text-xs text-slate-400">
-        {label}
-      </p>
-
-      <p className="mt-1 text-sm font-semibold text-slate-800">
-        {value}
-      </p>
-
+    <div className="rounded-xl bg-slate-50 p-3.5 dark:bg-slate-800/50">
+      <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-200">{value}</p>
     </div>
   );
 }

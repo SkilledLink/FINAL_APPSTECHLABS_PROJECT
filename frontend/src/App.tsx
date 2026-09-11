@@ -65,6 +65,9 @@ import { VerificationPage } from "./verification/pages/VerificationPage";
 // Marketplace
 import Marketplace from "./features/Market/pages/Marketplace/Marketplace";
 
+// portfo
+import { PortfolioPage } from "./features/Portfo/pages/PortfolioPage";
+
 
 // ============================================================
 // PUBLIC ONLY ROUTE
@@ -79,6 +82,8 @@ function PublicOnlyRoute() {
 
   return <Outlet />;
 }
+
+
 
 
 // ============================================================
@@ -203,10 +208,10 @@ function App() {
             <Route
               path="portfolio"
               element={<PortfolioDashboard />}
-            />
+            /> 
 
             {/* Users */}
-            <Route
+             <Route
               path="users"
               element={<UsersPage />}
             />
@@ -224,6 +229,7 @@ function App() {
             />
 
           </Route>
+           {/*=======================================
 
 
           {/* ==================================================
@@ -311,6 +317,7 @@ function App() {
             element={<Navigate to="/" replace />}
           />
 
+      
         </Routes>
 
       </BrowserRouter>
