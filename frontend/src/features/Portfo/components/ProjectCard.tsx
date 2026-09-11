@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { MapPin, Calendar, ArrowRight } from 'lucide-react';
-import { Project } from '../types/portfolio.types';
+import type { Project } from '../types/portfolio.types';
 
 interface ProjectCardProps {
   project: Project;

@@ -1,4 +1,4 @@
-import { Project } from '../types/portfolio.types';
+import type { Project } from '../types/portfolio.types';
 
 const INITIAL_PROJECTS: Project[] = [
   {

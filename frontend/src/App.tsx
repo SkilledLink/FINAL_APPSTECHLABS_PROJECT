@@ -48,6 +48,7 @@ import NearbyProfessionalsPage from "./features/location/pages/NearbyProfessiona
 import JobsPage from "./features/jobs/pages/JobsPage";
 import JobDetailsPage from "./features/jobs/pages/JobDetailsPage";
 import PortfolioDashboard from "./features/portfolio/pages/PortfolioDashboard";
+import { PortfolioPage } from "./features/Portfo/pages/PortfolioPage";
 
 // Users
 import UsersPage from "./features/users/pages/UsersPage";
@@ -79,9 +80,6 @@ import { VerificationPage } from "./verification/pages/VerificationPage";
 // Marketplace
 import Marketplace from "./features/Market/pages/Marketplace/Marketplace";
 
-// portfo
-import { PortfolioPage } from "./features/Portfo/pages/PortfolioPage";
-
 
 // ============================================================
 // PUBLIC-ONLY ROUTE
@@ -102,7 +100,6 @@ function ProtectedRoute() {
 }
 
 
-
 // ============================================================
 // DYNAMIC ROUTE WRAPPERS
 // ============================================================
@@ -116,6 +113,28 @@ function JobDetailsRoute() {
   const navigate = useNavigate();
   return <JobDetailsPage jobId={id ?? ""} onBack={() => navigate(-1)} />;
 }
+
+// ============================================================
+// PUBLIC PORTFOLIO ROUTE
+// ============================================================
+
+function PublicPortfolioRoute() {
+  const handleSelectProject = () => {
+    // Portfolio page is public and does not require project selection handling here.
+  };
+
+  const handleNavigateCreate = () => {
+    // Portfolio page is public and does not require creation handling here.
+  };
+
+  return (
+    <PortfolioPage
+      onSelectProject={handleSelectProject}
+      onNavigateCreate={handleNavigateCreate}
+    />
+  );
+}
+
 
 // ============================================================
 // MAIN APP
@@ -179,6 +198,17 @@ function App() {
               <Route path="profile" element={<ProfileRoute />} />
               <Route path="profile/:id" element={<ProfileRoute />} />
             </Route>
+              PUBLIC PORTFOLIO
+              Accessible regardless of authentication
+          ================================================== */}
+
+          <Route
+            path="/portfolio"
+            element={<PublicPortfolioRoute />}
+          />
+
+
+          {/* ==================================================
               MAIN APPLICATION
           ================================================== */}
 
@@ -222,14 +252,14 @@ function App() {
               element={<DiscoverPage />}
             />
 
-            {/* Portfolio */}
+            {/* Portfolio Dashboard */}
             <Route
-              path="portfolio"
+              path="portfolio-dashboard"
               element={<PortfolioDashboard />}
-            /> 
+            />
 
             {/* Users */}
-             <Route
+            <Route
               path="users"
               element={<UsersPage />}
             />
@@ -247,7 +277,6 @@ function App() {
             />
 
           </Route>
-           {/*=======================================
 
           {/* ==================================================
               ADMIN LOGIN
@@ -282,7 +311,6 @@ function App() {
             path="*"
           />
 
-      
         </Routes>
       </BrowserRouter>
     </AuthProvider>

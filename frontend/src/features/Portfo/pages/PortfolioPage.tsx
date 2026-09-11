@@ -1,7 +1,7 @@
 import React from 'react';
 import { PortfolioGrid } from '../components/PortfolioGrid';
 import { usePortfolio } from '../hooks/usePortfolio';
-import { Project } from '../types/portfolio.types';
+import type { Project } from '../types/portfolio.types';
 
 interface PortfolioPageProps {
   onSelectProject: (project: Project) => void;

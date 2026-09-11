@@ -1,6 +1,6 @@
 import React from 'react';
 import { ProjectCard } from './ProjectCard';
-import { Project, Category } from '../types/portfolio.types';
+import type { Project, Category } from '../types/portfolio.types';
 
 interface PortfolioGridProps {
   projects: Project[];
