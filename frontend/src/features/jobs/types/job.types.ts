@@ -1,151 +1,115 @@
-export type JobType = 'Full-time' | 'Contract' | 'Freelance' | 'Part-time' | 'Internship';
+// src/features/jobs/types/job.types.ts
 
-export type JobStatus = 'active' | 'closed';
+export type JobStatus = 'draft' | 'published' | 'closed' | 'archived';
 
-export type JobCategory =
-  | 'Technology'
-  | 'Finance & Fintech'
-  | 'Design & Creative'
-  | 'Engineering'
-  | 'Marketing'
-  | 'Sales & Retail'
-  | 'Education'
-  | 'Healthcare'
-  | 'Trades & Construction'
-  | 'Logistics';
+export const JOB_STATUSES: JobStatus[] = ['draft', 'published', 'closed', 'archived'];
 
-export type CameroonCity =
-  | 'Douala'
-  | 'Yaoundé'
-  | 'Bamenda'
-  | 'Buea'
-  | 'Garoua'
-  | 'Limbe'
-  | 'Bafoussam'
-  | 'Kribi'
-  | 'Maroua'
-  | 'Ngaoundéré';
-
-export interface Review {
+/** Matches backend UserResponse — used as the job author block */
+export interface JobAuthor {
   id: string;
-  authorName: string;
-  authorAvatar: string;
-  rating: number;
-  comment: string;
-  date: string;
+  email?: string;
+  username: string;
+  first_name: string;
+  last_name: string;
+  bio?: string | null;
+  location?: string | null;
+  profile_image_url?: string | null;
+  banner_image_url?: string | null;
+  account_type?: string;
+  status?: string;
+  is_admin?: boolean;
+  is_moderator?: boolean;
+  created_at?: string;
 }
 
-export interface Poster {
+export interface JobImage {
   id: string;
-  name: string;
-  avatar: string;
-  title: string;
-  company: string;
-  verified: boolean;
-  rating: number;
-  reviewCount: number;
-  reviews: Review[];
-  memberSince: string;
+  image_url: string;
+  order: number;
 }
 
-export interface Comment {
+export interface JobComment {
   id: string;
-  authorName: string;
-  authorAvatar: string;
-  text: string;
-  createdAt: string;
+  user_id: string;
+  job_id: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+  replies: JobComment[];
+  // NOTE: backend doesn't send the user object on comments yet.
+  // If you add `user: UserResponse` to JobCommentResponse, add it here too:
+  user?: JobAuthor;
 }
 
 export interface Job {
   id: string;
   title: string;
-  poster: Poster;
-  category: JobCategory;
-  location: CameroonCity;
-  jobType: JobType;
-  salaryMin: number;
-  salaryMax: number;
-  postedAt: string;
+  description: string;
   status: JobStatus;
-  skills: string[];
-  description: string;
-  requirements: string[];
-  responsibilities: string[];
-  likes: number;
-  likedByMe: boolean;
-  comments: Comment[];
-  shares: number;
-  matchScore: number;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+
+  likes_count: number;
+  comments_count: number;
+  is_liked: boolean;
+
+  user?: JobAuthor;         // ← author
+  images: JobImage[];
+  comments: JobComment[];
 }
 
-export interface Application {
-  id: string;
-  jobId: string;
-  jobTitle: string;
-  company: string;
-  posterName: string;
-  posterAvatar: string;
-  location: string;
-  message: string;
-  appliedAt: string;
-  status: 'sent' | 'viewed' | 'replied';
+/* -------- Requests / lists -------- */
+
+export interface JobListParams {
+  page?: number;   // 1-based, matches backend
+  size?: number;   // matches backend
+  user_id?: string;
+  search?: string;
 }
 
-export interface PostJobInput {
+export interface JobListResponse {
+  items: Job[];
+  total: number;
+  page: number;
+  size: number;
+}
+
+export interface JobCreateInput {
   title: string;
-  posterName: string;
-  posterTitle: string;
-  posterCompany: string;
-  category: JobCategory;
-  location: CameroonCity;
-  jobType: JobType;
-  salaryMin: number;
-  salaryMax: number;
-  skills: string[];
   description: string;
-  requirements: string[];
-  responsibilities: string[];
+  status?: JobStatus;
+  files?: File[];
 }
 
-export interface JobFilters {
-  search: string;
-  category: JobCategory | 'All';
-  location: CameroonCity | 'All';
-  jobType: JobType | 'All';
-  status: JobStatus | 'All';
-  minSalary: number;
+export interface JobUpdateInput {
+  title?: string;
+  description?: string;
+  status?: JobStatus;
 }
 
-export const CAMEROON_CITIES: CameroonCity[] = [
-  'Douala',
-  'Yaoundé',
-  'Bamenda',
-  'Buea',
-  'Garoua',
-  'Limbe',
-  'Bafoussam',
-  'Kribi',
-  'Maroua',
-  'Ngaoundéré',
-];
+export interface JobImageResponse {
+  id: string;
+  image_url: string;
+  order: number;
+}
 
-export const JOB_CATEGORIES: JobCategory[] = [
-  'Technology',
-  'Finance & Fintech',
-  'Design & Creative',
-  'Engineering',
-  'Marketing',
-  'Sales & Retail',
-  'Education',
-  'Healthcare',
-  'Trades & Construction',
-  'Logistics',
-];
+export interface JobLikeResponse {
+  job_id: string;
+  liked: boolean;   // ← matches backend
+}
 
-export const JOB_TYPES: JobType[] = [
-  'Full-time',
-  'Contract',
-  'Freelance',
-  'Part-time',
-  'Internship',
-];
+export interface JobCommentCreateInput {
+  content: string;
+  parent_id?: string | null;
+}
+
+export interface JobCommentResponse {
+  id: string;
+  user_id: string;
+  job_id: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+  replies: JobComment[];
+}

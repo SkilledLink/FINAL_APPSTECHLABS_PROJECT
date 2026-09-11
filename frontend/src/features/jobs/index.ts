@@ -1,34 +1,45 @@
+// src/features/jobs/index.ts
+
+/* Pages */
 export { default as JobsPage } from './pages/JobsPage';
 export { default as JobDetailsPage } from './pages/JobDetailsPage';
 export { default as CreateJobPage } from './pages/CreateJobPage';
-export { default as MyApplicationsPage } from './pages/MyApplicationsPage';
 
+/* Components */
 export { default as JobCard } from './components/JobCard';
 export { default as JobGrid, JobGridSkeleton } from './components/JobGrid';
 export { default as JobSearch } from './components/JobSearch';
 export { default as JobFilters } from './components/JobFilters';
-export { default as JobApplicationForm } from './components/JobApplicationForm';
-export { default as MatchScore } from './components/MatchScore';
 export { default as Avatar } from './components/Avatar';
 
-export { JobsProvider, useJobs } from './hooks/useJobs';
+/* Hooks */
+export {
+  useJobs,
+  useJob,
+  useCreateJob,
+  useUpdateJob,
+  useDeleteJob,
+  useToggleJobLike,
+  useJobImages,
+  useJobComments,
+} from './hooks/useJobs';
 
+/* Service */
+export { jobService } from './services/jobService';
+
+/* Types */
 export type {
   Job,
-  Poster,
-  Comment,
-  Review,
-  Application,
-  PostJobInput,
-  JobType,
   JobStatus,
-  JobCategory,
-  CameroonCity,
-  JobFilters as JobFiltersType,
-} from './types/job.types';
-
-export {
-  CAMEROON_CITIES,
-  JOB_CATEGORIES,
-  JOB_TYPES,
+  JobAuthor,
+  JobImage,
+  JobComment,
+  JobListParams,
+  JobListResponse,
+  JobCreateInput,
+  JobUpdateInput,
+  JobImageResponse,
+  JobLikeResponse,
+  JobCommentCreateInput,
+  JobCommentResponse,
 } from './types/job.types';

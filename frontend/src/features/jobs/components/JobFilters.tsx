@@ -1,115 +1,86 @@
-import { SlidersHorizontal, X } from 'lucide-react';
-import { useState } from 'react';
-import {
-  CAMEROON_CITIES,
-  JOB_CATEGORIES,
-  JOB_TYPES,
-  type JobFilters as JobFiltersType,
-  type JobStatus,
-} from '../types/job.types';
+import { SlidersHorizontal, X, User as UserIcon, Sparkles, RotateCcw } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
-interface JobFiltersProps {
-  filters: JobFiltersType;
-  onChange: (partial: Partial<JobFiltersType>) => void;
-  resultCount: number;
+export interface JobFiltersState {
+  mineOnly: boolean;
 }
 
-const STATUS_OPTIONS: (JobStatus | 'All')[] = ['All', 'active', 'closed'];
+interface JobFiltersProps {
+  filters: JobFiltersState;
+  onChange: (partial: Partial<JobFiltersState>) => void;
+  resultCount: number;
+  canFilterMine: boolean;
+}
 
-export default function JobFilters({ filters, onChange, resultCount }: JobFiltersProps) {
+export default function JobFilters({
+  filters,
+  onChange,
+  resultCount,
+  canFilterMine,
+}: JobFiltersProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const activeCount = filters.mineOnly ? 1 : 0;
 
-  const activeCount =
-    (filters.category !== 'All' ? 1 : 0) +
-    (filters.location !== 'All' ? 1 : 0) +
-    (filters.jobType !== 'All' ? 1 : 0) +
-    (filters.status !== 'All' ? 1 : 0) +
-    (filters.minSalary > 0 ? 1 : 0);
+  // Prevent background scrolling when mobile filter drawer is open
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileOpen]);
 
-  const clearAll = () => {
-    onChange({ category: 'All', location: 'All', jobType: 'All', status: 'All', minSalary: 0 });
+  const handleResetFilters = () => {
+    onChange({ mineOnly: false });
   };
 
-  const FilterContent = () => (
-    <div className="space-y-5">
+  const renderFilterContent = () => (
+    <div className="space-y-6">
       <div>
-        <label className="label">Category</label>
-        <select
-          value={filters.category}
-          onChange={(e) => onChange({ category: e.target.value as JobFiltersType['category'] })}
-          className="input"
-        >
-          <option value="All">All Categories</option>
-          {JOB_CATEGORIES.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <label className="label">Location</label>
-        <select
-          value={filters.location}
-          onChange={(e) => onChange({ location: e.target.value as JobFiltersType['location'] })}
-          className="input"
-        >
-          <option value="All">All Cities</option>
-          {CAMEROON_CITIES.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <label className="label">Job Type</label>
-        <select
-          value={filters.jobType}
-          onChange={(e) => onChange({ jobType: e.target.value as JobFiltersType['jobType'] })}
-          className="input"
-        >
-          <option value="All">All Types</option>
-          {JOB_TYPES.map((t) => (
-            <option key={t} value={t}>{t}</option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <label className="label">Status</label>
-        <div className="flex gap-2">
-          {STATUS_OPTIONS.map((s) => (
-            <button
-              key={s}
-              onClick={() => onChange({ status: s })}
-              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium capitalize transition-colors ${filters.status === s
-                  ? 'bg-ink-900 text-white'
-                  : 'bg-white border border-ink-200 text-ink-600 hover:border-ink-300'
-                }`}
-            >
-              {s === 'All' ? 'All' : s}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">
+          <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+          <span>Scope</span>
         </div>
-      </div>
 
-      <div>
-        <label className="label">
-          Minimum Salary: {filters.minSalary > 0 ? `${Math.round(filters.minSalary / 1000)}K XAF` : 'Any'}
-        </label>
-        <input
-          type="range"
-          min={0}
-          max={1000000}
-          step={50000}
-          value={filters.minSalary}
-          onChange={(e) => onChange({ minSalary: Number(e.target.value) })}
-          className="w-full accent-brand-500"
-        />
+        {canFilterMine ? (
+          <button
+            type="button"
+            onClick={() => onChange({ mineOnly: !filters.mineOnly })}
+            className={`w-full flex items-center justify-between gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200 select-none ${
+              filters.mineOnly
+                ? 'bg-slate-900 text-white shadow-md shadow-slate-900/10 dark:bg-indigo-600 dark:text-white dark:shadow-indigo-600/20'
+                : 'bg-slate-100/80 text-slate-700 hover:bg-slate-200/70 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700/60'
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <UserIcon className="w-4 h-4" />
+              <span>{filters.mineOnly ? 'My jobs only' : 'Show my jobs only'}</span>
+            </div>
+            {filters.mineOnly && (
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            )}
+          </button>
+        ) : (
+          <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-800 p-3 text-center">
+            <p className="text-xs text-slate-500 dark:text-slate-400 italic">
+              Sign in to filter by your posts.
+            </p>
+          </div>
+        )}
       </div>
 
       {activeCount > 0 && (
-        <button onClick={clearAll} className="text-sm font-medium text-brand-600 hover:text-brand-700 transition-colors">
-          Clear all filters
+        <button
+          type="button"
+          onClick={handleResetFilters}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 transition-colors"
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+          <span>Reset filter</span>
         </button>
       )}
     </div>
@@ -117,41 +88,83 @@ export default function JobFilters({ filters, onChange, resultCount }: JobFilter
 
   return (
     <>
+      {/* Mobile Filter Toggle Button */}
       <button
+        type="button"
         onClick={() => setMobileOpen(true)}
-        className="lg:hidden btn-secondary w-full"
+        className="lg:hidden inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-700 transition-all active:scale-95"
       >
-        <SlidersHorizontal className="w-4 h-4" />
-        Filters
+        <SlidersHorizontal className="w-4 h-4 text-slate-500" />
+        <span>Filters</span>
         {activeCount > 0 && (
-          <span className="badge bg-brand-500 text-white">{activeCount}</span>
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-xs font-bold">
+            {activeCount}
+          </span>
         )}
       </button>
 
-      <aside className="hidden lg:block w-full lg:w-64 shrink-0">
-        <div className="card p-5 sticky top-24">
-          <div className="flex items-center justify-between mb-4 gap-2">
-            <h3 className="font-display font-bold text-ink-900">Filters</h3>
-            <span className="text-sm text-ink-400">{resultCount} jobs</span>
+      {/* Desktop Sidebar Filters */}
+      <aside className="hidden lg:block w-64 shrink-0">
+        <div className="sticky top-24 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex items-center justify-between mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
+            <h3 className="font-display font-bold text-slate-900 dark:text-slate-100 text-base">
+              Refine Search
+            </h3>
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 tabular-nums rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-1">
+              {resultCount} {resultCount === 1 ? 'job' : 'jobs'}
+            </span>
           </div>
-          <FilterContent />
+          {renderFilterContent()}
         </div>
       </aside>
 
-      {mobileOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 flex">
-          <div className="absolute inset-0 bg-ink-950/40 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <div className="relative w-80 max-w-[85vw] bg-white h-full overflow-y-auto p-5 animate-slide-right shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-display font-bold text-lg">Filters</h3>
-              <button onClick={() => setMobileOpen(false)} className="text-ink-400 hover:text-ink-700">
-                <X className="w-5 h-5" />
-              </button>
+      {/* Mobile Drawer (Portaled to document body to prevent stacking context clipping) */}
+      {mobileOpen &&
+        createPortal(
+          <div className="lg:hidden fixed inset-0 z-[99999] flex">
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200"
+              onClick={() => setMobileOpen(false)}
+            />
+
+            {/* Slide-over Panel */}
+            <div className="relative ml-auto w-80 max-w-[85vw] bg-white dark:bg-slate-900 h-full overflow-y-auto p-6 shadow-2xl z-10 flex flex-col justify-between animate-in slide-in-from-right duration-300">
+              <div>
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <SlidersHorizontal className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                    <h3 className="font-display font-bold text-lg text-slate-900 dark:text-slate-100">
+                      Filters
+                    </h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setMobileOpen(false)}
+                    className="w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
+                    aria-label="Close filters drawer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {renderFilterContent()}
+              </div>
+
+              {/* Drawer Footer Actions */}
+              <div className="pt-6 mt-6 border-t border-slate-100 dark:border-slate-800 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setMobileOpen(false)}
+                  className="w-full rounded-xl bg-slate-900 py-3 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-500 transition-colors"
+                >
+                  Apply Filters ({resultCount})
+                </button>
+              </div>
             </div>
-            <FilterContent />
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </>
   );
 }
