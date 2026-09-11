@@ -28,7 +28,7 @@ export const useProfileNavigation = (
   const navigate = useNavigate();
   const { currentUser } = useAuth();
 
-  const href = userId ? `/profile/${userId}` : undefined;
+  const href = userId ? `/home/profile/${userId}` : undefined;
   const isOwnProfile = !!userId && currentUser?.id === userId;
 
   const navigateToProfile = useCallback(

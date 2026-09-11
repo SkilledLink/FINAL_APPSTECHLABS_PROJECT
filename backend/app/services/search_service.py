@@ -1,5 +1,6 @@
 import logging
 from typing import List, Optional
+
 from sqlmodel import Session
 
 from app.repositories.search_repository import SearchRepository
@@ -20,20 +21,58 @@ class SearchService:
         query: str,
         city: Optional[str] = None,
         region: Optional[str] = None,
-        limit: int = 20
+        limit: int = 20,
     ) -> List[SearchResultResponse]:
-        if not query or not query.strip():
+
+        query = query.strip()
+
+        if not query:
             return []
 
         try:
+            # Generate semantic embedding.
             query_vector = self.embedding_service.generate_embedding(query)
-            results = self.repo.vector_search(query_vector, city, region, limit)
-            # If vector search returns nothing, fall back to keyword
-            if not results:
-                logger.info("Vector search empty, falling back to keyword search")
-                results = self.repo.keyword_search(query, city, region, limit)
-        except Exception as e:
-            logger.error(f"Vector search failed for '{query}': {e}")
-            results = self.repo.keyword_search(query, city, region, limit)
 
-        return [SearchResultResponse.model_validate(r) for r in results]
+            # Hybrid search:
+            # keyword relevance + semantic similarity.
+            results = self.repo.hybrid_search(
+                query=query,
+                query_vector=query_vector,
+                city=city,
+                region=region,
+                limit=limit,
+                min_relevance=0.45,
+            )
+
+            logger.info(
+                "Hybrid search for '%s' returned %d results",
+                query,
+                len(results),
+            )
+
+        except Exception as e:
+            logger.error(
+                "Hybrid/vector search failed for '%s': %s",
+                query,
+                e,
+                exc_info=True,
+            )
+
+            # If embeddings fail, fall back to normal keyword search.
+            results = self.repo.keyword_search(
+                query=query,
+                city=city,
+                region=region,
+                limit=limit,
+            )
+
+            logger.info(
+                "Keyword fallback for '%s' returned %d results",
+                query,
+                len(results),
+            )
+
+        return [
+            SearchResultResponse.model_validate(result)
+            for result in results
+        ]
