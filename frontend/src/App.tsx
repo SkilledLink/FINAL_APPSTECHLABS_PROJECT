@@ -73,6 +73,15 @@ import Overview from "./features/dash_board/Outlet/Overview";
 
 // TODO: replace with a real Professionals page if it exists
 const ProfessionalsPage = UsersPage;
+// Verification
+import { VerificationPage } from "./verification/pages/VerificationPage";
+
+// Marketplace
+import Marketplace from "./features/Market/pages/Marketplace/Marketplace";
+
+// portfo
+import { PortfolioPage } from "./features/Portfo/pages/PortfolioPage";
+
 
 // ============================================================
 // PUBLIC-ONLY ROUTE
@@ -91,6 +100,8 @@ function ProtectedRoute() {
   if (!isAuthenticated()) return <Navigate to="/login" replace />;
   return <Outlet />;
 }
+
+
 
 // ============================================================
 // DYNAMIC ROUTE WRAPPERS
@@ -168,7 +179,75 @@ function App() {
               <Route path="profile" element={<ProfileRoute />} />
               <Route path="profile/:id" element={<ProfileRoute />} />
             </Route>
+              MAIN APPLICATION
+          ================================================== */}
+
+          <Route path="/" element={<AppLayout />}>
+
+            <Route
+              index
+              element={<HomePage />}
+            />
+
+            <Route
+              path="dashboard"
+              element={<DashboardPage />}
+            />
+
+            <Route
+              path="feed"
+              element={<Feed />}
+            />
+
+            {/* Profile */}
+            <Route
+              path="profile"
+              element={<ProfileRoute />}
+            />
+
+            <Route
+              path="profile/:id"
+              element={<ProfileRoute />}
+            />
+
+            {/* Messages */}
+            <Route
+              path="messages"
+              element={<MessagesPage />}
+            />
+
+            {/* Discover */}
+            <Route
+              path="discover"
+              element={<DiscoverPage />}
+            />
+
+            {/* Portfolio */}
+            <Route
+              path="portfolio"
+              element={<PortfolioDashboard />}
+            /> 
+
+            {/* Users */}
+             <Route
+              path="users"
+              element={<UsersPage />}
+            />
+
+            {/* Verification */}
+            <Route
+              path="verification"
+              element={<VerificationPage />}
+            />
+
+            {/* Marketplace */}
+            <Route
+              path="marketplace"
+              element={<Marketplace />}
+            />
+
           </Route>
+           {/*=======================================
 
           {/* ==================================================
               ADMIN LOGIN
@@ -197,10 +276,16 @@ function App() {
               CATCH-ALL
               ================================================== */}
           <Route path="*" element={<Navigate to="/" replace />} />
+              CATCH ALL
+
+          <Route
+            path="*"
+          />
+
+      
         </Routes>
       </BrowserRouter>
     </AuthProvider>
   );
 }
-
 export default App;

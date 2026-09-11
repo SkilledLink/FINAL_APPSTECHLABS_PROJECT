@@ -8,7 +8,6 @@ import {
   HardDrive,
   RefreshCw,
   Server,
-//   ShieldCheck,
   Users,
   FileText,
   Flag,
@@ -98,18 +97,18 @@ export default function SystemCenter() {
       {/* HEADER */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <div className="flex items-center gap-2 text-sm text-slate-500">
+          <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
             <Server size={16} />
             <span>Administration</span>
             <span>/</span>
             <span>System Center</span>
           </div>
 
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">
             System Center
           </h1>
 
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Monitor platform health, technical errors, database
             performance and backups.
           </p>
@@ -117,7 +116,7 @@ export default function SystemCenter() {
 
         <button
           onClick={refreshSystem}
-          className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60"
         >
           <RefreshCw size={16} />
           Refresh
@@ -125,34 +124,34 @@ export default function SystemCenter() {
       </div>
 
       {/* OVERALL STATUS */}
-      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="rounded-full bg-green-100 p-2">
+          <div className="rounded-full bg-green-100 dark:bg-green-950/60 p-2">
             <CheckCircle2
               size={22}
-              className="text-green-600"
+              className="text-green-600 dark:text-green-400"
             />
           </div>
 
           <div>
-            <p className="font-semibold text-slate-900">
+            <p className="font-semibold text-slate-900 dark:text-white">
               All systems operational
             </p>
 
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               Last checked just now
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-sm text-green-700">
+        <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
           <span className="h-2 w-2 rounded-full bg-green-500" />
           System healthy
         </div>
       </div>
 
       {/* NAVIGATION */}
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
         <div className="flex min-w-max">
           <TabButton
             active={activeTab === "health"}
@@ -338,32 +337,32 @@ function SystemHealth() {
         <div className="space-y-4 py-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-slate-100 p-2">
+              <div className="rounded-lg bg-slate-100 dark:bg-slate-800 p-2">
                 <HardDrive
                   size={19}
-                  className="text-slate-600"
+                  className="text-slate-600 dark:text-slate-400"
                 />
               </div>
 
               <div>
-                <p className="text-sm font-medium text-slate-900">
+                <p className="text-sm font-medium text-slate-900 dark:text-white">
                   Platform storage
                 </p>
 
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   68.4 GB used of 100 GB
                 </p>
               </div>
             </div>
 
-            <span className="text-sm font-semibold text-slate-900">
+            <span className="text-sm font-semibold text-slate-900 dark:text-white">
               68.4%
             </span>
           </div>
 
-          <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+          <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
             <div
-              className="h-full rounded-full bg-blue-600"
+              className="h-full rounded-full bg-blue-600 dark:bg-blue-500"
               style={{ width: "68.4%" }}
             />
           </div>
@@ -481,7 +480,7 @@ function SystemErrors({
         title="System error logs"
         description="Inspect technical errors and determine what is happening."
       >
-        <div className="border-b border-slate-200 p-4">
+        <div className="border-b border-slate-200 dark:border-slate-800 p-4">
           <div className="relative max-w-md">
             <Search
               size={17}
@@ -492,12 +491,12 @@ function SystemErrors({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search errors..."
-              className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent dark:bg-slate-900 py-2.5 pl-10 pr-4 text-sm text-slate-900 dark:text-white outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-950"
             />
           </div>
         </div>
 
-        <div className="divide-y divide-slate-100">
+        <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
           {filteredErrors.map((error) => (
             <div
               key={error.id}
@@ -507,8 +506,8 @@ function SystemErrors({
                 <div
                   className={`mt-0.5 rounded-lg p-2 ${
                     error.level === "Error"
-                      ? "bg-red-50 text-red-600"
-                      : "bg-amber-50 text-amber-600"
+                      ? "bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400"
+                      : "bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400"
                   }`}
                 >
                   {error.level === "Error" ? (
@@ -519,11 +518,11 @@ function SystemErrors({
                 </div>
 
                 <div className="min-w-0">
-                  <p className="font-medium text-slate-900">
+                  <p className="font-medium text-slate-900 dark:text-white">
                     {error.message}
                   </p>
 
-                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
+                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
                     <span>{error.service}</span>
                     <span>{error.endpoint}</span>
                     <span>{error.timestamp}</span>
@@ -533,7 +532,7 @@ function SystemErrors({
 
               <button
                 onClick={() => onView(error)}
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-transparent dark:bg-slate-900 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60"
               >
                 View details
               </button>
@@ -677,11 +676,11 @@ function BackupRecovery({
       >
         <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-medium text-slate-900">
+            <p className="text-sm font-medium text-slate-900 dark:text-white">
               Manual database backup
             </p>
 
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               The backup should be stored securely and separately from
               the production database.
             </p>
@@ -690,7 +689,7 @@ function BackupRecovery({
           <button
             onClick={createBackup}
             disabled={isCreatingBackup}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isCreatingBackup ? (
               <>
@@ -734,31 +733,31 @@ function BackupRecovery({
       </SystemCard>
 
       {/* RESTORE */}
-      <div className="rounded-2xl border border-red-200 bg-white">
-        <div className="border-b border-red-100 px-5 py-5">
+      <div className="rounded-2xl border border-red-200 dark:border-red-900/50 bg-white dark:bg-slate-900">
+        <div className="border-b border-red-100 dark:border-red-900/40 px-5 py-5">
           <div className="flex items-center gap-2">
             <AlertTriangle
               size={18}
-              className="text-red-600"
+              className="text-red-600 dark:text-red-400"
             />
 
-            <h2 className="font-semibold text-slate-900">
+            <h2 className="font-semibold text-slate-900 dark:text-white">
               Restore backup
             </h2>
           </div>
 
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Restoring a backup can replace current platform data.
           </p>
         </div>
 
         <div className="p-5">
-          <div className="rounded-xl bg-red-50 p-4">
-            <p className="text-sm font-medium text-red-900">
+          <div className="rounded-xl bg-red-50 dark:bg-red-950/40 p-4">
+            <p className="text-sm font-medium text-red-900 dark:text-red-300">
               Dangerous operation
             </p>
 
-            <p className="mt-1 text-xs leading-5 text-red-700">
+            <p className="mt-1 text-xs leading-5 text-red-700 dark:text-red-400/80">
               A secure implementation should require administrator
               authentication, confirmation and preferably a recent backup
               before allowing a restore.
@@ -790,22 +789,22 @@ function ErrorDetails({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 p-4">
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-slate-200 p-5">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 p-5">
           <div>
-            <h2 className="font-semibold text-slate-900">
+            <h2 className="font-semibold text-slate-900 dark:text-white">
               Error Details
             </h2>
 
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               Technical information about this system event.
             </p>
           </div>
 
           <button
             onClick={onClose}
-            className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+            className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200"
           >
             <XCircle size={20} />
           </button>
@@ -815,15 +814,15 @@ function ErrorDetails({
           <div
             className={`rounded-xl p-4 ${
               error.level === "Error"
-                ? "bg-red-50"
-                : "bg-amber-50"
+                ? "bg-red-50 dark:bg-red-950/60 text-red-900 dark:text-red-300"
+                : "bg-amber-50 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300"
             }`}
           >
             <p className="text-sm font-semibold">
               {error.message}
             </p>
 
-            <p className="mt-1 text-xs">
+            <p className="mt-1 text-xs opacity-90">
               {error.level} · HTTP {error.statusCode}
             </p>
           </div>
@@ -851,11 +850,11 @@ function ErrorDetails({
           </div>
 
           <div>
-            <p className="mb-2 text-sm font-medium text-slate-900">
+            <p className="mb-2 text-sm font-medium text-slate-900 dark:text-white">
               What may be happening
             </p>
 
-            <div className="rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 p-4 text-sm leading-6 text-slate-600 dark:text-slate-300">
               The administrator can use the service, endpoint,
               timestamp and HTTP status to investigate the problem
               in the backend logs.
@@ -863,7 +862,7 @@ function ErrorDetails({
           </div>
 
           <div>
-            <p className="mb-2 text-sm font-medium text-slate-900">
+            <p className="mb-2 text-sm font-medium text-slate-900 dark:text-white">
               Technical log
             </p>
 
@@ -899,22 +898,22 @@ function MetricCard({
   status: "good" | "warning" | "danger";
 }) {
   const iconClass = {
-    good: "bg-blue-50 text-blue-600",
-    warning: "bg-amber-50 text-amber-600",
-    danger: "bg-red-50 text-red-600",
+    good: "bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400",
+    warning: "bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400",
+    danger: "bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400",
   };
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5">
+    <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm text-slate-500">{title}</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{title}</p>
 
-          <p className="mt-2 text-2xl font-semibold text-slate-900">
+          <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">
             {value}
           </p>
 
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
             {subtitle}
           </p>
         </div>
@@ -937,18 +936,18 @@ function SystemCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-      <div className="border-b border-slate-200 px-5 py-5">
-        <h2 className="text-base font-semibold text-slate-900">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+      <div className="border-b border-slate-200 dark:border-slate-800 px-5 py-5">
+        <h2 className="text-base font-semibold text-slate-900 dark:text-white">
           {title}
         </h2>
 
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           {description}
         </p>
       </div>
 
-      <div className="divide-y divide-slate-100">
+      <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
         {children}
       </div>
     </div>
@@ -966,14 +965,14 @@ function HealthRow({
 }) {
   return (
     <div className="flex items-center justify-between gap-4 px-5 py-4">
-      <span className="text-sm text-slate-600">{label}</span>
+      <span className="text-sm text-slate-600 dark:text-slate-400">{label}</span>
 
       <div className="flex items-center gap-2">
         {good && (
           <span className="h-2 w-2 rounded-full bg-green-500" />
         )}
 
-        <span className="text-sm font-medium text-slate-900">
+        <span className="text-sm font-medium text-slate-900 dark:text-white">
           {value}
         </span>
       </div>
@@ -991,11 +990,11 @@ function ServiceRow({
   return (
     <div className="flex items-center justify-between px-5 py-4">
       <div>
-        <p className="text-sm font-medium text-slate-900">
+        <p className="text-sm font-medium text-slate-900 dark:text-white">
           {name}
         </p>
 
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
           {description}
         </p>
       </div>
@@ -1003,7 +1002,7 @@ function ServiceRow({
       <div className="flex items-center gap-2">
         <span className="h-2 w-2 rounded-full bg-green-500" />
 
-        <span className="text-xs font-medium text-green-700">
+        <span className="text-xs font-medium text-green-700 dark:text-green-400">
           Operational
         </span>
       </div>
@@ -1019,10 +1018,10 @@ function StorageItem({
   value: string;
 }) {
   return (
-    <div className="rounded-lg bg-slate-50 p-3">
-      <p className="text-xs text-slate-500">{label}</p>
+    <div className="rounded-lg border border-slate-200/60 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 p-3">
+      <p className="text-xs text-slate-500 dark:text-slate-400">{label}</p>
 
-      <p className="mt-1 text-sm font-semibold text-slate-900">
+      <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
         {value}
       </p>
     </div>
@@ -1039,13 +1038,13 @@ function DatabaseMetric({
   value: string;
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 p-4">
-      <div className="flex items-center gap-2 text-slate-500">
+    <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent dark:bg-slate-900 p-4">
+      <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
         {icon}
         <span className="text-xs">{label}</span>
       </div>
 
-      <p className="mt-2 text-xl font-semibold text-slate-900">
+      <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">
         {value}
       </p>
     </div>
@@ -1064,22 +1063,22 @@ function BackupRow({
   return (
     <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-3">
-        <div className="rounded-lg bg-slate-100 p-2">
-          <Download size={17} className="text-slate-600" />
+        <div className="rounded-lg bg-slate-100 dark:bg-slate-800 p-2">
+          <Download size={17} className="text-slate-600 dark:text-slate-400" />
         </div>
 
         <div>
-          <p className="text-sm font-medium text-slate-900">
+          <p className="text-sm font-medium text-slate-900 dark:text-white">
             {date}
           </p>
 
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             {size}
           </p>
         </div>
       </div>
 
-      <span className="w-fit rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700">
+      <span className="w-fit rounded-full bg-green-50 dark:bg-green-950/60 px-2.5 py-1 text-xs font-medium text-green-700 dark:text-green-400">
         {status}
       </span>
     </div>
@@ -1094,10 +1093,10 @@ function TechnicalField({
   value: string;
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 p-4">
-      <p className="text-xs text-slate-500">{label}</p>
+    <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent dark:bg-slate-900 p-4">
+      <p className="text-xs text-slate-500 dark:text-slate-400">{label}</p>
 
-      <p className="mt-1 break-all text-sm font-medium text-slate-900">
+      <p className="mt-1 break-all text-sm font-medium text-slate-900 dark:text-white">
         {value}
       </p>
     </div>
@@ -1120,8 +1119,8 @@ function TabButton({
       onClick={onClick}
       className={`flex items-center gap-2 border-b-2 px-5 py-4 text-sm font-medium transition ${
         active
-          ? "border-blue-600 text-blue-600"
-          : "border-transparent text-slate-500 hover:text-slate-900"
+          ? "border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400"
+          : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
       }`}
     >
       {icon}
