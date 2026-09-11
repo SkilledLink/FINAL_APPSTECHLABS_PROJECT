@@ -49,4 +49,19 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     EMBEDDING_DIMENSION: int = 1536
 
+        # ── Location / Geocoding ─────────────────────────────────
+    NOMINATIM_BASE_URL: str = "https://nominatim.openstreetmap.org"
+    NOMINATIM_USER_AGENT: str = "SkilledLink/1.0 (contact@skilledlink.app)"
+    NOMINATIM_TIMEOUT_SECONDS: float = 8.0
+    NOMINATIM_MIN_INTERVAL_SECONDS: float = 1.0
+    NOMINATIM_CACHE_TTL_SECONDS: int = 60 * 60 * 24
+    NOMINATIM_COUNTRY_BIAS: str = "cm"
+
+    LOCATION_SEARCH_MAX_RESULTS: int = 8
+    LOCATION_MIN_RADIUS_KM: float = 0.5
+    LOCATION_MAX_RADIUS_KM: float = 200.0
+    NEARBY_DEFAULT_RADIUS_KM: float = 10.0
+    NEARBY_MAX_RESULTS: int = 50
+    LOCATION_PUBLIC_FUZZ_DECIMALS: int = 3
+
 settings = Settings()

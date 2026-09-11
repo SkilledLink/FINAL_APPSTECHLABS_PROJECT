@@ -1,33 +1,38 @@
+# app/main.py
+
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlmodel import SQLModel
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
+from sqlmodel import SQLModel
 
-# ─── Existing versioned routers ──────────────────────────
+# ─── Versioned routers ─────────────────────────────────────
 from app.api.v1.auth import router as auth_router
 from app.api.v1.conversations import router as conversations_router
 from app.api.v1.messages import router as messages_router
 from app.api.v1.uploads import router as uploads_router
 from app.api.v1.users import router as users_router
 from app.api.v1.professionals import router as professionals_router
-from app.api.v1.jobs import router as jobs_router
-from app.api.v1 import search
-
-# ─── NEW routers ──────────────────────────────────────────
 from app.api.v1.professional_kyc import router as professional_kyc_router
 from app.api.v1.professional_portfolio import router as professional_portfolio_router
-from app.api.v1.feeds import router as feeds_router                            # ✅ NEW
-from app.webhooks import router as webhooks_router
+from app.api.v1.professional_admin import router as professional_admin_router   # ✅ NEW
+from app.api.v1.location import router as location_router
+from app.api.v1.professional_location import router as professional_location_router
+from app.api.v1.jobs import router as jobs_router
+from app.api.v1.feeds import router as feeds_router
+from app.api.v1 import search
 from app.api.v1 import chat
 from app.api.v1.chat import router as chat_router
 
+# ─── Webhooks (global, not versioned) ──────────────────────
+from app.webhooks import router as webhooks_router
 
-
+# ─── Database ──────────────────────────────────────────────
 from app.database.session import engine
 
-# ─── Import all models so they are registered with SQLModel.metadata ──
+# ─── Import all models so they register with SQLModel.metadata ──
 from app.models.user import User
 from app.models.refresh_token import RefreshToken
 from app.models.verification_token import VerificationToken
@@ -35,6 +40,7 @@ from app.models.conversation import Conversation
 from app.models.conversation_participant import ConversationParticipant
 from app.models.message import Message
 from app.models.professional import Professional
+from app.models.professional_audit_log import ProfessionalAuditLog          # ✅ NEW
 from app.models.job import Job, JobImage, JobLike, JobComment
 from app.models.professional_portfolio import (
     ProfessionalCategory,
@@ -45,7 +51,7 @@ from app.models.professional_portfolio import (
     ProfessionalService,
     ProfessionalAvailability,
 )
-from app.models.feed import (                                                 # ✅ NEW
+from app.models.feed import (
     Feed,
     FeedMedia,
     FeedLike,
@@ -55,8 +61,9 @@ from app.models.feed import (                                                 # 
 )
 
 
-# ─── Lifespan (database init) ────────────────────────────
-def lifespan(app: FastAPI):
+# ─── Lifespan ──────────────────────────────────────────────
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     print("⏳ Attempting to connect to the database...")
     try:
         with engine.connect() as connection:
@@ -65,7 +72,7 @@ def lifespan(app: FastAPI):
         SQLModel.metadata.create_all(engine)
         print("✅ Database tables are ready.")
     except OperationalError as e:
-        print("❌ Database connection FAILED.")
+        print("❌ Database connection FAILED.") 
         print(f"Error details: {e}")
         raise e
     yield
@@ -77,7 +84,7 @@ def lifespan(app: FastAPI):
 app = FastAPI(title="Appstect API", lifespan=lifespan)
 
 
-# ─── CORS Middleware ──────────────────────────────────────
+# ─── CORS ──────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
@@ -87,36 +94,36 @@ app.add_middleware(
 )
 
 
-# ─── Register routers ─────────────────────────────────────
-app.include_router(auth_router)                          # /auth
-app.include_router(conversations_router)                 # /conversations
-app.include_router(messages_router)                      # /messages
-app.include_router(uploads_router)                       # /uploads
-app.include_router(users_router)                         # /users
+# ─── Register routers ──────────────────────────────────────
+# Order matters where routes overlap. Static-prefix routers must come
+# before dynamic ones (e.g. /professionals/admin before /professionals/{id}).
 
-# ─── IMPORTANT: Put professional_portfolio_router BEFORE professionals_router ──
-app.include_router(professional_portfolio_router)       # /professionals/portfolio (static)
-app.include_router(professionals_router)                # /professionals (dynamic routes like /{professional_id})
-app.include_router(professional_kyc_router)             # /professionals/kyc
-app.include_router(jobs_router)                         # /jobs
-app.include_router(professional_portfolio_router)        # /professionals/portfolio (static)
-app.include_router(professionals_router)                 # /professionals (dynamic routes like /{professional_id})
-app.include_router(professional_kyc_router)              # /professionals/kyc
+app.include_router(auth_router)
+app.include_router(conversations_router)
+app.include_router(messages_router)
+app.include_router(uploads_router)
+app.include_router(users_router)
 
-app.include_router(jobs_router)                          # /jobs
-app.include_router(feeds_router)                         # /feeds ✅ NEW
+# Professionals — static-prefix routers first
+app.include_router(location_router)
+app.include_router(professional_location_router)
+app.include_router(professional_admin_router)       # /professionals/admin/*
+app.include_router(professional_portfolio_router)   # /professionals/portfolio/*
+app.include_router(professional_kyc_router)         # /professionals/kyc/*
+app.include_router(professionals_router)            # /professionals + /{id}
+
+app.include_router(jobs_router)
+app.include_router(feeds_router)
 
 app.include_router(search.router, prefix="/api/v1")
 app.include_router(chat.router, prefix="/api/v1")
 app.include_router(chat_router)
 
+# Webhooks (global)
+app.include_router(webhooks_router)
 
 
-# ─── Webhooks (global, not versioned) ──────────────────
-app.include_router(webhooks_router)                      # /webhooks/didit
-
-
-# ─── Health check ────────────────────────────────────────
+# ─── Health check ──────────────────────────────────────────
 @app.get("/health/database")
 def health_check():
     try:
