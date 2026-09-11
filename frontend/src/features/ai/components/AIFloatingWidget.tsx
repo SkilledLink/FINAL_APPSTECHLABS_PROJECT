@@ -51,7 +51,7 @@ export function AIFloatingWidget() {
               </button>
               <div>
                 <h2 className="text-base font-semibold text-slate-900">AI Assistant</h2>
-                <p className="text-xs text-slate-500">SkillHub Local Concierge</p>
+                <p className="text-xs text-slate-500">SkilledLink Local Concierge</p>
               </div>
             </div>
           </header>

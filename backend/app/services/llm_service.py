@@ -1,6 +1,5 @@
 import logging
 import time
-from typing import Optional
 from google import genai
 from google.genai import types
 from app.core.config import settings
@@ -20,9 +19,12 @@ class LLMService:
 
     def generate_response(self, prompt: str, system_prompt: str) -> str:
         full_prompt = f"{system_prompt}\n\n{prompt}"
-        logger.info(f"Sending prompt to Gemini (length: {len(full_prompt)} chars)")
+        logger.info(
+            f"Sending prompt to Gemini (length: {len(full_prompt)} chars)"
+        )
 
         last_error = None
+
         for attempt in range(self.max_retries + 1):
             try:
                 response = self.client.models.generate_content(
@@ -32,8 +34,7 @@ class LLMService:
                         temperature=0.7,
                         top_p=0.95,
                         top_k=40,
-                        max_output_tokens=2048,     # ✅ Bigger limit
-                        # Disable "thinking" so tokens go to the actual answer
+                        max_output_tokens=2048,
                         thinking_config=types.ThinkingConfig(
                             thinking_budget=0
                         ),
@@ -47,14 +48,72 @@ class LLMService:
                 return "I'm sorry, I couldn't generate a response. Please try again."
 
             except Exception as e:
-                logger.error(f"Gemini attempt {attempt + 1} failed: {e}")
+                error_message = str(e)
                 last_error = e
+
+                logger.error(
+                    f"Gemini attempt {attempt + 1} failed: {error_message}"
+                )
+
+                # Do not retry when the Gemini quota has been exhausted.
+                if (
+                    "429" in error_message
+                    or "RESOURCE_EXHAUSTED" in error_message
+                    or "quota" in error_message.lower()
+                ):
+                    logger.warning(
+                        "Gemini quota exhausted. Skipping remaining retries."
+                    )
+                    return (
+                        "The AI assistant has temporarily reached its usage "
+                        "limit. Please try again later."
+                    )
+
+                # Retry temporary service failures.
+                if (
+                    "503" in error_message
+                    or "UNAVAILABLE" in error_message
+                ):
+                    if attempt < self.max_retries:
+                        delay = self.base_delay * (2 ** attempt)
+                        logger.info(
+                            f"Gemini temporarily unavailable. "
+                            f"Retrying in {delay:.1f}s..."
+                        )
+                        time.sleep(delay)
+                        continue
+
+                    return (
+                        "The AI service is temporarily overloaded. "
+                        "Please try again in a moment."
+                    )
+
+                # Retry timeout/deadline errors.
+                if (
+                    "Deadline" in error_message
+                    or "timeout" in error_message.lower()
+                ):
+                    if attempt < self.max_retries:
+                        delay = self.base_delay * (2 ** attempt)
+                        logger.info(
+                            f"Gemini request timed out. "
+                            f"Retrying in {delay:.1f}s..."
+                        )
+                        time.sleep(delay)
+                        continue
+
+                    return (
+                        "The AI service is currently slow. "
+                        "Please try again in a few seconds."
+                    )
+
+                # Retry other unexpected errors only if attempts remain.
                 if attempt < self.max_retries:
-                    time.sleep(self.base_delay * (2 ** attempt))
+                    delay = self.base_delay * (2 ** attempt)
+                    logger.info(
+                        f"Retrying Gemini request in {delay:.1f}s..."
+                    )
+                    time.sleep(delay)
 
         logger.error(f"All Gemini attempts failed: {last_error}")
-        if "Deadline" in str(last_error) or "timeout" in str(last_error).lower():
-            return "The AI service is currently slow. Please try again in a few seconds."
-        if "503" in str(last_error) or "UNAVAILABLE" in str(last_error):
-            return "The AI service is temporarily overloaded. Please try again in a moment."
         return "I'm sorry, I encountered an error. Please try again later."
