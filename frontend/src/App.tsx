@@ -5,6 +5,7 @@ import {
   Navigate,
   Outlet,
   useParams,
+  useNavigate,
 } from "react-router-dom";
 
 import { ToastContainer } from "react-toastify";
@@ -18,6 +19,7 @@ import { AuthLayout } from "./features/auth/components/AuthLayout";
 import AppLayout from "./components/layout/AppLayout/AppLayout";
 
 // Landing
+import LandingPage from './features/landing/pages/LandingPage';
 import LandingPage from "./features/landing/pages/LandingPage";
 
 // Auth pages
@@ -27,17 +29,15 @@ import ForgotPasswordPage from "./features/auth/pages/ForgotPasswordPage";
 import ResetPasswordPage from "./features/auth/pages/ResetPasswordPage";
 import VerifyEmailPage from "./features/auth/pages/VerifyEmailPage";
 
-// Main pages
-import HomePage from "./features/home/pages/HomePage";
-import Feed from "./features/posts/components/Feed";
-
 // Auth hook
 import { useAuth } from "./features/auth/hooks/useAuth";
 
 // AI assistant
 import { AIFloatingWidget } from "./features/ai/components/AIFloatingWidget";
 
-// Dashboard
+// Main pages
+import HomePage from "./features/home/pages/HomePage";
+import Feed from "./features/posts/components/Feed";
 import DashboardPage from "./features/dashboard/components/pages/DashboardPage";
 import { ProfilePage } from "./features/profile";
 import { MessagesPage } from "./features/messages";
@@ -47,10 +47,14 @@ import { DiscoverPage } from "./features/discover";
 import { JobsPage } from "./features/jobs";
 
 // Professional Portfolio
+import JobsPage from "./features/jobs/pages/JobsPage";
+import JobDetailsPage from "./features/jobs/pages/JobDetailsPage";
 import PortfolioDashboard from "./features/portfolio/pages/PortfolioDashboard";
 
 // Users
 import UsersPage from "./features/users/pages/UsersPage";
+import MarketplacePage from "./features/Market/pages/Marketplace/Marketplace";
+import { VerificationPage } from "./verification/pages/VerificationPage";
 
 // Admin
 import AdminLogin from "./features/dash_board/AdminDahboard/AdminLogin";
@@ -72,7 +76,28 @@ import { VerificationPage } from "./verification/pages/VerificationPage";
 
 // Marketplace
 import Marketplace from "./features/Market/pages/Marketplace/Marketplace";
-import UserProfilePage from "./features/user_profile/pages/UserProfilePage";
+
+
+// ============================================================
+// PUBLIC ONLY ROUTE
+// ============================================================
+import DashboardPage from './features/dashboard/components/pages/DashboardPage';
+
+// Profile
+import { ProfilePage } from './features/profile';
+
+// Messages
+import { MessagesPage } from './features/messages';
+
+// Discover
+import { DiscoverPage } from './features/discover';
+import { JobsPage   } from './features/jobs';
+
+// Professional Portfolio
+import PortfolioDashboard from './features/portfolio/pages/PortfolioDashboard';
+
+// Users
+import UsersPage from './features/users/pages/UsersPage';
 
 // TODO: Replace these with your actual Professionals page if it exists
 const ProfessionalsPage = UsersPage;
@@ -82,34 +107,34 @@ const ProfessionalsPage = UsersPage;
 // ============================================================
 function PublicOnlyRoute() {
   const { isAuthenticated } = useAuth();
-
-  if (isAuthenticated()) {
-    return <Navigate to="/home" replace />;
-  }
-
-  return <Outlet />;
-}
-
-// ============================================================
-// PROTECTED ROUTE
-// ============================================================
-function ProtectedRoute() {
-  const { isAuthenticated } = useAuth();
-
-  if (!isAuthenticated()) {
-    return <Navigate to="/login" replace />;
-  }
-
+  if (isAuthenticated()) return <Navigate to="/home" replace />;
   return <Outlet />;
 }
 
 // ============================================================
 // PROFILE ROUTE
+// PROTECTED ROUTE
+// ============================================================
+// PROTECTED ROUTE
+// ============================================================
+function ProtectedRoute() {
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated()) return <Navigate to="/login" replace />;
+  return <Outlet />;
+}
+
+// ============================================================
+// DYNAMIC ROUTE WRAPPERS
 // ============================================================
 function ProfileRoute() {
   const { id } = useParams<{ id: string }>();
-
   return <ProfilePage userId={id ?? ""} />;
+}
+
+function JobDetailsRoute() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  return <JobDetailsPage jobId={id ?? ""} onBack={() => navigate(-1)} />;
 }
 
 // ============================================================
@@ -132,16 +157,29 @@ function App() {
           theme="light"
         />
 
+        {/* AI Widget */}
         <AIFloatingWidget />
 
         <Routes>
           {/* ==================================================
-              PUBLIC ROUTES
+              LANDING PAGE (PUBLIC)
               ================================================== */}
-
           <Route path="/" element={<LandingPage />} />
 
-          {/* Auth pages */}
+          {/* ==================================================
+              AUTH ROUTES
+          ================================================== */}
+
+          {/* ==================================================
+              PUBLIC ROUTES
+              ================================================== */}
+          
+          {/* Landing Page is the root URL */}
+          <Route path="/" element={<LandingPage />} />
+
+          {/* Auth pages are public but redirect to /home if already logged in */}
+              AUTH ROUTES (PUBLIC-ONLY)
+              ================================================== */}
           <Route element={<PublicOnlyRoute />}>
             <Route element={<AuthLayout />}>
               <Route path="/login" element={<LoginPage />} />
@@ -155,6 +193,8 @@ function App() {
                 path="/reset-password"
                 element={<ResetPasswordPage />}
               />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
             </Route>
           </Route>
 
@@ -162,12 +202,27 @@ function App() {
               AUTHENTICATED APPLICATION
               ================================================== */}
 
+              AUTHENTICATED APPLICATION (PROTECTED)
+              ================================================== */}
           <Route element={<ProtectedRoute />}>
             <Route path="/home" element={<AppLayout />}>
               <Route index element={<HomePage />} />
               <Route path="dashboard" element={<DashboardPage />} />
               <Route path="feed" element={<Feed />} />
               <Route path="jobs" element={<JobsPage />} />
+              <Route path="discover" element={<DiscoverPage />} />
+              
+              {/* Job Routes */}
+              <Route path="jobs" element={<JobsPage />} />
+              <Route path="jobs/:id" element={<JobDetailsRoute />} />
+
+              <Route path="portfolio" element={<PortfolioDashboard />} />
+              <Route path="messages" element={<MessagesPage />} />
+              <Route path="professionals" element={<UsersPage />} />
+              <Route path="users" element={<UsersPage />} />
+              <Route path="verification" element={<VerificationPage />} />
+              <Route path="marketplace" element={<MarketplacePage />} />
+
               <Route path="profile" element={<ProfileRoute />} />
               <Route path="profile/:id" element={<ProfileRoute />} />
               <Route path="messages" element={<MessagesPage />} />
@@ -185,6 +240,17 @@ function App() {
               ADMIN LOGIN
               ================================================== */}
 
+
+            {/* Direct /jobs and /jobs/:id route fallbacks for top-level navigation */}
+            <Route element={<AppLayout />}>
+              <Route path="/jobs" element={<JobsPage />} />
+              <Route path="/jobs/:id" element={<JobDetailsRoute />} />
+            </Route>
+          </Route>
+
+          {/* ==================================================
+              ADMIN LOGIN
+              ================================================== */}
           <Route path="/admin/login" element={<AdminLogin />} />
 
           {/* ==================================================
@@ -207,9 +273,21 @@ function App() {
           </Route>
 
           {/* ==================================================
+              CATCH ALL
+          ================================================== */}
+
+          <Route
+            path="*"
+            element={<Navigate to="/" replace />}
+          />
               CATCH-ALL
               ================================================== */}
+          
+          {/* Redirect any unknown URL back to the Landing Page */}
+          <Route path="*" element={<Navigate to="/" replace />} />
 
+              CATCH-ALL
+              ================================================== */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

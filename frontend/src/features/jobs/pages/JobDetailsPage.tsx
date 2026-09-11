@@ -1,41 +1,116 @@
-import { ArrowLeft, MapPin, Briefcase, CheckCircle2, Star, Clock, Share2, Heart, MessageCircle, Send, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { useJobs } from '../hooks/useJobs';
-import type { Comment, Job } from '../types/job.types';
-import { formatSalaryRange, timeAgo, formatDate } from '../utils/format';
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Heart,
+  ImageIcon,
+  MessageCircle,
+  Send,
+  Share2,
+  X,
+  Loader2,
+} from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
+import { useJob, useJobComments, useToggleJobLike } from '../hooks/useJobs';
+import type { JobComment } from '../types/job.types';
+import { timeAgo } from '../utils/format';
+import { useAuth } from '../../auth/hooks/useAuth';
 import Avatar from '../components/Avatar';
-import MatchScore from '../components/MatchScore';
-import JobApplicationForm from '../components/JobApplicationForm';
 
 interface JobDetailsPageProps {
   jobId: string;
   onBack: () => void;
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  published: 'Published',
+  draft: 'Draft',
+  closed: 'Closed',
+  archived: 'Archived',
+};
+
+const STATUS_STYLES: Record<string, string> = {
+  published:
+    'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-800',
+  draft:
+    'bg-slate-100 text-slate-700 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700',
+  closed:
+    'bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:ring-rose-800',
+  archived:
+    'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:ring-amber-800',
+};
+
 export default function JobDetailsPage({ jobId, onBack }: JobDetailsPageProps) {
-  const { getJobById, toggleLike, addComment, shareJob, loading } = useJobs();
-  const job = getJobById(jobId);
-  const [showApply, setShowApply] = useState(false);
+  const { user } = useAuth();
+  const { job, loading, error, setJob, refresh } = useJob(jobId);
+  const { toggleLike } = useToggleJobLike();
+  const { createComment } = useJobComments();
+
   const [commentText, setCommentText] = useState('');
+  const [submittingComment, setSubmittingComment] = useState(false);
   const [shareNotice, setShareNotice] = useState(false);
+  const [animateLike, setAnimateLike] = useState(false);
+  const [lightbox, setLightbox] = useState<string | null>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [jobId]);
 
-  if (loading || !job) {
+  // Handle escape key for lightbox
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setLightbox(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (lightbox) {
+      window.addEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'unset';
+    };
+  }, [lightbox, handleKeyDown]);
+
+  if (loading) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-20">
-        <div className="skeleton h-8 w-32 rounded-lg mb-6" />
-        <div className="card p-8 space-y-4">
-          <div className="skeleton h-6 w-3/4 rounded" />
-          <div className="skeleton h-4 w-1/2 rounded" />
-          <div className="skeleton h-32 w-full rounded" />
-          <div className="skeleton h-32 w-full rounded" />
+      <div className="mx-auto max-w-4xl px-4 py-12">
+        <div className="mb-6 h-8 w-32 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800" />
+        <div className="space-y-4 rounded-3xl border border-slate-200/80 bg-white p-8 dark:border-slate-800 dark:bg-slate-900">
+          <div className="h-6 w-3/4 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800" />
+          <div className="h-4 w-1/2 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800" />
+          <div className="h-64 w-full animate-pulse rounded-2xl bg-slate-200 dark:bg-slate-800" />
+          <div className="h-24 w-full animate-pulse rounded-2xl bg-slate-200 dark:bg-slate-800" />
         </div>
       </div>
     );
   }
+
+  if (error || !job) {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-24 text-center">
+        <p className="text-slate-500 dark:text-slate-400">
+          {error ?? 'Job not found.'}
+        </p>
+        <button
+          type="button"
+          onClick={onBack}
+          className="mt-6 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to jobs
+        </button>
+      </div>
+    );
+  }
+
+  const authorName = job.user
+    ? `${job.user.first_name ?? ''} ${job.user.last_name ?? ''}`.trim() || job.user.username
+    : 'Unknown user';
+  const authorAvatar = job.user?.profile_image_url ?? undefined;
+  const comments = job.comments ?? [];
 
   const handleShare = async () => {
     const url = `${window.location.origin}/jobs/${job.id}`;
@@ -47,230 +122,321 @@ export default function JobDetailsPage({ jobId, onBack }: JobDetailsPageProps) {
         setShareNotice(true);
         setTimeout(() => setShareNotice(false), 2000);
       }
-    } catch { /* cancelled */ }
-    shareJob(job.id);
+    } catch {
+      /* User cancelled sharing */
+    }
   };
 
-  const handleSubmitComment = () => {
-    if (!commentText.trim()) return;
-    const comment: Omit<Comment, 'id' | 'createdAt'> = {
-      authorName: 'You',
-      authorAvatar: '',
-      text: commentText.trim(),
-    };
-    addComment(job.id, comment);
-    setCommentText('');
+  const handleLike = async () => {
+    const nextLiked = !job.is_liked;
+    setJob((prev) =>
+      prev
+        ? {
+            ...prev,
+            is_liked: nextLiked,
+            likes_count: Math.max(0, prev.likes_count + (nextLiked ? 1 : -1)),
+          }
+        : prev
+    );
+    setAnimateLike(true);
+    setTimeout(() => setAnimateLike(false), 400);
+
+    const res = await toggleLike(job.id);
+    if (!res) refresh();
+    else setJob((prev) => (prev ? { ...prev, is_liked: res.liked } : prev));
+  };
+
+  const handleSubmitComment = async () => {
+    const text = commentText.trim();
+    if (!text || submittingComment) return;
+
+    setSubmittingComment(true);
+    const res = await createComment(job.id, { content: text });
+    setSubmittingComment(false);
+
+    if (res) {
+      setCommentText('');
+      setJob((prev) =>
+        prev
+          ? {
+              ...prev,
+              comments: [...(prev.comments ?? []), res as JobComment],
+              comments_count: (prev.comments_count ?? 0) + 1,
+            }
+          : prev
+      );
+    }
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 animate-fade-in">
-      <button onClick={onBack} className="btn-ghost mb-6 -ml-3">
-        <ArrowLeft className="w-4 h-4" /> Back to jobs
-      </button>
+    <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950 transition-colors">
+      {/* Navigation Header */}
+      <div className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/80 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/80">
+        <div className="mx-auto flex max-w-4xl items-center gap-3 px-4 py-3 sm:px-6">
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Back to jobs</span>
+          </button>
+        </div>
+      </div>
 
-      {/* TOP: Poster Profile & Review Box */}
-      <section className="card p-6 mb-6">
-        <div className="flex items-start gap-4">
-          <Avatar name={job.poster.name} avatar={job.poster.avatar} size="xl" />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="font-display text-xl font-bold text-ink-900">{job.poster.name}</h2>
-              {job.poster.verified && (
-                <span className="inline-flex items-center gap-1 badge bg-brand-50 text-brand-700 ring-1 ring-brand-200">
-                  <CheckCircle2 className="w-3 h-3" /> Verified
-                </span>
-              )}
+      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+        {/* Main Job Card */}
+        <div className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          {job.images?.length > 0 && (
+            <div className="relative aspect-[16/8] overflow-hidden bg-slate-100 dark:bg-slate-800">
+              <img
+                src={job.images[0].image_url}
+                alt={job.title}
+                className="h-full w-full cursor-zoom-in object-cover transition-transform duration-300 hover:scale-105"
+                onClick={() => setLightbox(job.images[0].image_url)}
+              />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent" />
             </div>
-            <p className="text-sm text-ink-500 mt-0.5">{job.poster.title} · {job.poster.company}</p>
-            <div className="flex items-center gap-3 mt-2 flex-wrap">
-              <div className="flex items-center gap-1">
-                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                <span className="text-sm font-semibold text-ink-800">{job.poster.rating}</span>
-                <span className="text-sm text-ink-400">({job.poster.reviewCount} reviews)</span>
+          )}
+
+          <div className="p-6 sm:p-8">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold capitalize ring-1 ${
+                  STATUS_STYLES[job.status] ?? STATUS_STYLES.draft
+                }`}
+              >
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    job.status === 'published' ? 'bg-emerald-500' : 'bg-slate-400'
+                  }`}
+                />
+                {STATUS_LABELS[job.status] ?? job.status}
+              </span>
+              <span className="text-xs text-slate-400 dark:text-slate-500">
+                Posted {timeAgo(job.created_at)}
+              </span>
+            </div>
+
+            <h1 className="mt-4 font-display text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 sm:text-4xl">
+              {job.title}
+            </h1>
+
+            {/* Author Metadata */}
+            <div className="mt-6 flex items-center gap-3 rounded-2xl bg-slate-50 p-3.5 dark:bg-slate-800/50">
+              {job.user?.username ? (
+                <Link to={`/profile/${job.user.username}`}>
+                  <Avatar name={authorName} avatar={authorAvatar} size="lg" />
+                </Link>
+              ) : (
+                <Avatar name={authorName} avatar={authorAvatar} size="lg" />
+              )}
+              <div className="min-w-0 flex-1">
+                {job.user?.username ? (
+                  <Link
+                    to={`/profile/${job.user.username}`}
+                    className="inline-flex items-center gap-1.5 font-semibold text-slate-900 transition-colors hover:text-indigo-600 dark:text-slate-100 dark:hover:text-indigo-400"
+                  >
+                    <span>{authorName}</span>
+                    <CheckCircle2 className="h-4 w-4 text-indigo-500" />
+                  </Link>
+                ) : (
+                  <span className="font-semibold text-slate-900 dark:text-slate-100">
+                    {authorName}
+                  </span>
+                )}
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  @{job.user?.username ?? 'unknown'}
+                  {job.user?.account_type ? ` · ${job.user.account_type}` : ''}
+                </p>
               </div>
-              <span className="text-ink-300">·</span>
-              <span className="text-sm text-ink-400">Member since {job.poster.memberSince}</span>
+            </div>
+
+            {/* Job Description */}
+            <div className="mt-8">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                Description
+              </h2>
+              <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-slate-700 dark:text-slate-300 sm:text-base">
+                {job.description}
+              </p>
+            </div>
+
+            {/* Action Bar */}
+            <div className="mt-8 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-6 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={handleLike}
+                className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all ${
+                  job.is_liked
+                    ? 'border-rose-200 bg-rose-50 text-rose-600 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-400'
+                    : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
+                }`}
+              >
+                <Heart
+                  className={`h-4 w-4 transition-transform ${
+                    animateLike ? 'scale-125' : ''
+                  } ${job.is_liked ? 'fill-rose-500 text-rose-500' : ''}`}
+                />
+                <span>
+                  {job.likes_count} {job.likes_count === 1 ? 'like' : 'likes'}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleShare}
+                className="relative inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                <Share2 className="h-4 w-4" />
+                <span>Share</span>
+                {shareNotice && (
+                  <span className="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1 text-xs text-white dark:bg-slate-100 dark:text-slate-900 shadow-md animate-scale-in">
+                    Copied to clipboard!
+                  </span>
+                )}
+              </button>
             </div>
           </div>
         </div>
 
-        {job.poster.reviews.length > 0 && (
-          <div className="mt-5 pt-5 border-t border-ink-100">
-            <h3 className="text-sm font-bold text-ink-800 mb-3">Recent Feedback</h3>
-            <div className="space-y-3">
-              {job.poster.reviews.map((review) => (
-                <div key={review.id} className="flex gap-3">
-                  <Avatar name={review.authorName} avatar={review.authorAvatar} size="sm" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-ink-800">{review.authorName}</span>
-                      <div className="flex items-center gap-0.5">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <Star key={i} className={`w-3 h-3 ${i < review.rating ? 'fill-amber-400 text-amber-400' : 'text-ink-200'}`} />
-                        ))}
-                      </div>
-                      <span className="text-xs text-ink-400">{timeAgo(review.date)}</span>
-                    </div>
-                    <p className="text-sm text-ink-600 mt-0.5">{review.comment}</p>
-                  </div>
-                </div>
+        {/* Media Gallery */}
+        {job.images?.length > 1 && (
+          <div className="mt-6 rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className="mb-4 flex items-center gap-2">
+              <ImageIcon className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+              <h2 className="font-display font-bold text-slate-900 dark:text-slate-100">
+                Gallery · {job.images.length}
+              </h2>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+              {job.images.map((img) => (
+                <button
+                  type="button"
+                  key={img.id}
+                  onClick={() => setLightbox(img.image_url)}
+                  className="group relative aspect-square overflow-hidden rounded-2xl bg-slate-100 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <img
+                    src={img.image_url}
+                    alt={`${job.title} gallery thumbnail`}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    loading="lazy"
+                  />
+                </button>
               ))}
             </div>
           </div>
         )}
-      </section>
 
-      {/* MIDDLE: Job Description & Details */}
-      <section className="card p-6 mb-6">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div className="min-w-0">
-            <h1 className="font-display text-2xl font-extrabold text-ink-900">{job.title}</h1>
-            <div className="flex items-center gap-3 mt-2 text-sm text-ink-500 flex-wrap">
-              <span className="inline-flex items-center gap-1"><MapPin className="w-4 h-4" /> {job.location}</span>
-              <span className="inline-flex items-center gap-1"><Briefcase className="w-4 h-4" /> {job.jobType}</span>
-              <span className="inline-flex items-center gap-1"><Clock className="w-4 h-4" /> Posted {timeAgo(job.postedAt)}</span>
-            </div>
+        {/* Comments Section */}
+        <div className="mt-6 rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex items-center gap-2">
+            <MessageCircle className="h-5 w-5 text-slate-400 dark:text-slate-500" />
+            <h2 className="font-display text-lg font-bold text-slate-900 dark:text-slate-100">
+              Comments
+            </h2>
+            <span className="ml-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600 tabular-nums dark:bg-slate-800 dark:text-slate-400">
+              {comments.length}
+            </span>
           </div>
-          <MatchScore score={job.matchScore} />
-        </div>
 
-        <div className="flex items-center gap-3 mt-4 flex-wrap">
-          <span className={`badge ${job.status === 'active' ? 'bg-brand-50 text-brand-700 ring-1 ring-brand-200' : 'bg-ink-100 text-ink-500 ring-1 ring-ink-200'}`}>
-            {job.status === 'active' && <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />}
-            {job.status === 'active' ? 'Active to Apply' : 'Closed'}
-          </span>
-          <span className="text-lg font-bold text-ink-900">
-            {formatSalaryRange(job.salaryMin, job.salaryMax)}
-            <span className="text-sm font-normal text-ink-400"> /month</span>
-          </span>
-        </div>
-
-        <div className="mt-5">
-          <h3 className="font-display font-bold text-ink-900 mb-2">Description</h3>
-          <p className="text-sm text-ink-600 leading-relaxed">{job.description}</p>
-        </div>
-
-        <div className="mt-5">
-          <h3 className="font-display font-bold text-ink-900 mb-2">Requirements</h3>
-          <ul className="space-y-2">
-            {job.requirements.map((req, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-ink-600">
-                <CheckCircle2 className="w-4 h-4 text-brand-500 shrink-0 mt-0.5" />
-                <span>{req}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="mt-5">
-          <h3 className="font-display font-bold text-ink-900 mb-2">Responsibilities</h3>
-          <ul className="space-y-2">
-            {job.responsibilities.map((r, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-ink-600">
-                <span className="w-1.5 h-1.5 rounded-full bg-accent-400 shrink-0 mt-1.5" />
-                <span>{r}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="mt-5">
-          <h3 className="font-display font-bold text-ink-900 mb-2">Required Skills</h3>
-          <div className="flex flex-wrap gap-2">
-            {job.skills.map((skill) => (
-              <span key={skill} className="badge bg-ink-100 text-ink-700">{skill}</span>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* BOTTOM: Apply Action Section */}
-      <section className="card p-6 mb-6">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <h3 className="font-display font-bold text-lg text-ink-900">Ready to apply?</h3>
-            <p className="text-sm text-ink-500 mt-0.5">
-              Send a direct message to {job.poster.name} about this position.
-            </p>
-          </div>
-          <button
-            onClick={() => setShowApply(true)}
-            disabled={job.status !== 'active'}
-            className="btn-primary text-base px-6 py-3"
-          >
-            Apply Now
-          </button>
-        </div>
-
-        {/* Social actions */}
-        <div className="flex items-center gap-2 mt-5 pt-5 border-t border-ink-100">
-          <button
-            onClick={() => toggleLike(job.id)}
-            className={`btn-ghost gap-1.5 ${job.likedByMe ? 'text-rose-500 hover:text-rose-600' : ''}`}
-          >
-            <Heart className={`w-4 h-4 ${job.likedByMe ? 'fill-rose-500' : ''}`} />
-            <span className="text-sm">{job.likes}</span>
-          </button>
-          <button
-            onClick={handleShare}
-            className="btn-ghost gap-1.5 relative"
-          >
-            <Share2 className="w-4 h-4" />
-            <span className="text-sm">{job.shares}</span>
-            {shareNotice && (
-              <span className="absolute -top-9 left-1/2 -translate-x-1/2 bg-ink-900 text-white text-xs px-2.5 py-1 rounded-lg whitespace-nowrap animate-scale-in">
-                Copied!
-              </span>
-            )}
-          </button>
-        </div>
-      </section>
-
-      {/* Comments section */}
-      <section className="card p-6">
-        <h3 className="font-display font-bold text-lg text-ink-900 mb-4 flex items-center gap-2">
-          <MessageCircle className="w-5 h-5 text-ink-400" />
-          Comments ({job.comments.length})
-        </h3>
-
-        <div className="flex gap-2.5 mb-4">
-          <Avatar name="You" size="sm" />
-          <div className="flex-1 flex gap-2">
-            <input
-              type="text"
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && commentText.trim()) handleSubmitComment(); }}
-              placeholder="Write a comment..."
-              className="input flex-1 py-2 text-sm"
-            />
-            <button onClick={handleSubmitComment} disabled={!commentText.trim()} className="btn-primary px-3 py-2 text-sm">
-              <Send className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {job.comments.length > 0 ? (
-          <div className="space-y-4">
-            {job.comments.map((c) => (
-              <div key={c.id} className="flex gap-2.5">
-                <Avatar name={c.authorName} avatar={c.authorAvatar} size="sm" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-ink-800">{c.authorName}</span>
-                    <span className="text-xs text-ink-400">{timeAgo(c.createdAt)}</span>
-                  </div>
-                  <p className="text-sm text-ink-600 mt-0.5">{c.text}</p>
-                </div>
+          {user && (
+            <div className="mt-5 flex gap-3">
+              <Avatar
+                name={`${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || 'You'}
+                avatar={user.profile_image_url ?? undefined}
+                size="md"
+              />
+              <div className="flex flex-1 items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/60 p-1.5 transition-colors focus-within:border-indigo-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-indigo-500/20 dark:border-slate-800 dark:bg-slate-800/40 dark:focus-within:border-indigo-500 dark:focus-within:bg-slate-900">
+                <input
+                  type="text"
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && commentText.trim() && !submittingComment) {
+                      handleSubmitComment();
+                    }
+                  }}
+                  placeholder="Add a comment…"
+                  className="flex-1 bg-transparent px-2 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none dark:text-slate-100 dark:placeholder:text-slate-500"
+                />
+                <button
+                  type="button"
+                  onClick={handleSubmitComment}
+                  disabled={!commentText.trim() || submittingComment}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-white transition-all hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-30 dark:bg-indigo-600 dark:hover:bg-indigo-500"
+                  aria-label="Send comment"
+                >
+                  {submittingComment ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Send className="h-3.5 w-3.5" />
+                  )}
+                </button>
               </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-ink-400 text-center py-4">No comments yet.</p>
-        )}
-      </section>
+            </div>
+          )}
 
-      <JobApplicationForm job={job} open={showApply} onClose={() => setShowApply(false)} />
+          <div className="mt-6 space-y-4">
+            {comments.length > 0 ? (
+              comments.map((c) => {
+                const mine = user?.id === c.user_id;
+                const label = mine ? 'You' : 'User';
+                return (
+                  <div key={c.id} className="flex gap-3">
+                    <Avatar name={label} size="md" />
+                    <div className="min-w-0 flex-1">
+                      <div className="rounded-2xl bg-slate-50 px-4 py-3 dark:bg-slate-800/40">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                            {label}
+                          </span>
+                          <span className="text-xs text-slate-400 dark:text-slate-500">
+                            {timeAgo(c.created_at)}
+                          </span>
+                        </div>
+                        <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+                          {c.content}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="rounded-2xl border border-dashed border-slate-200 py-10 text-center dark:border-slate-800">
+                <p className="text-sm text-slate-400 dark:text-slate-500">
+                  No comments yet. Start the conversation.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Lightbox Modal */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 p-4 backdrop-blur-md animate-fade-in"
+          onClick={() => setLightbox(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setLightbox(null)}
+            className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-slate-800/80 text-slate-200 hover:bg-slate-700 hover:text-white transition-colors"
+            aria-label="Close image lightbox"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <img
+            src={lightbox}
+            alt="Expanded preview"
+            className="max-h-[90vh] max-w-[90vw] rounded-2xl object-contain shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }
