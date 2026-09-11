@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   AlertTriangle,
   MapPin,
-//   Clock,
 } from "lucide-react";
 
 import {
@@ -22,163 +21,59 @@ import {
 } from "recharts";
 
 const activityData = [
-  {
-    day: "Apr 23",
-    users: 480,
-    applications: 250,
-    posts: 140,
-  },
-  {
-    day: "Apr 24",
-    users: 610,
-    applications: 410,
-    posts: 230,
-  },
-  {
-    day: "Apr 25",
-    users: 560,
-    applications: 390,
-    posts: 200,
-  },
-  {
-    day: "Apr 26",
-    users: 820,
-    applications: 550,
-    posts: 350,
-  },
-  {
-    day: "Apr 27",
-    users: 980,
-    applications: 650,
-    posts: 380,
-  },
-  {
-    day: "Apr 28",
-    users: 900,
-    applications: 600,
-    posts: 390,
-  },
-  {
-    day: "Apr 29",
-    users: 760,
-    applications: 520,
-    posts: 350,
-  },
+  { day: "Apr 23", users: 480, applications: 250, posts: 140 },
+  { day: "Apr 24", users: 610, applications: 410, posts: 230 },
+  { day: "Apr 25", users: 560, applications: 390, posts: 200 },
+  { day: "Apr 26", users: 820, applications: 550, posts: 350 },
+  { day: "Apr 27", users: 980, applications: 650, posts: 380 },
+  { day: "Apr 28", users: 900, applications: 600, posts: 390 },
+  { day: "Apr 29", users: 760, applications: 520, posts: 350 },
 ];
 
 const workers = [
-  {
-    name: "Electrician",
-    count: 231,
-    percentage: 28,
-  },
-  {
-    name: "Plumber",
-    count: 181,
-    percentage: 22,
-  },
-  {
-    name: "Carpenter",
-    count: 147,
-    percentage: 18,
-  },
-  {
-    name: "Mechanic",
-    count: 103,
-    percentage: 12,
-  },
-  {
-    name: "Welder",
-    count: 84,
-    percentage: 10,
-  },
-  {
-    name: "Painter",
-    count: 56,
-    percentage: 7,
-  },
-  {
-    name: "Cleaner",
-    count: 41,
-    percentage: 5,
-  },
+  { name: "Electrician", count: 231, percentage: 28 },
+  { name: "Plumber", count: 181, percentage: 22 },
+  { name: "Carpenter", count: 147, percentage: 18 },
+  { name: "Mechanic", count: 103, percentage: 12 },
+  { name: "Welder", count: 84, percentage: 10 },
+  { name: "Painter", count: 56, percentage: 7 },
+  { name: "Cleaner", count: 41, percentage: 5 },
 ];
 
 const recentUsers = [
-  {
-    name: "John Kamga",
-    email: "john@example.com",
-    role: "Worker",
-    status: "Active",
-    joined: "Apr 28, 2025",
-  },
-  {
-    name: "Sarah Johnson",
-    email: "sarah@example.com",
-    role: "User",
-    status: "Active",
-    joined: "Apr 27, 2025",
-  },
-  {
-    name: "Daniel Mbarga",
-    email: "daniel@example.com",
-    role: "Worker",
-    status: "Active",
-    joined: "Apr 26, 2025",
-  },
-  {
-    name: "Esther Nguema",
-    email: "esther@example.com",
-    role: "User",
-    status: "Suspended",
-    joined: "Apr 25, 2025",
-  },
-  {
-    name: "David Mvondo",
-    email: "david@example.com",
-    role: "Worker",
-    status: "Active",
-    joined: "Apr 24, 2025",
-  },
+  { name: "John Kamga", email: "john@example.com", role: "Worker", status: "Active", joined: "Apr 28, 2025" },
+  { name: "Sarah Johnson", email: "sarah@example.com", role: "User", status: "Active", joined: "Apr 27, 2025" },
+  { name: "Daniel Mbarga", email: "daniel@example.com", role: "Worker", status: "Active", joined: "Apr 26, 2025" },
+  { name: "Esther Nguema", email: "esther@example.com", role: "User", status: "Suspended", joined: "Apr 25, 2025" },
+  { name: "David Mvondo", email: "david@example.com", role: "Worker", status: "Active", joined: "Apr 24, 2025" },
 ];
 
 const recentJobs = [
-  {
-    title: "Electrical Installation",
-    category: "Electrician",
-    location: "Douala",
-    applicants: 12,
-    status: "Open",
-  },
-  {
-    title: "House Plumbing",
-    category: "Plumber",
-    location: "Yaoundé",
-    applicants: 8,
-    status: "Open",
-  },
-  {
-    title: "Furniture Repair",
-    category: "Carpenter",
-    location: "Bonapriso",
-    applicants: 5,
-    status: "In Progress",
-  },
-  {
-    title: "Vehicle Maintenance",
-    category: "Mechanic",
-    location: "Bastos",
-    applicants: 14,
-    status: "Open",
-  },
-  {
-    title: "Wall Painting",
-    category: "Painter",
-    location: "Akwa",
-    applicants: 9,
-    status: "Open",
-  },
+  { title: "Electrical Installation", category: "Electrician", location: "Douala", applicants: 12, status: "Open" },
+  { title: "House Plumbing", category: "Plumber", location: "Yaoundé", applicants: 8, status: "Open" },
+  { title: "Furniture Repair", category: "Carpenter", location: "Bonapriso", applicants: 5, status: "In Progress" },
+  { title: "Vehicle Maintenance", category: "Mechanic", location: "Bastos", applicants: 14, status: "Open" },
+  { title: "Wall Painting", category: "Painter", location: "Akwa", applicants: 9, status: "Open" },
 ];
+
+/* Custom Tooltip for Recharts Dark/Light Mode */
+function CustomTooltip({ active, payload, label }: any) {
+  if (active && payload && payload.length) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-lg dark:border-slate-800 dark:bg-slate-900">
+        <p className="mb-2 text-xs font-semibold text-slate-700 dark:text-slate-300">{label}</p>
+        {payload.map((entry: any, index: number) => (
+          <div key={index} className="flex items-center gap-2 text-xs">
+            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
+            <span className="text-slate-500 dark:text-slate-400">{entry.name}:</span>
+            <span className="font-semibold text-slate-900 dark:text-white">{entry.value}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
+}
 
 export default function Overview() {
   return (
@@ -188,27 +83,26 @@ export default function Overview() {
         <div>
           <div className="mb-2 flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-blue-600" />
-
-            <span className="text-sm font-medium text-slate-500">
+            <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
               Platform Overview
             </span>
           </div>
 
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
             Good morning, Administrator
           </h1>
 
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Here's what's happening on your platform today.
           </p>
         </div>
 
         <div className="flex gap-2">
-          <button className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">
+          <button className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">
             Apr 23, 2025 - Apr 29, 2025
           </button>
 
-          <button className="hidden rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm sm:block">
+          <button className="hidden rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 sm:block">
             Last 7 days
           </button>
         </div>
@@ -216,59 +110,31 @@ export default function Overview() {
 
       {/* Stats */}
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          title="Total Users"
-          value="2,540"
-          change="+12.5%"
-          icon={Users}
-        />
-
-        <StatCard
-          title="Total Workers"
-          value="820"
-          change="+8.2%"
-          icon={UserCheck}
-        />
-
-        <StatCard
-          title="Active Jobs"
-          value="1,245"
-          change="+15.4%"
-          icon={BriefcaseBusiness}
-        />
-
-        <StatCard
-          title="Total Posts"
-          value="386"
-          change="+6.8%"
-          icon={FileText}
-        />
+        <StatCard title="Total Users" value="2,540" change="+12.5%" icon={Users} />
+        <StatCard title="Total Workers" value="820" change="+8.2%" icon={UserCheck} />
+        <StatCard title="Active Jobs" value="1,245" change="+15.4%" icon={BriefcaseBusiness} />
+        <StatCard title="Total Posts" value="386" change="+6.8%" icon={FileText} />
       </section>
 
       {/* Charts + activity */}
       <section className="grid grid-cols-1 gap-5 xl:grid-cols-12">
         {/* Activity chart */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm xl:col-span-7">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 xl:col-span-7">
           <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
             <div>
               <div className="flex items-center gap-2">
-                <TrendingUp
-                  size={18}
-                  className="text-blue-600"
-                />
-
-                <h2 className="font-semibold text-slate-900">
+                <TrendingUp size={18} className="text-blue-600 dark:text-blue-500" />
+                <h2 className="font-semibold text-slate-900 dark:text-white">
                   Platform Activity
                 </h2>
               </div>
 
-              <p className="mt-1 text-xs text-slate-400">
-                User signups, job applications and post engagement
-                over time.
+              <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                User signups, job applications and post engagement over time.
               </p>
             </div>
 
-            <button className="w-fit rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600">
+            <button className="w-fit rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800">
               Last 7 days
             </button>
           </div>
@@ -277,79 +143,35 @@ export default function Overview() {
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={activityData}>
                 <defs>
-                  <linearGradient
-                    id="usersGradient"
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop
-                      offset="0%"
-                      stopColor="#2563eb"
-                      stopOpacity={0.22}
-                    />
-
-                    <stop
-                      offset="100%"
-                      stopColor="#2563eb"
-                      stopOpacity={0}
-                    />
+                  <linearGradient id="usersGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#2563eb" stopOpacity={0.22} />
+                    <stop offset="100%" stopColor="#2563eb" stopOpacity={0} />
                   </linearGradient>
 
-                  <linearGradient
-                    id="applicationsGradient"
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <stop
-                      offset="0%"
-                      stopColor="#8b5cf6"
-                      stopOpacity={0.15}
-                    />
-
-                    <stop
-                      offset="100%"
-                      stopColor="#8b5cf6"
-                      stopOpacity={0}
-                    />
+                  <linearGradient id="applicationsGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.15} />
+                    <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} />
                   </linearGradient>
                 </defs>
 
-                <CartesianGrid
-                  stroke="#eef2f7"
-                  vertical={false}
-                />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-slate-100 dark:stroke-slate-800" />
 
                 <XAxis
                   dataKey="day"
                   axisLine={false}
                   tickLine={false}
-                  tick={{
-                    fontSize: 11,
-                    fill: "#94a3b8",
-                  }}
+                  tick={{ fill: "currentColor" }}
+                  className="text-[11px] text-slate-400 dark:text-slate-500"
                 />
 
                 <YAxis
                   axisLine={false}
                   tickLine={false}
-                  tick={{
-                    fontSize: 11,
-                    fill: "#94a3b8",
-                  }}
+                  tick={{ fill: "currentColor" }}
+                  className="text-[11px] text-slate-400 dark:text-slate-500"
                 />
 
-                <Tooltip
-                  contentStyle={{
-                    border: "1px solid #e2e8f0",
-                    borderRadius: "12px",
-                    boxShadow:
-                      "0 10px 30px rgba(15,23,42,0.08)",
-                  }}
-                />
+                <Tooltip content={<CustomTooltip />} />
 
                 <Area
                   type="monotone"
@@ -381,7 +203,7 @@ export default function Overview() {
             </ResponsiveContainer>
           </div>
 
-          <div className="mt-3 flex flex-wrap justify-center gap-5 text-xs text-slate-500">
+          <div className="mt-3 flex flex-wrap justify-center gap-5 text-xs text-slate-500 dark:text-slate-400">
             <Legend color="bg-blue-600" label="New Users" />
             <Legend color="bg-violet-500" label="Job Applications" />
             <Legend color="bg-teal-500" label="Post Engagement" />
@@ -389,13 +211,13 @@ export default function Overview() {
         </div>
 
         {/* Worker categories */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm xl:col-span-2">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 xl:col-span-2">
           <div className="mb-5">
-            <h2 className="font-semibold text-slate-900">
+            <h2 className="font-semibold text-slate-900 dark:text-white">
               Worker Categories
             </h2>
 
-            <p className="mt-1 text-xs text-slate-400">
+            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
               Distribution of skilled workers
             </p>
           </div>
@@ -404,25 +226,23 @@ export default function Overview() {
             {workers.map((worker) => (
               <div key={worker.name}>
                 <div className="mb-1.5 flex items-center justify-between text-xs">
-                  <span className="font-medium text-slate-700">
+                  <span className="font-medium text-slate-700 dark:text-slate-300">
                     {worker.name}
                   </span>
 
-                  <span className="text-slate-400">
+                  <span className="text-slate-400 dark:text-slate-500">
                     {worker.percentage}%
                   </span>
                 </div>
 
-                <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+                <div className="h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
                   <div
                     className="h-full rounded-full bg-blue-500"
-                    style={{
-                      width: `${worker.percentage * 3.5}%`,
-                    }}
+                    style={{ width: `${worker.percentage}%` }}
                   />
                 </div>
 
-                <p className="mt-1 text-[10px] text-slate-400">
+                <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">
                   {worker.count} workers
                 </p>
               </div>
@@ -431,19 +251,19 @@ export default function Overview() {
         </div>
 
         {/* Recent activity */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm xl:col-span-3">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 xl:col-span-3">
           <div className="mb-5 flex items-center justify-between">
             <div>
-              <h2 className="font-semibold text-slate-900">
+              <h2 className="font-semibold text-slate-900 dark:text-white">
                 Recent Activity
               </h2>
 
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
                 Latest platform events
               </p>
             </div>
 
-            <button className="text-xs font-medium text-blue-600 hover:text-blue-700">
+            <button className="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
               View all
             </button>
           </div>
@@ -498,7 +318,6 @@ export default function Overview() {
       {/* Tables */}
       <section className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         <RecentUsers />
-
         <RecentJobs />
       </section>
     </div>
@@ -519,31 +338,31 @@ function StatCard({
   icon: React.ElementType;
 }) {
   return (
-    <div className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md">
+    <div className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-900">
       <div className="flex items-start justify-between">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400">
           <Icon size={19} />
         </div>
 
-        <span className="text-slate-300">⋮</span>
+        <span className="text-slate-300 dark:text-slate-600">⋮</span>
       </div>
 
-      <p className="mt-5 text-xs font-medium text-slate-500">
+      <p className="mt-5 text-xs font-medium text-slate-500 dark:text-slate-400">
         {title}
       </p>
 
       <div className="mt-1 flex items-end justify-between">
-        <h2 className="text-3xl font-bold tracking-tight text-slate-900">
+        <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
           {value}
         </h2>
 
-        <div className="mb-1 flex items-center gap-1 text-xs font-semibold text-emerald-500">
+        <div className="mb-1 flex items-center gap-1 text-xs font-semibold text-emerald-500 dark:text-emerald-400">
           <TrendingUp size={13} />
           {change}
         </div>
       </div>
 
-      <p className="mt-2 text-[10px] text-slate-400">
+      <p className="mt-2 text-[10px] text-slate-400 dark:text-slate-500">
         vs. previous 7 days
       </p>
     </div>
@@ -552,13 +371,7 @@ function StatCard({
 
 /* ---------------- LEGEND ---------------- */
 
-function Legend({
-  color,
-  label,
-}: {
-  color: string;
-  label: string;
-}) {
+function Legend({ color, label }: { color: string; label: string }) {
   return (
     <div className="flex items-center gap-2">
       <span className={`h-2 w-2 rounded-full ${color}`} />
@@ -585,30 +398,27 @@ function ActivityItem({
   return (
     <div className="flex gap-3">
       <div
-        className={`
-          flex h-9 w-9 shrink-0 items-center justify-center rounded-full
-          ${
-            danger
-              ? "bg-red-50 text-red-500"
-              : "bg-blue-50 text-blue-600"
-          }
-        `}
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+          danger
+            ? "bg-red-50 text-red-500 dark:bg-red-950/50 dark:text-red-400"
+            : "bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
+        }`}
       >
         {icon}
       </div>
 
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
-          <p className="text-xs font-semibold text-slate-800">
+          <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
             {title}
           </p>
 
-          <span className="whitespace-nowrap text-[9px] text-slate-400">
+          <span className="whitespace-nowrap text-[9px] text-slate-400 dark:text-slate-500">
             {time}
           </span>
         </div>
 
-        <p className="mt-0.5 truncate text-[10px] text-slate-400">
+        <p className="mt-0.5 truncate text-[10px] text-slate-400 dark:text-slate-500">
           {description}
         </p>
       </div>
@@ -620,19 +430,19 @@ function ActivityItem({
 
 function RecentUsers() {
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex items-center justify-between border-b border-slate-100 p-5">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex items-center justify-between border-b border-slate-100 p-5 dark:border-slate-800">
         <div>
-          <h2 className="font-semibold text-slate-900">
+          <h2 className="font-semibold text-slate-900 dark:text-white">
             Recent Users
           </h2>
 
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
             Recently registered members
           </p>
         </div>
 
-        <button className="text-xs font-medium text-blue-600">
+        <button className="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
           View all
         </button>
       </div>
@@ -640,38 +450,34 @@ function RecentUsers() {
       <div className="overflow-x-auto">
         <table className="w-full min-w-[600px] text-left">
           <thead>
-            <tr className="border-b border-slate-100 bg-slate-50/70">
-              <th className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+            <tr className="border-b border-slate-100 bg-slate-50/70 dark:border-slate-800 dark:bg-slate-800/40">
+              <th className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                 Name
               </th>
-
-              <th className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              <th className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                 Role
               </th>
-
-              <th className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              <th className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                 Status
               </th>
-
-              <th className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              <th className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                 Joined
               </th>
-
-              <th className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              <th className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                 Actions
               </th>
             </tr>
           </thead>
 
-          <tbody>
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {recentUsers.map((user) => (
               <tr
                 key={user.email}
-                className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50"
+                className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40"
               >
                 <td className="px-5 py-3">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-600">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                       {user.name
                         .split(" ")
                         .map((n) => n[0])
@@ -679,11 +485,11 @@ function RecentUsers() {
                     </div>
 
                     <div>
-                      <p className="text-xs font-semibold text-slate-800">
+                      <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
                         {user.name}
                       </p>
 
-                      <p className="text-[10px] text-slate-400">
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500">
                         {user.email}
                       </p>
                     </div>
@@ -692,14 +498,11 @@ function RecentUsers() {
 
                 <td className="px-5 py-3">
                   <span
-                    className={`
-                    rounded-full px-2 py-1 text-[9px] font-semibold
-                    ${
+                    className={`rounded-full px-2 py-1 text-[9px] font-semibold ${
                       user.role === "Worker"
-                        ? "bg-blue-50 text-blue-600"
-                        : "bg-violet-50 text-violet-600"
-                    }
-                  `}
+                        ? "bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
+                        : "bg-violet-50 text-violet-600 dark:bg-violet-950/50 dark:text-violet-400"
+                    }`}
                   >
                     {user.role}
                   </span>
@@ -707,25 +510,22 @@ function RecentUsers() {
 
                 <td className="px-5 py-3">
                   <span
-                    className={`
-                    inline-flex items-center gap-1 rounded-full px-2 py-1 text-[9px] font-semibold
-                    ${
+                    className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[9px] font-semibold ${
                       user.status === "Active"
-                        ? "bg-emerald-50 text-emerald-600"
-                        : "bg-red-50 text-red-600"
-                    }
-                  `}
+                        ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
+                        : "bg-red-50 text-red-600 dark:bg-red-950/50 dark:text-red-400"
+                    }`}
                   >
                     <span className="h-1.5 w-1.5 rounded-full bg-current" />
                     {user.status}
                   </span>
                 </td>
 
-                <td className="px-5 py-3 text-[10px] text-slate-500">
+                <td className="px-5 py-3 text-[10px] text-slate-500 dark:text-slate-400">
                   {user.joined}
                 </td>
 
-                <td className="px-5 py-3 text-slate-400">
+                <td className="px-5 py-3 text-slate-400 dark:text-slate-600">
                   ⋯
                 </td>
               </tr>
@@ -741,43 +541,41 @@ function RecentUsers() {
 
 function RecentJobs() {
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex items-center justify-between border-b border-slate-100 p-5">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex items-center justify-between border-b border-slate-100 p-5 dark:border-slate-800">
         <div>
-          <h2 className="font-semibold text-slate-900">
+          <h2 className="font-semibold text-slate-900 dark:text-white">
             Recent Jobs
           </h2>
 
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
             Latest jobs posted on the platform
           </p>
         </div>
 
-        <button className="text-xs font-medium text-blue-600">
+        <button className="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
           View all
         </button>
       </div>
 
-      <div className="divide-y divide-slate-100">
+      <div className="divide-y divide-slate-100 dark:divide-slate-800">
         {recentJobs.map((job) => (
           <div
             key={job.title}
-            className="flex items-center gap-3 px-5 py-3 transition hover:bg-slate-50"
+            className="flex items-center gap-3 px-5 py-3 transition hover:bg-slate-50 dark:hover:bg-slate-800/40"
           >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400">
               <BriefcaseBusiness size={16} />
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-semibold text-slate-800">
+              <p className="truncate text-xs font-semibold text-slate-800 dark:text-slate-200">
                 {job.title}
               </p>
 
-              <div className="mt-1 flex flex-wrap items-center gap-2 text-[9px] text-slate-400">
+              <div className="mt-1 flex flex-wrap items-center gap-2 text-[9px] text-slate-400 dark:text-slate-500">
                 <span>{job.category}</span>
-
                 <span>•</span>
-
                 <span className="flex items-center gap-1">
                   <MapPin size={9} />
                   {job.location}
@@ -786,29 +584,26 @@ function RecentJobs() {
             </div>
 
             <div className="hidden text-right sm:block">
-              <p className="text-[10px] font-semibold text-slate-600">
+              <p className="text-[10px] font-semibold text-slate-600 dark:text-slate-300">
                 {job.applicants}
               </p>
 
-              <p className="text-[9px] text-slate-400">
+              <p className="text-[9px] text-slate-400 dark:text-slate-500">
                 applicants
               </p>
             </div>
 
             <span
-              className={`
-              rounded-full px-2 py-1 text-[9px] font-semibold
-              ${
+              className={`rounded-full px-2 py-1 text-[9px] font-semibold ${
                 job.status === "Open"
-                  ? "bg-emerald-50 text-emerald-600"
-                  : "bg-blue-50 text-blue-600"
-              }
-            `}
+                  ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
+                  : "bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
+              }`}
             >
               {job.status}
             </span>
 
-            <span className="text-slate-300">⋯</span>
+            <span className="text-slate-300 dark:text-slate-600">⋯</span>
           </div>
         ))}
       </div>

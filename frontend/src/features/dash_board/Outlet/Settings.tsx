@@ -122,18 +122,18 @@ export default function Settings() {
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <div className="flex items-center gap-2 text-sm text-slate-500">
+          <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
             <SettingsIcon size={16} />
             <span>Administration</span>
             <span>/</span>
             <span>Settings</span>
           </div>
 
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">
             Platform Settings
           </h1>
 
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Configure and manage your platform without changing the application
             code.
           </p>
@@ -141,7 +141,7 @@ export default function Settings() {
 
         <button
           onClick={saveSettings}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700"
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500"
         >
           <Save size={17} />
           Save Changes
@@ -150,15 +150,15 @@ export default function Settings() {
 
       {/* Maintenance warning */}
       {settings.maintenanceMode && (
-        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <AlertTriangle className="mt-0.5 text-amber-600" size={20} />
+        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/40 p-4">
+          <AlertTriangle className="mt-0.5 text-amber-600 dark:text-amber-400" size={20} />
 
           <div>
-            <p className="font-medium text-amber-900">
+            <p className="font-medium text-amber-900 dark:text-amber-300">
               Maintenance mode is enabled
             </p>
 
-            <p className="mt-1 text-sm text-amber-700">
+            <p className="mt-1 text-sm text-amber-700 dark:text-amber-400/80">
               Normal users may not be able to access the platform while
               maintenance mode is active.
             </p>
@@ -168,7 +168,7 @@ export default function Settings() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[270px_1fr]">
         {/* Settings navigation */}
-        <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-2">
+        <aside className="h-fit rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const active = activeSection === item.id;
@@ -179,15 +179,15 @@ export default function Settings() {
                 onClick={() => setActiveSection(item.id)}
                 className={`mb-1 flex w-full items-start gap-3 rounded-xl p-3 text-left transition ${
                   active
-                    ? "bg-blue-50 text-blue-700"
-                    : "text-slate-600 hover:bg-slate-50"
+                    ? "bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400"
+                    : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/60"
                 }`}
               >
                 <div
                   className={`mt-0.5 rounded-lg p-2 ${
                     active
-                      ? "bg-blue-100 text-blue-700"
-                      : "bg-slate-100 text-slate-500"
+                      ? "bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
                   }`}
                 >
                   <Icon size={18} />
@@ -196,7 +196,7 @@ export default function Settings() {
                 <div>
                   <p className="text-sm font-medium">{item.label}</p>
 
-                  <p className="mt-0.5 text-xs text-slate-400">
+                  <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
                     {item.description}
                   </p>
                 </div>
@@ -374,7 +374,7 @@ function UserSettings({ settings, updateSetting }: any) {
           }
         />
 
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-slate-400 dark:text-slate-500">
           This should trigger a review rather than immediately banning the
           account.
         </p>
@@ -464,12 +464,12 @@ function ModerationSettings({ settings, updateSetting }: any) {
         />
 
         {settings.autoModeration && (
-          <div className="rounded-lg border border-blue-100 bg-blue-50 p-4">
-            <p className="text-sm font-medium text-blue-900">
+          <div className="rounded-lg border border-blue-100 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/40 p-4">
+            <p className="text-sm font-medium text-blue-900 dark:text-blue-300">
               Automatic moderation is enabled
             </p>
 
-            <p className="mt-1 text-xs text-blue-700">
+            <p className="mt-1 text-xs text-blue-700 dark:text-blue-400/80">
               Automated moderation should flag content for review. It should
               not permanently ban users without administrator review.
             </p>
@@ -494,15 +494,15 @@ function ModerationSettings({ settings, updateSetting }: any) {
           ].map((category) => (
             <label
               key={category}
-              className="flex items-center gap-3 rounded-lg border border-slate-200 p-3"
+              className="flex items-center gap-3 rounded-lg border border-slate-200 dark:border-slate-800 p-3 bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer"
             >
               <input
                 type="checkbox"
                 defaultChecked
-                className="h-4 w-4 rounded border-slate-300 text-blue-600"
+                className="h-4 w-4 rounded border-slate-300 dark:border-slate-700 text-blue-600 bg-transparent dark:bg-slate-900"
               />
 
-              <span className="text-sm text-slate-700">
+              <span className="text-sm text-slate-700 dark:text-slate-300">
                 {category}
               </span>
             </label>
@@ -598,18 +598,18 @@ function SecuritySettings({ settings, updateSetting }: any) {
         title="Administrator account"
         description="Manage your administrator authentication."
       >
-        <button className="flex w-full items-center justify-between rounded-xl border border-slate-200 p-4 text-left transition hover:bg-slate-50">
+        <button className="flex w-full items-center justify-between rounded-xl border border-slate-200 dark:border-slate-800 p-4 text-left transition hover:bg-slate-50 dark:hover:bg-slate-800/40">
           <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-slate-100 p-2">
+            <div className="rounded-lg bg-slate-100 dark:bg-slate-800 p-2 text-slate-500 dark:text-slate-400">
               <KeyRound size={18} />
             </div>
 
             <div>
-              <p className="text-sm font-medium text-slate-900">
+              <p className="text-sm font-medium text-slate-900 dark:text-white">
                 Change admin password
               </p>
 
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Update the password used to access the admin dashboard.
               </p>
             </div>
@@ -632,15 +632,15 @@ function SecuritySettings({ settings, updateSetting }: any) {
           }
         />
 
-        <div className="flex items-center gap-3 rounded-xl border border-slate-200 p-4">
-          <Smartphone size={20} className="text-slate-500" />
+        <div className="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
+          <Smartphone size={20} className="text-slate-500 dark:text-slate-400" />
 
           <div>
-            <p className="text-sm font-medium text-slate-900">
+            <p className="text-sm font-medium text-slate-900 dark:text-white">
               Authentication app
             </p>
 
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               Use an authenticator application for verification codes.
             </p>
           </div>
@@ -699,14 +699,14 @@ function SecuritySettings({ settings, updateSetting }: any) {
         title="Suspicious login attempts"
         description="Review unsuccessful or unusual administrator login attempts."
       >
-        <div className="rounded-xl border border-slate-200 p-4">
+        <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-900">
+              <p className="text-sm font-medium text-slate-900 dark:text-white">
                 No suspicious activity
               </p>
 
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                 No suspicious administrator login attempts detected recently.
               </p>
             </div>
@@ -747,21 +747,21 @@ function PlatformSettings({ settings, updateSetting }: any) {
         />
 
         <div>
-          <label className="mb-2 block text-sm font-medium text-slate-700">
+          <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
             Platform logo
           </label>
 
-          <button className="flex w-full items-center gap-3 rounded-xl border border-dashed border-slate-300 p-5 text-left hover:bg-slate-50">
-            <div className="rounded-lg bg-slate-100 p-3">
-              <Upload size={20} className="text-slate-500" />
+          <button className="flex w-full items-center gap-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-5 text-left hover:bg-slate-50 dark:hover:bg-slate-800/40">
+            <div className="rounded-lg bg-slate-100 dark:bg-slate-800 p-3">
+              <Upload size={20} className="text-slate-500 dark:text-slate-400" />
             </div>
 
             <div>
-              <p className="text-sm font-medium text-slate-900">
+              <p className="text-sm font-medium text-slate-900 dark:text-white">
                 Upload platform logo
               </p>
 
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                 PNG, JPG or SVG. Recommended square logo.
               </p>
             </div>
@@ -798,15 +798,15 @@ function PlatformSettings({ settings, updateSetting }: any) {
         />
 
         {settings.maintenanceMode && (
-          <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
-            <Wrench size={19} className="text-amber-600" />
+          <div className="flex items-start gap-3 rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/40 p-4">
+            <Wrench size={19} className="text-amber-600 dark:text-amber-400" />
 
             <div>
-              <p className="text-sm font-medium text-amber-900">
+              <p className="text-sm font-medium text-amber-900 dark:text-amber-300">
                 Platform maintenance is active
               </p>
 
-              <p className="mt-1 text-xs text-amber-700">
+              <p className="mt-1 text-xs text-amber-700 dark:text-amber-400/80">
                 Consider allowing administrators to continue accessing the
                 dashboard during maintenance.
               </p>
@@ -832,18 +832,18 @@ function SettingsCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-      <div className="border-b border-slate-200 px-5 py-5 sm:px-6">
-        <h2 className="text-base font-semibold text-slate-900">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+      <div className="border-b border-slate-200 dark:border-slate-800 px-5 py-5 sm:px-6">
+        <h2 className="text-base font-semibold text-slate-900 dark:text-white">
           {title}
         </h2>
 
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           {description}
         </p>
       </div>
 
-      <div className="divide-y divide-slate-100 px-5 sm:px-6">
+      <div className="divide-y divide-slate-100 dark:divide-slate-800/60 px-5 sm:px-6">
         {children}
       </div>
     </div>
@@ -864,9 +864,9 @@ function Toggle({
   return (
     <div className="flex items-center justify-between gap-6 py-5">
       <div>
-        <p className="text-sm font-medium text-slate-900">{label}</p>
+        <p className="text-sm font-medium text-slate-900 dark:text-white">{label}</p>
 
-        <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">
+        <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500 dark:text-slate-400">
           {description}
         </p>
       </div>
@@ -875,7 +875,7 @@ function Toggle({
         type="button"
         onClick={() => onChange(!checked)}
         className={`relative h-6 w-11 shrink-0 rounded-full transition ${
-          checked ? "bg-blue-600" : "bg-slate-300"
+          checked ? "bg-blue-600 dark:bg-blue-600" : "bg-slate-300 dark:bg-slate-700"
         }`}
         aria-label={label}
       >
@@ -900,7 +900,7 @@ function NumberInput({
 }) {
   return (
     <div className="py-4">
-      <label className="mb-2 block text-sm font-medium text-slate-700">
+      <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
         {label}
       </label>
 
@@ -908,7 +908,7 @@ function NumberInput({
         type="number"
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full max-w-sm rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+        className="w-full max-w-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent dark:bg-slate-900 px-3 py-2.5 text-sm text-slate-900 dark:text-white outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-950"
       />
     </div>
   );
@@ -925,14 +925,14 @@ function TextInput({
 }) {
   return (
     <div className="py-4">
-      <label className="mb-2 block text-sm font-medium text-slate-700">
+      <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
         {label}
       </label>
 
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+        className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent dark:bg-slate-900 px-3 py-2.5 text-sm text-slate-900 dark:text-white outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-950"
       />
     </div>
   );
@@ -947,14 +947,14 @@ function TextArea({
 }) {
   return (
     <div className="py-4">
-      <label className="mb-2 block text-sm font-medium text-slate-700">
+      <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
         {label}
       </label>
 
       <textarea
         rows={7}
         placeholder={placeholder}
-        className="w-full resize-y rounded-lg border border-slate-300 px-3 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+        className="w-full resize-y rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent dark:bg-slate-900 px-3 py-3 text-sm text-slate-900 dark:text-white outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-950"
       />
     </div>
   );
@@ -972,29 +972,29 @@ function SessionItem({
   active?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between rounded-xl border border-slate-200 p-4">
+    <div className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-slate-800 p-4">
       <div className="flex items-center gap-3">
-        <div className="rounded-lg bg-slate-100 p-2 text-slate-500">
+        <div className="rounded-lg bg-slate-100 dark:bg-slate-800 p-2 text-slate-500 dark:text-slate-400">
           {icon}
         </div>
 
         <div>
-          <p className="text-sm font-medium text-slate-900">
+          <p className="text-sm font-medium text-slate-900 dark:text-white">
             {device}
           </p>
 
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             {location}
           </p>
         </div>
       </div>
 
       {active ? (
-        <span className="rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700">
+        <span className="rounded-full bg-green-50 dark:bg-green-950/50 px-2.5 py-1 text-xs font-medium text-green-700 dark:text-green-400">
           Active
         </span>
       ) : (
-        <button className="text-xs font-medium text-red-600 hover:text-red-700">
+        <button className="text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-700">
           Sign out
         </button>
       )}

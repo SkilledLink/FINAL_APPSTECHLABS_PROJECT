@@ -105,22 +105,22 @@ export default function Workers() {
       {/* Header */}
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
-          <p className="text-sm font-medium text-blue-600">
+          <p className="text-sm font-medium text-blue-600 dark:text-blue-400">
             Workforce
           </p>
 
-          <h1 className="mt-1 text-3xl font-bold text-slate-900">
+          <h1 className="mt-1 text-3xl font-bold text-slate-900 dark:text-white">
             Workers
           </h1>
 
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Manage all skilled workers registered on the platform.
           </p>
         </div>
 
         <button
           onClick={() => setShowModal(true)}
-          className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700"
+          className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 transition-colors"
         >
           <Plus size={18} />
           Add Worker
@@ -128,40 +128,40 @@ export default function Workers() {
       </div>
 
       {/* Search */}
-      <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 shadow-sm">
-        <Search size={18} className="text-slate-400" />
+      <div className="flex items-center gap-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 shadow-sm transition-colors">
+        <Search size={18} className="text-slate-400 dark:text-slate-500" />
 
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search workers..."
-          className="w-full py-3 text-sm outline-none"
+          className="w-full py-3 text-sm bg-transparent outline-none text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500"
         />
       </div>
 
       {/* Workers */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm transition-colors">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[800px]">
             <thead>
-              <tr className="border-b border-slate-100 bg-slate-50">
-                <th className="px-5 py-4 text-left text-xs font-semibold text-slate-500">
+              <tr className="border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                <th className="px-5 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400">
                   Worker
                 </th>
 
-                <th className="px-5 py-4 text-left text-xs font-semibold text-slate-500">
+                <th className="px-5 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400">
                   Profession
                 </th>
 
-                <th className="px-5 py-4 text-left text-xs font-semibold text-slate-500">
+                <th className="px-5 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400">
                   Location
                 </th>
 
-                <th className="px-5 py-4 text-left text-xs font-semibold text-slate-500">
+                <th className="px-5 py-4 text-left text-xs font-semibold text-slate-500 dark:text-slate-400">
                   Status
                 </th>
 
-                <th className="px-5 py-4 text-right text-xs font-semibold text-slate-500">
+                <th className="px-5 py-4 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">
                   Actions
                 </th>
               </tr>
@@ -171,11 +171,11 @@ export default function Workers() {
               {filteredWorkers.map((worker) => (
                 <tr
                   key={worker.id}
-                  className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                  className="border-b border-slate-100 dark:border-slate-700/50 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
                 >
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 font-bold text-blue-600">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-500/10 font-bold text-blue-600 dark:text-blue-400">
                         {worker.name
                           .split(" ")
                           .map((n) => n[0])
@@ -183,22 +183,22 @@ export default function Workers() {
                       </div>
 
                       <div>
-                        <p className="text-sm font-semibold text-slate-800">
+                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                           {worker.name}
                         </p>
 
-                        <p className="text-xs text-slate-400">
+                        <p className="text-xs text-slate-400 dark:text-slate-500">
                           {worker.email}
                         </p>
                       </div>
                     </div>
                   </td>
 
-                  <td className="px-5 py-4 text-sm text-slate-600">
+                  <td className="px-5 py-4 text-sm text-slate-600 dark:text-slate-300">
                     {worker.profession}
                   </td>
 
-                  <td className="px-5 py-4 text-sm text-slate-600">
+                  <td className="px-5 py-4 text-sm text-slate-600 dark:text-slate-300">
                     {worker.location}
                   </td>
 
@@ -206,8 +206,8 @@ export default function Workers() {
                     <span
                       className={`rounded-full px-3 py-1 text-xs font-semibold ${
                         worker.status === "Active"
-                          ? "bg-emerald-50 text-emerald-600"
-                          : "bg-red-50 text-red-600"
+                          ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
+                          : "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400"
                       }`}
                     >
                       {worker.status}
@@ -216,15 +216,13 @@ export default function Workers() {
 
                   <td className="px-5 py-4">
                     <div className="flex justify-end gap-2">
-                      <button className="rounded-lg p-2 text-slate-500 hover:bg-slate-100">
+                      <button className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors">
                         <Pencil size={16} />
                       </button>
 
                       <button
-                        onClick={() =>
-                          deleteWorker(worker.id)
-                        }
-                        className="rounded-lg p-2 text-red-500 hover:bg-red-50"
+                        onClick={() => deleteWorker(worker.id)}
+                        className="rounded-lg p-2 text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10 transition-colors"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -239,22 +237,22 @@ export default function Workers() {
 
       {/* Add Worker Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b p-5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 dark:bg-slate-950/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-slate-800 shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 p-5">
               <div>
-                <h2 className="font-bold text-slate-900">
+                <h2 className="font-bold text-slate-900 dark:text-white">
                   Add Worker
                 </h2>
 
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-400 dark:text-slate-400">
                   Create a worker profile
                 </p>
               </div>
 
               <button
                 onClick={() => setShowModal(false)}
-                className="rounded-lg p-2 hover:bg-slate-100"
+                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors"
               >
                 <X size={18} />
               </button>
@@ -267,7 +265,7 @@ export default function Workers() {
                 onChange={(e) =>
                   setForm({ ...form, name: e.target.value })
                 }
-                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500"
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-3 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-blue-500 dark:focus:border-blue-500 transition-colors"
                 required
               />
 
@@ -278,7 +276,7 @@ export default function Workers() {
                 onChange={(e) =>
                   setForm({ ...form, email: e.target.value })
                 }
-                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500"
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-3 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-blue-500 dark:focus:border-blue-500 transition-colors"
                 required
               />
 
@@ -291,7 +289,7 @@ export default function Workers() {
                     profession: e.target.value,
                   })
                 }
-                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500"
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-3 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-blue-500 dark:focus:border-blue-500 transition-colors"
                 required
               />
 
@@ -304,13 +302,13 @@ export default function Workers() {
                     location: e.target.value,
                   })
                 }
-                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500"
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-3 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-blue-500 dark:focus:border-blue-500 transition-colors"
                 required
               />
 
               <button
                 type="submit"
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 transition-colors mt-2"
               >
                 <UserCheck size={17} />
                 Add Worker
