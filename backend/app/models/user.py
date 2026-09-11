@@ -5,9 +5,9 @@ from uuid import UUID, uuid4
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.enums.user import AccountStatus, AccountType
-from app.models.professional import Professional
 
 if TYPE_CHECKING:
+    from app.models.professional import Professional
     from app.models.job import Job
     from app.models.professional_portfolio import ProfessionalPortfolio
     from app.models.feed import Feed
@@ -152,9 +152,15 @@ class User(SQLModel, table=True):
     # RELATIONSHIPS
     # ============================================================
 
+    # ⚠️ `foreign_keys` is REQUIRED because `professionals` has 3 FKs
+    # pointing at `users.id` (user_id, admin_override_by, deleted_by_user_id).
+    # Without this hint, SQLAlchemy raises AmbiguousForeignKeysError.
     professional: Optional["Professional"] = Relationship(
         back_populates="user",
-        sa_relationship_kwargs={"uselist": False},
+        sa_relationship_kwargs={
+            "uselist": False,
+            "foreign_keys": "[Professional.user_id]",
+        },
     )
 
     refresh_tokens: list["RefreshToken"] = Relationship(
