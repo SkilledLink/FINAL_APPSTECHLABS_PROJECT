@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Project, Category } from '../types/portfolio.types';
+import type { Project, Category } from '../types/portfolio.types';
 import { portfolioService } from '../services/portfolioService';
 
 export function usePortfolio() {

@@ -42,6 +42,9 @@ import { DiscoverPage } from "./features/discover";
 
 // Portfolio
 import PortfolioDashboard from "./features/portfolio/pages/PortfolioDashboard";
+import { PortfolioPage } from "./features/Portfo/pages/PortfolioPage";
+
+// Users
 import UsersPage from "./features/users/pages/UsersPage";
 
 // Admin
@@ -65,9 +68,6 @@ import { VerificationPage } from "./verification/pages/VerificationPage";
 // Marketplace
 import Marketplace from "./features/Market/pages/Marketplace/Marketplace";
 
-// portfo
-import { PortfolioPage } from "./features/Portfo/pages/PortfolioPage";
-
 
 // ============================================================
 // PUBLIC ONLY ROUTE
@@ -84,8 +84,6 @@ function PublicOnlyRoute() {
 }
 
 
-
-
 // ============================================================
 // PROFILE ROUTE
 // ============================================================
@@ -94,6 +92,28 @@ function ProfileRoute() {
   const { id } = useParams<{ id: string }>();
 
   return <ProfilePage userId={id ?? ""} />;
+}
+
+
+// ============================================================
+// PUBLIC PORTFOLIO ROUTE
+// ============================================================
+
+function PublicPortfolioRoute() {
+  const handleSelectProject = () => {
+    // Portfolio page is public and does not require project selection handling here.
+  };
+
+  const handleNavigateCreate = () => {
+    // Portfolio page is public and does not require creation handling here.
+  };
+
+  return (
+    <PortfolioPage
+      onSelectProject={handleSelectProject}
+      onNavigateCreate={handleNavigateCreate}
+    />
+  );
 }
 
 
@@ -161,6 +181,17 @@ function App() {
 
 
           {/* ==================================================
+              PUBLIC PORTFOLIO
+              Accessible regardless of authentication
+          ================================================== */}
+
+          <Route
+            path="/portfolio"
+            element={<PublicPortfolioRoute />}
+          />
+
+
+          {/* ==================================================
               MAIN APPLICATION
           ================================================== */}
 
@@ -204,14 +235,14 @@ function App() {
               element={<DiscoverPage />}
             />
 
-            {/* Portfolio */}
+            {/* Portfolio Dashboard */}
             <Route
-              path="portfolio"
+              path="portfolio-dashboard"
               element={<PortfolioDashboard />}
-            /> 
+            />
 
             {/* Users */}
-             <Route
+            <Route
               path="users"
               element={<UsersPage />}
             />
@@ -229,7 +260,6 @@ function App() {
             />
 
           </Route>
-           {/*=======================================
 
 
           {/* ==================================================
@@ -317,7 +347,6 @@ function App() {
             element={<Navigate to="/" replace />}
           />
 
-      
         </Routes>
 
       </BrowserRouter>
@@ -326,3 +355,28 @@ function App() {
 }
 
 export default App;
+// ```
+
+// ### Public portfolio URL
+
+// The portfolio is now accessible at:
+
+// ```text
+// /portfolio/:id
+// ```
+
+// For example:
+
+// ```text
+// http://localhost:5173/portfolio/15
+// ```
+
+// This route is **outside `AppLayout` and `PublicOnlyRoute`**, so authentication does not affect access to it.
+
+// **Important:** I assumed your `PortfolioPage` accepts a `userId` prop, like:
+
+// ```tsx
+// <PortfolioPage userId={id ?? ""} />
+// ```
+
+// If your actual `PortfolioPage` does **not** accept `userId` and instead gets the user ID another way, show me that component and I'll adjust the route exactly to it.
