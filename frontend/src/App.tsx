@@ -137,6 +137,28 @@ function PublicPortfolioRoute() {
 
 
 // ============================================================
+// PUBLIC PORTFOLIO ROUTE
+// ============================================================
+
+function PublicPortfolioRoute() {
+  const handleSelectProject = () => {
+    // Portfolio page is public and does not require project selection handling here.
+  };
+
+  const handleNavigateCreate = () => {
+    // Portfolio page is public and does not require creation handling here.
+  };
+
+  return (
+    <PortfolioPage
+      onSelectProject={handleSelectProject}
+      onNavigateCreate={handleNavigateCreate}
+    />
+  );
+}
+
+
+// ============================================================
 // MAIN APP
 // ============================================================
 function App() {
@@ -198,6 +220,17 @@ function App() {
               <Route path="profile" element={<ProfileRoute />} />
               <Route path="profile/:id" element={<ProfileRoute />} />
             </Route>
+              PUBLIC PORTFOLIO
+              Accessible regardless of authentication
+          ================================================== */}
+
+          <Route
+            path="/portfolio"
+            element={<PublicPortfolioRoute />}
+          />
+
+
+          {/* ==================================================
               PUBLIC PORTFOLIO
               Accessible regardless of authentication
           ================================================== */}
