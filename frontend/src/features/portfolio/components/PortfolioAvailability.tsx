@@ -79,7 +79,7 @@ export default function PortfolioAvailability({ availability, onSave }: Props) {
       <div className="relative z-10">
         {/* Header Badge & Title */}
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/15 via-blue-500/10 to-indigo-500/15 dark:from-cyan-500/20 dark:to-blue-900/30 text-cyan-600 dark:text-cyan-400 flex items-center justify-center border border-cyan-500/20 shadow-inner">
+          <div className="w-1'0 h-10 rounded-xl bg-gradient-to-br from-cyan-500/15 via-blue-500/10 to-indigo-500/15 dark:from-cyan-500/20 dark:to-blue-900/30 text-cyan-600 dark:text-cyan-400 flex items-center justify-center border border-cyan-500/20 shadow-inner">
             <Calendar size={20} />
           </div>
           <div>

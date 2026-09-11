@@ -38,10 +38,10 @@ export const BeforeAfter: React.FC<BeforeAfterProps> = ({ beforeImage, afterImag
 
         {/* Interactive Slider Bar */}
         <div 
-          className="absolute inset-y-0 w-1 bg-amber-500 cursor-ew-resize"
+          className="absolute inset-y-0 w-1 bg-blue-500 cursor-ew-resize"
           style={{ left: `${sliderPosition}%` }}
         >
-          <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-amber-500 border-2 border-white shadow-lg flex items-center justify-center text-white text-xs font-bold">
+          <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-blue-500 border-2 border-white shadow-lg flex items-center justify-center text-white text-xs font-bold">
             ↔
           </div>
         </div>
