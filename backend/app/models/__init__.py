@@ -12,6 +12,7 @@ from app.models.refresh_token import RefreshToken
 # from app.models.verification import Verification
 from app.models.verification_token import VerificationToken
 # from app.models.password_reset_token import PasswordResetToken
+from app.models.audit_log import AuditLog
 
 # from app.models.role import Role
 # from app.models.permission import Permission

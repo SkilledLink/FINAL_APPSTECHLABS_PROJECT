@@ -25,6 +25,7 @@ from app.api.v1.feeds import router as feeds_router
 from app.api.v1 import search
 from app.api.v1 import chat
 from app.api.v1.chat import router as chat_router
+from app.models.audit_log import AuditLog  # noqa: F401  registers with SQLModel.metadata
 
 # ─── Webhooks (global, not versioned) ──────────────────────
 from app.webhooks import router as webhooks_router
@@ -42,6 +43,8 @@ from app.models.message import Message
 from app.models.professional import Professional
 from app.models.professional_audit_log import ProfessionalAuditLog          # ✅ NEW
 from app.models.job import Job, JobImage, JobLike, JobComment
+from app.api.v1.admin import admin_router          # ✅ NEW
+from app.api.v1.moderator import moderator_router          # ✅ NEW
 from app.models.professional_portfolio import (
     ProfessionalCategory,
     ProfessionalSpecialty,
@@ -118,6 +121,9 @@ app.include_router(feeds_router)
 app.include_router(search.router, prefix="/api/v1")
 app.include_router(chat.router, prefix="/api/v1")
 app.include_router(chat_router)
+# ─── Admin & Moderator ─────────────────────────────────────
+app.include_router(admin_router)
+app.include_router(moderator_router)
 
 # Webhooks (global)
 app.include_router(webhooks_router)
