@@ -1,7 +1,13 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Link } from "react-router-dom";
-import { Eye, EyeOff, ArrowRight, Lock, Mail } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  Eye,
+  EyeOff,
+  ArrowRight,
+  Lock,
+  Mail,
+} from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import type { LoginCredentials } from "../types/auth.types";
 
@@ -11,7 +17,12 @@ interface LoginFormProps {
 
 export function LoginForm({ onSuccess }: LoginFormProps) {
   const { login, loading, error, clearError } = useAuth();
-  const [accountType, setAccountType] = useState<"client" | "professional">("client");
+  const navigate = useNavigate();
+
+  const [accountType, setAccountType] = useState<
+    "client" | "professional"
+  >("client");
+
   const [showPassword, setShowPassword] = useState(false);
   const [focused, setFocused] = useState<string | null>(null);
   const [email, setEmail] = useState("");
@@ -19,46 +30,65 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const credentials: LoginCredentials = { email, password, accountType };
+
+    const credentials: LoginCredentials = {
+      email,
+      password,
+      accountType,
+    };
+
     const ok = await login(credentials);
-    if (ok) onSuccess?.();
+
+    if (ok) {
+      onSuccess?.();
+      navigate("/home");
+    }
   };
 
   return (
-    <div 
+    <div
       className="max-w-md w-full bg-white border border-[#E2E8F0] rounded-2xl p-6 sm:p-8 shadow-sm"
       style={{ fontFamily: "'Hanken Grotesk', sans-serif" }}
     >
       <h1 className="text-[#0F172A] text-[26px] sm:text-[30px] font-bold tracking-tight">
         Sign in to Vantage
       </h1>
+
       <p className="text-[#64748B] text-[15px] mt-2">
         Use your account credentials to continue.
       </p>
 
-      {/* account type toggle */}
+      {/* Account type toggle */}
       <div className="mt-7 relative flex bg-[#F1F5F9] rounded-xl p-1">
         <div
           className="absolute top-1 bottom-1 w-[calc(50%-4px)] bg-[#0F172A] rounded-lg transition-transform duration-300 ease-out"
           style={{
             transform:
-              accountType === "client" ? "translateX(0)" : "translateX(calc(100% + 8px))",
+              accountType === "client"
+                ? "translateX(0)"
+                : "translateX(calc(100% + 8px))",
           }}
         />
+
         <button
           type="button"
           onClick={() => setAccountType("client")}
           className={`relative z-10 flex-1 text-sm font-medium py-2.5 rounded-lg transition-colors duration-300 ${
-            accountType === "client" ? "text-white" : "text-[#64748B]"
+            accountType === "client"
+              ? "text-white"
+              : "text-[#64748B]"
           }`}
         >
           Client
         </button>
+
         <button
           type="button"
           onClick={() => setAccountType("professional")}
           className={`relative z-10 flex-1 text-sm font-medium py-2.5 rounded-lg transition-colors duration-300 ${
-            accountType === "professional" ? "text-white" : "text-[#64748B]"
+            accountType === "professional"
+              ? "text-white"
+              : "text-[#64748B]"
           }`}
         >
           Professional
@@ -72,6 +102,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       )}
 
       <form onSubmit={handleSubmit} className="mt-7 space-y-4">
+        {/* Email */}
         <label className="block">
           <span
             className="text-[12.5px] font-medium text-[#475569] mb-1.5 block"
@@ -79,6 +110,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           >
             Email address
           </span>
+
           <div
             className={`flex items-center gap-2.5 rounded-xl border px-3.5 py-3 transition-all duration-200 ${
               focused === "email"
@@ -89,8 +121,13 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
             <Mail
               size={17}
               strokeWidth={1.8}
-              className={focused === "email" ? "text-[#4F46E5]" : "text-[#94A3B8]"}
+              className={
+                focused === "email"
+                  ? "text-[#4F46E5]"
+                  : "text-[#94A3B8]"
+              }
             />
+
             <input
               type="email"
               required
@@ -107,6 +144,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           </div>
         </label>
 
+        {/* Password */}
         <label className="block">
           <span
             className="text-[12.5px] font-medium text-[#475569] mb-1.5 block"
@@ -114,6 +152,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           >
             Password
           </span>
+
           <div
             className={`flex items-center gap-2.5 rounded-xl border px-3.5 py-3 transition-all duration-200 ${
               focused === "password"
@@ -124,8 +163,13 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
             <Lock
               size={17}
               strokeWidth={1.8}
-              className={focused === "password" ? "text-[#4F46E5]" : "text-[#94A3B8]"}
+              className={
+                focused === "password"
+                  ? "text-[#4F46E5]"
+                  : "text-[#94A3B8]"
+              }
             />
+
             <input
               type={showPassword ? "text" : "password"}
               required
@@ -139,17 +183,23 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
               placeholder="••••••••"
               className="flex-1 bg-transparent outline-none text-[14.5px] text-[#0F172A] placeholder:text-[#94A3B8]"
             />
+
             <button
               type="button"
-              onClick={() => setShowPassword((s) => !s)}
+              onClick={() => setShowPassword((value) => !value)}
               className="text-[#94A3B8] hover:text-[#64748B] transition-colors"
               tabIndex={-1}
             >
-              {showPassword ? <EyeOff size={17} strokeWidth={1.8} /> : <Eye size={17} strokeWidth={1.8} />}
+              {showPassword ? (
+                <EyeOff size={17} strokeWidth={1.8} />
+              ) : (
+                <Eye size={17} strokeWidth={1.8} />
+              )}
             </button>
           </div>
         </label>
 
+        {/* Forgot password */}
         <div className="flex justify-end -mt-1">
           <Link
             to="/forgot-password"
@@ -157,79 +207,9 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           >
             Forgot password?
           </Link>
-import React, { useState } from "react";
-
-export const LoginForm: React.FC = () => {
-  const [role, setRole] = useState<"CLIENT" | "PROFESSIONAL">("CLIENT");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Login submitted:", { role, email, password });
-  };
-
-  return (
-    <div className="w-full max-w-[360px] mx-auto flex flex-col items-center">
-      {/* Brand Header */}
-      <h1 className="text-2xl font-extrabold text-[#0d1b2a] tracking-tight mb-8">
-        Fieldwork
-      </h1>
-
-      <h2 className="text-2xl font-bold text-[#0d1b2a] mb-6">
-        Secure Sign In
-      </h2>
-
-      {/* Role Pill Switcher */}
-      <div className="w-full border border-[#0d1b2a] rounded-full p-1 flex bg-[#eef2f6] mb-6">
-        <button
-          type="button"
-          onClick={() => setRole("CLIENT")}
-          className={`flex-1 py-1.5 text-xs font-semibold rounded-full transition-all ${
-            role === "CLIENT"
-              ? "bg-[#0d1b2a] text-white shadow-sm"
-              : "text-[#0d1b2a] hover:bg-black/5"
-          }`}
-        >
-          Sign in as Client
-        </button>
-        <button
-          type="button"
-          onClick={() => setRole("PROFESSIONAL")}
-          className={`flex-1 py-1.5 text-xs font-semibold rounded-full transition-all ${
-            role === "PROFESSIONAL"
-              ? "bg-[#0d1b2a] text-white shadow-sm"
-              : "text-[#0d1b2a] hover:bg-black/5"
-          }`}
-        >
-          Sign in as Professional
-        </button>
-      </div>
-
-      {/* Form Fields */}
-      <form onSubmit={handleSubmit} className="w-full space-y-3.5">
-        <div>
-          <input
-            type="email"
-            placeholder="Email Address"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full px-3.5 py-2.5 bg-white border border-gray-400 rounded-md text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#0d1b2a]"
-          />
         </div>
 
-        <div>
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="w-full px-3.5 py-2.5 bg-white border border-gray-400 rounded-md text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#0d1b2a]"
-          />
-        </div>
-
+        {/* Submit */}
         <button
           type="submit"
           disabled={loading}
@@ -240,7 +220,10 @@ export const LoginForm: React.FC = () => {
           ) : (
             <>
               Sign in as {accountType}
-              <ArrowRight size={16} className="transition-transform duration-200 group-hover:translate-x-0.5" />
+              <ArrowRight
+                size={16}
+                className="transition-transform duration-200 group-hover:translate-x-0.5"
+              />
             </>
           )}
         </button>
@@ -248,10 +231,47 @@ export const LoginForm: React.FC = () => {
 
       <p className="mt-7 text-center text-[14px] text-[#64748B]">
         Don't have an account?{" "}
-        <Link to="/register" className="text-[#4F46E5] font-medium hover:text-[#3730A3]">
+        <Link
+          to="/register"
+          className="text-[#4F46E5] font-medium hover:text-[#3730A3]"
+        >
           Create one
         </Link>
       </p>
     </div>
   );
 }
+// ```
+
+// The important change is just:
+
+// ```tsx
+// import { Link, useNavigate } from "react-router-dom";
+// ```
+
+// then:
+
+// ```tsx
+// const navigate = useNavigate();
+// ```
+
+// and after successful login:
+
+// ```tsx
+// if (ok) {
+//   onSuccess?.();
+//   navigate("/home");
+// }
+// ```
+
+// So the flow becomes:
+
+// **Login succeeds → `ok === true` → `/home`**
+
+// Make sure your router actually has:
+
+// ```tsx
+// <Route path="/home" element={<Home />} />
+// ```
+
+// and not just `/`.
