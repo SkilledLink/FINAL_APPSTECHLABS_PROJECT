@@ -62,6 +62,9 @@ from app.models.feed import (
     Hashtag,
     FeedHashtag,
 )
+from app.models.moderation_record import ModerationRecord  # noqa: F401
+from app.models.notification import Notification  # noqa: F401
+from app.api.v1.notifications import router as notifications_router
 
 
 # ─── Lifespan ──────────────────────────────────────────────
@@ -124,6 +127,8 @@ app.include_router(chat_router)
 # ─── Admin & Moderator ─────────────────────────────────────
 app.include_router(admin_router)
 app.include_router(moderator_router)
+app.include_router(notifications_router)
+
 
 # Webhooks (global)
 app.include_router(webhooks_router)

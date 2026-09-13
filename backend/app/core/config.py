@@ -69,12 +69,14 @@ class Settings(BaseSettings):
 
     # ── Moderation ───────────────────────────────────────────
     MODERATION_ENABLED: bool = True
-    MODERATION_PROVIDER: str = "groq"            # "groq" | "gemini"
-    MODERATION_FALLBACK_PROVIDER: str = "gemini"
+    MODERATION_TEXT_PROVIDER: str = "groq"
+    MODERATION_TEXT_FALLBACK_PROVIDER: str = "gemini"
+    MODERATION_IMAGE_PROVIDER: str = "gemini"
+    MODERATION_IMAGE_FALLBACK_PROVIDER: str = "groq"
     MODERATION_TIMEOUT_SECONDS: int = 20
     MODERATION_MAX_RETRIES: int = 2
     MODERATION_IMAGE_MAX_DIMENSION: int = 768
-    MODERATION_GROQ_TEXT_MODEL: str = "meta-llama/llama-3.3-70b-versatile"
+    MODERATION_GROQ_TEXT_MODEL: str = "openai/gpt-oss-120b"
     MODERATION_GROQ_VISION_MODEL: str = "meta-llama/llama-4-scout-17b-16e-instruct"
     MODERATION_GROQ_BASE_URL: str = "https://api.groq.com/openai/v1"
     MODERATION_GEMINI_MODEL: str = "gemini-flash-latest"

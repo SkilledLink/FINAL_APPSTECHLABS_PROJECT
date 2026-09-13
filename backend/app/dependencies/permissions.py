@@ -16,6 +16,8 @@ _MODERATOR_CAPS: frozenset[Capability] = frozenset({
     Capability.MANAGE_COMMENTS,
     Capability.MANAGE_JOBS,
     Capability.VIEW_AUDIT_LOG,
+    Capability.MANAGE_MODERATION,   # ← new
+
 })
 
 

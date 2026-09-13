@@ -34,7 +34,8 @@ from app.models.conversation import Conversation
 from app.models.conversation_participant import ConversationParticipant
 from app.models.message import Message
 
-# from app.models.notification import Notification
 # from app.models.review import Review
 
 from app.models.knowledge_document import KnowledgeDocument
+from app.models.moderation_record import ModerationRecord  # noqa: F401
+from app.models.notification import Notification  # noqa: F401
