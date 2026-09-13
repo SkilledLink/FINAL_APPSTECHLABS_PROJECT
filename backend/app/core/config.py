@@ -64,4 +64,21 @@ class Settings(BaseSettings):
     NEARBY_MAX_RESULTS: int = 50
     LOCATION_PUBLIC_FUZZ_DECIMALS: int = 3
 
+        # ── Groq (existing, reused by moderation) ────────────────
+    GROQ_API_KEY: str = ""
+
+    # ── Moderation ───────────────────────────────────────────
+    MODERATION_ENABLED: bool = True
+    MODERATION_TEXT_PROVIDER: str = "groq"
+    MODERATION_TEXT_FALLBACK_PROVIDER: str = "gemini"
+    MODERATION_IMAGE_PROVIDER: str = "gemini"
+    MODERATION_IMAGE_FALLBACK_PROVIDER: str = "groq"
+    MODERATION_TIMEOUT_SECONDS: int = 20
+    MODERATION_MAX_RETRIES: int = 2
+    MODERATION_IMAGE_MAX_DIMENSION: int = 768
+    MODERATION_GROQ_TEXT_MODEL: str = "openai/gpt-oss-120b"
+    MODERATION_GROQ_VISION_MODEL: str = "meta-llama/llama-4-scout-17b-16e-instruct"
+    MODERATION_GROQ_BASE_URL: str = "https://api.groq.com/openai/v1"
+    MODERATION_GEMINI_MODEL: str = "gemini-flash-latest"
+
 settings = Settings()

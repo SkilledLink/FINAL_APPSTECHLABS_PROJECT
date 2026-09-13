@@ -1,11 +1,11 @@
 import {
-  BrowserRouter,
-  Routes,
-  Route,
-  Navigate,
-  Outlet,
-  useParams,
-  useNavigate,
+BrowserRouter,
+Routes,
+Route,
+Navigate,
+Outlet,
+useParams,
+useNavigate,
 } from "react-router-dom";
 
 import { ToastContainer } from "react-toastify";
@@ -74,279 +74,163 @@ import Overview from "./features/dash_board/Outlet/Overview";
 
 // TODO: replace with a real Professionals page if it exists
 const ProfessionalsPage = UsersPage;
-// Verification
-import { VerificationPage } from "./verification/pages/VerificationPage";
 
 // Marketplace
 import Marketplace from "./features/Market/pages/Marketplace/Marketplace";
-
 
 // ============================================================
 // PUBLIC-ONLY ROUTE
 // ============================================================
 function PublicOnlyRoute() {
-  const { isAuthenticated } = useAuth();
-  if (isAuthenticated()) return <Navigate to="/home" replace />;
-  return <Outlet />;
+const { isAuthenticated } = useAuth();
+if (isAuthenticated()) return <Navigate to="/home" replace />;
+return <Outlet />;
 }
 
 // ============================================================
 // PROTECTED ROUTE
 // ============================================================
 function ProtectedRoute() {
-  const { isAuthenticated } = useAuth();
-  if (!isAuthenticated()) return <Navigate to="/login" replace />;
-  return <Outlet />;
+const { isAuthenticated } = useAuth();
+if (!isAuthenticated()) return <Navigate to="/login" replace />;
+return <Outlet />;
 }
-
 
 // ============================================================
 // DYNAMIC ROUTE WRAPPERS
 // ============================================================
 function ProfileRoute() {
-  const { id } = useParams<{ id: string }>();
-  return <ProfilePage userId={id ?? ""} />;
+const { id } = useParams<{ id: string }>();
+return <ProfilePage userId={id ?? ""} />;
 }
 
 function JobDetailsRoute() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  return <JobDetailsPage jobId={id ?? ""} onBack={() => navigate(-1)} />;
+const { id } = useParams<{ id: string }>();
+const navigate = useNavigate();
+return <JobDetailsPage jobId={id ?? ""} onBack={() => navigate(-1)} />;
 }
 
 // ============================================================
 // PUBLIC PORTFOLIO ROUTE
 // ============================================================
-
 function PublicPortfolioRoute() {
-  const handleSelectProject = () => {
-    // Portfolio page is public and does not require project selection handling here.
-  };
+const handleSelectProject = () => {
+// Portfolio page is public and does not require project selection handling here.
+};
 
-  const handleNavigateCreate = () => {
-    // Portfolio page is public and does not require creation handling here.
-  };
+const handleNavigateCreate = () => {
+// Portfolio page is public and does not require creation handling here.
+};
 
-  return (
-    <PortfolioPage
-      onSelectProject={handleSelectProject}
-      onNavigateCreate={handleNavigateCreate}
-    />
-  );
+return ( <PortfolioPage
+   onSelectProject={handleSelectProject}
+   onNavigateCreate={handleNavigateCreate}
+ />
+);
 }
-
-
-// ============================================================
-// PUBLIC PORTFOLIO ROUTE
-// ============================================================
-
-function PublicPortfolioRoute() {
-  const handleSelectProject = () => {
-    // Portfolio page is public and does not require project selection handling here.
-  };
-
-  const handleNavigateCreate = () => {
-    // Portfolio page is public and does not require creation handling here.
-  };
-
-  return (
-    <PortfolioPage
-      onSelectProject={handleSelectProject}
-      onNavigateCreate={handleNavigateCreate}
-    />
-  );
-}
-
 
 // ============================================================
 // MAIN APP
 // ============================================================
 function App() {
-  return (
-    <AuthProvider>
-      <BrowserRouter>
-        <ToastContainer
-          position="top-right"
-          autoClose={3000}
-          hideProgressBar={false}
-          newestOnTop
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="light"
-        />
+return ( <AuthProvider> <BrowserRouter> <ToastContainer
+       position="top-right"
+       autoClose={3000}
+       hideProgressBar={false}
+       newestOnTop
+       closeOnClick
+       rtl={false}
+       pauseOnFocusLoss
+       draggable
+       pauseOnHover
+       theme="light"
+     />
 
-        {/* AI Widget */}
-        <AIFloatingWidget />
+    {/* AI Widget */}
+    <AIFloatingWidget />
 
-        <Routes>
-          {/* ==================================================
-              LANDING PAGE (PUBLIC)
-              ================================================== */}
-          <Route path="/" element={<LandingPage />} />
-
-          {/* ==================================================
-              AUTH ROUTES (PUBLIC-ONLY)
-              ================================================== */}
-          <Route element={<PublicOnlyRoute />}>
-            <Route element={<AuthLayout />}>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/verify-email" element={<VerifyEmailPage />} />
-              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
-            </Route>
-          </Route>
-
-          {/* ==================================================
-              AUTHENTICATED APPLICATION (PROTECTED)
-              ================================================== */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/home" element={<AppLayout />}>
-              <Route index element={<HomePage />} />
-              <Route path="dashboard" element={<DashboardPage />} />
-              <Route path="feed" element={<Feed />} />
-              <Route path="jobs" element={<JobsPage />} />
-              <Route path="jobs/:id" element={<JobDetailsRoute />} />
-              <Route path="discover" element={<NearbyProfessionalsPage />} />
-              <Route path="portfolio" element={<PortfolioDashboard />} />
-              <Route path="messages" element={<MessagesPage />} />
-              <Route path="professionals" element={<ProfessionalsPage />} />
-              <Route path="users" element={<UsersPage />} />
-              <Route path="verification" element={<VerificationPage />} />
-              <Route path="marketplace" element={<MarketplacePage />} />
-              <Route path="profile" element={<ProfileRoute />} />
-              <Route path="profile/:id" element={<ProfileRoute />} />
-            </Route>
-              PUBLIC PORTFOLIO
-              Accessible regardless of authentication
+    <Routes>
+      {/* ==================================================
+          LANDING PAGE (PUBLIC)
           ================================================== */}
+      <Route path="/" element={<LandingPage />} />
 
-          <Route
-            path="/portfolio"
-            element={<PublicPortfolioRoute />}
-          />
-
-
-          {/* ==================================================
-              PUBLIC PORTFOLIO
-              Accessible regardless of authentication
+      {/* ==================================================
+          AUTH ROUTES (PUBLIC-ONLY)
           ================================================== */}
+      <Route element={<PublicOnlyRoute />}>
+        <Route element={<AuthLayout />}>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+        </Route>
+      </Route>
 
-          <Route
-            path="/portfolio"
-            element={<PublicPortfolioRoute />}
-          />
-
-
-          {/* ==================================================
-              MAIN APPLICATION
+      {/* ==================================================
+          AUTHENTICATED APPLICATION (PROTECTED)
           ================================================== */}
+      <Route element={<ProtectedRoute />}>
+        <Route path="/home" element={<AppLayout />}>
+          <Route index element={<HomePage />} />
+          <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="feed" element={<Feed />} />
+          <Route path="jobs" element={<JobsPage />} />
+          <Route path="jobs/:id" element={<JobDetailsRoute />} />
+          <Route path="discover" element={<NearbyProfessionalsPage />} />
+          <Route path="portfolio" element={<PortfolioDashboard />} />
+          <Route path="messages" element={<MessagesPage />} />
+          <Route path="professionals" element={<ProfessionalsPage />} />
+          <Route path="users" element={<UsersPage />} />
+          <Route path="verification" element={<VerificationPage />} />
+          <Route path="marketplace" element={<MarketplacePage />} />
+          <Route path="profile" element={<ProfileRoute />} />
+          <Route path="profile/:id" element={<ProfileRoute />} />
+        </Route>
+      </Route>
 
-          <Route path="/" element={<AppLayout />}>
+      {/* ==================================================
+          PUBLIC PORTFOLIO
+          Accessible regardless of authentication
+          ================================================== */}
+      <Route
+        path="/portfolio"
+        element={<PublicPortfolioRoute />}
+      />
 
-            <Route
-              index
-              element={<HomePage />}
-            />
+      {/* ==================================================
+          ADMIN LOGIN
+          ================================================== */}
+      <Route path="/admin/login" element={<AdminLogin />} />
 
-            <Route
-              path="dashboard"
-              element={<DashboardPage />}
-            />
+      {/* ==================================================
+          PROTECTED ADMIN AREA
+          ================================================== */}
+      <Route element={<ProtectedAdminRoute />}>
+        <Route path="/admin" element={<AdminDashboard />}>
+          <Route index element={<Overview />} />
+          <Route path="overview" element={<Overview />} />
+          <Route path="jobs" element={<Jobs />} />
+          <Route path="workers" element={<Workers />} />
+          <Route path="users" element={<Users />} />
+          <Route path="posts" element={<Posts />} />
+          <Route path="verification" element={<Verification />} />
+          <Route path="reports" element={<Reports />} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="system-center" element={<SystemCenter />} />
+        </Route>
+      </Route>
 
-            <Route
-              path="feed"
-              element={<Feed />}
-            />
+      {/* ==================================================
+          CATCH-ALL
+          ================================================== */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  </BrowserRouter>
+</AuthProvider>
 
-            {/* Profile */}
-            <Route
-              path="profile"
-              element={<ProfileRoute />}
-            />
-
-            <Route
-              path="profile/:id"
-              element={<ProfileRoute />}
-            />
-
-            {/* Messages */}
-            <Route
-              path="messages"
-              element={<MessagesPage />}
-            />
-
-            {/* Discover */}
-            <Route
-              path="discover"
-              element={<DiscoverPage />}
-            />
-
-            {/* Portfolio Dashboard */}
-            <Route
-              path="portfolio-dashboard"
-              element={<PortfolioDashboard />}
-            />
-
-            {/* Users */}
-            <Route
-              path="users"
-              element={<UsersPage />}
-            />
-
-            {/* Verification */}
-            <Route
-              path="verification"
-              element={<VerificationPage />}
-            />
-
-            {/* Marketplace */}
-            <Route
-              path="marketplace"
-              element={<Marketplace />}
-            />
-
-          </Route>
-
-          {/* ==================================================
-              ADMIN LOGIN
-              ================================================== */}
-          <Route path="/admin/login" element={<AdminLogin />} />
-
-          {/* ==================================================
-              PROTECTED ADMIN AREA
-              ================================================== */}
-          <Route element={<ProtectedAdminRoute />}>
-            <Route path="/admin" element={<AdminDashboard />}>
-              <Route index element={<Overview />} />
-              <Route path="overview" element={<Overview />} />
-              <Route path="jobs" element={<Jobs />} />
-              <Route path="workers" element={<Workers />} />
-              <Route path="users" element={<Users />} />
-              <Route path="posts" element={<Posts />} />
-              <Route path="verification" element={<Verification />} />
-              <Route path="reports" element={<Reports />} />
-              <Route path="settings" element={<Settings />} />
-              <Route path="system-center" element={<SystemCenter />} />
-            </Route>
-          </Route>
-
-          {/* ==================================================
-              CATCH-ALL
-              ================================================== */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-              CATCH ALL
-
-          <Route
-            path="*"
-          />
-
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
-  );
+);
 }
+
 export default App;

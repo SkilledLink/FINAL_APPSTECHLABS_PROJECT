@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from app.schemas.user import UserResponse
+from app.schemas.moderation import ModerationSummary
 
 
 # ─────────────────────────────────────────────────────────────
@@ -63,7 +64,7 @@ class FeedResponse(BaseModel):
     status: str
     is_public: bool
     user_id: UUID
-    is_deleted: bool = False   # ✅ NEW
+    is_deleted: bool = False
 
     created_at: datetime
     updated_at: datetime
@@ -76,6 +77,9 @@ class FeedResponse(BaseModel):
     media: List[FeedMediaResponse] = Field(default_factory=list)
     hashtags: List[HashtagResponse] = Field(default_factory=list)
     comments: List[FeedCommentResponse] = Field(default_factory=list)
+
+    # ─── Moderation summary (only populated for owner / admin / moderator) ──
+    moderation: Optional[ModerationSummary] = None
 
     class Config:
         from_attributes = True
