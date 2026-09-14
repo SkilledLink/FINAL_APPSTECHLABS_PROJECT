@@ -1,24 +1,24 @@
 import {
-  Heart,
-  MessageCircle,
-  Share2,
-  ImageIcon,
   ArrowUpRight,
-  Send,
-  Sparkles,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  X,
+  Heart,
+  ImageIcon,
   Maximize2,
+  MessageCircle,
+  Send,
+  Share2,
+  Sparkles,
+  X,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
-import type { Job } from '../types/job.types';
-import { useToggleJobLike, useJobComments } from '../hooks/useJobs';
-import { timeAgo, truncate } from '../utils/format';
 import { useAuth } from '../../auth/hooks/useAuth';
+import { useJobComments, useToggleJobLike } from '../hooks/useJobs';
+import type { Job } from '../types/job.types';
+import { timeAgo, truncate } from '../utils/format';
 import Avatar from './Avatar';
 
 interface JobCardProps {
@@ -33,22 +33,26 @@ const STATUS_CONFIG: Record<
 > = {
   published: {
     label: 'Active',
-    badge: 'bg-emerald-500/10 text-emerald-700 ring-emerald-600/20 backdrop-blur-md dark:text-emerald-400 dark:ring-emerald-400/30',
+    badge:
+      'bg-emerald-500/10 text-emerald-700 ring-emerald-600/20 backdrop-blur-md dark:text-emerald-400 dark:ring-emerald-400/30',
     dot: 'bg-emerald-500 animate-pulse',
   },
   draft: {
     label: 'Draft',
-    badge: 'bg-slate-500/10 text-slate-700 ring-slate-600/20 backdrop-blur-md dark:text-slate-300 dark:ring-slate-400/30',
+    badge:
+      'bg-slate-500/10 text-slate-700 ring-slate-600/20 backdrop-blur-md dark:text-slate-300 dark:ring-slate-400/30',
     dot: 'bg-slate-400',
   },
   closed: {
     label: 'Closed',
-    badge: 'bg-rose-500/10 text-rose-700 ring-rose-600/20 backdrop-blur-md dark:text-rose-400 dark:ring-rose-400/30',
+    badge:
+      'bg-rose-500/10 text-rose-700 ring-rose-600/20 backdrop-blur-md dark:text-rose-400 dark:ring-rose-400/30',
     dot: 'bg-rose-500',
   },
   archived: {
     label: 'Archived',
-    badge: 'bg-amber-500/10 text-amber-700 ring-amber-600/20 backdrop-blur-md dark:text-amber-400 dark:ring-amber-400/30',
+    badge:
+      'bg-amber-500/10 text-amber-700 ring-amber-600/20 backdrop-blur-md dark:text-amber-400 dark:ring-amber-400/30',
     dot: 'bg-amber-500',
   },
 };
@@ -70,37 +74,47 @@ export default function JobCard({ job, onOpenDetails, onPatch }: JobCardProps) {
   const [animateLike, setAnimateLike] = useState(false);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
+  // Sync internal state if job prop updates from parent refetching
+  useEffect(() => {
+    setIsLiked(job.is_liked);
+    setLikesCount(job.likes_count);
+    setCommentsCount(job.comments_count);
+    setComments(job.comments ?? []);
+    setActiveImageIndex(0);
+  }, [job]);
+
   const authorName = job.user
     ? `${job.user.first_name || ''} ${job.user.last_name || ''}`.trim() || job.user.username
     : 'Anonymous';
   const authorAvatar = job.user?.profile_image_url ?? undefined;
-  const hasImages = job.images && job.images.length > 0;
+  const hasImages = Array.isArray(job.images) && job.images.length > 0;
   const statusInfo = STATUS_CONFIG[job.status] ?? STATUS_CONFIG.draft;
 
   const pushPatch = (patch: Partial<Job>) => onPatch?.(job.id, patch);
 
-  // Keyboard navigation & body scroll lock for lightbox
+  // Keyboard navigation & body scroll lock for full-screen lightbox
   useEffect(() => {
-    if (!isLightboxOpen) return;
+    if (!isLightboxOpen || !hasImages) return;
 
+    const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setIsLightboxOpen(false);
-      if (e.key === 'ArrowLeft' && job.images?.length > 1) {
+      if (e.key === 'ArrowLeft' && job.images.length > 1) {
         setActiveImageIndex((prev) => (prev === 0 ? job.images.length - 1 : prev - 1));
       }
-      if (e.key === 'ArrowRight' && job.images?.length > 1) {
+      if (e.key === 'ArrowRight' && job.images.length > 1) {
         setActiveImageIndex((prev) => (prev === job.images.length - 1 ? 0 : prev + 1));
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.body.style.overflow = '';
+      document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isLightboxOpen, job.images]);
+  }, [isLightboxOpen, hasImages, job.images?.length]);
 
   const handleCardClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
@@ -117,13 +131,13 @@ export default function JobCard({ job, onOpenDetails, onPatch }: JobCardProps) {
 
   const handlePrevImage = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!job.images || job.images.length <= 1) return;
+    if (!hasImages || job.images.length <= 1) return;
     setActiveImageIndex((prev) => (prev === 0 ? job.images.length - 1 : prev - 1));
   };
 
   const handleNextImage = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!job.images || job.images.length <= 1) return;
+    if (!hasImages || job.images.length <= 1) return;
     setActiveImageIndex((prev) => (prev === job.images.length - 1 ? 0 : prev + 1));
   };
 
@@ -140,11 +154,13 @@ export default function JobCard({ job, onOpenDetails, onPatch }: JobCardProps) {
     setIsLiked(nextLiked);
     setLikesCount(nextCount);
     pushPatch({ is_liked: nextLiked, likes_count: nextCount });
+
     setAnimateLike(true);
     setTimeout(() => setAnimateLike(false), 450);
 
     const res = await toggleLike(job.id);
     if (!res) {
+      // Rollback on failure
       setIsLiked(!nextLiked);
       setLikesCount(likesCount);
       pushPatch({ is_liked: !nextLiked, likes_count: likesCount });
@@ -184,9 +200,9 @@ export default function JobCard({ job, onOpenDetails, onPatch }: JobCardProps) {
     if (res) {
       setCommentText('');
       setComments((prev) => [...prev, res]);
-      const next = commentsCount + 1;
-      setCommentsCount(next);
-      pushPatch({ comments_count: next });
+      const nextCount = commentsCount + 1;
+      setCommentsCount(nextCount);
+      pushPatch({ comments_count: nextCount });
     }
   };
 
@@ -196,7 +212,7 @@ export default function JobCard({ job, onOpenDetails, onPatch }: JobCardProps) {
         onClick={handleCardClick}
         className="group relative flex flex-col cursor-pointer overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-xl hover:shadow-slate-900/5 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700 dark:hover:shadow-black/20"
       >
-        {/* Visual Header / Media Container */}
+        {/* Media Container */}
         <div
           onClick={handleImageClick}
           className="group/media relative aspect-[16/9] w-full overflow-hidden bg-slate-100 dark:bg-slate-800 cursor-pointer"
@@ -212,7 +228,7 @@ export default function JobCard({ job, onOpenDetails, onPatch }: JobCardProps) {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-slate-950/10 to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
 
-              {/* Hover overlay hint */}
+              {/* Hover Overlay Hint */}
               <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/media:opacity-100 transition-opacity duration-300 pointer-events-none z-10">
                 <span className="inline-flex items-center gap-2 rounded-full bg-slate-950/75 px-4 py-2 text-xs font-semibold text-white backdrop-blur-md border border-white/20 shadow-lg">
                   <Maximize2 className="h-3.5 w-3.5 text-indigo-400" />
@@ -220,7 +236,7 @@ export default function JobCard({ job, onOpenDetails, onPatch }: JobCardProps) {
                 </span>
               </div>
 
-              {/* Inline Carousel Controls */}
+              {/* Inline Carousel Navigation Buttons */}
               {job.images.length > 1 && (
                 <>
                   <button
@@ -240,7 +256,7 @@ export default function JobCard({ job, onOpenDetails, onPatch }: JobCardProps) {
                     <ChevronRight className="h-5 w-5" />
                   </button>
 
-                  {/* Inline Pagination Dots Indicator */}
+                  {/* Carousel Dots */}
                   <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-2 py-1 rounded-full bg-slate-950/40 backdrop-blur-md">
                     {job.images.map((_, idx) => (
                       <button
@@ -260,18 +276,18 @@ export default function JobCard({ job, onOpenDetails, onPatch }: JobCardProps) {
               )}
             </>
           ) : (
-            <div className="relative h-full w-full bg-gradient-to-br from-indigo-600 via-violet-600 to-brand-700 p-6 flex flex-col justify-between overflow-hidden">
+            <div className="relative h-full w-full bg-gradient-to-br from-indigo-600 via-violet-600 to-indigo-800 p-6 flex flex-col justify-between overflow-hidden">
               <div className="absolute -top-12 -right-12 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
               <div className="absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-indigo-400/20 blur-2xl" />
 
               <div className="relative z-10 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-white/80">
                 <Sparkles className="h-3.5 w-3.5" />
-                <span>Featured Job Post</span>
+                <span>Featured Opportunity</span>
               </div>
             </div>
           )}
 
-          {/* Header Badges Overlay */}
+          {/* Top Status & Badge Overlay */}
           <div className="absolute top-3 inset-x-3 flex items-center justify-between pointer-events-none z-10">
             <span
               className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ring-1 shadow-sm ${statusInfo.badge}`}
@@ -291,9 +307,9 @@ export default function JobCard({ job, onOpenDetails, onPatch }: JobCardProps) {
           </div>
         </div>
 
-        {/* Main Card Body */}
+        {/* Card Body */}
         <div className="flex flex-1 flex-col p-5">
-          {/* Author Header */}
+          {/* Author Row */}
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               {job.user?.username ? (
@@ -329,6 +345,7 @@ export default function JobCard({ job, onOpenDetails, onPatch }: JobCardProps) {
             </div>
 
             <button
+              type="button"
               onClick={() => onOpenDetails(job.id)}
               className="group/btn inline-flex items-center justify-center rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-all"
               aria-label="View job details"
@@ -337,20 +354,21 @@ export default function JobCard({ job, onOpenDetails, onPatch }: JobCardProps) {
             </button>
           </div>
 
-          {/* Job Title placed cleanly in the body below author info */}
+          {/* Job Title */}
           <h3 className="mt-3.5 font-display text-lg font-bold leading-snug text-slate-900 dark:text-slate-100 line-clamp-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
             {job.title}
           </h3>
 
-          {/* Description Body */}
+          {/* Description */}
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-300 leading-relaxed line-clamp-2">
             {truncate(job.description, 130)}
           </p>
 
-          {/* Action Controls Footer */}
+          {/* Actions & Controls */}
           <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5">
               <button
+                type="button"
                 onClick={handleLike}
                 className={`group/heart inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all ${
                   isLiked
@@ -367,6 +385,7 @@ export default function JobCard({ job, onOpenDetails, onPatch }: JobCardProps) {
               </button>
 
               <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowComments((v) => !v);
@@ -384,6 +403,7 @@ export default function JobCard({ job, onOpenDetails, onPatch }: JobCardProps) {
 
             <div className="flex items-center gap-2">
               <button
+                type="button"
                 onClick={handleShare}
                 className="relative inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-all"
               >
@@ -398,6 +418,7 @@ export default function JobCard({ job, onOpenDetails, onPatch }: JobCardProps) {
               </button>
 
               <button
+                type="button"
                 onClick={() => onOpenDetails(job.id)}
                 className="inline-flex items-center gap-1 rounded-xl bg-slate-900 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-500 transition-colors"
               >
@@ -406,7 +427,7 @@ export default function JobCard({ job, onOpenDetails, onPatch }: JobCardProps) {
             </div>
           </div>
 
-          {/* Collapsible Comments Drawer */}
+          {/* Collapsible Comments Section */}
           {showComments && (
             <div
               className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200"
@@ -415,15 +436,15 @@ export default function JobCard({ job, onOpenDetails, onPatch }: JobCardProps) {
               {comments.length > 0 ? (
                 <div className="space-y-3 max-h-52 overflow-y-auto pr-1 scrollbar-thin">
                   {comments.map((c) => {
-                    const mine = user?.id === c.user_id;
-                    const label = mine ? 'You' : 'User';
+                    const isMine = user?.id === c.user_id;
+                    const commentAuthor = isMine ? 'You' : 'User';
                     return (
                       <div key={c.id} className="flex items-start gap-2.5 text-xs">
-                        <Avatar name={label} size="sm" />
+                        <Avatar name={commentAuthor} size="sm" />
                         <div className="flex-1 min-w-0 rounded-2xl bg-slate-50 p-2.5 dark:bg-slate-800/60">
                           <div className="flex items-center justify-between gap-2">
                             <span className="font-semibold text-slate-900 dark:text-slate-200">
-                              {label}
+                              {commentAuthor}
                             </span>
                             <span className="text-[10px] text-slate-400">
                               {timeAgo(c.created_at)}
@@ -443,9 +464,9 @@ export default function JobCard({ job, onOpenDetails, onPatch }: JobCardProps) {
                 </p>
               )}
 
-              {/* Input area */}
+              {/* Comment Input */}
               <div className="flex items-center gap-2">
-                <Avatar name="You" size="sm" />
+                <Avatar name={user?.first_name || 'You'} size="sm" />
                 <div className="relative flex-1">
                   <input
                     type="text"
@@ -458,6 +479,7 @@ export default function JobCard({ job, onOpenDetails, onPatch }: JobCardProps) {
                     className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2 pl-3 pr-9 text-xs text-slate-900 placeholder-slate-400 outline-none transition-all focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:border-indigo-400"
                   />
                   <button
+                    type="button"
                     onClick={handleSubmitComment}
                     disabled={!commentText.trim() || isSubmittingComment}
                     className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-lg p-1 text-indigo-600 hover:bg-indigo-50 disabled:opacity-30 disabled:hover:bg-transparent dark:text-indigo-400 dark:hover:bg-indigo-950/50 transition-colors"
@@ -471,18 +493,21 @@ export default function JobCard({ job, onOpenDetails, onPatch }: JobCardProps) {
         </div>
       </article>
 
-      {/* ─── FULL-SCREEN PHOTO GALLERY LIGHTBOX (PORTAL TO DOCUMENT BODY) ─── */}
+      {/* Full-Screen Gallery Modal */}
       {isLightboxOpen &&
         hasImages &&
         createPortal(
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Image lightbox gallery"
             className="fixed inset-0 z-[999999] flex flex-col items-center justify-between bg-slate-950/95 p-4 sm:p-6 backdrop-blur-2xl select-none animate-in fade-in duration-200"
             onClick={(e) => {
               e.stopPropagation();
               setIsLightboxOpen(false);
             }}
           >
-            {/* Top Bar Header with safe padding to avoid website navbar overlay */}
+            {/* Top Modal Bar */}
             <div className="w-full max-w-6xl flex items-center justify-between text-white z-50 pt-2 pb-3 border-b border-white/10">
               <div className="flex items-center gap-3 min-w-0">
                 <span className="text-sm font-semibold text-slate-200 truncate max-w-xs sm:max-w-md">
@@ -504,14 +529,14 @@ export default function JobCard({ job, onOpenDetails, onPatch }: JobCardProps) {
                     setIsLightboxOpen(false);
                   }}
                   className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 active:scale-95 transition-all focus:outline-none focus:ring-2 focus:ring-white/50"
-                  aria-label="Close photo popup"
+                  aria-label="Close photo gallery"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
             </div>
 
-            {/* Main Photo Display Area */}
+            {/* Display Viewport */}
             <div
               className="relative flex-1 w-full max-w-5xl flex items-center justify-center overflow-hidden my-4"
               onClick={(e) => e.stopPropagation()}
@@ -523,7 +548,6 @@ export default function JobCard({ job, onOpenDetails, onPatch }: JobCardProps) {
                 className="max-h-[72vh] max-w-full object-contain rounded-2xl shadow-2xl transition-transform duration-300"
               />
 
-              {/* Lightbox Prev / Next Arrows */}
               {job.images.length > 1 && (
                 <>
                   <button
@@ -556,7 +580,7 @@ export default function JobCard({ job, onOpenDetails, onPatch }: JobCardProps) {
               )}
             </div>
 
-            {/* Bottom Thumbnails Strip */}
+            {/* Bottom Thumbnails */}
             {job.images.length > 1 && (
               <div
                 className="flex items-center gap-2 overflow-x-auto p-2 max-w-full z-10 scrollbar-none"

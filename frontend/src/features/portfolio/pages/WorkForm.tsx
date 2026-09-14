@@ -6,14 +6,9 @@ import {
   Image as ImageIcon,
   Loader2,
   Briefcase,
-  MapPin,
-  Calendar,
-  Clock,
-  Users,
-  Tag,
-  FileText,
   Trash2,
-  Sparkles,
+  Save,
+  Star,
 } from 'lucide-react';
 import type { Work } from '../../../api/portfolioApi';
 
@@ -23,6 +18,12 @@ interface WorkFormProps {
   onSave: (data: any, files?: { before?: File; after?: File }) => Promise<void>;
   loading?: boolean;
 }
+
+const inputCls =
+  'w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-cyan-400 dark:focus:ring-cyan-400/20';
+
+const labelCls =
+  'mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300';
 
 export default function WorkForm({ work, onClose, onSave, loading = false }: WorkFormProps) {
   const [formData, setFormData] = useState({
@@ -35,12 +36,18 @@ export default function WorkForm({ work, onClose, onSave, loading = false }: Wor
     duration_unit: 'days',
     team_size: '',
     client_type: '',
+    cost: '',
+    client_name: '',
+    client_testimonial: '',
+    rating: undefined as number | undefined,
   });
   const [beforeFile, setBeforeFile] = useState<File | null>(null);
   const [afterFile, setAfterFile] = useState<File | null>(null);
   const [beforePreview, setBeforePreview] = useState<string | null>(null);
   const [afterPreview, setAfterPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const beforeInputRef = useRef<HTMLInputElement>(null);
   const afterInputRef = useRef<HTMLInputElement>(null);
 
@@ -56,6 +63,10 @@ export default function WorkForm({ work, onClose, onSave, loading = false }: Wor
         duration_unit: work.duration_unit || 'days',
         team_size: work.team_size?.toString() || '',
         client_type: work.client_type || '',
+        cost: work.cost?.toString() || '',
+        client_name: work.client_name || '',
+        client_testimonial: work.client_testimonial || '',
+        rating: work.rating ?? undefined,
       });
       if (work.before_image_url) setBeforePreview(work.before_image_url);
       if (work.after_image_url) setAfterPreview(work.after_image_url);
@@ -92,10 +103,24 @@ export default function WorkForm({ work, onClose, onSave, loading = false }: Wor
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+
+    if (!formData.title.trim() || formData.title.trim().length < 2) {
+      setError('Title must be at least 2 characters.');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const data = {
         ...formData,
+        title: formData.title.trim(),
+        description: formData.description.trim() || undefined,
+        service_category: formData.service_category.trim() || undefined,
+        location: formData.location.trim() || undefined,
+        client_name: formData.client_name.trim() || undefined,
+        client_testimonial: formData.client_testimonial.trim() || undefined,
+        cost: formData.cost ? parseFloat(formData.cost) : undefined,
         duration_value: formData.duration_value ? parseInt(formData.duration_value, 10) : undefined,
         team_size: formData.team_size ? parseInt(formData.team_size, 10) : undefined,
         completed_at: formData.completed_at ? new Date(formData.completed_at).toISOString() : undefined,
@@ -106,354 +131,379 @@ export default function WorkForm({ work, onClose, onSave, loading = false }: Wor
     }
   };
 
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      /* Added top offset pt-20 sm:pt-24 to ensure clear distance from top navbar header */
-      className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-md flex items-start sm:items-center justify-center p-4 pt-20 sm:pt-24 overflow-y-auto"
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ scale: 0.95, y: 20, opacity: 0 }}
-        animate={{ scale: 1, y: 0, opacity: 1 }}
-        exit={{ scale: 0.95, y: 20, opacity: 0 }}
-        transition={{ type: 'spring', damping: 25, stiffness: 320 }}
-        className="relative my-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-slate-200/80 dark:border-slate-800/80 rounded-3xl shadow-2xl max-w-2xl w-full p-6 sm:p-8 max-h-[85vh] flex flex-col overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Ambient Top Background Glows */}
-        <div className="absolute top-0 left-1/4 -mt-10 w-48 h-48 bg-blue-500/10 dark:bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute top-0 right-10 -mt-10 w-40 h-40 bg-indigo-500/10 dark:bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
+  const isSaving = submitting || loading;
 
-        {/* Modal Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-200/60 dark:border-slate-800/80 relative z-10 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-2xl">
-              <Sparkles size={22} />
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center sm:p-6"
+      role="dialog"
+      aria-modal="true"
+    >
+      {/* Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity dark:bg-slate-950/80"
+        onClick={!isSaving ? onClose : undefined}
+      />
+
+      {/* Modal Container */}
+      <motion.div
+        initial={{ scale: 0.95, y: 10, opacity: 0 }}
+        animate={{ scale: 1, y: 0, opacity: 1 }}
+        exit={{ scale: 0.95, y: 10, opacity: 0 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 320 }}
+        className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl dark:border-slate-800/80 dark:bg-slate-900"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 dark:border-slate-800">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-400">
+              <Briefcase className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                {work ? 'Edit Project Details' : 'Showcase New Project'}
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                {work ? 'Edit work project' : 'Add new work project'}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                {work ? 'Update your portfolio work entry below' : 'Add details and before/after images for your portfolio'}
+                Showcase your portfolio project details and images
               </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-full transition-all"
+            disabled={isSaving}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
           >
-            <X size={20} />
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Form Body - Scrollable Container */}
-        <form onSubmit={handleSubmit} className="space-y-5 overflow-y-auto pr-1 my-4 relative z-10 custom-scrollbar flex-1">
-          {/* Project Title */}
+        {/* Form Body */}
+        <form onSubmit={handleSubmit} className="flex-1 space-y-5 overflow-y-auto p-6">
+          {error && (
+            <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-medium text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-400">
+              {error}
+            </div>
+          )}
+
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-              Project Title <span className="text-rose-500">*</span>
+            <label className={labelCls}>
+              Title <span className="text-rose-500">*</span>
             </label>
-            <div className="relative flex items-center">
-              <Briefcase size={16} className="absolute left-3.5 text-slate-400 pointer-events-none" />
+            <input
+              type="text"
+              required
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              placeholder="e.g. Modern Living Room Wall Repainting"
+              className={inputCls}
+            />
+          </div>
+
+          <div>
+            <label className={labelCls}>Description</label>
+            <textarea
+              rows={3}
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="What did you do? Challenges, materials, outcome…"
+              className={`${inputCls} resize-none`}
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className={labelCls}>Category</label>
               <input
                 type="text"
-                required
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-xl text-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 focus:outline-none transition-all"
-                placeholder="e.g., Modern Living Room Wall Repainting"
+                value={formData.service_category}
+                onChange={(e) => setFormData({ ...formData, service_category: e.target.value })}
+                placeholder="e.g. Interior Painting"
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Location</label>
+              <input
+                type="text"
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                placeholder="e.g. Yaoundé, Mvog-Mbi"
+                className={inputCls}
               />
             </div>
           </div>
 
-          {/* Project Description */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-              Description
-            </label>
-            <div className="relative">
-              <FileText size={16} className="absolute left-3.5 top-3 text-slate-400 pointer-events-none" />
-              <textarea
-                rows={3}
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-xl text-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 focus:outline-none transition-all"
-                placeholder="Summarize key tasks, challenges overcome, and materials used..."
-              />
-            </div>
-          </div>
-
-          {/* Category & Location Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Service Category
-              </label>
-              <div className="relative flex items-center">
-                <Tag size={16} className="absolute left-3.5 text-slate-400 pointer-events-none" />
-                <input
-                  type="text"
-                  value={formData.service_category}
-                  onChange={(e) => setFormData({ ...formData, service_category: e.target.value })}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-xl text-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 focus:outline-none transition-all"
-                  placeholder="e.g., Interior Painting"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Location
-              </label>
-              <div className="relative flex items-center">
-                <MapPin size={16} className="absolute left-3.5 text-slate-400 pointer-events-none" />
-                <input
-                  type="text"
-                  value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-xl text-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 focus:outline-none transition-all"
-                  placeholder="e.g., Yaoundé, Mvog-Mbi"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Completion Date */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-              Completed Date
-            </label>
-            <div className="relative flex items-center">
-              <Calendar size={16} className="absolute left-3.5 text-slate-400 pointer-events-none" />
+              <label className={labelCls}>Completed on</label>
               <input
                 type="date"
                 value={formData.completed_at}
                 onChange={(e) => setFormData({ ...formData, completed_at: e.target.value })}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-xl text-sm font-medium text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 focus:outline-none transition-all"
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Cost (XAF)</label>
+              <input
+                type="number"
+                min={0}
+                step={500}
+                value={formData.cost}
+                onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
+                placeholder="e.g. 150000"
+                className={inputCls}
               />
             </div>
           </div>
 
-          {/* Duration & Duration Unit */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-3">
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Duration Value
-              </label>
-              <div className="relative flex items-center">
-                <Clock size={16} className="absolute left-3.5 text-slate-400 pointer-events-none" />
-                <input
-                  type="number"
-                  min="0"
-                  value={formData.duration_value}
-                  onChange={(e) => setFormData({ ...formData, duration_value: e.target.value })}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-xl text-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 focus:outline-none transition-all"
-                  placeholder="e.g., 3"
-                />
-              </div>
+              <label className={labelCls}>Duration</label>
+              <input
+                type="number"
+                min="0"
+                value={formData.duration_value}
+                onChange={(e) => setFormData({ ...formData, duration_value: e.target.value })}
+                placeholder="e.g. 3"
+                className={inputCls}
+              />
             </div>
-
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Unit
-              </label>
+              <label className={labelCls}>Unit</label>
               <select
                 value={formData.duration_unit}
                 onChange={(e) => setFormData({ ...formData, duration_unit: e.target.value })}
-                className="w-full px-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-xl text-sm font-medium text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 focus:outline-none transition-all"
+                className={inputCls}
               >
-                <option value="minutes">Minutes</option>
-                <option value="hours">Hours</option>
-                <option value="days">Days</option>
-                <option value="weeks">Weeks</option>
-                <option value="months">Months</option>
+                <option value="minutes" className="dark:bg-slate-900">Minutes</option>
+                <option value="hours" className="dark:bg-slate-900">Hours</option>
+                <option value="days" className="dark:bg-slate-900">Days</option>
+                <option value="weeks" className="dark:bg-slate-900">Weeks</option>
+                <option value="months" className="dark:bg-slate-900">Months</option>
               </select>
+            </div>
+            <div>
+              <label className={labelCls}>Team size</label>
+              <input
+                type="number"
+                min="1"
+                value={formData.team_size}
+                onChange={(e) => setFormData({ ...formData, team_size: e.target.value })}
+                placeholder="e.g. 2"
+                className={inputCls}
+              />
             </div>
           </div>
 
-          {/* Team Size & Client Type */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Team Size
-              </label>
-              <div className="relative flex items-center">
-                <Users size={16} className="absolute left-3.5 text-slate-400 pointer-events-none" />
+          <div>
+            <label className={labelCls}>Client type</label>
+            <select
+              value={formData.client_type}
+              onChange={(e) => setFormData({ ...formData, client_type: e.target.value })}
+              className={inputCls}
+            >
+              <option value="" className="dark:bg-slate-900">—</option>
+              <option value="individual" className="dark:bg-slate-900">Individual</option>
+              <option value="household" className="dark:bg-slate-900">Household</option>
+              <option value="business" className="dark:bg-slate-900">Business</option>
+              <option value="organization" className="dark:bg-slate-900">Organization</option>
+              <option value="government" className="dark:bg-slate-900">Government</option>
+              <option value="professional" className="dark:bg-slate-900">Professional</option>
+              <option value="contractor" className="dark:bg-slate-900">Contractor</option>
+            </select>
+          </div>
+
+          {/* Transformation Media Section */}
+          <div className="space-y-3 rounded-2xl border border-slate-200/80 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-950/40">
+            <div className="flex items-center justify-between">
+              <label className={labelCls}>Transformation Media</label>
+              <span className="text-[11px] text-slate-400">16:9 ratio recommended</span>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              {/* Before Image */}
+              <div className="relative aspect-video overflow-hidden rounded-xl border border-dashed border-slate-300 bg-white dark:border-slate-800 dark:bg-slate-950 flex items-center justify-center group">
+                <span className="absolute top-2 left-2 z-10 rounded-md bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:bg-amber-400/20 dark:text-amber-400">
+                  Before
+                </span>
+
+                {beforePreview ? (
+                  <>
+                    <img src={beforePreview} alt="Before" className="h-full w-full object-cover" />
+                    <div className="absolute inset-0 flex items-center justify-center gap-2 bg-slate-950/60 opacity-0 transition-opacity group-hover:opacity-100">
+                      <button
+                        type="button"
+                        onClick={() => beforeInputRef.current?.click()}
+                        className="rounded-lg bg-white/20 px-2.5 py-1.5 text-xs font-medium text-white backdrop-blur-md hover:bg-white/30"
+                      >
+                        <Upload className="inline h-3.5 w-3.5 mr-1" /> Replace
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeImage('before')}
+                        className="rounded-lg bg-rose-500/80 p-1.5 text-white backdrop-blur-md hover:bg-rose-600"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => beforeInputRef.current?.click()}
+                    className="flex flex-col items-center justify-center text-slate-400 hover:text-cyan-500"
+                  >
+                    <ImageIcon className="h-6 w-6 mb-1" />
+                    <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                      Upload Before Photo
+                    </span>
+                  </button>
+                )}
                 <input
-                  type="number"
-                  min="1"
-                  value={formData.team_size}
-                  onChange={(e) => setFormData({ ...formData, team_size: e.target.value })}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-xl text-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 focus:outline-none transition-all"
-                  placeholder="e.g., 2"
+                  ref={beforeInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => handleFileChange(e, 'before')}
+                />
+              </div>
+
+              {/* After Image */}
+              <div className="relative aspect-video overflow-hidden rounded-xl border border-dashed border-slate-300 bg-white dark:border-slate-800 dark:bg-slate-950 flex items-center justify-center group">
+                <span className="absolute top-2 left-2 z-10 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:bg-emerald-400/20 dark:text-emerald-400">
+                  After
+                </span>
+
+                {afterPreview ? (
+                  <>
+                    <img src={afterPreview} alt="After" className="h-full w-full object-cover" />
+                    <div className="absolute inset-0 flex items-center justify-center gap-2 bg-slate-950/60 opacity-0 transition-opacity group-hover:opacity-100">
+                      <button
+                        type="button"
+                        onClick={() => afterInputRef.current?.click()}
+                        className="rounded-lg bg-white/20 px-2.5 py-1.5 text-xs font-medium text-white backdrop-blur-md hover:bg-white/30"
+                      >
+                        <Upload className="inline h-3.5 w-3.5 mr-1" /> Replace
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeImage('after')}
+                        className="rounded-lg bg-rose-500/80 p-1.5 text-white backdrop-blur-md hover:bg-rose-600"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => afterInputRef.current?.click()}
+                    className="flex flex-col items-center justify-center text-slate-400 hover:text-cyan-500"
+                  >
+                    <ImageIcon className="h-6 w-6 mb-1" />
+                    <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                      Upload After Photo
+                    </span>
+                  </button>
+                )}
+                <input
+                  ref={afterInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => handleFileChange(e, 'after')}
                 />
               </div>
             </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Client Type
-              </label>
-              <select
-                value={formData.client_type}
-                onChange={(e) => setFormData({ ...formData, client_type: e.target.value })}
-                className="w-full px-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-xl text-sm font-medium text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 focus:outline-none transition-all"
-              >
-                <option value="">Select Client Type...</option>
-                <option value="individual">Individual</option>
-                <option value="household">Household</option>
-                <option value="business">Business</option>
-                <option value="organization">Organization</option>
-                <option value="government">Government</option>
-                <option value="professional">Professional</option>
-                <option value="contractor">Contractor</option>
-              </select>
-            </div>
           </div>
 
-          {/* Project Transformation Images */}
-          <div className="border-t border-slate-200/80 dark:border-slate-800/80 pt-4 mt-3">
-            <div className="flex items-center justify-between mb-3">
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                Transformation Media (Before & After)
-              </label>
-              <span className="text-[11px] text-slate-400">Recommended 16:9 aspect ratio</span>
+          {/* Client Feedback Section */}
+          <div className="space-y-4 rounded-2xl border border-slate-200/80 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-950/40">
+            <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <Star className="h-3.5 w-3.5 text-amber-500" />
+              <span>Client feedback (optional)</span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Before Media Upload Card */}
-              <div className="flex flex-col">
-                <div className="relative aspect-video bg-slate-100/70 dark:bg-slate-800/40 rounded-2xl overflow-hidden border-2 border-dashed border-slate-300/80 dark:border-slate-700/80 hover:border-blue-500 dark:hover:border-blue-400 transition-all group flex items-center justify-center">
-                  <span className="absolute top-2 left-2 px-2 py-0.5 bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 rounded-md text-[10px] font-extrabold uppercase tracking-widest backdrop-blur-sm z-10">
-                    Before
-                  </span>
-
-                  {beforePreview ? (
-                    <>
-                      <img src={beforePreview} alt="Before" className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => beforeInputRef.current?.click()}
-                          className="p-2 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white rounded-xl text-xs font-medium transition-all flex items-center gap-1"
-                        >
-                          <Upload size={14} /> Replace
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => removeImage('before')}
-                          className="p-2 bg-rose-500/80 hover:bg-rose-600 backdrop-blur-md text-white rounded-xl text-xs font-medium transition-all"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </>
-                  ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className={labelCls}>Client name</label>
+                <input
+                  type="text"
+                  value={formData.client_name}
+                  onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
+                  placeholder="e.g. Mrs. Ngu"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>Rating</label>
+                <div className="flex gap-1.5 pt-0.5">
+                  {[1, 2, 3, 4, 5].map((r) => (
                     <button
+                      key={r}
                       type="button"
-                      onClick={() => beforeInputRef.current?.click()}
-                      className="w-full h-full flex flex-col items-center justify-center p-4 text-slate-400 hover:text-blue-500 transition-colors"
+                      onClick={() =>
+                        setFormData({
+                          ...formData,
+                          rating: formData.rating === r ? undefined : r,
+                        })
+                      }
+                      className={`flex h-9 flex-1 items-center justify-center rounded-xl text-sm font-semibold transition-all duration-200 ${
+                        formData.rating === r
+                          ? 'bg-amber-400 text-slate-950 shadow-sm shadow-amber-400/30 dark:bg-amber-400 dark:text-slate-950'
+                          : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800'
+                      }`}
                     >
-                      <ImageIcon size={28} className="mb-1.5 opacity-80" />
-                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Upload Initial State</span>
-                      <span className="text-[10px] text-slate-400 mt-0.5">Click to browse photo</span>
+                      {r} ★
                     </button>
-                  )}
-
-                  <input
-                    ref={beforeInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => handleFileChange(e, 'before')}
-                  />
+                  ))}
                 </div>
               </div>
+            </div>
 
-              {/* After Media Upload Card */}
-              <div className="flex flex-col">
-                <div className="relative aspect-video bg-slate-100/70 dark:bg-slate-800/40 rounded-2xl overflow-hidden border-2 border-dashed border-slate-300/80 dark:border-slate-700/80 hover:border-emerald-500 dark:hover:border-emerald-400 transition-all group flex items-center justify-center">
-                  <span className="absolute top-2 left-2 px-2 py-0.5 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-md text-[10px] font-extrabold uppercase tracking-widest backdrop-blur-sm z-10">
-                    After
-                  </span>
-
-                  {afterPreview ? (
-                    <>
-                      <img src={afterPreview} alt="After" className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => afterInputRef.current?.click()}
-                          className="p-2 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white rounded-xl text-xs font-medium transition-all flex items-center gap-1"
-                        >
-                          <Upload size={14} /> Replace
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => removeImage('after')}
-                          className="p-2 bg-rose-500/80 hover:bg-rose-600 backdrop-blur-md text-white rounded-xl text-xs font-medium transition-all"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => afterInputRef.current?.click()}
-                      className="w-full h-full flex flex-col items-center justify-center p-4 text-slate-400 hover:text-emerald-500 transition-colors"
-                    >
-                      <ImageIcon size={28} className="mb-1.5 opacity-80" />
-                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Upload Final Result</span>
-                      <span className="text-[10px] text-slate-400 mt-0.5">Click to browse photo</span>
-                    </button>
-                  )}
-
-                  <input
-                    ref={afterInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => handleFileChange(e, 'after')}
-                  />
-                </div>
-              </div>
+            <div>
+              <label className={labelCls}>Testimonial</label>
+              <textarea
+                rows={2}
+                value={formData.client_testimonial}
+                onChange={(e) => setFormData({ ...formData, client_testimonial: e.target.value })}
+                placeholder="What did the client say?"
+                className={`${inputCls} resize-none`}
+              />
             </div>
           </div>
         </form>
 
-        {/* Modal Footer Controls */}
-        <div className="flex gap-3 pt-4 border-t border-slate-200/60 dark:border-slate-800/80 relative z-10 shrink-0">
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 border-t border-slate-100 bg-slate-50/50 px-6 py-4 dark:border-slate-800 dark:bg-slate-900/50">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 py-2.5 rounded-xl text-sm font-semibold transition-all"
+            disabled={isSaving}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
           >
             Cancel
           </button>
-
           <button
-            type="submit"
+            type="button"
             onClick={handleSubmit}
-            disabled={submitting || loading}
-            className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-all shadow-lg shadow-blue-500/25 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            disabled={isSaving}
+            className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-cyan-500 disabled:opacity-60 dark:bg-cyan-500 dark:text-slate-950 dark:hover:bg-cyan-400"
           >
-            {submitting || loading ? (
-              <>
-                <Loader2 size={18} className="animate-spin" /> Saving Project...
-              </>
-            ) : work ? (
-              'Save Changes'
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              'Create Showcase'
+              <Save className="h-4 w-4" />
             )}
+            {work ? 'Save changes' : 'Add project'}
           </button>
         </div>
       </motion.div>
-    </motion.div>
+    </div>
   );
 }

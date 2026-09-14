@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
-  Tag,
-  DollarSign,
+  Plus,
+  Wrench,
+  Loader2,
+  Check,
+  ShieldCheck,
   Clock,
   MapPin,
+  DollarSign,
+  Tag,
   Layers,
-  AlertTriangle,
-  Check,
-  Loader2,
-  Wrench,
   FileText,
-  Sparkles,
+  Zap,
 } from 'lucide-react';
 import type { Service } from '../../../api/portfolioApi';
 
@@ -27,13 +28,23 @@ export default function ServiceForm({ service, onClose, onSave }: ServiceFormPro
     title: '',
     description: '',
     category: '',
+    service_area: '',
     starting_price: '',
     pricing_type: 'fixed',
     estimated_duration: '',
-    service_area: '',
+    warranty_days: '',
+    lead_time_days: '',
     is_active: true,
     is_emergency_service: false,
   });
+
+  // Dynamic Array Fields for Included / Not Included
+  const [whatsIncluded, setWhatsIncluded] = useState<string[]>([]);
+  const [includedInput, setIncludedInput] = useState('');
+
+  const [whatsNotIncluded, setWhatsNotIncluded] = useState<string[]>([]);
+  const [notIncludedInput, setNotIncludedInput] = useState('');
+
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -42,25 +53,69 @@ export default function ServiceForm({ service, onClose, onSave }: ServiceFormPro
         title: service.title || '',
         description: service.description || '',
         category: service.category || '',
+        service_area: service.service_area || '',
         starting_price: service.starting_price?.toString() || '',
         pricing_type: service.pricing_type || 'fixed',
-        estimated_duration: service.estimated_duration || '',
-        service_area: service.service_area || '',
-        is_active: service.is_active !== undefined ? service.is_active : true,
-        is_emergency_service: service.is_emergency_service || false,
+        estimated_duration: service.estimated_duration || (service as any).duration || '',
+        warranty_days: (service as any).warranty_days?.toString() || '',
+        lead_time_days: (service as any).lead_time_days?.toString() || '',
+        is_active: service.is_active ?? true,
+        is_emergency_service: service.is_emergency_service ?? false,
       });
+
+      if ((service as any).whats_included) {
+        setWhatsIncluded(
+          Array.isArray((service as any).whats_included)
+            ? (service as any).whats_included
+            : [(service as any).whats_included]
+        );
+      }
+      if ((service as any).whats_not_included) {
+        setWhatsNotIncluded(
+          Array.isArray((service as any).whats_not_included)
+            ? (service as any).whats_not_included
+            : [(service as any).whats_not_included]
+        );
+      }
     }
   }, [service]);
+
+  // Tag Handlers
+  const handleAddIncluded = () => {
+    if (includedInput.trim()) {
+      setWhatsIncluded([...whatsIncluded, includedInput.trim()]);
+      setIncludedInput('');
+    }
+  };
+
+  const handleRemoveIncluded = (index: number) => {
+    setWhatsIncluded(whatsIncluded.filter((_, i) => i !== index));
+  };
+
+  const handleAddNotIncluded = () => {
+    if (notIncludedInput.trim()) {
+      setWhatsNotIncluded([...whatsNotIncluded, notIncludedInput.trim()]);
+      setNotIncludedInput('');
+    }
+  };
+
+  const handleRemoveNotIncluded = (index: number) => {
+    setWhatsNotIncluded(whatsNotIncluded.filter((_, i) => i !== index));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const data = {
+      const payload = {
         ...formData,
         starting_price: formData.starting_price ? parseFloat(formData.starting_price) : undefined,
+        warranty_days: formData.warranty_days ? parseInt(formData.warranty_days, 10) : undefined,
+        lead_time_days: formData.lead_time_days ? parseInt(formData.lead_time_days, 10) : undefined,
+        whats_included: whatsIncluded,
+        whats_not_included: whatsNotIncluded,
       };
-      await onSave(data);
+      await onSave(payload);
     } finally {
       setLoading(false);
     }
@@ -71,246 +126,375 @@ export default function ServiceForm({ service, onClose, onSave }: ServiceFormPro
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      /* Top offset (pt-20 sm:pt-24) ensures modal renders comfortably below header navbar */
-      className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-md flex items-start sm:items-center justify-center p-4 pt-20 sm:pt-24 overflow-y-auto"
+      transition={{ duration: 0.25 }}
+      /* High Z-index overlay clearing website navigation */
+      className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 pt-16 sm:pt-20 bg-slate-950/40 backdrop-blur-2xl overflow-y-auto"
       onClick={onClose}
     >
       <motion.div
-        initial={{ scale: 0.95, y: 20, opacity: 0 }}
+        initial={{ scale: 0.94, y: 20, opacity: 0 }}
         animate={{ scale: 1, y: 0, opacity: 1 }}
-        exit={{ scale: 0.95, y: 20, opacity: 0 }}
-        transition={{ type: 'spring', damping: 25, stiffness: 320 }}
-        className="relative my-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-slate-200/80 dark:border-slate-800/80 rounded-3xl shadow-2xl max-w-lg w-full p-6 sm:p-8 max-h-[85vh] flex flex-col overflow-hidden"
+        exit={{ scale: 0.94, y: 20, opacity: 0 }}
+        transition={{ type: 'spring', damping: 28, stiffness: 380 }}
+        className="relative my-auto w-full max-w-2xl rounded-[28px] border border-white/60 dark:border-white/10 bg-white/80 dark:bg-slate-900/80 p-6 sm:p-7 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] backdrop-blur-3xl max-h-[85vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Ambient Top Glow Effects */}
-        <div className="absolute top-0 left-1/3 -mt-10 w-44 h-44 bg-blue-500/10 dark:bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute top-0 right-10 -mt-10 w-36 h-36 bg-indigo-500/10 dark:bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
+        {/* Soft Ambient iPhone Glow Effect */}
+        <div className="absolute -top-24 left-1/2 -translate-x-1/2 h-56 w-56 rounded-full bg-indigo-500/15 blur-3xl pointer-events-none" />
 
         {/* Modal Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-200/60 dark:border-slate-800/80 relative z-10 shrink-0">
+        <div className="relative z-10 flex shrink-0 items-center justify-between border-b border-slate-200/60 dark:border-slate-800/60 pb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-2xl">
-              <Wrench size={22} />
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+              <Wrench size={18} />
             </div>
             <div>
-              <h3 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              <h3 className="text-base font-semibold tracking-tight text-slate-900 dark:text-white">
                 {service ? 'Edit Service' : 'Add New Service'}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                {service ? 'Update service pricing & parameters' : 'Define a new offering for your service catalog'}
+                Configure your service parameters and details
               </p>
             </div>
           </div>
+
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-full transition-all"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200/50 hover:bg-slate-200 dark:bg-slate-800/50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors"
           >
-            <X size={20} />
+            <X size={16} />
           </button>
         </div>
 
         {/* Scrollable Form Body */}
-        <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto pr-1 my-4 relative z-10 custom-scrollbar flex-1">
+        <form
+          id="service-form"
+          onSubmit={handleSubmit}
+          className="relative z-10 flex-1 space-y-4 overflow-y-auto py-5 pr-1 scrollbar-none"
+        >
           {/* Service Title */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-              Service Title <span className="text-rose-500">*</span>
+            <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">
+              Service title <span className="text-rose-500">*</span>
             </label>
-            <div className="relative flex items-center">
-              <Sparkles size={16} className="absolute left-3.5 text-slate-400 pointer-events-none" />
-              <input
-                type="text"
-                required
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-xl text-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 focus:outline-none transition-all"
-                placeholder="e.g., Interior Painting & Surface Prep"
-              />
-            </div>
+            <input
+              type="text"
+              required
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              placeholder="e.g. Electrical Installation & Diagnostics"
+              className="w-full rounded-2xl border border-slate-200/80 bg-slate-100/60 dark:border-slate-700/50 dark:bg-slate-800/50 px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-inner"
+            />
           </div>
 
-          {/* Category & Pricing Type */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Description */}
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">
+              Description
+            </label>
+            <textarea
+              rows={3}
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Detailed description of the service offered..."
+              className="w-full rounded-2xl border border-slate-200/80 bg-slate-100/60 dark:border-slate-700/50 dark:bg-slate-800/50 px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-inner"
+            />
+          </div>
+
+          {/* Category & Service Area */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+              <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">
                 Category
               </label>
-              <div className="relative flex items-center">
-                <Tag size={16} className="absolute left-3.5 text-slate-400 pointer-events-none" />
+              <div className="relative">
+                <Tag size={15} className="absolute left-3.5 top-3 text-slate-400" />
                 <input
                   type="text"
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-xl text-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 focus:outline-none transition-all"
-                  placeholder="e.g., Painting"
+                  placeholder="e.g. Electrical"
+                  className="w-full rounded-2xl border border-slate-200/80 bg-slate-100/60 dark:border-slate-700/50 dark:bg-slate-800/50 pl-10 pr-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-inner"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Pricing Structure
+              <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                Service area
               </label>
-              <div className="relative flex items-center">
-                <Layers size={16} className="absolute left-3.5 text-slate-400 pointer-events-none" />
-                <select
-                  value={formData.pricing_type}
-                  onChange={(e) => setFormData({ ...formData, pricing_type: e.target.value })}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-xl text-sm font-medium text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 focus:outline-none transition-all"
-                >
-                  <option value="fixed">Fixed Rate</option>
-                  <option value="starting_from">Starting From</option>
-                  <option value="hourly">Hourly Rate</option>
-                  <option value="daily">Daily Rate</option>
-                  <option value="quote_required">Quote Required</option>
-                </select>
+              <div className="relative">
+                <MapPin size={15} className="absolute left-3.5 top-3 text-slate-400" />
+                <input
+                  type="text"
+                  value={formData.service_area}
+                  onChange={(e) => setFormData({ ...formData, service_area: e.target.value })}
+                  placeholder="e.g. Downtown & Metro Area"
+                  className="w-full rounded-2xl border border-slate-200/80 bg-slate-100/60 dark:border-slate-700/50 dark:bg-slate-800/50 pl-10 pr-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-inner"
+                />
               </div>
             </div>
           </div>
 
-          {/* Starting Price & Estimated Duration */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Starting Price, Pricing Type, Duration */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Starting Price
+              <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                Starting price
               </label>
-              <div className="relative flex items-center">
-                <DollarSign size={16} className="absolute left-3.5 text-slate-400 pointer-events-none" />
+              <div className="relative">
+                <DollarSign size={15} className="absolute left-3.5 top-3 text-slate-400" />
                 <input
                   type="number"
                   step="0.01"
                   min="0"
                   value={formData.starting_price}
                   onChange={(e) => setFormData({ ...formData, starting_price: e.target.value })}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-xl text-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 focus:outline-none transition-all"
                   placeholder="0.00"
+                  className="w-full rounded-2xl border border-slate-200/80 bg-slate-100/60 dark:border-slate-700/50 dark:bg-slate-800/50 pl-10 pr-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-inner"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Estimated Duration
+              <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                Pricing type
               </label>
-              <div className="relative flex items-center">
-                <Clock size={16} className="absolute left-3.5 text-slate-400 pointer-events-none" />
+              <div className="relative">
+                <Layers size={15} className="absolute left-3.5 top-3 text-slate-400 pointer-events-none" />
+                <select
+                  value={formData.pricing_type}
+                  onChange={(e) => setFormData({ ...formData, pricing_type: e.target.value })}
+                  className="w-full appearance-none rounded-2xl border border-slate-200/80 bg-slate-100/60 dark:border-slate-700/50 dark:bg-slate-800/50 pl-10 pr-4 py-2.5 text-sm text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-inner"
+                >
+                  <option value="fixed">Fixed Rate</option>
+                  <option value="starting_from">Starting From</option>
+                  <option value="hourly">Hourly</option>
+                  <option value="daily">Daily</option>
+                  <option value="quote_required">Quote Required</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                Duration
+              </label>
+              <div className="relative">
+                <Clock size={15} className="absolute left-3.5 top-3 text-slate-400" />
                 <input
                   type="text"
                   value={formData.estimated_duration}
                   onChange={(e) => setFormData({ ...formData, estimated_duration: e.target.value })}
-                  placeholder="e.g., 2-3 hours"
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-xl text-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 focus:outline-none transition-all"
+                  placeholder="e.g. 2 hours"
+                  className="w-full rounded-2xl border border-slate-200/80 bg-slate-100/60 dark:border-slate-700/50 dark:bg-slate-800/50 pl-10 pr-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-inner"
                 />
               </div>
             </div>
           </div>
 
-          {/* Service Area */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-              Service Coverage Area
-            </label>
-            <div className="relative flex items-center">
-              <MapPin size={16} className="absolute left-3.5 text-slate-400 pointer-events-none" />
+          {/* What's Included & What's Not Included */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {/* What's Included */}
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                What's included
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={includedInput}
+                  onChange={(e) => setIncludedInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddIncluded())}
+                  placeholder="Add item..."
+                  className="flex-1 rounded-2xl border border-slate-200/80 bg-slate-100/60 dark:border-slate-700/50 dark:bg-slate-800/50 px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-inner"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddIncluded}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-indigo-600 text-white hover:bg-indigo-700 transition-all"
+                >
+                  <Plus size={18} />
+                </button>
+              </div>
+
+              {/* Tag List */}
+              {whatsIncluded.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <AnimatePresence>
+                    {whatsIncluded.map((item, idx) => (
+                      <motion.span
+                        key={idx}
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0.8, opacity: 0 }}
+                        className="inline-flex items-center gap-1 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/20 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300 border border-emerald-500/20"
+                      >
+                        {item}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveIncluded(idx)}
+                          className="hover:text-rose-500 transition-colors ml-0.5"
+                        >
+                          <X size={12} />
+                        </button>
+                      </motion.span>
+                    ))}
+                  </AnimatePresence>
+                </div>
+              )}
+            </div>
+
+            {/* What's Not Included */}
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                What's not included
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={notIncludedInput}
+                  onChange={(e) => setNotIncludedInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddNotIncluded())}
+                  placeholder="Add item..."
+                  className="flex-1 rounded-2xl border border-slate-200/80 bg-slate-100/60 dark:border-slate-700/50 dark:bg-slate-800/50 px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-inner"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddNotIncluded}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-indigo-600 text-white hover:bg-indigo-700 transition-all"
+                >
+                  <Plus size={18} />
+                </button>
+              </div>
+
+              {/* Tag List */}
+              {whatsNotIncluded.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <AnimatePresence>
+                    {whatsNotIncluded.map((item, idx) => (
+                      <motion.span
+                        key={idx}
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0.8, opacity: 0 }}
+                        className="inline-flex items-center gap-1 rounded-xl bg-rose-500/10 dark:bg-rose-500/20 px-2.5 py-1 text-xs font-medium text-rose-700 dark:text-rose-300 border border-rose-500/20"
+                      >
+                        {item}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveNotIncluded(idx)}
+                          className="hover:text-rose-500 transition-colors ml-0.5"
+                        >
+                          <X size={12} />
+                        </button>
+                      </motion.span>
+                    ))}
+                  </AnimatePresence>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Warranty & Lead Time */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                Warranty (days)
+              </label>
+              <div className="relative">
+                <ShieldCheck size={15} className="absolute left-3.5 top-3 text-slate-400" />
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.warranty_days}
+                  onChange={(e) => setFormData({ ...formData, warranty_days: e.target.value })}
+                  placeholder="e.g. 30"
+                  className="w-full rounded-2xl border border-slate-200/80 bg-slate-100/60 dark:border-slate-700/50 dark:bg-slate-800/50 pl-10 pr-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-inner"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                Lead time (days)
+              </label>
+              <div className="relative">
+                <Clock size={15} className="absolute left-3.5 top-3 text-slate-400" />
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.lead_time_days}
+                  onChange={(e) => setFormData({ ...formData, lead_time_days: e.target.value })}
+                  placeholder="e.g. 2"
+                  className="w-full rounded-2xl border border-slate-200/80 bg-slate-100/60 dark:border-slate-700/50 dark:bg-slate-800/50 pl-10 pr-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-inner"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Toggle Switches (Active & Emergency Service) */}
+          <div className="grid grid-cols-1 gap-3 pt-2 sm:grid-cols-2">
+            {/* Active Toggle */}
+            <label className="flex cursor-pointer items-center justify-between rounded-2xl border border-slate-200/80 bg-slate-100/50 dark:border-slate-800/80 dark:bg-slate-800/40 p-3 transition-all hover:bg-slate-100/80 dark:hover:bg-slate-800/60">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  <Check size={14} />
+                </div>
+                <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                  Active
+                </span>
+              </div>
               <input
-                type="text"
-                value={formData.service_area}
-                onChange={(e) => setFormData({ ...formData, service_area: e.target.value })}
-                placeholder="e.g., Yaoundé & surrounding areas"
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-xl text-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 focus:outline-none transition-all"
+                type="checkbox"
+                checked={formData.is_active}
+                onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                className="sr-only peer"
               />
-            </div>
-          </div>
-
-          {/* Description */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-              Service Description
+              <div className="relative w-10 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
             </label>
-            <div className="relative">
-              <FileText size={16} className="absolute left-3.5 top-3 text-slate-400 pointer-events-none" />
-              <textarea
-                rows={3}
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-xl text-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 focus:outline-none transition-all"
-                placeholder="Detail what is included, materials used, or client preparation required..."
+
+            {/* Emergency Toggle */}
+            <label className="flex cursor-pointer items-center justify-between rounded-2xl border border-slate-200/80 bg-slate-100/50 dark:border-slate-800/80 dark:bg-slate-800/40 p-3 transition-all hover:bg-slate-100/80 dark:hover:bg-slate-800/60">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                  <Zap size={14} />
+                </div>
+                <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                  Emergency Service
+                </span>
+              </div>
+              <input
+                type="checkbox"
+                checked={formData.is_emergency_service}
+                onChange={(e) => setFormData({ ...formData, is_emergency_service: e.target.checked })}
+                className="sr-only peer"
               />
-            </div>
-          </div>
-
-          {/* Service Flags & Status Toggles Card */}
-          <div className="p-3.5 rounded-2xl bg-slate-50/60 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/60 space-y-3 mt-2">
-            {/* Active Service Toggle */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className={`p-1.5 rounded-lg ${formData.is_active ? 'bg-emerald-500/10 text-emerald-500' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
-                  <Check size={16} />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200">Active Service</p>
-                  <p className="text-[11px] text-slate-400">Visible to prospective clients</p>
-                </div>
-              </div>
-
-              <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                <input
-                  type="checkbox"
-                  checked={formData.is_active}
-                  onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                  className="sr-only peer"
-                />
-                <div className="w-9 h-5 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
-            </div>
-
-            <div className="border-t border-slate-200/40 dark:border-slate-700/40" />
-
-            {/* Emergency Service Toggle */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className={`p-1.5 rounded-lg ${formData.is_emergency_service ? 'bg-amber-500/10 text-amber-500' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
-                  <AlertTriangle size={16} />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200">Emergency / Urgent Support</p>
-                  <p className="text-[11px] text-slate-400">High priority dispatch or off-hours service</p>
-                </div>
-              </div>
-
-              <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                <input
-                  type="checkbox"
-                  checked={formData.is_emergency_service}
-                  onChange={(e) => setFormData({ ...formData, is_emergency_service: e.target.checked })}
-                  className="sr-only peer"
-                />
-                <div className="w-9 h-5 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
-              </label>
-            </div>
+              <div className="relative w-10 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+            </label>
           </div>
         </form>
 
         {/* Modal Action Footer */}
-        <div className="flex gap-3 pt-4 border-t border-slate-200/60 dark:border-slate-800/80 relative z-10 shrink-0">
+        <div className="relative z-10 flex shrink-0 items-center justify-end gap-3 border-t border-slate-200/60 dark:border-slate-800/60 pt-4">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 py-2.5 rounded-xl text-sm font-semibold transition-all"
+            className="rounded-2xl bg-slate-200/60 dark:bg-slate-800/60 px-5 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all backdrop-blur-md"
           >
             Cancel
           </button>
 
           <button
             type="submit"
-            onClick={handleSubmit}
+            form="service-form"
             disabled={loading}
-            className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-all shadow-lg shadow-blue-500/25 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-6 py-2.5 text-xs font-semibold text-white shadow-lg shadow-indigo-500/25 hover:bg-indigo-500 active:scale-[0.98] disabled:opacity-50 transition-all"
           >
             {loading ? (
               <>
-                <Loader2 size={18} className="animate-spin" /> Saving Service...
+                <Loader2 size={15} className="animate-spin" /> Saving...
               </>
             ) : service ? (
               'Save Changes'

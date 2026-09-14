@@ -1,76 +1,59 @@
-// src/features/portfolio/components/PortfolioTabs.tsx
-import React from 'react';
-import { motion } from 'framer-motion';
-import { LayoutGrid, Briefcase, Star, Clock, type LucideIcon } from 'lucide-react';
-
-export type Tab = 'overview' | 'works' | 'services' | 'availability';
-
-interface TabOption {
-  id: Tab;
-  label: string;
-  icon: LucideIcon;
-}
-
-const tabs: TabOption[] = [
-  { id: 'overview', label: 'Overview', icon: LayoutGrid },
-  { id: 'works', label: 'Works', icon: Briefcase },
-  { id: 'services', label: 'Services', icon: Star },
-  { id: 'availability', label: 'Availability', icon: Clock },
-];
+export type PortfolioTab = 'services' | 'works' | 'availability' | 'about';
 
 interface PortfolioTabsProps {
-  activeTab: Tab;
-  onTabChange: (tab: Tab) => void;
+  active: PortfolioTab;
+  onChange: (tab: PortfolioTab) => void;
+  counts?: Partial<Record<PortfolioTab, number>>;
 }
 
-export default function PortfolioTabs({ activeTab, onTabChange }: PortfolioTabsProps) {
-  return (
-    <div className="relative border-b border-slate-200/80 dark:border-slate-800/80 pb-1">
-      <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar py-1 px-0.5">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
+const TABS: { value: PortfolioTab; label: string }[] = [
+  { value: 'services', label: 'Services' },
+  { value: 'works', label: 'Works' },
+  { value: 'availability', label: 'Availability' },
+  { value: 'about', label: 'About' },
+];
 
+export default function PortfolioTabs({
+  active,
+  onChange,
+  counts = {},
+}: PortfolioTabsProps) {
+  return (
+    <div className="border-b border-slate-200/80 dark:border-slate-800/80">
+      <div className="scrollbar-thin flex gap-1 overflow-x-auto px-2">
+        {TABS.map((tab) => {
+          const isActive = tab.value === active;
+          const count = counts[tab.value];
           return (
-            <motion.button
-              key={tab.id}
-              whileTap={{ scale: 0.96 }}
-              onClick={() => onTabChange(tab.id)}
-              className={`relative px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-colors duration-200 flex items-center gap-2 whitespace-nowrap outline-none select-none ${
+            <button
+              key={tab.value}
+              type="button"
+              onClick={() => onChange(tab.value)}
+              className={`relative whitespace-nowrap px-4 py-3.5 text-sm font-semibold transition-colors duration-200 ${
                 isActive
-                  ? 'text-cyan-600 dark:text-cyan-400'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100/60 dark:hover:bg-slate-800/50'
+                  ? 'text-slate-900 dark:text-slate-100'
+                  : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
               }`}
             >
-              {/* Sliding Active Pill Background */}
-              {isActive && (
-                <motion.div
-                  layoutId="activeTabPill"
-                  transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                  className="absolute inset-0 bg-cyan-500/10 dark:bg-cyan-500/15 border border-cyan-500/30 rounded-2xl shadow-sm"
-                />
-              )}
+              <span className="inline-flex items-center gap-2">
+                {tab.label}
+                {typeof count === 'number' && count > 0 && (
+                  <span
+                    className={`inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums transition-colors duration-200 ${
+                      isActive
+                        ? 'bg-cyan-500/15 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-300'
+                        : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                )}
+              </span>
 
-              {/* Icon & Text */}
-              <Icon
-                size={16}
-                className={`relative z-10 transition-colors ${
-                  isActive
-                    ? 'text-cyan-600 dark:text-cyan-400'
-                    : 'text-slate-400 dark:text-slate-500'
-                }`}
-              />
-              <span className="relative z-10">{tab.label}</span>
-
-              {/* Bottom Glow Indicator */}
               {isActive && (
-                <motion.div
-                  layoutId="activeTabIndicator"
-                  transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                  className="absolute -bottom-1.5 left-3 right-3 h-0.5 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full shadow-[0_0_8px_rgba(6,182,212,0.6)]"
-                />
+                <span className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500" />
               )}
-            </motion.button>
+            </button>
           );
         })}
       </div>

@@ -18,9 +18,9 @@ class DurationUnit(str, Enum):
 class ClientType(str, Enum):
     INDIVIDUAL = "individual"
     BUSINESS = "business"
+    HOUSEHOLD = "household"
     GOVERNMENT = "government"
     NGO = "ngo"
-
 
 class PricingType(str, Enum):
     FIXED = "fixed"

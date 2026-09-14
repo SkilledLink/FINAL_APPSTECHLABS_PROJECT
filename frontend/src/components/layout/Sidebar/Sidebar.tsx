@@ -43,15 +43,31 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
   const { logout } = useAuth();
   const { user, loading, uploadAvatar } = useUser();
 
-  // Close dropdown on outside click
+  // Close dropdown and reset state when sidebar collapses
+  useEffect(() => {
+    if (!isHovered) {
+      setIsProfileDropdownOpen(false);
+    }
+  }, [isHovered]);
+
+  // Close dropdown on outside click and Escape key press
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsProfileDropdownOpen(false);
       }
     };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsProfileDropdownOpen(false);
+      }
+    };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
 
   const getInitials = (firstName?: string, lastName?: string) => {
@@ -154,6 +170,8 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
         <div ref={dropdownRef} className="relative">
           <button
             onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+            aria-expanded={isProfileDropdownOpen}
+            aria-haspopup="true"
             className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl hover:bg-blue-500/10 dark:hover:bg-blue-400/10 transition-colors group cursor-pointer"
           >
             {/* Avatar */}
