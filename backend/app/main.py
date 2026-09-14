@@ -65,6 +65,7 @@ from app.models.feed import (
 from app.models.moderation_record import ModerationRecord  # noqa: F401
 from app.models.notification import Notification  # noqa: F401
 from app.api.v1.notifications import router as notifications_router
+from app.api.v1.reports import router as report_router
 
 
 # ─── Lifespan ──────────────────────────────────────────────
@@ -128,6 +129,7 @@ app.include_router(chat_router)
 app.include_router(admin_router)
 app.include_router(moderator_router)
 app.include_router(notifications_router)
+app.include_router(report_router)
 
 
 # Webhooks (global)
@@ -143,3 +145,5 @@ def health_check():
         return {"status": "connected"}
     except Exception as e:
         return {"status": "disconnected", "error": str(e)}
+
+
