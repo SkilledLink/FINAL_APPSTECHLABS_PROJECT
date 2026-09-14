@@ -1,5 +1,5 @@
 import React from 'react';
-import type { DashboardStats } from '../types/dashboard.types';
+import type { DashboardStats } from '../types/admin.types';
 import {
   TrendingUp,
   TrendingDown,

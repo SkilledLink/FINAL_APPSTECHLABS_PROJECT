@@ -13,4 +13,4 @@ export { default as SettingsTab } from './components/SettingsTab';
 export { default as MetricCard } from './components/MetricCard';
 export { useDashboard } from './hooks/useDashboard';
 export { dashboardService } from './services/dashboardService';
-export * from './types/dashboard.types';
+export * from './types/admin.types';

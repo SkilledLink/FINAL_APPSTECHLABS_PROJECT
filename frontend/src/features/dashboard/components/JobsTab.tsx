@@ -9,7 +9,7 @@ import {
   XCircle,
   UserCheck,
 } from 'lucide-react';
-import type { Job } from '../types/dashboard.types';
+import type { Job } from '../types/admin.types';
 
 interface JobsTabProps {
   jobs: Job[];

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Users, Clock, CheckCircle, Star } from 'lucide-react';
 import MetricCard from './MetricCard';
-import type { DashboardStats, Request } from '../types/dashboard.types';
+import type { DashboardStats, Request } from '../types/admin.types';
 
 interface OverviewTabProps {
   stats: DashboardStats;

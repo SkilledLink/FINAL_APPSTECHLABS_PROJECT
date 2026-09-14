@@ -8,7 +8,7 @@ import {
   DollarSign,
   Calendar,
 } from 'lucide-react';
-import type { Request } from '../types/dashboard.types';
+import type { Request } from '../types/admin.types';
 
 interface RequestsTabProps {
   requests: Request[];

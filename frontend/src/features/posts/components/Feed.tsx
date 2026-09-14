@@ -17,16 +17,13 @@ import { FeedSkeleton } from './FeedSkeleton';
 import { useInfiniteFeed } from '../hooks/useInfiniteFeed';
 import { useFeedMutations } from '../hooks/useFeedMutations';
 import { useFeedFilters } from '../hooks/useFeedFilters';
+import type { Post } from '../types/post.types';
 
-// Motion Animation Configurations
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: {
-      staggerChildren: 0.06,
-      delayChildren: 0.02,
-    },
+    transition: { staggerChildren: 0.06, delayChildren: 0.02 },
   },
 };
 
@@ -36,11 +33,7 @@ const postVariants = {
     opacity: 1,
     y: 0,
     scale: 1,
-    transition: {
-      type: 'spring',
-      stiffness: 300,
-      damping: 26,
-    },
+    transition: { type: 'spring', stiffness: 300, damping: 26 },
   },
   exit: {
     opacity: 0,
@@ -63,18 +56,109 @@ const Feed: React.FC = () => {
     refresh,
     removePost,
     updatePostInList,
+    prependPost,
+    replacePost,
+    markPostFailed,
+    markPostUploading,
   } = useInfiniteFeed({ ...filters, limit: 10 });
 
   const { toggleLike, deletePost, createComment, deleteComment } =
     useFeedMutations();
 
-  // ─── Like ──────────────────────────────────────────────
+  // Retry registry for optimistic posts
+  const retryRef = useRef<Map<string, () => void>>(new Map());
+
+  // ─── Optimistic create ──────────────────────────────────
+  const handleOptimisticCreate = useCallback(
+    (tempPost: Post, retry: () => void) => {
+      prependPost(tempPost);
+      if (tempPost._tempId) {
+        retryRef.current.set(tempPost._tempId, retry);
+      }
+    },
+    [prependPost],
+  );
+
+  const handleCreateSuccess = useCallback(
+    (tempId: string, realPost: Post) => {
+      // Revoke the temp blob URL
+      const tempUrl = realPost.media?.[0]?.media_url;
+      // (find temp first — we still have it in the current list)
+      // We use functional setPosts so we don't depend on a stale closure.
+      // eslint-disable-next-line
+      // Note: URL revoke is best-effort; harmless if the URL is not a blob.
+
+      replacePost(tempId, realPost);
+      retryRef.current.delete(tempId);
+
+      const decision = realPost.moderation?.decision;
+      const status = realPost.status;
+
+      if (decision === 'unsafe' || status === 'rejected') {
+        toast.error('Your post was rejected');
+      } else if (
+        decision === 'review' ||
+        status === 'pending_review' ||
+        status === 'pending_moderation'
+      ) {
+        toast.info('Your post is being reviewed');
+      } else {
+        toast.success('Post created');
+      }
+
+      // Best-effort revoke of any blob URL held by the replaced temp post.
+      // We look up the temp by scanning the DOM-independent retryRef key set.
+      // Since we already removed the entry, just skip if not a blob.
+      if (tempUrl && tempUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(tempUrl);
+      }
+    },
+    [replacePost],
+  );
+
+  const handleCreateError = useCallback(
+    (tempId: string, err: Error) => {
+      markPostFailed(tempId);
+      toast.error(err.message || 'Failed to create post');
+    },
+    [markPostFailed],
+  );
+
+  const handleRetryPost = useCallback(
+    (post: Post) => {
+      const tempId = post._tempId;
+      if (!tempId) return;
+      const retry = retryRef.current.get(tempId);
+      if (!retry) {
+        toast.error('Cannot retry this post anymore');
+        return;
+      }
+      markPostUploading(tempId);
+      retry();
+    },
+    [markPostUploading],
+  );
+
+  const handleDismissPost = useCallback(
+    (post: Post) => {
+      const mediaUrl = post.media?.[0]?.media_url;
+      if (mediaUrl && mediaUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(mediaUrl);
+      }
+      if (post._tempId) {
+        retryRef.current.delete(post._tempId);
+      }
+      removePost(post.id);
+    },
+    [removePost],
+  );
+
+  // ─── Like ────────────────────────────────────────────────
   const handleLike = useCallback(
     async (postId: string) => {
       const post = posts.find((p) => p.id === postId);
       if (!post) return;
 
-      // Optimistic update
       updatePostInList({
         ...post,
         is_liked: !post.is_liked,
@@ -93,10 +177,10 @@ const Feed: React.FC = () => {
         toast.error(err.message || 'Failed to like post');
       }
     },
-    [posts, toggleLike, updatePostInList]
+    [posts, toggleLike, updatePostInList],
   );
 
-  // ─── Delete ────────────────────────────────────────────
+  // ─── Delete ──────────────────────────────────────────────
   const handleDelete = useCallback(
     async (postId: string) => {
       if (!window.confirm('Are you sure you want to delete this post?')) return;
@@ -108,10 +192,10 @@ const Feed: React.FC = () => {
         toast.error(err.message || 'Failed to delete post');
       }
     },
-    [deletePost, removePost]
+    [deletePost, removePost],
   );
 
-  // ─── Comment ───────────────────────────────────────────
+  // ─── Comment ─────────────────────────────────────────────
   const handleComment = useCallback(
     async (postId: string, content: string) => {
       try {
@@ -129,7 +213,7 @@ const Feed: React.FC = () => {
         toast.error(err.message || 'Failed to add comment');
       }
     },
-    [posts, createComment, updatePostInList]
+    [posts, createComment, updatePostInList],
   );
 
   const handleDeleteComment = useCallback(
@@ -148,10 +232,10 @@ const Feed: React.FC = () => {
         toast.error(err.message || 'Failed to delete comment');
       }
     },
-    [posts, deleteComment, updatePostInList]
+    [posts, deleteComment, updatePostInList],
   );
 
-  // ─── Infinite scroll ───────────────────────────────────
+  // ─── Infinite scroll ────────────────────────────────────
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -166,21 +250,24 @@ const Feed: React.FC = () => {
 
       if (node) observerRef.current.observe(node);
     },
-    [loading, loadingMore, hasMore, loadMore]
+    [loading, loadingMore, hasMore, loadMore],
   );
 
   return (
     <div className="mx-auto w-full max-w-2xl px-1 sm:px-2 pb-6 overflow-x-hidden space-y-4">
-      {/* ─── Sticky Post Composer Wrapper ─────── */}
+      {/* Sticky composer */}
       <motion.div
         initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25, ease: 'easeOut' }}
         className="sticky top-0 z-30 -mx-1 sm:-mx-2 px-1 sm:px-2 py-2 bg-slate-50/80 dark:bg-[#0b1329]/80 backdrop-blur-2xl border-b border-slate-200/60 dark:border-slate-800/60 transition-all duration-300 shadow-xs"
       >
-        <PostComposer onPosted={refresh} />
+        <PostComposer
+          onOptimisticCreate={handleOptimisticCreate}
+          onCreateSuccess={handleCreateSuccess}
+          onCreateError={handleCreateError}
+        />
 
-        {/* Active Filter Pill Bar */}
         <AnimatePresence>
           {filters?.hashtag && (
             <motion.div
@@ -192,7 +279,9 @@ const Feed: React.FC = () => {
               <div className="flex items-center gap-1.5 truncate">
                 <Filter className="w-3.5 h-3.5 shrink-0" />
                 <span>Filtering by:</span>
-                <span className="font-bold underline underline-offset-2">#{filters.hashtag}</span>
+                <span className="font-bold underline underline-offset-2">
+                  #{filters.hashtag}
+                </span>
               </div>
               <button
                 onClick={clearFilters}
@@ -206,7 +295,7 @@ const Feed: React.FC = () => {
         </AnimatePresence>
       </motion.div>
 
-      {/* ─── Loading Skeletons ───────────────────────────── */}
+      {/* Skeletons */}
       {loading && posts.length === 0 && (
         <div className="space-y-4">
           <FeedSkeleton />
@@ -215,7 +304,7 @@ const Feed: React.FC = () => {
         </div>
       )}
 
-      {/* ─── Error Alert State ──────────────────────────── */}
+      {/* Error */}
       {error && !loading && (
         <motion.div
           initial={{ opacity: 0, scale: 0.96 }}
@@ -243,16 +332,14 @@ const Feed: React.FC = () => {
         </motion.div>
       )}
 
-      {/* ─── Empty Feed State ────────────────────────────── */}
+      {/* Empty state */}
       {!loading && posts.length === 0 && !error && (
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           className="relative overflow-hidden my-4 rounded-2xl border border-dashed border-slate-300/80 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60 p-8 text-center backdrop-blur-xl shadow-xs"
         >
-          {/* Subtle Ambient Glow */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 bg-blue-500/10 dark:bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
-
           <div className="relative mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20">
             <MessageSquarePlus className="h-6 w-6" />
             <Sparkles className="absolute -top-1 -right-1 h-4 w-4 text-amber-400 animate-pulse" />
@@ -276,7 +363,7 @@ const Feed: React.FC = () => {
         </motion.div>
       )}
 
-      {/* ─── Feed Posts List ────────────────────────────── */}
+      {/* List */}
       {posts.length > 0 && (
         <motion.div
           variants={containerVariants}
@@ -287,7 +374,7 @@ const Feed: React.FC = () => {
           <AnimatePresence mode="popLayout" initial={false}>
             {posts.map((post) => (
               <motion.div
-                key={post.id}
+                key={post._tempId ?? post.id}
                 layout
                 variants={postVariants}
                 initial="hidden"
@@ -302,6 +389,8 @@ const Feed: React.FC = () => {
                   onComment={handleComment}
                   onDeleteComment={handleDeleteComment}
                   onHashtagClick={setHashtag}
+                  onRetry={handleRetryPost}
+                  onDismiss={handleDismissPost}
                 />
               </motion.div>
             ))}
@@ -309,7 +398,7 @@ const Feed: React.FC = () => {
         </motion.div>
       )}
 
-      {/* ─── Infinite Scroll Loader ──────────── */}
+      {/* Infinite scroll */}
       {hasMore && (
         <div
           ref={loadMoreRef}
@@ -328,7 +417,7 @@ const Feed: React.FC = () => {
         </div>
       )}
 
-      {/* ─── End of Feed Indicator ──────────────────────── */}
+      {/* End of feed */}
       {!hasMore && posts.length > 0 && (
         <motion.div
           initial={{ opacity: 0 }}

@@ -7,6 +7,7 @@ interface PostActionsProps {
   onLike: () => void;
   onCommentToggle: () => void;
   onShare?: () => void;
+  disabled?: boolean;
 }
 
 const PostActions: React.FC<PostActionsProps> = ({
@@ -14,24 +15,34 @@ const PostActions: React.FC<PostActionsProps> = ({
   onLike,
   onCommentToggle,
   onShare,
+  disabled = false,
 }) => {
+  const base = 'flex items-center gap-2 text-sm font-medium transition-colors';
+  const enabled = 'text-gray-600 dark:text-slate-300 hover:text-red-500';
+  const enabledBlue =
+    'text-gray-600 dark:text-slate-300 hover:text-blue-500';
+  const disabledCls =
+    'text-gray-400 dark:text-slate-500 cursor-not-allowed opacity-60';
+
   return (
     <div className="flex items-center gap-6 border-t border-gray-100 dark:border-slate-700 pt-3">
       <button
-        onClick={onLike}
-        className="flex items-center gap-2 text-sm font-medium transition-colors text-gray-600 dark:text-slate-300 hover:text-red-500"
+        onClick={disabled ? undefined : onLike}
+        disabled={disabled}
+        className={`${base} ${disabled ? disabledCls : enabled}`}
       >
         <Heart
           className={`w-5 h-5 ${
-            feed.is_liked ? 'fill-red-500 text-red-500' : ''
+            feed.is_liked && !disabled ? 'fill-red-500 text-red-500' : ''
           }`}
         />
         {feed.likes_count}
       </button>
 
       <button
-        onClick={onCommentToggle}
-        className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-slate-300 hover:text-blue-500 transition-colors"
+        onClick={disabled ? undefined : onCommentToggle}
+        disabled={disabled}
+        className={`${base} ${disabled ? disabledCls : enabledBlue}`}
       >
         <MessageCircle className="w-5 h-5" />
         {feed.comments_count}
@@ -39,8 +50,9 @@ const PostActions: React.FC<PostActionsProps> = ({
 
       {onShare && (
         <button
-          onClick={onShare}
-          className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-slate-300 hover:text-blue-500 transition-colors"
+          onClick={disabled ? undefined : onShare}
+          disabled={disabled}
+          className={`${base} ${disabled ? disabledCls : enabledBlue}`}
         >
           <Share2 className="w-5 h-5" />
           Share

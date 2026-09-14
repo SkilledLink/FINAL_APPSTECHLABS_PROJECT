@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-// USER (lightweight — matches backend UserResponse subset)
+// USER
 // ─────────────────────────────────────────────────────────────
 export interface PostUser {
   id: string;
@@ -18,7 +18,7 @@ export interface PostUser {
 }
 
 // ─────────────────────────────────────────────────────────────
-// MEDIA (image or video)
+// MEDIA
 // ─────────────────────────────────────────────────────────────
 export type PostMediaType = 'image' | 'video';
 
@@ -57,9 +57,36 @@ export interface PostComment {
 }
 
 // ─────────────────────────────────────────────────────────────
-// POST (= Feed on the backend)
+// MODERATION
 // ─────────────────────────────────────────────────────────────
-export type PostStatus = 'published' | 'draft' | 'archived' | 'reported';
+export type ModerationDecision = 'safe' | 'review' | 'unsafe';
+
+export interface ModerationSummary {
+  record_id: string;
+  decision: ModerationDecision;
+  severity: number;
+  confidence: number;
+  description: string;
+  reason: string;
+  categories: string[];
+  provider: string;
+  model: string;
+  error?: string | null;
+  created_at: string;
+}
+
+// ─────────────────────────────────────────────────────────────
+// POST
+// ─────────────────────────────────────────────────────────────
+export type PostStatus =
+  | 'draft'
+  | 'published'
+  | 'archived'
+  | 'pending_moderation'
+  | 'pending_review'
+  | 'rejected';
+
+export type PostClientStatus = 'uploading' | 'failed';
 
 export interface Post {
   id: string;
@@ -73,16 +100,20 @@ export interface Post {
   created_at: string;
   updated_at: string;
 
-  // Aggregates
   likes_count: number;
   comments_count: number;
   is_liked: boolean;
 
-  // Relations
   user?: PostUser | null;
   media: PostMedia[];
   hashtags: Hashtag[];
   comments: PostComment[];
+
+  moderation?: ModerationSummary | null;
+
+  // Client-only — never sent by the backend
+  _clientStatus?: PostClientStatus;
+  _tempId?: string;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -103,8 +134,8 @@ export interface PostCreatePayload {
   description: string;
   status?: PostStatus;
   is_public?: boolean;
-  hashtags?: string[];          // e.g. ["python", "tech"]
-  media?: File | null;          // image or video
+  hashtags?: string[];
+  media?: File | null;
 }
 
 export interface PostUpdatePayload {

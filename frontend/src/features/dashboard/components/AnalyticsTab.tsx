@@ -9,7 +9,7 @@ import {
   CheckCircle,
   BarChart3,
 } from 'lucide-react';
-import type { AnalyticsData, DashboardStats } from '../types/dashboard.types';
+import type { AnalyticsData, DashboardStats } from '../types/admin.types';
 
 interface AnalyticsTabProps {
   stats: DashboardStats;

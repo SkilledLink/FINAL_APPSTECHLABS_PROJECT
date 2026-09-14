@@ -6,7 +6,7 @@ import type {
   Job,
   DashboardStats,
   AnalyticsData,
-} from '../types/dashboard.types';
+} from '../types/admin.types';
 
 // Mock Professional Data
 const mockProfessional: Professional = {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Plus, Star, Calendar, User, MessageCircle } from 'lucide-react';
-import type { PortfolioItem } from '../types/dashboard.types';
+import type { PortfolioItem } from '../types/admin.types';
 
 interface PortfolioTabProps {
   portfolio: PortfolioItem[];

@@ -39,7 +39,12 @@ export function useFeed(options?: UseFeedOptions) {
           status: params?.status ?? status,
         });
 
-        setFeeds(data.items);
+        setFeeds((prev) => {
+          const pending = prev.filter(
+            (f) => f._clientStatus === 'uploading' || f._clientStatus === 'failed',
+          );
+          return [...pending, ...data.items];
+        });
         setTotal(data.total);
         setPage(data.page);
         setSize(data.size);

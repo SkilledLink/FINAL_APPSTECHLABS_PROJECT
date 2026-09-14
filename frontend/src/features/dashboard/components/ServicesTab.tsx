@@ -9,7 +9,7 @@ import {
   XCircle,
   Image as ImageIcon,
 } from 'lucide-react';
-import type { Service } from '../types/dashboard.types';
+import type { Service } from '../types/admin.types';
 
 interface ServicesTabProps {
   services: Service[];

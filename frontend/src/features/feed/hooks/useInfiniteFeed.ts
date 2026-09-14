@@ -25,7 +25,6 @@ export function useInfiniteFeed(options?: UseInfiniteFeedOptions) {
     enabled = true,
   } = options || {};
 
-  // Track the current skip position
   const skipRef = useRef(0);
   const loadingRef = useRef(false);
 
@@ -48,7 +47,12 @@ export function useInfiniteFeed(options?: UseInfiniteFeedOptions) {
         status,
       });
 
-      setFeeds(data.items);
+      setFeeds((prev) => {
+        const pending = prev.filter(
+          (f) => f._clientStatus === 'uploading' || f._clientStatus === 'failed',
+        );
+        return [...pending, ...data.items];
+      });
       setHasMore(data.items.length >= limit);
       skipRef.current = data.items.length;
     } catch (err: any) {
@@ -112,6 +116,42 @@ export function useInfiniteFeed(options?: UseInfiniteFeedOptions) {
     );
   }, []);
 
+  // ─── Optimistic post helpers ────────────────────────────
+  /**
+   * Swap a temp (optimistic) feed for the real feed returned by the backend.
+   * Keeps `_tempId` on the result so the React key remains stable and the
+   * component does not remount (no animation replay, no scroll jump).
+   */
+  const replaceFeed = useCallback((tempId: string, realFeed: Feed) => {
+    setFeeds((prev) =>
+      prev.map((f) =>
+        f._tempId === tempId || f.id === tempId
+          ? { ...realFeed, _tempId: tempId, _clientStatus: undefined }
+          : f
+      )
+    );
+  }, []);
+
+  const markFeedFailed = useCallback((tempId: string) => {
+    setFeeds((prev) =>
+      prev.map((f) =>
+        f._tempId === tempId || f.id === tempId
+          ? { ...f, _clientStatus: 'failed' as const }
+          : f
+      )
+    );
+  }, []);
+
+  const markFeedUploading = useCallback((tempId: string) => {
+    setFeeds((prev) =>
+      prev.map((f) =>
+        f._tempId === tempId || f.id === tempId
+          ? { ...f, _clientStatus: 'uploading' as const }
+          : f
+      )
+    );
+  }, []);
+
   // Auto-load on mount or when filters change
   useEffect(() => {
     if (enabled) {
@@ -130,6 +170,9 @@ export function useInfiniteFeed(options?: UseInfiniteFeedOptions) {
     prependFeed,
     removeFeed,
     updateFeedInList,
+    replaceFeed,
+    markFeedFailed,
+    markFeedUploading,
     setFeeds,
   };
 }
