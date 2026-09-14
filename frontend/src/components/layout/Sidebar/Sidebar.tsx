@@ -1,7 +1,7 @@
 // src/components/layout/Sidebar/Sidebar.tsx
-import React, { useState, useRef, useEffect } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useState, useRef, useEffect } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home,
   Compass,
@@ -16,9 +16,9 @@ import {
   Moon,
   ChevronDown,
   ImagePlus,
-} from "lucide-react";
-import { useAuth } from "../../../features/auth/hooks/useAuth";
-import { useUser } from "../../../features/profile/hooks/useUser";
+} from 'lucide-react';
+import { useAuth } from '../../../features/auth/hooks/useAuth';
+import { useUser } from '../../../features/profile/hooks/useUser';
 
 interface SidebarProps {
   isDark: boolean;
@@ -26,12 +26,12 @@ interface SidebarProps {
 }
 
 const navItems = [
-  { icon: Home, label: "Home", path: "/home", end: true },
-  { icon: Compass, label: "Discover", path: "/home/discover" },
-  { icon: Briefcase, label: "Jobs", path: "/home/jobs" },
-  { icon: LayoutDashboard, label: "Portfolio", path: "/home/portfolio" },
-  { icon: MessageSquareMore, label: "Messages", path: "/home/messages" },
-  { icon: Users, label: "Network", path: "/home/professionals" },
+  { icon: Home, label: 'Home', path: '/home', end: true },
+  { icon: Compass, label: 'Discover', path: '/home/discover' },
+  { icon: Briefcase, label: 'Jobs', path: '/home/jobs' },
+  { icon: LayoutDashboard, label: 'Portfolio', path: '/home/portfolio' },
+  { icon: MessageSquareMore, label: 'Messages', path: '/home/messages' },
+  { icon: Users, label: 'Network', path: '/home/professionals' },
 ];
 
 export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
@@ -43,41 +43,41 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
   const { logout } = useAuth();
   const { user, loading, uploadAvatar } = useUser();
 
-  // Close dropdown and reset state when sidebar collapses
   useEffect(() => {
-    if (!isHovered) {
-      setIsProfileDropdownOpen(false);
-    }
+    if (!isHovered) setIsProfileDropdownOpen(false);
   }, [isHovered]);
 
-  // Close dropdown on outside click and Escape key press
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsProfileDropdownOpen(false);
       }
     };
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsProfileDropdownOpen(false);
-      }
+      if (event.key === 'Escape') setIsProfileDropdownOpen(false);
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
 
   const getInitials = (firstName?: string, lastName?: string) => {
-    if (!firstName && !lastName) return "U";
-    return `${firstName?.charAt(0) || ""}${lastName?.charAt(0) || ""}`.toUpperCase() || "U";
+    if (!firstName && !lastName) return 'U';
+    return (
+      `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase() ||
+      'U'
+    );
   };
 
   const handleLogout = () => {
     logout();
-    navigate("/login");
+    navigate('/login');
   };
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -93,44 +93,94 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
       animate={{ width: isHovered ? 240 : 76 }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      transition={{ type: "tween", ease: [0.4, 0, 0.2, 1], duration: 0.22 }}
-      className="hidden md:flex flex-col h-full bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl text-slate-800 dark:text-slate-100 border-r border-slate-200/60 dark:border-slate-800/60 z-20 shadow-xl shrink-0 overflow-hidden will-change-[width] transform-gpu"
+      transition={{ type: 'tween', ease: [0.4, 0, 0.2, 1], duration: 0.22 }}
+      className="hidden h-full shrink-0 flex-col overflow-hidden border-r border-slate-200/70 bg-white/85 backdrop-blur-xl will-change-[width] md:flex dark:border-white/10 dark:bg-slate-950/70"
     >
       {/* Background lightning */}
-      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden transform-gpu">
-        <svg className="w-[240px] h-full opacity-35 dark:opacity-45" viewBox="0 0 240 800" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+        <svg
+          className="h-full w-[240px] opacity-30 dark:opacity-40"
+          viewBox="0 0 240 800"
+          preserveAspectRatio="none"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
           <defs>
-            <filter id="light-blue-glow-sidebar" x="-10%" y="-10%" width="120%" height="120%">
+            <filter
+              id="light-blue-glow-sidebar"
+              x="-10%"
+              y="-10%"
+              width="120%"
+              height="120%"
+            >
               <feGaussianBlur stdDeviation="1" result="blur" />
               <feMerge>
                 <feMergeNode in="blur" />
                 <feMergeNode in="SourceGraphic" />
               </feMerge>
             </filter>
-            <linearGradient id="thunder-blue-vert-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#93c5fd" stopOpacity="0.6" />
-              <stop offset="50%" stopColor="#60a5fa" stopOpacity="0.8" />
-              <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.2" />
+            <linearGradient
+              id="thunder-blue-vert-grad"
+              x1="0%"
+              y1="0%"
+              x2="0%"
+              y2="100%"
+            >
+              <stop offset="0%" stopColor="#93c5fd" stopOpacity="0.55" />
+              <stop offset="50%" stopColor="#60a5fa" stopOpacity="0.75" />
+              <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.15" />
             </linearGradient>
           </defs>
-          <motion.path d="M 38 -20 L 25 120 L 55 190 L 15 310 L 48 420 L 22 550 L 60 670 L 30 820" stroke="url(#thunder-blue-vert-grad)" strokeWidth="1.1" strokeLinecap="round" filter="url(#light-blue-glow-sidebar)" initial={{ opacity: 0.25 }} animate={{ opacity: [0.2, 0.6, 0.25, 0.65, 0.2], strokeWidth: [0.9, 1.2, 0.9, 1.3, 1] }} transition={{ duration: 3.2, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }} />
-          <motion.path d="M 55 190 L 85 220 L 110 205 M 48 420 L 90 460 L 125 440 M 22 550 L 65 580" stroke="#93c5fd" strokeWidth="0.75" strokeLinecap="round" opacity="0.3" filter="url(#light-blue-glow-sidebar)" initial={{ opacity: 0.1 }} animate={{ opacity: [0.1, 0.5, 0.15, 0.55, 0.1] }} transition={{ duration: 2.8, repeat: Infinity, repeatType: "mirror", delay: 0.3 }} />
+          <motion.path
+            d="M 38 -20 L 25 120 L 55 190 L 15 310 L 48 420 L 22 550 L 60 670 L 30 820"
+            stroke="url(#thunder-blue-vert-grad)"
+            strokeWidth="1.1"
+            strokeLinecap="round"
+            filter="url(#light-blue-glow-sidebar)"
+            initial={{ opacity: 0.25 }}
+            animate={{
+              opacity: [0.2, 0.6, 0.25, 0.65, 0.2],
+              strokeWidth: [0.9, 1.2, 0.9, 1.3, 1],
+            }}
+            transition={{
+              duration: 3.2,
+              repeat: Infinity,
+              repeatType: 'reverse',
+              ease: 'easeInOut',
+            }}
+          />
+          <motion.path
+            d="M 55 190 L 85 220 L 110 205 M 48 420 L 90 460 L 125 440 M 22 550 L 65 580"
+            stroke="#93c5fd"
+            strokeWidth="0.75"
+            strokeLinecap="round"
+            opacity="0.3"
+            filter="url(#light-blue-glow-sidebar)"
+            initial={{ opacity: 0.1 }}
+            animate={{ opacity: [0.1, 0.5, 0.15, 0.55, 0.1] }}
+            transition={{
+              duration: 2.8,
+              repeat: Infinity,
+              repeatType: 'mirror',
+              delay: 0.3,
+            }}
+          />
         </svg>
-        <div className="absolute top-1/3 -left-12 w-48 h-48 bg-blue-400/10 dark:bg-blue-500/15 rounded-full blur-2xl pointer-events-none" />
+        <div className="pointer-events-none absolute -left-12 top-1/3 h-48 w-48 rounded-full bg-blue-400/10 blur-2xl dark:bg-blue-500/15" />
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-4 flex flex-col gap-1.5 px-3 overflow-y-auto no-scrollbar relative z-10">
+      <nav className="no-scrollbar relative z-10 flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
         {navItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
             end={item.end}
             className={({ isActive }) =>
-              `relative flex items-center px-3.5 py-3 rounded-xl font-semibold text-sm transition-colors duration-150 group ${
+              `group relative flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-150 ${
                 isActive
-                  ? "text-blue-600 dark:text-blue-400"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+                  ? 'text-blue-600 dark:text-blue-400'
+                  : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100'
               }`
             }
           >
@@ -139,13 +189,22 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
                 {isActive && (
                   <motion.div
                     layoutId="sidebarActivePill"
-                    className="absolute inset-0 bg-blue-500/10 dark:bg-blue-400/15 rounded-xl border border-blue-500/20 dark:border-blue-400/20 shadow-xs"
-                    transition={{ type: "tween", duration: 0.2 }}
+                    className="absolute inset-0 rounded-lg border border-blue-500/20 bg-blue-500/10 dark:border-blue-400/20 dark:bg-blue-400/10"
+                    transition={{ type: 'tween', duration: 0.2 }}
                   >
-                    <span className="absolute left-0 top-2 bottom-2 w-1 bg-blue-600 dark:bg-blue-400 rounded-r-full shadow-[0_0_10px_rgba(37,99,235,0.7)]" />
+                    <span className="absolute bottom-2 left-0 top-2 w-[3px] rounded-r-full bg-blue-600 dark:bg-blue-400" />
                   </motion.div>
                 )}
-                <item.icon size={20} className={`shrink-0 z-10 transition-transform duration-150 group-hover:scale-110 ${isActive ? "text-blue-600 dark:text-blue-400" : "text-slate-500 dark:text-slate-400"}`} />
+
+                <item.icon
+                  size={19}
+                  className={`z-10 shrink-0 transition-transform duration-150 group-hover:scale-105 ${
+                    isActive
+                      ? 'text-blue-600 dark:text-blue-400'
+                      : 'text-slate-500 dark:text-slate-400'
+                  }`}
+                />
+
                 <AnimatePresence initial={false}>
                   {isHovered && (
                     <motion.span
@@ -153,7 +212,7 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -6 }}
                       transition={{ duration: 0.12 }}
-                      className="ml-3.5 z-10 whitespace-nowrap overflow-hidden"
+                      className="z-10 ml-3.5 overflow-hidden whitespace-nowrap"
                     >
                       {item.label}
                     </motion.span>
@@ -165,29 +224,33 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
         ))}
       </nav>
 
-      {/* ─── User Profile Section (Bottom) ─── */}
-      <div className="p-3 border-t border-blue-400/20 dark:border-blue-400/20 relative z-10">
+      {/* User profile section */}
+      <div className="relative z-10 border-t border-slate-200/70 p-3 dark:border-white/10">
         <div ref={dropdownRef} className="relative">
           <button
             onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
             aria-expanded={isProfileDropdownOpen}
             aria-haspopup="true"
-            className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl hover:bg-blue-500/10 dark:hover:bg-blue-400/10 transition-colors group cursor-pointer"
+            className="group flex w-full cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 transition-colors hover:bg-blue-500/8 dark:hover:bg-blue-400/10"
           >
-            {/* Avatar */}
-            <div className="h-9 w-9 rounded-full bg-blue-600 shadow-md shadow-blue-600/20 overflow-hidden border border-white/40 dark:border-slate-700/60 flex items-center justify-center shrink-0">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/40 bg-blue-600 shadow-sm shadow-blue-600/20 dark:border-slate-700/60">
               {loading ? (
-                <span className="text-white font-bold text-sm animate-pulse">...</span>
+                <span className="animate-pulse text-sm font-bold text-white">
+                  …
+                </span>
               ) : user?.avatar_url ? (
-                <img src={user.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                <img
+                  src={user.avatar_url}
+                  alt="Profile"
+                  className="h-full w-full object-cover"
+                />
               ) : (
-                <span className="text-white font-bold text-sm">
+                <span className="text-sm font-bold text-white">
                   {getInitials(user?.first_name, user?.last_name)}
                 </span>
               )}
             </div>
 
-            {/* Name & Role (visible when expanded) */}
             <AnimatePresence initial={false}>
               {isHovered && (
                 <motion.div
@@ -195,77 +258,102 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -6 }}
                   transition={{ duration: 0.12 }}
-                  className="flex-1 text-left truncate"
+                  className="flex-1 truncate text-left"
                 >
-                  <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
+                  <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
                     {user?.first_name} {user?.last_name}
                   </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate">Professional</p>
+                  <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
+                    Professional
+                  </p>
                 </motion.div>
               )}
             </AnimatePresence>
 
             <ChevronDown
-              size={16}
-              className={`text-slate-500 dark:text-slate-400 shrink-0 transition-transform duration-200 ${
-                isProfileDropdownOpen ? "rotate-180" : ""
-              } ${!isHovered && "ml-auto"}`}
+              size={15}
+              className={`shrink-0 text-slate-500 transition-transform duration-200 dark:text-slate-400 ${
+                isProfileDropdownOpen ? 'rotate-180' : ''
+              } ${!isHovered ? 'ml-auto' : ''}`}
             />
           </button>
 
-          {/* Dropdown menu */}
+          {/* Dropdown */}
           <AnimatePresence>
             {isProfileDropdownOpen && (
               <motion.div
-                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                initial={{ opacity: 0, y: -8, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                transition={{ duration: 0.15 }}
-                className="absolute bottom-full left-0 right-0 mb-2 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200/60 dark:border-slate-700/60 overflow-hidden z-50"
+                exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
+                className="absolute bottom-full left-0 right-0 z-50 mb-2 overflow-hidden rounded-xl border border-slate-200/70 bg-white shadow-xl shadow-slate-900/10 dark:border-white/10 dark:bg-slate-900"
               >
-                <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700">
-                  <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
+                <div className="border-b border-slate-100 px-4 py-3 dark:border-white/10">
+                  <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
                     {user?.first_name} {user?.last_name}
                   </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{user?.email}</p>
+                  <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                    {user?.email}
+                  </p>
                 </div>
                 <div className="py-1">
                   <button
-                    onClick={() => { navigate("/home/profile"); setIsProfileDropdownOpen(false); }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer"
+                    onClick={() => {
+                      navigate('/home/profile');
+                      setIsProfileDropdownOpen(false);
+                    }}
+                    className="flex w-full cursor-pointer items-center gap-3 px-4 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800/60"
                   >
-                    <User size={16} className="text-slate-500 dark:text-slate-400" />
+                    <User
+                      size={15}
+                      className="text-slate-500 dark:text-slate-400"
+                    />
                     My Profile
                   </button>
                   <button
-                    onClick={() => { fileInputRef.current?.click(); }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex w-full cursor-pointer items-center gap-3 px-4 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800/60"
                   >
-                    <ImagePlus size={16} className="text-slate-500 dark:text-slate-400" />
+                    <ImagePlus
+                      size={15}
+                      className="text-slate-500 dark:text-slate-400"
+                    />
                     Upload Avatar
                   </button>
                   <button
-                    onClick={() => { navigate("/home/settings"); setIsProfileDropdownOpen(false); }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer"
+                    onClick={() => {
+                      navigate('/home/settings');
+                      setIsProfileDropdownOpen(false);
+                    }}
+                    className="flex w-full cursor-pointer items-center gap-3 px-4 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800/60"
                   >
-                    <Settings size={16} className="text-slate-500 dark:text-slate-400" />
+                    <Settings
+                      size={15}
+                      className="text-slate-500 dark:text-slate-400"
+                    />
                     Settings
                   </button>
-                  {/* Theme Toggle inside dropdown */}
                   <button
-                    onClick={() => { toggleTheme(); setIsProfileDropdownOpen(false); }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer"
+                    onClick={() => {
+                      toggleTheme();
+                      setIsProfileDropdownOpen(false);
+                    }}
+                    className="flex w-full cursor-pointer items-center gap-3 px-4 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800/60"
                   >
-                    {isDark ? <Sun size={16} className="text-amber-500" /> : <Moon size={16} className="text-blue-500" />}
-                    {isDark ? "Light Mode" : "Dark Mode"}
+                    {isDark ? (
+                      <Sun size={15} className="text-blue-500" />
+                    ) : (
+                      <Moon size={15} className="text-blue-500" />
+                    )}
+                    {isDark ? 'Light Mode' : 'Dark Mode'}
                   </button>
                 </div>
-                <div className="py-1 border-t border-slate-100 dark:border-slate-700">
+                <div className="border-t border-slate-100 py-1 dark:border-white/10">
                   <button
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer"
+                    className="flex w-full cursor-pointer items-center gap-3 px-4 py-2 text-sm text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30"
                   >
-                    <LogOut size={16} />
+                    <LogOut size={15} />
                     Logout
                   </button>
                 </div>
@@ -274,8 +362,13 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
           </AnimatePresence>
         </div>
 
-        {/* Hidden file input for avatar upload */}
-        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleAvatarChange}
+        />
       </div>
     </motion.aside>
   );

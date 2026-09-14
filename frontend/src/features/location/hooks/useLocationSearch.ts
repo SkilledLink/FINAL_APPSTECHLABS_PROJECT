@@ -11,7 +11,8 @@ export interface UseLocationSearchResult {
   clear: () => void;
 }
 
-const DEBOUNCE_MS = 500;
+const DEBOUNCE_MS = 400;
+const MIN_QUERY_LENGTH = 2;
 
 export function useLocationSearch(
   country?: string,
@@ -22,41 +23,50 @@ export function useLocationSearch(
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const requestId = useRef(0);
+  /* Guards against out-of-order responses */
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
     const trimmed = query.trim();
-    if (trimmed.length < 2) {
+
+    if (trimmed.length < MIN_QUERY_LENGTH) {
       setResults([]);
       setLoading(false);
       setError(null);
       return;
     }
 
-    const timer = setTimeout(async () => {
-      const id = ++requestId.current;
+    const timer = window.setTimeout(async () => {
+      const id = ++requestIdRef.current;
       setLoading(true);
       setError(null);
+
       try {
         const res = await locationService.search(trimmed, limit, country);
-        if (id !== requestId.current) return;
-        setResults(res.results);
+        if (id !== requestIdRef.current) return;
+        setResults(res.results ?? []);
       } catch (err: any) {
-        if (id !== requestId.current) return;
+        if (id !== requestIdRef.current) return;
         setError(err?.message ?? 'Search failed');
         setResults([]);
       } finally {
-        if (id === requestId.current) setLoading(false);
+        if (id === requestIdRef.current) setLoading(false);
       }
     }, DEBOUNCE_MS);
 
-    return () => clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+      /* Invalidate any in-flight response so it doesn't overwrite a newer one */
+      requestIdRef.current++;
+    };
   }, [query, country, limit]);
 
   const clear = () => {
+    requestIdRef.current++;
     setQuery('');
     setResults([]);
     setError(null);
+    setLoading(false);
   };
 
   return { results, loading, error, query, setQuery, clear };

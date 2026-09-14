@@ -50,14 +50,12 @@ export default function NearbyProfessionalCard({
     <Link
       to={profileHref}
       onClick={() => onSelect?.(professional.id)}
-      className="group relative block overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-indigo-300 hover:shadow-xl hover:shadow-indigo-500/10 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-indigo-500/50 dark:hover:shadow-indigo-500/5"
+      className="group relative block overflow-hidden rounded-md border border-slate-200/70 bg-white/85 backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-500/40 hover:shadow-[0_8px_24px_-12px_rgba(59,130,246,0.25)] dark:border-white/10 dark:bg-slate-900/60 dark:hover:border-blue-500/30"
     >
-      {/* Top Accent Gradient Line */}
-      <span className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 transition-transform duration-300 group-hover:scale-x-100" />
+      <span className="absolute inset-x-0 top-0 h-[2px] origin-left scale-x-0 bg-gradient-to-r from-blue-500 to-blue-700 transition-transform duration-300 group-hover:scale-x-100" />
 
-      <div className="p-6">
+      <div className="p-5">
         <div className="flex items-start gap-4">
-          {/* Avatar with Availability Ring */}
           <div className="relative shrink-0">
             <Avatar
               name={fullName}
@@ -66,8 +64,8 @@ export default function NearbyProfessionalCard({
             />
             {professional.available && (
               <span
-                className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-500 ring-2 ring-emerald-500/20 dark:border-slate-900"
-                title="Available"
+                className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-blue-600 dark:border-slate-900"
+                aria-label="Available"
               />
             )}
           </div>
@@ -76,13 +74,13 @@ export default function NearbyProfessionalCard({
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <h3 className="truncate text-base font-bold text-slate-900 transition-colors group-hover:text-indigo-600 dark:text-slate-100 dark:group-hover:text-indigo-400">
+                  <h3 className="truncate text-[15px] font-semibold tracking-tight text-slate-900 transition-colors group-hover:text-blue-700 dark:text-white dark:group-hover:text-blue-400">
                     {fullName}
                   </h3>
                   {professional.is_verified && (
                     <BadgeCheck
-                      className="h-4 w-4 shrink-0 fill-indigo-600 text-white dark:fill-indigo-400 dark:text-slate-900"
-                      title="Verified professional"
+                      className="h-4 w-4 shrink-0 fill-blue-600 text-white dark:fill-blue-500 dark:text-slate-900"
+                      aria-label="Verified professional"
                     />
                   )}
                 </div>
@@ -91,9 +89,7 @@ export default function NearbyProfessionalCard({
                   {professional.profession}
                   {professional.company_name && (
                     <>
-                      <span className="mx-1.5 text-slate-300 dark:text-slate-700">
-                        ·
-                      </span>
+                      <span className="mx-1.5 text-slate-300 dark:text-slate-700">·</span>
                       <span className="text-slate-500 dark:text-slate-400">
                         {professional.company_name}
                       </span>
@@ -102,15 +98,14 @@ export default function NearbyProfessionalCard({
                 </p>
               </div>
 
-              <ArrowUpRight className="h-4 w-4 shrink-0 text-slate-400 opacity-0 transition-all duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:opacity-100 dark:text-slate-500" />
+              <ArrowUpRight className="h-4 w-4 shrink-0 text-slate-400 opacity-0 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:opacity-100" />
             </div>
 
-            {/* Rating and Experience Badges */}
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
               {professional.rating > 0 ? (
                 <span className="inline-flex items-center gap-1">
-                  <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                  <span className="font-bold text-slate-900 tabular-nums dark:text-slate-100">
+                  <Star className="h-3.5 w-3.5 fill-blue-500 text-blue-500" />
+                  <span className="font-bold tabular-nums text-slate-900 dark:text-slate-100">
                     {professional.rating.toFixed(1)}
                   </span>
                   <span className="text-slate-500 dark:text-slate-400">
@@ -127,9 +122,7 @@ export default function NearbyProfessionalCard({
               {professional.years_of_experience != null &&
                 professional.years_of_experience > 0 && (
                   <>
-                    <span className="text-slate-300 dark:text-slate-700">
-                      ·
-                    </span>
+                    <span className="text-slate-300 dark:text-slate-700">·</span>
                     <span className="inline-flex items-center gap-1 font-medium text-slate-500 dark:text-slate-400">
                       <Clock className="h-3 w-3" />
                       {professional.years_of_experience}{' '}
@@ -142,30 +135,28 @@ export default function NearbyProfessionalCard({
           </div>
         </div>
 
-        {/* Headline */}
         {professional.headline && (
           <p className="mt-3.5 line-clamp-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
             {professional.headline}
           </p>
         )}
 
-        {/* Services Offered */}
         {visibleServices.length > 0 && (
           <div className="mt-4">
-            <div className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            <div className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
               Services offered
             </div>
             <div className="flex flex-wrap gap-1.5">
               {visibleServices.map((service) => (
                 <span
                   key={service}
-                  className="rounded-lg bg-indigo-50/80 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 ring-1 ring-indigo-100 dark:bg-indigo-950/60 dark:text-indigo-300 dark:ring-indigo-900/50"
+                  className="rounded-sm border border-blue-500/20 bg-blue-500/8 px-2.5 py-1 text-[11px] font-semibold text-blue-700 dark:border-blue-400/20 dark:text-blue-300"
                 >
                   {service}
                 </span>
               ))}
               {remaining > 0 && (
-                <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                <span className="rounded-sm bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-400">
                   +{remaining} more
                 </span>
               )}
@@ -173,23 +164,22 @@ export default function NearbyProfessionalCard({
           </div>
         )}
 
-        {/* Specialties Fallback */}
         {visibleServices.length === 0 && skills.length > 0 && (
           <div className="mt-4">
-            <div className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            <div className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
               Specialties
             </div>
             <div className="flex flex-wrap gap-1.5">
               {skills.slice(0, 4).map((skill) => (
                 <span
                   key={skill}
-                  className="rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                  className="rounded-sm bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300"
                 >
                   {skill}
                 </span>
               ))}
               {skills.length > 4 && (
-                <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                <span className="rounded-sm bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                   +{skills.length - 4}
                 </span>
               )}
@@ -197,19 +187,18 @@ export default function NearbyProfessionalCard({
           </div>
         )}
 
-        {/* Footer Info: Location & Rate */}
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200/60 pt-4 dark:border-white/10">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
               {public_location ? (
-                <MapPin className="h-3.5 w-3.5 shrink-0 text-indigo-600 dark:text-indigo-400" />
+                <MapPin className="h-3.5 w-3.5 shrink-0 text-blue-600 dark:text-blue-400" />
               ) : (
                 <Globe className="h-3.5 w-3.5 shrink-0 text-slate-400 dark:text-slate-500" />
               )}
               <span className="truncate font-medium">{locationLabel}</span>
             </div>
             {hasDistance && (
-              <div className="mt-0.5 pl-5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+              <div className="mt-0.5 pl-5 text-[11px] font-bold text-blue-600 dark:text-blue-400">
                 {formatDistance(distance_km as number)}
               </div>
             )}
@@ -217,10 +206,10 @@ export default function NearbyProfessionalCard({
 
           {professional.hourly_rate != null && (
             <div className="text-right">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
                 Rate
               </div>
-              <div className="text-sm font-bold text-slate-900 tabular-nums dark:text-slate-100">
+              <div className="text-sm font-bold tabular-nums text-slate-900 dark:text-slate-100">
                 {professional.hourly_rate.toLocaleString()}{' '}
                 <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
                   {professional.currency}/hr

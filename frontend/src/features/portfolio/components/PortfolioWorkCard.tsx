@@ -12,6 +12,7 @@ import {
   Tag,
   Briefcase,
   Loader2,
+  AlertTriangle,
 } from 'lucide-react';
 import type { Work } from '../../../types/portfolio';
 
@@ -21,6 +22,39 @@ interface PortfolioWorkCardProps {
   onDelete: () => Promise<void> | void;
   onUploadImages: (before?: File, after?: File) => Promise<void>;
 }
+
+/* ───────────────────────── Shared tokens ───────────────────────── */
+
+const CARD =
+  'group relative flex flex-col justify-between overflow-hidden rounded-md ' +
+  'border border-slate-200/70 bg-white/85 backdrop-blur-xl ' +
+  'dark:border-white/10 dark:bg-slate-900/60 ' +
+  'shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-16px_rgba(15,23,42,0.12)] ' +
+  'dark:shadow-[0_1px_2px_rgba(0,0,0,0.3),0_8px_24px_-16px_rgba(0,0,0,0.5)] ' +
+  'transition-all duration-200 ' +
+  'hover:border-blue-500/40 hover:shadow-[0_8px_24px_-12px_rgba(59,130,246,0.25)] ' +
+  'dark:hover:border-blue-500/30';
+
+const CHIP_BLUE =
+  'inline-flex items-center gap-1 rounded-sm border border-blue-500/20 ' +
+  'bg-blue-500/8 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ' +
+  'text-blue-700 dark:border-blue-400/20 dark:text-blue-300';
+
+const CHIP_MUTED =
+  'inline-flex items-center gap-1 rounded-sm border border-slate-200/80 ' +
+  'bg-slate-100/60 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ' +
+  'text-slate-600 dark:border-white/10 dark:bg-slate-800/50 dark:text-slate-400';
+
+const META_CHIP =
+  'inline-flex items-center gap-1 rounded-sm border border-slate-200/70 ' +
+  'bg-white/70 px-2 py-1 text-[11px] font-medium text-slate-600 ' +
+  'backdrop-blur-md dark:border-white/10 dark:bg-slate-800/50 dark:text-slate-300';
+
+const ICON_BTN =
+  'flex h-7 w-7 items-center justify-center rounded text-slate-400 ' +
+  'transition-colors focus:outline-none focus-visible:ring-2 disabled:opacity-50';
+
+/* ─────────────────────────────────────────────────────────────── */
 
 export default function PortfolioWorkCard({
   work,
@@ -57,215 +91,262 @@ export default function PortfolioWorkCard({
     setIsDeleting(true);
     try {
       await onDelete();
+      setShowConfirmDelete(false);
     } finally {
       setIsDeleting(false);
-      setShowConfirmDelete(false);
     }
   };
+
+  const hasMeta = Boolean(
+    work.location ||
+      (work.duration_value && work.duration_unit) ||
+      work.team_size ||
+      work.client_type
+  );
 
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 15 }}
+      initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      className="group relative bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 hover:border-cyan-500/40 dark:hover:border-cyan-500/30 rounded-3xl p-5 shadow-sm hover:shadow-xl hover:shadow-cyan-500/5 transition-all duration-300 flex flex-col justify-between overflow-hidden"
+      exit={{ opacity: 0, scale: 0.98 }}
+      transition={{ duration: 0.15, ease: 'easeOut' }}
+      className={`${CARD} p-4 sm:p-5`}
     >
-      {/* Background Refraction Glow */}
-      <div className="absolute -top-12 -right-12 w-32 h-32 bg-cyan-500/5 dark:bg-cyan-500/10 rounded-full blur-2xl group-hover:bg-cyan-500/15 transition-all duration-500 pointer-events-none" />
+      {/* Corner glow (hover) */}
+      <div className="pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full bg-blue-500/0 blur-2xl transition-all duration-500 group-hover:bg-blue-500/15" />
 
-      <div>
-        {/* Header Badges & Actions */}
-        <div className="flex items-start justify-between gap-2 mb-3">
-          <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+      <div className="relative">
+        {/* ── Header: category badge + actions ── */}
+        <div className="mb-3 flex items-start justify-between gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
             {work.service_category ? (
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 truncate">
+              <span className={CHIP_BLUE}>
                 <Tag size={11} />
                 <span className="truncate">{work.service_category}</span>
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
-                Project Showcase
+              <span className={CHIP_MUTED}>Project</span>
+            )}
+
+            {work.client_type && (
+              <span className={CHIP_MUTED}>
+                <Briefcase size={10} />
+                {work.client_type}
               </span>
             )}
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center gap-1 opacity-90 group-hover:opacity-100 transition-opacity shrink-0">
+          <div className="-mr-1 -mt-1 flex shrink-0 items-center gap-0.5">
             <button
+              type="button"
               onClick={onEdit}
-              className="p-1.5 text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-500/10 rounded-xl transition-all duration-200"
               title="Edit work"
+              aria-label={`Edit ${work.title}`}
+              className={`${ICON_BTN} hover:bg-blue-500/10 hover:text-blue-600 dark:hover:text-blue-400 focus-visible:ring-blue-500/25`}
             >
               <Edit3 size={15} />
             </button>
             <button
+              type="button"
               onClick={() => setShowConfirmDelete(true)}
-              className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl transition-all duration-200"
               title="Delete work"
+              aria-label={`Delete ${work.title}`}
+              className={`${ICON_BTN} hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-400 focus-visible:ring-rose-500/25`}
             >
               <Trash2 size={15} />
             </button>
           </div>
         </div>
 
-        {/* Title */}
-        <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors duration-200 line-clamp-1">
+        {/* ── Title ── */}
+        <h3 className="line-clamp-2 text-[15px] font-semibold leading-snug tracking-tight text-slate-900 transition-colors group-hover:text-blue-700 dark:text-white dark:group-hover:text-blue-400">
           {work.title}
         </h3>
 
-        {/* Description */}
+        {/* ── Description ── */}
         {work.description && (
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 line-clamp-2 leading-relaxed">
+          <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
             {work.description}
           </p>
         )}
 
-        {/* Metadata Badges */}
-        <div className="flex flex-wrap gap-1.5 mt-3 text-[11px] font-medium text-slate-600 dark:text-slate-300">
-          {work.location && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 rounded-xl">
-              <MapPin size={12} className="text-slate-400" />
-              <span>{work.location}</span>
-            </span>
-          )}
-          {work.duration_value && work.duration_unit && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 rounded-xl">
-              <Clock size={12} className="text-slate-400" />
-              <span>
+        {/* ── Metadata ── */}
+        {hasMeta && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {work.location && (
+              <span className={META_CHIP}>
+                <MapPin size={11} className="text-blue-500" />
+                <span className="truncate">{work.location}</span>
+              </span>
+            )}
+            {work.duration_value && work.duration_unit && (
+              <span className={META_CHIP}>
+                <Clock size={11} className="text-blue-500" />
                 {work.duration_value} {work.duration_unit}
               </span>
-            </span>
-          )}
-          {work.team_size && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 rounded-xl">
-              <Users size={12} className="text-slate-400" />
-              <span>{work.team_size} members</span>
-            </span>
-          )}
-          {work.client_type && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 rounded-xl">
-              <Briefcase size={12} className="text-slate-400" />
-              <span>{work.client_type}</span>
-            </span>
-          )}
-        </div>
+            )}
+            {work.team_size && (
+              <span className={META_CHIP}>
+                <Users size={11} className="text-blue-500" />
+                {work.team_size} {work.team_size === 1 ? 'person' : 'members'}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Before / After Showcase Grid */}
-      <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 grid grid-cols-2 gap-2.5">
-        {/* Before Image Box */}
-        <div className="relative group/aspect aspect-video bg-slate-100 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 rounded-2xl overflow-hidden">
-          {work.before_image_url ? (
-            <img
-              src={work.before_image_url}
-              alt="Before project showcase"
-              className="w-full h-full object-cover transition-transform duration-500 group-hover/aspect:scale-105"
-            />
-          ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500">
-              <ImageIcon size={20} />
-              <span className="text-[10px] font-medium mt-1">Before Image</span>
-            </div>
-          )}
+      {/* ── Before / After grid ── */}
+      <div className="relative mt-4 grid grid-cols-2 gap-2 border-t border-slate-200/60 pt-3 dark:border-white/10">
+        {/* Before */}
+        <ImageSlot
+          variant="before"
+          label="Before"
+          imageUrl={work.before_image_url ?? null}
+          uploading={uploading === 'before'}
+          disabled={uploading !== null}
+          inputRef={beforeRef}
+          onPick={() => beforeRef.current?.click()}
+        />
+        <input
+          ref={beforeRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          className="hidden"
+          onChange={(e) => handleFile(e, 'before')}
+        />
 
-          <button
-            onClick={() => beforeRef.current?.click()}
-            disabled={uploading !== null}
-            className="absolute inset-0 bg-slate-950/60 backdrop-blur-[2px] opacity-0 group-hover/aspect:opacity-100 transition-all duration-200 flex items-center justify-center text-white text-xs font-medium gap-1.5"
-          >
-            {uploading === 'before' ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <Camera size={16} />
-            )}
-            <span>{work.before_image_url ? 'Replace' : 'Upload'}</span>
-          </button>
-
-          <input
-            ref={beforeRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => handleFile(e, 'before')}
-          />
-
-          <span className="absolute bottom-1.5 left-1.5 text-[10px] font-bold bg-slate-950/70 backdrop-blur-md text-white px-2 py-0.5 rounded-lg border border-white/10">
-            Before
-          </span>
-        </div>
-
-        {/* After Image Box */}
-        <div className="relative group/aspect aspect-video bg-slate-100 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 rounded-2xl overflow-hidden">
-          {work.after_image_url ? (
-            <img
-              src={work.after_image_url}
-              alt="After project showcase"
-              className="w-full h-full object-cover transition-transform duration-500 group-hover/aspect:scale-105"
-            />
-          ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500">
-              <ImageIcon size={20} />
-              <span className="text-[10px] font-medium mt-1">After Image</span>
-            </div>
-          )}
-
-          <button
-            onClick={() => afterRef.current?.click()}
-            disabled={uploading !== null}
-            className="absolute inset-0 bg-slate-950/60 backdrop-blur-[2px] opacity-0 group-hover/aspect:opacity-100 transition-all duration-200 flex items-center justify-center text-white text-xs font-medium gap-1.5"
-          >
-            {uploading === 'after' ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <Camera size={16} />
-            )}
-            <span>{work.after_image_url ? 'Replace' : 'Upload'}</span>
-          </button>
-
-          <input
-            ref={afterRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => handleFile(e, 'after')}
-          />
-
-          <span className="absolute bottom-1.5 left-1.5 text-[10px] font-bold bg-cyan-500/90 backdrop-blur-md text-white px-2 py-0.5 rounded-lg border border-white/10 shadow-sm">
-            After
-          </span>
-        </div>
+        {/* After */}
+        <ImageSlot
+          variant="after"
+          label="After"
+          imageUrl={work.after_image_url ?? null}
+          uploading={uploading === 'after'}
+          disabled={uploading !== null}
+          inputRef={afterRef}
+          onPick={() => afterRef.current?.click()}
+        />
+        <input
+          ref={afterRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          className="hidden"
+          onChange={(e) => handleFile(e, 'after')}
+        />
       </div>
 
-      {/* Delete Confirmation Overlay */}
+      {/* ── Delete confirmation overlay ── */}
       {showConfirmDelete && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="absolute inset-0 bg-slate-950/80 backdrop-blur-md p-4 flex flex-col justify-center items-center text-center z-20 rounded-3xl"
+          transition={{ duration: 0.12 }}
+          className="absolute inset-0 z-20 flex flex-col items-center justify-center rounded-md border border-white/60 bg-white/95 p-5 text-center backdrop-blur-md dark:border-white/10 dark:bg-slate-900/95"
         >
-          <p className="text-xs font-semibold text-slate-200 mb-3">
-            Delete <span className="text-white font-bold">"{work.title}"</span>?
+          <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-md border border-rose-500/20 bg-rose-500/10 text-rose-600 dark:text-rose-400">
+            <AlertTriangle size={16} />
+          </div>
+
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">
+            Delete work?
           </p>
-          <div className="flex gap-2 w-full max-w-[200px]">
+          <p className="mb-4 mt-1 line-clamp-2 text-xs text-slate-500 dark:text-slate-400">
+            "{work.title}"
+          </p>
+
+          <div className="flex w-full max-w-[220px] gap-2">
             <button
+              type="button"
               onClick={() => setShowConfirmDelete(false)}
               disabled={isDeleting}
-              className="flex-1 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-xl transition"
+              className="flex-1 rounded border border-slate-200/80 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-white/10 dark:bg-slate-800/50 dark:text-slate-200 dark:hover:bg-slate-800"
             >
               Cancel
             </button>
             <button
+              type="button"
               onClick={handleDelete}
               disabled={isDeleting}
-              className="flex-1 px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold rounded-xl transition flex items-center justify-center gap-1 disabled:opacity-50"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm shadow-rose-500/25 transition-colors hover:bg-rose-500 disabled:opacity-50"
             >
-              {isDeleting ? <Loader2 size={12} className="animate-spin" /> : 'Delete'}
+              {isDeleting ? (
+                <>
+                  <Loader2 size={13} className="animate-spin" />
+                  Deleting…
+                </>
+              ) : (
+                <>
+                  <Trash2 size={13} />
+                  Delete
+                </>
+              )}
             </button>
           </div>
         </motion.div>
       )}
     </motion.div>
+  );
+}
+
+/* ───────────────────────── Image slot ───────────────────────── */
+
+function ImageSlot({
+  variant,
+  label,
+  imageUrl,
+  uploading,
+  disabled,
+  onPick,
+}: {
+  variant: 'before' | 'after';
+  label: string;
+  imageUrl: string | null;
+  uploading: boolean;
+  disabled: boolean;
+  inputRef: React.RefObject<HTMLInputElement>;
+  onPick: () => void;
+}) {
+  const hasImage = Boolean(imageUrl);
+
+  return (
+    <div className="group/slot relative aspect-video overflow-hidden rounded-sm border border-slate-200/70 bg-slate-100 dark:border-white/10 dark:bg-slate-800/60">
+      {hasImage ? (
+        <img
+          src={imageUrl!}
+          alt={`${label} project showcase`}
+          className="h-full w-full object-cover transition-transform duration-500 group-hover/slot:scale-[1.03]"
+        />
+      ) : (
+        <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-slate-400 dark:text-slate-500">
+          <ImageIcon size={18} />
+          <span className="text-[10px] font-medium">{label}</span>
+        </div>
+      )}
+
+      {/* Hover overlay — upload / replace */}
+      <button
+        type="button"
+        onClick={onPick}
+        disabled={disabled}
+        className="absolute inset-0 flex items-center justify-center gap-1.5 bg-slate-950/60 text-[11px] font-semibold text-white opacity-0 backdrop-blur-[2px] transition-opacity duration-200 group-hover/slot:opacity-100 disabled:cursor-not-allowed"
+      >
+        {uploading ? (
+          <Loader2 size={14} className="animate-spin" />
+        ) : (
+          <Camera size={14} />
+        )}
+        <span>{hasImage ? 'Replace' : 'Upload'}</span>
+      </button>
+
+      {/* Corner label */}
+      <span
+        className={`absolute bottom-1.5 left-1.5 rounded-sm border border-white/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white shadow-sm backdrop-blur-md ${
+          variant === 'after' ? 'bg-blue-600/90' : 'bg-slate-950/70'
+        }`}
+      >
+        {label}
+      </span>
+    </div>
   );
 }

@@ -28,12 +28,12 @@ export default function ProfessionalLocationCard({
     <div
       className={`inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 ${className}`}
     >
-      <MapPin className="h-3.5 w-3.5 shrink-0 text-indigo-600 dark:text-indigo-400" />
+      <MapPin className="h-3.5 w-3.5 shrink-0 text-blue-600 dark:text-blue-400" />
       <span className="truncate font-medium">{location.display_name}</span>
       {hasDistance && (
         <>
           <span className="text-slate-300 dark:text-slate-700">·</span>
-          <span className="font-semibold text-emerald-600 tabular-nums dark:text-emerald-400">
+          <span className="font-semibold tabular-nums text-blue-600 dark:text-blue-400">
             {distanceKm < 0.1
               ? 'Here'
               : distanceKm < 1

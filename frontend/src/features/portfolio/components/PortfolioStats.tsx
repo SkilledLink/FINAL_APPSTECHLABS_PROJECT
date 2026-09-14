@@ -1,4 +1,4 @@
-import { Briefcase, MapPin, Star, Users } from 'lucide-react';
+import { Briefcase, MapPin, Star, Users, TrendingUp, Sparkles } from 'lucide-react';
 import type { Portfolio, Service, Work } from '../types/portfolio.types';
 
 interface PortfolioStatsProps {
@@ -7,76 +7,165 @@ interface PortfolioStatsProps {
   works: Work[];
 }
 
-export default function PortfolioStats({ portfolio, services, works }: PortfolioStatsProps) {
-  const stats = [
+interface StatCard {
+  label: string;
+  value: string;
+  hint?: string;
+  icon: React.ComponentType<{ className?: string }>;
+  showStar?: boolean;
+  hintIcon?: React.ComponentType<{ className?: string }>;
+}
+
+/* ───────────────────────── Shared tokens ───────────────────────── */
+
+/* Card shell — matches the panel + section cards */
+const CARD =
+  'group relative overflow-hidden rounded-md border border-slate-200/70 ' +
+  'bg-white/85 backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/60 ' +
+  'shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-16px_rgba(15,23,42,0.12)] ' +
+  'dark:shadow-[0_1px_2px_rgba(0,0,0,0.3),0_8px_24px_-16px_rgba(0,0,0,0.5)] ' +
+  'transition-all duration-200 ' +
+  'hover:-translate-y-0.5 hover:border-blue-500/40 ' +
+  'hover:shadow-[0_8px_24px_-12px_rgba(59,130,246,0.25)] ' +
+  'dark:hover:border-blue-500/30 ' +
+  'p-3.5 sm:p-5';
+
+/* Accent rail + bottom hairline */
+const RAIL = 'from-blue-500 to-blue-700';
+
+/* Icon tile */
+const ICON_TILE =
+  'border-blue-500/20 bg-blue-500/10 text-blue-600 ' +
+  'dark:border-blue-400/20 dark:bg-blue-400/10 dark:text-blue-400';
+
+/* Gradient for the value */
+const VALUE_GRADIENT =
+  'from-blue-700 to-blue-500 dark:from-blue-300 dark:to-blue-500';
+
+/* ─────────────────────────────────────────────────────────────── */
+
+export default function PortfolioStats({
+  portfolio,
+  services,
+  works,
+}: PortfolioStatsProps) {
+  const activeServices = services.filter((s) => s.is_active).length;
+  const totalServices = services.length;
+
+  const ratingNum =
+    portfolio.average_rating && portfolio.average_rating > 0
+      ? Number(portfolio.average_rating)
+      : null;
+  const totalReviews = portfolio.total_reviews ?? 0;
+
+  const areaLabel =
+    portfolio.service_radius_km != null
+      ? `${portfolio.service_radius_km} km`
+      : portfolio.city || portfolio.region || portfolio.country || '—';
+
+  const cards: StatCard[] = [
     {
-      label: 'Active Services',
-      value: services.filter((s) => s.is_active).length,
-      icon: <Briefcase className="h-4 w-4" />,
-      iconClass: 'text-cyan-600 dark:text-cyan-400',
-      iconBg: 'border-cyan-500/20 bg-cyan-500/10',
-      glow: 'bg-cyan-500/5 group-hover:bg-cyan-500/15',
+      label: 'Active services',
+      value: String(activeServices),
+      hint:
+        totalServices === 0
+          ? 'No services yet'
+          : activeServices === totalServices
+          ? 'All services live'
+          : `${totalServices - activeServices} paused`,
+      icon: Briefcase,
+      hintIcon: activeServices > 0 ? TrendingUp : undefined,
     },
     {
-      label: 'Works Showcased',
-      value: works.length,
-      icon: <Users className="h-4 w-4" />,
-      iconClass: 'text-blue-600 dark:text-blue-400',
-      iconBg: 'border-blue-500/20 bg-blue-500/10',
-      glow: 'bg-blue-500/5 group-hover:bg-blue-500/15',
+      label: 'Works showcased',
+      value: String(works.length),
+      hint:
+        works.length === 0
+          ? 'Add your first project'
+          : `${works.length} project${works.length === 1 ? '' : 's'} in your portfolio`,
+      icon: Users,
+      hintIcon: works.length > 0 ? Sparkles : undefined,
     },
     {
-      label: 'Rating',
-      value:
-        portfolio.average_rating && portfolio.average_rating > 0
-          ? Number(portfolio.average_rating).toFixed(1)
-          : '—',
-      icon: <Star className="h-4 w-4" />,
-      iconClass: 'text-amber-600 dark:text-amber-400',
-      iconBg: 'border-amber-500/20 bg-amber-500/10',
-      glow: 'bg-amber-500/5 group-hover:bg-amber-500/15',
+      label: 'Average rating',
+      value: ratingNum != null ? ratingNum.toFixed(1) : '—',
+      hint:
+        ratingNum != null
+          ? `Based on ${totalReviews} review${totalReviews === 1 ? '' : 's'}`
+          : 'No reviews yet',
+      icon: Star,
+      showStar: ratingNum != null,
     },
     {
-      label: 'Service Area',
-      value:
+      label: 'Service area',
+      value: areaLabel,
+      hint:
         portfolio.service_radius_km != null
-          ? `${portfolio.service_radius_km} km`
-          : portfolio.city || '—',
-      icon: <MapPin className="h-4 w-4" />,
-      iconClass: 'text-emerald-600 dark:text-emerald-400',
-      iconBg: 'border-emerald-500/20 bg-emerald-500/10',
-      glow: 'bg-emerald-500/5 group-hover:bg-emerald-500/15',
+          ? 'Travel radius'
+          : portfolio.city
+          ? 'Based in city'
+          : 'Set your location',
+      icon: MapPin,
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-      {stats.map((s) => (
-        <div
-          key={s.label}
-          className="group relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white/80 px-4 py-4 shadow-sm backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg dark:border-slate-800/80 dark:bg-slate-900/80 dark:hover:border-slate-700"
-        >
-          {/* Background Glow */}
-          <div
-            className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full blur-2xl transition-all duration-500 ${s.glow}`}
-          />
+    <div className="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4">
+      {cards.map((card) => {
+        const Icon = card.icon;
+        const HintIcon = card.hintIcon;
 
-          <div className="relative flex items-start justify-between gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              {s.label}
-            </span>
-            <span
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border ${s.iconBg} ${s.iconClass}`}
-            >
-              {s.icon}
-            </span>
-          </div>
+        return (
+          <div key={card.label} className={CARD}>
+            {/* Accent rail — left edge */}
+            <div
+              className={`pointer-events-none absolute left-0 top-3.5 bottom-3.5 w-[3px] rounded-r-sm bg-gradient-to-b ${RAIL} opacity-70 transition-all duration-300 group-hover:top-2 group-hover:bottom-2 group-hover:opacity-100`}
+            />
 
-          <div className="relative mt-2 truncate text-lg font-extrabold text-slate-900 tabular-nums dark:text-slate-100 sm:text-xl">
-            {s.value}
+            {/* Corner glow (hover) */}
+            <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-blue-500/20 opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-100" />
+
+            {/* Icon tile (top-right) */}
+            <div className="relative flex items-start justify-between gap-2">
+              <span className="text-[10px] font-bold uppercase leading-tight tracking-[0.12em] text-slate-500 dark:text-slate-400">
+                {card.label}
+              </span>
+              <span
+                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md border shadow-sm backdrop-blur-md sm:h-8 sm:w-8 ${ICON_TILE}`}
+              >
+                <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              </span>
+            </div>
+
+            {/* Big value */}
+            <div className="relative mt-2.5 flex items-baseline gap-1.5 sm:mt-3">
+              <span
+                className={`bg-gradient-to-br bg-clip-text text-2xl font-extrabold leading-none tracking-tight text-transparent tabular-nums sm:text-[2rem] ${VALUE_GRADIENT}`}
+              >
+                {card.value}
+              </span>
+              {card.showStar && (
+                <Star className="h-3.5 w-3.5 fill-blue-500 text-blue-500 sm:h-4 sm:w-4" />
+              )}
+            </div>
+
+            {/* Hint row */}
+            {card.hint && (
+              <div className="relative mt-1.5 flex items-center gap-1.5 text-[11px] font-medium text-slate-500 dark:text-slate-400 sm:mt-2">
+                {HintIcon && (
+                  <HintIcon className="h-3 w-3 shrink-0 text-blue-500" />
+                )}
+                <span className="truncate">{card.hint}</span>
+              </div>
+            )}
+
+            {/* Bottom hairline accent (hover) */}
+            <div
+              className={`pointer-events-none absolute inset-x-3 bottom-0 h-px bg-gradient-to-r ${RAIL} opacity-0 transition-opacity duration-300 group-hover:opacity-60 sm:inset-x-4`}
+            />
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
