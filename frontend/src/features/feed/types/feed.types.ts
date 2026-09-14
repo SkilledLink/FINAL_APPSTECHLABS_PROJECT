@@ -57,9 +57,37 @@ export interface FeedComment {
 }
 
 // ─────────────────────────────────────────────────────────────
+// MODERATION
+// ─────────────────────────────────────────────────────────────
+export type ModerationDecision = 'safe' | 'review' | 'unsafe';
+
+export interface ModerationSummary {
+  record_id: string;
+  decision: ModerationDecision;
+  severity: number;
+  confidence: number;
+  description: string;
+  reason: string;
+  categories: string[];
+  provider: string;
+  model: string;
+  error?: string | null;
+  created_at: string;
+}
+
+// ─────────────────────────────────────────────────────────────
 // FEED
 // ─────────────────────────────────────────────────────────────
-export type FeedStatus = 'published' | 'draft' | 'archived' | 'reported';
+export type FeedStatus =
+  | 'draft'
+  | 'published'
+  | 'archived'
+  | 'pending_moderation'
+  | 'pending_review'
+  | 'rejected';
+
+/** Client-only flag set on optimistic (still uploading) or failed posts. */
+export type FeedClientStatus = 'uploading' | 'failed';
 
 export interface Feed {
   id: string;
@@ -83,6 +111,15 @@ export interface Feed {
   media: FeedMedia[];
   hashtags: Hashtag[];
   comments: FeedComment[];
+
+  // Moderation summary — populated for owner / admin / moderator.
+  moderation?: ModerationSummary | null;
+
+  // ─── Client-only fields (never sent by the backend) ──────
+  /** Set only while an optimistic post is uploading or has failed. */
+  _clientStatus?: FeedClientStatus;
+  /** Temporary ID used to reconcile the optimistic post with the real one. */
+  _tempId?: string;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -103,8 +140,8 @@ export interface FeedCreatePayload {
   description: string;
   status?: FeedStatus;
   is_public?: boolean;
-  hashtags?: string[];          // e.g. ["python", "tech"]
-  media?: File | null;          // image or video
+  hashtags?: string[];
+  media?: File | null;
 }
 
 export interface FeedUpdatePayload {

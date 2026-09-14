@@ -1,6 +1,13 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, MoreHorizontal, Trash2 } from 'lucide-react';
+import {
+  MoreHorizontal,
+  Trash2,
+  Loader2,
+  AlertTriangle,
+  RefreshCw,
+  XCircle,
+} from 'lucide-react';
 import PostActions from './PostActions';
 import type { Feed } from '../types/feed.types';
 
@@ -11,6 +18,26 @@ interface PostCardProps {
   onComment?: (feedId: string, content: string) => void;
   onDeleteComment?: (feedId: string, commentId: string) => void;
   onHashtagClick?: (hashtag: string) => void;
+  onRetry?: (feed: Feed) => void;
+  onDismiss?: (feed: Feed) => void;
+}
+
+type VisualState = 'normal' | 'uploading' | 'failed' | 'rejected' | 'pending';
+
+function getVisualState(feed: Feed): VisualState {
+  if (feed._clientStatus === 'uploading') return 'uploading';
+  if (feed._clientStatus === 'failed') return 'failed';
+
+  const decision = feed.moderation?.decision;
+  if (decision === 'unsafe' || feed.status === 'rejected') return 'rejected';
+  if (
+    decision === 'review' ||
+    feed.status === 'pending_review' ||
+    feed.status === 'pending_moderation'
+  ) {
+    return 'pending';
+  }
+  return 'normal';
 }
 
 const PostCard: React.FC<PostCardProps> = ({
@@ -20,6 +47,8 @@ const PostCard: React.FC<PostCardProps> = ({
   onComment,
   onDeleteComment,
   onHashtagClick,
+  onRetry,
+  onDismiss,
 }) => {
   const [isMediaOpen, setIsMediaOpen] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -33,6 +62,8 @@ const PostCard: React.FC<PostCardProps> = ({
   const avatarUrl = user?.profile_image_url || '/default-avatar.png';
 
   const primaryMedia = feed.media?.[0];
+  const visualState = getVisualState(feed);
+  const isLocked = visualState !== 'normal';
 
   const timeAgo = (dateStr: string) => {
     const diff = Date.now() - new Date(dateStr).getTime();
@@ -52,12 +83,53 @@ const PostCard: React.FC<PostCardProps> = ({
     setCommentText('');
   };
 
+  const containerCls = (() => {
+    switch (visualState) {
+      case 'uploading':
+        return 'bg-white dark:bg-slate-800 opacity-75 border-gray-200 dark:border-slate-700';
+      case 'failed':
+        return 'bg-white dark:bg-slate-800 border-red-300 dark:border-red-800';
+      case 'rejected':
+        return 'bg-red-50/40 dark:bg-red-950/20 border-red-300 dark:border-red-800';
+      case 'pending':
+        return 'bg-amber-50/40 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800';
+      default:
+        return 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700';
+    }
+  })();
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-4 mb-4"
+      className={`rounded-xl shadow-sm border p-4 mb-4 ${containerCls}`}
     >
+      {/* Status banner */}
+      {visualState === 'uploading' && (
+        <div className="flex items-center gap-2 mb-2 text-xs font-medium text-blue-600 dark:text-blue-400">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          <span>Posting…</span>
+        </div>
+      )}
+      {visualState === 'failed' && (
+        <div className="flex items-center gap-2 mb-2 text-xs font-semibold text-red-600 dark:text-red-400">
+          <AlertTriangle className="w-3.5 h-3.5" />
+          <span>Failed to post</span>
+        </div>
+      )}
+      {visualState === 'rejected' && (
+        <div className="flex items-center gap-2 mb-2 text-xs font-semibold text-red-600 dark:text-red-400">
+          <XCircle className="w-3.5 h-3.5" />
+          <span>Rejected</span>
+        </div>
+      )}
+      {visualState === 'pending' && (
+        <div className="flex items-center gap-2 mb-2 text-xs font-semibold text-amber-600 dark:text-amber-400">
+          <AlertTriangle className="w-3.5 h-3.5" />
+          <span>Pending review</span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-3">
@@ -74,12 +146,15 @@ const PostCard: React.FC<PostCardProps> = ({
             </div>
             <p className="text-xs text-gray-500 dark:text-slate-400">
               {user?.account_type || 'User'}
-              <span className="text-gray-400 dark:text-slate-500"> • {timeAgo(feed.created_at)}</span>
+              <span className="text-gray-400 dark:text-slate-500">
+                {' '}
+                • {timeAgo(feed.created_at)}
+              </span>
             </p>
           </div>
         </div>
 
-        {onDelete && (
+        {onDelete && !isLocked && (
           <div className="relative">
             <button
               onClick={() => setShowMenu(!showMenu)}
@@ -116,7 +191,6 @@ const PostCard: React.FC<PostCardProps> = ({
           {feed.description}
         </p>
 
-        {/* Hashtags */}
         {feed.hashtags?.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-2">
             {feed.hashtags.map((tag) => (
@@ -131,6 +205,13 @@ const PostCard: React.FC<PostCardProps> = ({
           </div>
         )}
       </div>
+
+      {/* Moderation reason (rejected only) */}
+      {visualState === 'rejected' && feed.moderation?.reason && (
+        <div className="mb-3 text-xs text-red-700 dark:text-red-300 bg-red-100/60 dark:bg-red-950/30 rounded-lg px-3 py-2">
+          {feed.moderation.reason}
+        </div>
+      )}
 
       {/* Media */}
       {primaryMedia && (
@@ -161,12 +242,31 @@ const PostCard: React.FC<PostCardProps> = ({
         feed={feed}
         onLike={() => onLike(feed.id)}
         onCommentToggle={() => setShowComments(!showComments)}
+        disabled={isLocked}
       />
 
-      {/* Comments Section */}
-      {showComments && (
+      {/* Retry / Dismiss (failed only) */}
+      {visualState === 'failed' && (
+        <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-slate-700">
+          <button
+            onClick={() => onRetry?.(feed)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-full hover:bg-blue-700 transition"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Retry
+          </button>
+          <button
+            onClick={() => onDismiss?.(feed)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 text-xs font-semibold rounded-full hover:bg-gray-200 dark:hover:bg-slate-600 transition"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Comments (hidden when not live) */}
+      {showComments && !isLocked && (
         <div className="mt-3 pt-3 border-t border-gray-100 dark:border-slate-700">
-          {/* Comment Input */}
           <div className="flex gap-2 mb-3">
             <input
               type="text"
@@ -185,7 +285,6 @@ const PostCard: React.FC<PostCardProps> = ({
             </button>
           </div>
 
-          {/* Comments List */}
           {feed.comments?.map((comment) => (
             <div key={comment.id} className="flex gap-2 mb-2">
               <img

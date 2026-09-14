@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ImagePlus,
@@ -12,12 +12,25 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useFeedMutations } from '../hooks/useFeedMutations';
+import { useAuth } from '../../auth/hooks/useAuth';
+import type {
+  Post,
+  PostCreatePayload,
+  PostMedia,
+  Hashtag,
+} from '../types/post.types';
 
 interface PostComposerProps {
-  onPosted?: () => void;
+  onOptimisticCreate?: (post: Post, retry: () => void) => void;
+  onCreateSuccess?: (tempId: string, realPost: Post) => void;
+  onCreateError?: (tempId: string, error: Error) => void;
 }
 
-export const PostComposer: React.FC<PostComposerProps> = ({ onPosted }) => {
+export const PostComposer: React.FC<PostComposerProps> = ({
+  onOptimisticCreate,
+  onCreateSuccess,
+  onCreateError,
+}) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [hashtagsInput, setHashtagsInput] = useState('');
@@ -31,7 +44,11 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPosted }) => {
   const videoInputRef = useRef<HTMLInputElement>(null);
 
   const { createPost, loading } = useFeedMutations();
+  const { user } = useAuth();
 
+  const payloadMapRef = useRef<Map<string, PostCreatePayload>>(new Map());
+
+  // ─── Media helpers ──────────────────────────────────────
   const validateAndSetFile = (file: File) => {
     if (file.type.startsWith('image/')) {
       setMediaType('image');
@@ -55,7 +72,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPosted }) => {
 
   const handleMediaSelect = (
     e: React.ChangeEvent<HTMLInputElement>,
-    type: 'image' | 'video'
+    type: 'image' | 'video',
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -91,9 +108,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPosted }) => {
     setIsDragging(false);
 
     const file = e.dataTransfer.files?.[0];
-    if (file) {
-      validateAndSetFile(file);
-    }
+    if (file) validateAndSetFile(file);
   };
 
   const removeMedia = () => {
@@ -103,11 +118,18 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPosted }) => {
     setMediaType(null);
   };
 
+  /**
+   * Clears the form. NOTE: intentionally does NOT revoke `mediaPreview` —
+   * the optimistic card in the list still references that blob URL until
+   * the real post replaces it.
+   */
   const resetForm = () => {
     setTitle('');
     setDescription('');
     setHashtagsInput('');
-    removeMedia();
+    setMediaFile(null);
+    setMediaPreview(null);
+    setMediaType(null);
     setIsExpanded(false);
   };
 
@@ -116,27 +138,119 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPosted }) => {
     .map((h) => h.replace(/^#/, '').trim())
     .filter(Boolean);
 
+  // ─── Build optimistic Post ──────────────────────────────
+  const buildTempPost = useCallback(
+    (tempId: string, payload: PostCreatePayload): Post => {
+      const now = new Date().toISOString();
+
+      const tempMedia: PostMedia[] = mediaPreview
+        ? [
+            {
+              id: `${tempId}-media`,
+              media_url: mediaPreview,
+              media_type: mediaType === 'video' ? 'video' : 'image',
+              thumbnail_url: null,
+              width: null,
+              height: null,
+              duration_seconds: null,
+              file_size: mediaFile?.size ?? null,
+            },
+          ]
+        : [];
+
+      const tempHashtags: Hashtag[] =
+        payload.hashtags?.map((name, i) => ({
+          id: `${tempId}-tag-${i}`,
+          name,
+          usage_count: 0,
+        })) ?? [];
+
+      return {
+        id: tempId,
+        title: payload.title,
+        description: payload.description,
+        status: 'pending_moderation',
+        is_public: true,
+        user_id: user?.id ?? 'me',
+        is_deleted: false,
+        created_at: now,
+        updated_at: now,
+        likes_count: 0,
+        comments_count: 0,
+        is_liked: false,
+        user: user
+          ? {
+              id: user.id,
+              first_name: user.first_name ?? '',
+              last_name: user.last_name ?? '',
+              profile_image_url: user.profile_image_url ?? null,
+              account_type: user.account_type,
+            }
+          : null,
+        media: tempMedia,
+        hashtags: tempHashtags,
+        comments: [],
+        moderation: null,
+        _clientStatus: 'uploading',
+        _tempId: tempId,
+      };
+    },
+    [mediaPreview, mediaType, mediaFile, user],
+  );
+
+  // ─── Fire the request (used for initial submit + retry) ─
+  const submitPayload = useCallback(
+    async (tempId: string, payload: PostCreatePayload) => {
+      try {
+        const realPost = await createPost(payload);
+        payloadMapRef.current.delete(tempId);
+        onCreateSuccess?.(tempId, realPost);
+      } catch (err) {
+        const e =
+          err instanceof Error ? err : new Error('Failed to create post');
+        onCreateError?.(tempId, e);
+      }
+    },
+    [createPost, onCreateSuccess, onCreateError],
+  );
+
+  // ─── Post click ─────────────────────────────────────────
   const handleSubmit = async () => {
     if (!description.trim()) {
       toast.error('Please write something');
       return;
     }
 
-    try {
-      await createPost({
-        title: title.trim() || description.trim().slice(0, 80),
-        description: description.trim(),
-        hashtags: parsedHashtags,
-        media: mediaFile,
-        is_public: true,
-      });
+    const payload: PostCreatePayload = {
+      title: title.trim() || description.trim().slice(0, 80),
+      description: description.trim(),
+      hashtags: parsedHashtags,
+      media: mediaFile,
+      is_public: true,
+    };
 
-      toast.success('Post published!');
-      resetForm();
-      onPosted?.();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to create post');
-    }
+    const tempId = `temp-${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}`;
+
+    const tempPost = buildTempPost(tempId, payload);
+    payloadMapRef.current.set(tempId, payload);
+
+    // 1) Show the optimistic card instantly.
+    onOptimisticCreate?.(tempPost, () => {
+      submitPayload(tempId, payload);
+    });
+
+    // 2) Clear the form.
+    resetForm();
+
+    // 3) Yield one tick so React paints the optimistic card before we
+    //    hit the network. This is the line that guarantees the
+    //    placeholder is visible immediately.
+    await new Promise((r) => setTimeout(r, 0));
+
+    // 4) Fire the request.
+    await submitPayload(tempId, payload);
   };
 
   return (
@@ -150,7 +264,6 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPosted }) => {
           : 'border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/80 shadow-xs hover:border-slate-300 dark:hover:border-slate-700/80'
       }`}
     >
-      {/* Drag & Drop Visual Overlay */}
       <AnimatePresence>
         {isDragging && (
           <motion.div
@@ -167,7 +280,6 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPosted }) => {
         )}
       </AnimatePresence>
 
-      {/* Expanded Header Context */}
       <AnimatePresence>
         {isExpanded && (
           <motion.div
@@ -191,7 +303,6 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPosted }) => {
         )}
       </AnimatePresence>
 
-      {/* Title Field (Optional) */}
       <AnimatePresence>
         {isExpanded && (
           <motion.div
@@ -211,7 +322,6 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPosted }) => {
         )}
       </AnimatePresence>
 
-      {/* Main Textarea Description */}
       <div className="relative">
         <textarea
           placeholder="What are you working on?"
@@ -223,7 +333,6 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPosted }) => {
         />
       </div>
 
-      {/* Media Preview Stage */}
       <AnimatePresence>
         {mediaPreview && (
           <motion.div
@@ -259,7 +368,6 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPosted }) => {
         )}
       </AnimatePresence>
 
-      {/* Hashtags Section with Dynamic Pill Previews */}
       <AnimatePresence>
         {isExpanded && (
           <motion.div
@@ -297,7 +405,6 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPosted }) => {
 
       <hr className="border-slate-100 dark:border-slate-800 my-3.5" />
 
-      {/* Bottom Action Toolbar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <motion.button
@@ -330,24 +437,14 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPosted }) => {
           whileTap={{ scale: 0.97 }}
           type="button"
           onClick={handleSubmit}
-          disabled={loading || !description.trim()}
+          disabled={!description.trim()}
           className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold px-5 py-2 rounded-full shadow-md shadow-blue-500/20 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed transition-all"
         >
-          {loading ? (
-            <>
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span>Posting...</span>
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Post</span>
-            </>
-          )}
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>Post</span>
         </motion.button>
       </div>
 
-      {/* Hidden File Input Fields */}
       <input
         ref={imageInputRef}
         type="file"

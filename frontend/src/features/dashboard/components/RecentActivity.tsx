@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Activity } from '../types/dashboard.types';
+import type { Activity } from '../types/admin.types';
 import { formatDistanceToNow } from 'date-fns';
 import {
   Camera,

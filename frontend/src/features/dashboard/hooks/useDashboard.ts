@@ -7,7 +7,7 @@ import type {
   Job,
   DashboardStats,
   AnalyticsData,
-} from '../types/dashboard.types';
+} from '../types/admin.types';
 import { dashboardService } from '../services/dashboardService';
 
 export const useDashboard = () => {

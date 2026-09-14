@@ -37,7 +37,7 @@ import { AIFloatingWidget } from "./features/ai/components/AIFloatingWidget";
 // Main pages
 import HomePage from "./features/home/pages/HomePage";
 import Feed from "./features/posts/components/Feed";
-import DashboardPage from "./features/dashboard/components/pages/DashboardPage";
+import DashboardPage from "./features/dashboard/pages/DashboardPage";
 import { ProfilePage } from "./features/profile";
 import { MessagesPage } from "./features/messages";
 

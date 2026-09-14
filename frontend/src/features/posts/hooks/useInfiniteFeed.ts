@@ -47,7 +47,15 @@ export function useInfiniteFeed(options?: UseInfiniteFeedOptions) {
         status,
       });
 
-      setPosts(data.items);
+      // Preserve any still-uploading or failed optimistic posts so they
+      // are not wiped by a background refetch.
+      setPosts((prev) => {
+        const pending = prev.filter(
+          (p) => p._clientStatus === 'uploading' || p._clientStatus === 'failed',
+        );
+        return [...pending, ...data.items];
+      });
+
       setHasMore(data.items.length >= limit);
       skipRef.current = data.items.length;
     } catch (err: any) {
@@ -111,6 +119,37 @@ export function useInfiniteFeed(options?: UseInfiniteFeedOptions) {
     );
   }, []);
 
+  // ─── Optimistic helpers ─────────────────────────────────
+  const replacePost = useCallback((tempId: string, realPost: Post) => {
+    setPosts((prev) =>
+      prev.map((p) =>
+        p._tempId === tempId || p.id === tempId
+          ? { ...realPost, _tempId: tempId, _clientStatus: undefined }
+          : p,
+      ),
+    );
+  }, []);
+
+  const markPostFailed = useCallback((tempId: string) => {
+    setPosts((prev) =>
+      prev.map((p) =>
+        p._tempId === tempId || p.id === tempId
+          ? { ...p, _clientStatus: 'failed' as const }
+          : p,
+      ),
+    );
+  }, []);
+
+  const markPostUploading = useCallback((tempId: string) => {
+    setPosts((prev) =>
+      prev.map((p) =>
+        p._tempId === tempId || p.id === tempId
+          ? { ...p, _clientStatus: 'uploading' as const }
+          : p,
+      ),
+    );
+  }, []);
+
   useEffect(() => {
     if (enabled) {
       loadInitial();
@@ -128,6 +167,9 @@ export function useInfiniteFeed(options?: UseInfiniteFeedOptions) {
     prependPost,
     removePost,
     updatePostInList,
+    replacePost,
+    markPostFailed,
+    markPostUploading,
     setPosts,
   };
 }

@@ -1,5 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useCallback, useRef, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import FeedHeader from './FeedHeader';
 import PostComposer from './PostComposer';
@@ -11,7 +10,6 @@ import { useFeedFilters } from '../hooks/useFeedFilters';
 import type { Feed as FeedType } from '../types/feed.types';
 
 const Feed: React.FC = () => {
-  const navigate = useNavigate();
   const { filters, setHashtag } = useFeedFilters();
   const {
     feeds,
@@ -24,26 +22,113 @@ const Feed: React.FC = () => {
     prependFeed,
     removeFeed,
     updateFeedInList,
+    replaceFeed,
+    markFeedFailed,
+    markFeedUploading,
   } = useInfiniteFeed({ ...filters, limit: 10 });
 
   const { deleteFeed, toggleLike, createComment, deleteComment } = useFeedMutations();
 
-  // ─── Post new feed ───────────────────────────────────────
-  const handlePost = async () => {
-    try {
-      // The composer will call createFeed directly and return the feed
-      // The parent refreshes to show the new feed
-      await refresh();
-    } catch (err: any) {
-      console.error(err);
-    }
-  };
+  // ─── Retry registry for optimistic posts ────────────────
+  // Maps tempId -> the function that re-fires the create request.
+  const retryRef = useRef<Map<string, () => void>>(new Map());
 
-  // ─── Like toggle ─────────────────────────────────────────
+  // ─── Revoke blob URLs on unmount to avoid memory leaks ──
+  useEffect(() => {
+    const map = retryRef.current;
+    return () => {
+      map.clear();
+    };
+  }, []);
+
+  // ─── New post: optimistic insert ────────────────────────
+  const handleOptimisticCreate = useCallback(
+    (tempFeed: FeedType, retry: () => void) => {
+      prependFeed(tempFeed);
+      if (tempFeed._tempId) {
+        retryRef.current.set(tempFeed._tempId, retry);
+      }
+    },
+    [prependFeed],
+  );
+
+  // ─── New post: server responded with the real feed ──────
+  const handleCreateSuccess = useCallback(
+    (tempId: string, realFeed: FeedType) => {
+      // Revoke the temp media blob URL now that we have the real one.
+      const temp = feeds.find((f) => f._tempId === tempId);
+      const tempMediaUrl = temp?.media?.[0]?.media_url;
+      if (tempMediaUrl && tempMediaUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(tempMediaUrl);
+      }
+
+      // Swap in place — no reload, no scroll jump.
+      replaceFeed(tempId, realFeed);
+      retryRef.current.delete(tempId);
+
+      // Fire the right toast based on moderation.
+      const decision = realFeed.moderation?.decision;
+      const status = realFeed.status;
+
+      if (decision === 'unsafe' || status === 'rejected') {
+        toast.error('Your post was rejected');
+      } else if (
+        decision === 'review' ||
+        status === 'pending_review' ||
+        status === 'pending_moderation'
+      ) {
+        toast.info('Your post is being reviewed');
+      } else {
+        toast.success('Post created');
+      }
+    },
+    [feeds, replaceFeed],
+  );
+
+  // ─── New post: request failed ───────────────────────────
+  const handleCreateError = useCallback(
+    (tempId: string, err: Error) => {
+      markFeedFailed(tempId);
+      toast.error(err.message || 'Failed to create post');
+    },
+    [markFeedFailed],
+  );
+
+  // ─── Retry a failed optimistic post ─────────────────────
+  const handleRetryPost = useCallback(
+    (feed: FeedType) => {
+      const tempId = feed._tempId;
+      if (!tempId) return;
+      const retry = retryRef.current.get(tempId);
+      if (!retry) {
+        toast.error('Cannot retry this post anymore');
+        return;
+      }
+      markFeedUploading(tempId);
+      retry();
+    },
+    [markFeedUploading],
+  );
+
+  // ─── Dismiss a failed optimistic post ───────────────────
+  const handleDismissPost = useCallback(
+    (feed: FeedType) => {
+      const mediaUrl = feed.media?.[0]?.media_url;
+      if (mediaUrl && mediaUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(mediaUrl);
+      }
+      if (feed._tempId) {
+        retryRef.current.delete(feed._tempId);
+      }
+      removeFeed(feed.id);
+    },
+    [removeFeed],
+  );
+
+  // ─── Like toggle ────────────────────────────────────────
   const handleLike = async (feedId: string) => {
     try {
       const result = await toggleLike(feedId);
-      // Optimistic update
       const feed = feeds.find((f) => f.id === feedId);
       if (feed) {
         updateFeedInList({
@@ -57,7 +142,7 @@ const Feed: React.FC = () => {
     }
   };
 
-  // ─── Delete feed ─────────────────────────────────────────
+  // ─── Delete feed ────────────────────────────────────────
   const handleDelete = async (feedId: string) => {
     if (!window.confirm('Delete this post?')) return;
     try {
@@ -69,7 +154,7 @@ const Feed: React.FC = () => {
     }
   };
 
-  // ─── Comment ─────────────────────────────────────────────
+  // ─── Comment ────────────────────────────────────────────
   const handleComment = async (feedId: string, content: string) => {
     try {
       const comment = await createComment(feedId, { content });
@@ -103,7 +188,7 @@ const Feed: React.FC = () => {
     }
   };
 
-  // ─── Load more (infinite scroll) ─────────────────────────
+  // ─── Load more (infinite scroll) ────────────────────────
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -118,15 +203,19 @@ const Feed: React.FC = () => {
 
       if (node) observerRef.current.observe(node);
     },
-    [loading, loadingMore, hasMore, loadMore]
+    [loading, loadingMore, hasMore, loadMore],
   );
 
-  // ─── Render ──────────────────────────────────────────────
+  // ─── Render ─────────────────────────────────────────────
   return (
     <div className="max-w-xl mx-auto p-4">
       <FeedHeader onSelectHashtag={setHashtag} />
 
-      <PostComposer onPosted={handlePost} />
+      <PostComposer
+        onOptimisticCreate={handleOptimisticCreate}
+        onCreateSuccess={handleCreateSuccess}
+        onCreateError={handleCreateError}
+      />
 
       {loading && feeds.length === 0 && (
         <>
@@ -159,13 +248,15 @@ const Feed: React.FC = () => {
       <div className="space-y-4 mt-4">
         {feeds.map((feed) => (
           <PostCard
-            key={feed.id}
+            key={feed._tempId ?? feed.id}
             feed={feed}
             onLike={handleLike}
             onDelete={handleDelete}
             onComment={handleComment}
             onDeleteComment={handleDeleteComment}
             onHashtagClick={setHashtag}
+            onRetry={handleRetryPost}
+            onDismiss={handleDismissPost}
           />
         ))}
       </div>

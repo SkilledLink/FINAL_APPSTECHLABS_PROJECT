@@ -1,16 +1,16 @@
 import React from 'react';
 import { Loader2 } from 'lucide-react';
 
-import { useDashboard } from '../../hooks/useDashboard';
+import { useDashboard } from '../hooks/useDashboard';
 
-import DashboardLayout from '../DashboardLayout';
-import OverviewTab from '../OverviewTab';
-import RequestsTab from '../RequestsTab';
-import ServicesTab from '../ServicesTab';
-import PortfolioTab from '../PortfolioTab';
-import JobsTab from '../JobsTab';
-import AnalyticsTab from '../AnalyticsTab';
-import SettingsTab from '../SettingsTab';
+import DashboardLayout from '../components/DashboardLayout';
+import OverviewTab from '../components/OverviewTab';
+import RequestsTab from '../components/RequestsTab';
+import ServicesTab from '../components/ServicesTab';
+import PortfolioTab from '../components/PortfolioTab';
+import JobsTab from '../components/JobsTab';
+import AnalyticsTab from '../components/AnalyticsTab';
+import SettingsTab from '../components/SettingsTab';
 
 const DashboardPage: React.FC = () => {
   const {

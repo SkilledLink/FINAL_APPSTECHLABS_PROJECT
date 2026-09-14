@@ -14,6 +14,10 @@ import {
   CheckCircle2,
   Smile,
   Globe,
+  Loader2,
+  AlertTriangle,
+  RefreshCw,
+  XCircle,
 } from 'lucide-react';
 import PostActions from './PostActions';
 import ShareModal from './ShareModal';
@@ -26,9 +30,56 @@ interface PostCardProps {
   onComment?: (postId: string, content: string) => void;
   onDeleteComment?: (postId: string, commentId: string) => void;
   onHashtagClick?: (hashtag: string) => void;
+  onRetry?: (post: Post) => void;
+  onDismiss?: (post: Post) => void;
 }
 
-// ─── Auto-Playing Video Component ───
+type VisualState = 'normal' | 'uploading' | 'failed' | 'rejected' | 'pending';
+
+function getVisualState(post: Post): VisualState {
+  if (post._clientStatus === 'uploading') return 'uploading';
+  if (post._clientStatus === 'failed') return 'failed';
+
+  const decision = post.moderation?.decision;
+  if (decision === 'unsafe' || post.status === 'rejected') return 'rejected';
+  if (
+    decision === 'review' ||
+    post.status === 'pending_review' ||
+    post.status === 'pending_moderation'
+  ) {
+    return 'pending';
+  }
+  return 'normal';
+}
+
+// ─── Initials avatar helpers ───
+const getInitials = (first?: string, last?: string): string => {
+  const a = (first || '').trim().charAt(0);
+  const b = (last || '').trim().charAt(0);
+  const initials = (a + b).toUpperCase();
+  return initials || '?';
+};
+
+const AVATAR_COLORS = [
+  'from-blue-500 to-indigo-600',
+  'from-purple-500 to-pink-600',
+  'from-emerald-500 to-teal-600',
+  'from-amber-500 to-orange-600',
+  'from-rose-500 to-red-600',
+  'from-cyan-500 to-blue-600',
+  'from-fuchsia-500 to-purple-600',
+  'from-lime-500 to-emerald-600',
+];
+
+const getAvatarColor = (seed: string): string => {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = seed.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+};
+
+// ─── Auto-Playing Video ───
 const AutoPlayVideo: React.FC<{
   src: string;
   onClick: () => void;
@@ -122,7 +173,7 @@ const AutoPlayVideo: React.FC<{
   );
 };
 
-// ─── Main Upgraded PostCard ───
+// ─── Main PostCard ───
 export const PostCard: React.FC<PostCardProps> = ({
   post,
   onLike,
@@ -130,6 +181,8 @@ export const PostCard: React.FC<PostCardProps> = ({
   onComment,
   onDeleteComment,
   onHashtagClick,
+  onRetry,
+  onDismiss,
 }) => {
   const [isMediaOpen, setIsMediaOpen] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -137,6 +190,11 @@ export const PostCard: React.FC<PostCardProps> = ({
   const [commentText, setCommentText] = useState('');
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [showHeartAnimation, setShowHeartAnimation] = useState(false);
+
+  // Description clamp state
+  const descRef = useRef<HTMLParagraphElement>(null);
+  const [isDescExpanded, setIsDescExpanded] = useState(false);
+  const [isDescOverflowing, setIsDescOverflowing] = useState(false);
 
   const user = post.user;
   const displayName = user
@@ -146,8 +204,10 @@ export const PostCard: React.FC<PostCardProps> = ({
     ? `@${user.first_name.toLowerCase()}${user.last_name ? user.last_name.toLowerCase() : ''}`
     : '@user';
 
-  const avatarUrl = user?.profile_image_url || '/default-avatar.png';
   const primaryMedia = post.media?.[0];
+
+  const visualState = getVisualState(post);
+  const isLocked = visualState !== 'normal';
 
   const formatTimeAgo = (dateStr: string) => {
     const diff = Date.now() - new Date(dateStr).getTime();
@@ -166,12 +226,13 @@ export const PostCard: React.FC<PostCardProps> = ({
 
   const handleDoubleTap = useCallback(
     (e: React.MouseEvent) => {
+      if (isLocked) return;
       e.stopPropagation();
       onLike(post.id);
       setShowHeartAnimation(true);
       setTimeout(() => setShowHeartAnimation(false), 800);
     },
-    [onLike, post.id]
+    [onLike, post.id, isLocked]
   );
 
   const handleCommentSubmit = (e?: React.FormEvent) => {
@@ -189,52 +250,125 @@ export const PostCard: React.FC<PostCardProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isMediaOpen]);
 
+  // Detect whether the collapsed description is actually overflowing.
+  // Uses ResizeObserver so it re-checks on width changes.
+  useEffect(() => {
+    const el = descRef.current;
+    if (!el) return;
+
+    const check = () => {
+      // Only measure while collapsed. When expanded,
+      // scrollHeight === clientHeight and we'd get a false negative.
+      if (isDescExpanded) return;
+      setIsDescOverflowing(el.scrollHeight > el.clientHeight + 1);
+    };
+
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [post.description, isDescExpanded]);
+
+  const containerCls = (() => {
+    switch (visualState) {
+      case 'uploading':
+        return 'opacity-80';
+      case 'failed':
+        return 'border-rose-300 dark:border-rose-800 bg-rose-50/30 dark:bg-rose-950/10';
+      case 'rejected':
+        return 'border-rose-300 dark:border-rose-800 bg-rose-50/40 dark:bg-rose-950/20';
+      case 'pending':
+        return 'border-amber-300 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-950/20';
+      default:
+        return '';
+    }
+  })();
+
   return (
     <>
-      <article className="group/card relative w-full overflow-hidden rounded-3xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-sm transition-all duration-300 hover:shadow-xl hover:shadow-slate-200/50 dark:hover:shadow-none hover:border-slate-300 dark:hover:border-slate-700 mb-5">
-        
-        {/* ─── CARD HEADER ─── */}
+      <article
+        className={`group/card relative w-full overflow-hidden rounded-3xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-sm transition-all duration-300 hover:shadow-xl hover:shadow-slate-200/50 dark:hover:shadow-none hover:border-slate-300 dark:hover:border-slate-700 mb-5 ${containerCls}`}
+      >
+        {/* Status banner */}
+        {visualState === 'uploading' && (
+          <div className="flex items-center gap-2 px-4 sm:px-5 pt-3 text-xs font-semibold text-blue-600 dark:text-blue-400">
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            <span>Posting…</span>
+          </div>
+        )}
+        {visualState === 'failed' && (
+          <div className="flex items-center gap-2 px-4 sm:px-5 pt-3 text-xs font-semibold text-rose-600 dark:text-rose-400">
+            <AlertTriangle className="w-3.5 h-3.5" />
+            <span>Failed to post</span>
+          </div>
+        )}
+        {visualState === 'rejected' && (
+          <div className="flex items-center gap-2 px-4 sm:px-5 pt-3 text-xs font-semibold text-rose-600 dark:text-rose-400">
+            <XCircle className="w-3.5 h-3.5" />
+            <span>Rejected</span>
+          </div>
+        )}
+        {visualState === 'pending' && (
+          <div className="flex items-center gap-2 px-4 sm:px-5 pt-3 text-xs font-semibold text-amber-600 dark:text-amber-400">
+            <AlertTriangle className="w-3.5 h-3.5" />
+            <span>Pending review</span>
+          </div>
+        )}
+
+        {/* HEADER */}
         <div className="flex items-center justify-between p-4 sm:p-5 pb-3">
-          <div className="flex items-center gap-3.5">
-            <div className="relative group/avatar cursor-pointer">
-              <img
-                src={avatarUrl}
-                alt={displayName}
-                className="h-11 w-11 rounded-full object-cover ring-2 ring-slate-100 dark:ring-slate-800 transition-transform duration-300 group-hover/avatar:scale-105"
-              />
+          <div className="flex items-center gap-3.5 min-w-0 flex-1">
+            <div className="relative group/avatar cursor-pointer shrink-0">
+              {user?.profile_image_url ? (
+                <img
+                  src={user.profile_image_url}
+                  alt={displayName}
+                  className="h-11 w-11 rounded-full object-cover ring-2 ring-slate-100 dark:ring-slate-800 transition-transform duration-300 group-hover/avatar:scale-105"
+                />
+              ) : (
+                <div
+                  className={`h-11 w-11 rounded-full bg-gradient-to-br ${getAvatarColor(
+                    user?.id || displayName,
+                  )} flex items-center justify-center ring-2 ring-slate-100 dark:ring-slate-800 transition-transform duration-300 group-hover/avatar:scale-105`}
+                >
+                  <span className="text-white font-bold text-sm tracking-tight select-none">
+                    {getInitials(user?.first_name, user?.last_name)}
+                  </span>
+                </div>
+              )}
               <span className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900" />
             </div>
 
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="font-extrabold text-slate-900 dark:text-slate-100 text-base tracking-tight hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer">
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                <span className="font-extrabold text-slate-900 dark:text-slate-100 text-base tracking-tight hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer break-words">
                   {displayName}
                 </span>
 
                 {user?.account_type === 'professional' ? (
-                  <span className="inline-flex items-center gap-1 rounded-md bg-gradient-to-r from-blue-600 to-indigo-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-xs">
+                  <span className="inline-flex items-center gap-1 rounded-md bg-gradient-to-r from-blue-600 to-indigo-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-xs shrink-0">
                     <Sparkles className="w-2.5 h-2.5" />
                     PRO
                   </span>
                 ) : (
-                  <CheckCircle2 className="w-4 h-4 text-blue-500 fill-blue-500/10" />
+                  <CheckCircle2 className="w-4 h-4 text-blue-500 fill-blue-500/10 shrink-0" />
                 )}
               </div>
 
-              <div className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 font-medium mt-0.5">
-                <span>{username}</span>
-                <span>•</span>
-                <span>{formatTimeAgo(post.created_at)}</span>
-                <span>•</span>
-                <span className="inline-flex items-center gap-0.5">
+              <div className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 font-medium mt-0.5 min-w-0">
+                <span className="truncate max-w-[140px]">{username}</span>
+                <span className="shrink-0">•</span>
+                <span className="shrink-0">{formatTimeAgo(post.created_at)}</span>
+                <span className="shrink-0">•</span>
+                <span className="inline-flex items-center gap-0.5 shrink-0">
                   <Globe className="w-3 h-3 text-slate-400" />
                 </span>
               </div>
             </div>
           </div>
 
-          {onDelete && (
-            <div className="relative">
+          {onDelete && !isLocked && (
+            <div className="relative shrink-0">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -278,18 +412,35 @@ export const PostCard: React.FC<PostCardProps> = ({
           )}
         </div>
 
-        {/* ─── POST TEXT CONTENT & HASHTAGS ─── */}
+        {/* CONTENT */}
         <div className="px-4 pb-3 sm:px-5 space-y-2">
           {post.title && post.title !== post.description && (
-            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight leading-snug">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight leading-snug break-words [overflow-wrap:anywhere]">
               {post.title}
             </h2>
           )}
 
           {post.description && (
-            <p className="text-sm sm:text-[15px] text-slate-800 dark:text-slate-200 leading-relaxed font-normal whitespace-pre-wrap">
-              {post.description}
-            </p>
+            <div>
+              <p
+                ref={descRef}
+                className={`text-sm sm:text-[15px] text-slate-800 dark:text-slate-200 leading-relaxed font-normal whitespace-pre-wrap break-words [overflow-wrap:anywhere] ${
+                  !isDescExpanded ? 'line-clamp-4' : ''
+                }`}
+              >
+                {post.description}
+              </p>
+
+              {isDescOverflowing && (
+                <button
+                  type="button"
+                  onClick={() => setIsDescExpanded((v) => !v)}
+                  className="mt-1 text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                >
+                  {isDescExpanded ? 'See less' : 'See more'}
+                </button>
+              )}
+            </div>
           )}
 
           {post.hashtags && post.hashtags.length > 0 && (
@@ -299,7 +450,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                   key={tag.id}
                   type="button"
                   onClick={() => onHashtagClick?.(tag.name)}
-                  className="rounded-lg bg-blue-50 dark:bg-blue-950/40 px-2.5 py-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+                  className="rounded-lg bg-blue-50 dark:bg-blue-950/40 px-2.5 py-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors break-all max-w-full"
                 >
                   #{tag.name}
                 </button>
@@ -308,7 +459,14 @@ export const PostCard: React.FC<PostCardProps> = ({
           )}
         </div>
 
-        {/* ─── MEDIA ATTACHMENT SECTION ─── */}
+        {/* Moderation reason (rejected) */}
+        {visualState === 'rejected' && post.moderation?.reason && (
+          <div className="mx-4 sm:mx-5 mb-3 text-xs text-rose-700 dark:text-rose-300 bg-rose-100/60 dark:bg-rose-950/30 rounded-lg px-3 py-2 break-words [overflow-wrap:anywhere]">
+            {post.moderation.reason}
+          </div>
+        )}
+
+        {/* MEDIA */}
         {primaryMedia && (
           <div className="relative w-full px-3 sm:px-4">
             {primaryMedia.media_type === 'video' ? (
@@ -354,19 +512,44 @@ export const PostCard: React.FC<PostCardProps> = ({
           </div>
         )}
 
-        {/* ─── POST ACTIONS BAR ─── */}
+        {/* ACTIONS */}
         <div className="px-3 py-2 sm:px-4 mt-1 border-t border-slate-100 dark:border-slate-800/60">
           <PostActions
             post={post}
             onLike={() => onLike(post.id)}
             onCommentToggle={() => setShowComments(!showComments)}
             onShare={() => setIsShareModalOpen(true)}
+            disabled={isLocked}
           />
         </div>
 
-        {/* ─── CLEAN INTEGRATED COMMENTS SECTION ─── */}
+        {/* Retry / Dismiss */}
+        {visualState === 'failed' && (
+          <div className="flex gap-2 px-4 sm:px-5 py-3 border-t border-rose-100 dark:border-rose-900/50">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => onRetry?.(post)}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-full transition shadow-md shadow-blue-500/20"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Retry
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => onDismiss?.(post)}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+            >
+              <X className="w-3.5 h-3.5" />
+              Dismiss
+            </motion.button>
+          </div>
+        )}
+
+        {/* COMMENTS */}
         <AnimatePresence>
-          {showComments && (
+          {showComments && !isLocked && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
@@ -374,7 +557,6 @@ export const PostCard: React.FC<PostCardProps> = ({
               transition={{ duration: 0.2, ease: 'easeInOut' }}
               className="border-t border-slate-100 dark:border-slate-800/80 px-4 pt-3 pb-4 space-y-3"
             >
-              {/* Comment Thread List */}
               <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1 scrollbar-thin">
                 {post.comments?.map((comment) => (
                   <motion.div
@@ -383,20 +565,32 @@ export const PostCard: React.FC<PostCardProps> = ({
                     animate={{ opacity: 1, y: 0 }}
                     className="group/comment flex items-start justify-between gap-2.5 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-2xl border border-slate-100 dark:border-slate-800"
                   >
-                    <div className="flex items-start gap-2.5">
-                      <img
-                        src={
-                          comment.user?.profile_image_url ||
-                          '/default-avatar.png'
-                        }
-                        alt=""
-                        className="h-7 w-7 rounded-full object-cover ring-1 ring-slate-200 dark:ring-slate-700 mt-0.5 shrink-0"
-                      />
-                      <div className="flex-1">
-                        <span className="font-bold text-slate-900 dark:text-slate-100 text-xs">
+                    <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                      {comment.user?.profile_image_url ? (
+                        <img
+                          src={comment.user.profile_image_url}
+                          alt=""
+                          className="h-7 w-7 rounded-full object-cover ring-1 ring-slate-200 dark:ring-slate-700 mt-0.5 shrink-0"
+                        />
+                      ) : (
+                        <div
+                          className={`h-7 w-7 rounded-full bg-gradient-to-br ${getAvatarColor(
+                            comment.user?.id || comment.id,
+                          )} flex items-center justify-center ring-1 ring-slate-200 dark:ring-slate-700 mt-0.5 shrink-0`}
+                        >
+                          <span className="text-white font-bold text-[10px] tracking-tight select-none">
+                            {getInitials(
+                              comment.user?.first_name,
+                              comment.user?.last_name,
+                            )}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <span className="font-bold text-slate-900 dark:text-slate-100 text-xs break-words">
                           {comment.user?.first_name} {comment.user?.last_name}
                         </span>
-                        <p className="text-xs text-slate-700 dark:text-slate-300 mt-0.5 leading-relaxed">
+                        <p className="text-xs text-slate-700 dark:text-slate-300 mt-0.5 leading-relaxed break-words [overflow-wrap:anywhere]">
                           {comment.content}
                         </p>
                       </div>
@@ -425,7 +619,6 @@ export const PostCard: React.FC<PostCardProps> = ({
                 )}
               </div>
 
-              {/* Seamless Comment Input Form */}
               <form
                 onSubmit={handleCommentSubmit}
                 className="flex items-center gap-2 pt-1"
@@ -456,7 +649,7 @@ export const PostCard: React.FC<PostCardProps> = ({
         </AnimatePresence>
       </article>
 
-      {/* ─── MEDIA LIGHTBOX OVERLAY ─── */}
+      {/* LIGHTBOX */}
       <AnimatePresence>
         {isMediaOpen && primaryMedia && (
           <motion.div
@@ -513,7 +706,7 @@ export const PostCard: React.FC<PostCardProps> = ({
         )}
       </AnimatePresence>
 
-      {/* ─── SHARE MODAL ─── */}
+      {/* SHARE MODAL */}
       <ShareModal
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
