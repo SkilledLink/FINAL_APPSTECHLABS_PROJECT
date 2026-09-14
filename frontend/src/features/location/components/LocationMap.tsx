@@ -3,17 +3,23 @@ import * as maplibregl from 'maplibre-gl';
 import { Map as MLMap, Marker } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
-const OSM_STYLE: maplibregl.StyleSpecification = {
+// Premium Carto Voyager tiles (Clean, modern vector-like aesthetic)
+const PREMIUM_MAP_STYLE: maplibregl.StyleSpecification = {
   version: 8,
   sources: {
-    osm: {
+    carto: {
       type: 'raster',
-      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tiles: [
+        'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+        'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+        'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+      ],
       tileSize: 256,
-      attribution: '© OpenStreetMap contributors',
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
     },
   },
-  layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
+  layers: [{ id: 'carto-tiles', type: 'raster', source: 'carto' }],
 };
 
 export interface MapMarker {
@@ -70,13 +76,41 @@ function circleGeoJSON(
   };
 }
 
+/**
+  Creates a custom HTML element for markers with smooth animations and glows.
+ */
+function createMarkerDOMElement(highlighted = false): HTMLDivElement {
+  const el = document.createElement('div');
+  el.className =
+    'relative flex items-center justify-center cursor-pointer group transition-transform duration-300 hover:scale-125';
+
+  const pulseRing = highlighted
+    ? `<span class="absolute -inset-1.5 rounded-full bg-amber-500/40 animate-ping"></span>`
+    : `<span class="absolute -inset-1 rounded-full bg-indigo-500/20 group-hover:bg-indigo-500/40 transition-all"></span>`;
+
+  const pinGradient = highlighted
+    ? 'bg-gradient-to-tr from-amber-500 to-orange-400 text-white shadow-lg shadow-amber-500/30 ring-2 ring-white dark:ring-slate-900'
+    : 'bg-gradient-to-tr from-indigo-600 to-violet-500 text-white shadow-md shadow-indigo-500/30 ring-2 ring-white dark:ring-slate-900';
+
+  el.innerHTML = `
+    ${pulseRing}
+    <div class="relative flex h-8 w-8 items-center justify-center rounded-full ${pinGradient} transition-all duration-200">
+      <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+      </svg>
+    </div>
+  `;
+
+  return el;
+}
+
 export default function LocationMap({
   latitude,
   longitude,
   markers,
   radiusKm,
   zoom = 13,
-  height = 320,
+  height = 360,
   draggable = false,
   onMarkerDragEnd,
   className = '',
@@ -86,48 +120,66 @@ export default function LocationMap({
   const centerMarkerRef = useRef<Marker | null>(null);
   const markersRef = useRef<Map<string, Marker>>(new Map());
 
-  // Determine initial center: explicit props > first marker > default Cameroon center
+  // Determine initial center: explicit props > first marker > default center
   const initialLat = latitude ?? (markers && markers[0]?.latitude) ?? 3.848;
   const initialLng = longitude ?? (markers && markers[0]?.longitude) ?? 11.502;
 
-  // Init
+  // Initialize Map
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: OSM_STYLE,
+      style: PREMIUM_MAP_STYLE,
       center: [initialLng, initialLat],
       zoom,
       attributionControl: { compact: true },
     });
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+
+    map.addControl(
+      new maplibregl.NavigationControl({ showCompass: false }),
+      'top-right',
+    );
 
     map.on('load', () => {
-      // Radius circle
+      // Radius Circle Layer
       if (radiusKm && radiusKm > 0 && latitude != null && longitude != null) {
         map.addSource('radius', {
           type: 'geojson',
           data: circleGeoJSON(latitude, longitude, radiusKm),
         });
+
         map.addLayer({
           id: 'radius-fill',
           type: 'fill',
           source: 'radius',
-          paint: { 'fill-color': '#16a85f', 'fill-opacity': 0.12 },
+          paint: {
+            'fill-color': '#6366f1',
+            'fill-opacity': 0.12,
+          },
         });
+
         map.addLayer({
           id: 'radius-line',
           type: 'line',
           source: 'radius',
-          paint: { 'line-color': '#16a85f', 'line-width': 1.5 },
+          paint: {
+            'line-color': '#4f46e5',
+            'line-width': 2,
+            'line-dasharray': [2, 2],
+          },
         });
       }
 
-      // Single center marker (when used as a picker)
-      if (latitude != null && longitude != null && (!markers || markers.length === 0)) {
+      // Single Center Picker Marker
+      if (
+        latitude != null &&
+        longitude != null &&
+        (!markers || markers.length === 0)
+      ) {
+        const customEl = createMarkerDOMElement(true);
         const marker = new maplibregl.Marker({
-          color: '#16a85f',
+          element: customEl,
           draggable,
         })
           .setLngLat([longitude, latitude])
@@ -154,23 +206,28 @@ export default function LocationMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Sync center marker
+  // Sync Center Marker
   useEffect(() => {
     if (!mapRef.current || !centerMarkerRef.current) return;
     if (latitude == null || longitude == null) return;
     centerMarkerRef.current.setLngLat([longitude, latitude]);
-    mapRef.current.easeTo({ center: [longitude, latitude], duration: 300 });
+    mapRef.current.easeTo({ center: [longitude, latitude], duration: 400 });
   }, [latitude, longitude]);
 
-  // Sync radius circle
+  // Sync Radius Circle
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
     if (latitude == null || longitude == null) return;
 
-    const data = radiusKm && radiusKm > 0 ? circleGeoJSON(latitude, longitude, radiusKm) : null;
+    const data =
+      radiusKm && radiusKm > 0
+        ? circleGeoJSON(latitude, longitude, radiusKm)
+        : null;
 
-    const source = map.getSource('radius') as maplibregl.GeoJSONSource | undefined;
+    const source = map.getSource('radius') as
+      | maplibregl.GeoJSONSource
+      | undefined;
 
     if (data && source) {
       source.setData(data);
@@ -180,13 +237,20 @@ export default function LocationMap({
         id: 'radius-fill',
         type: 'fill',
         source: 'radius',
-        paint: { 'fill-color': '#16a85f', 'fill-opacity': 0.12 },
+        paint: {
+          'fill-color': '#6366f1',
+          'fill-opacity': 0.12,
+        },
       });
       map.addLayer({
         id: 'radius-line',
         type: 'line',
         source: 'radius',
-        paint: { 'line-color': '#16a85f', 'line-width': 1.5 },
+        paint: {
+          'line-color': '#4f46e5',
+          'line-width': 2,
+          'line-dasharray': [2, 2],
+        },
       });
     } else if (!data && source) {
       if (map.getLayer('radius-fill')) map.removeLayer('radius-fill');
@@ -195,24 +259,20 @@ export default function LocationMap({
     }
   }, [latitude, longitude, radiusKm]);
 
-  // Sync multiple markers
+  // Sync Multiple Markers
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
 
-    // Wait until the map is loaded if it isn't yet
     if (!map.loaded()) {
-      map.once('load', () => {
-        // re-trigger this effect
-        map.fire('markers:reload');
-      });
+      map.once('load', () => map.fire('markers:reload'));
       return;
     }
 
     const nextMarkers = markers ?? [];
-    const nextIds = new Set(nextMarkers.map(m => m.id));
+    const nextIds = new Set(nextMarkers.map((m) => m.id));
 
-    // Remove markers no longer present
+    // Remove obsolete markers
     for (const [id, marker] of markersRef.current.entries()) {
       if (!nextIds.has(id)) {
         marker.remove();
@@ -220,49 +280,44 @@ export default function LocationMap({
       }
     }
 
-    // Add/update markers
+    // Add or update markers
     for (const m of nextMarkers) {
       const existing = markersRef.current.get(m.id);
       if (existing) {
         existing.setLngLat([m.longitude, m.latitude]);
-        existing.getElement().style.zIndex = m.highlighted ? '10' : '';
-        existing.getElement().style.filter = m.highlighted
-          ? 'drop-shadow(0 4px 8px rgba(22,168,95,0.6))'
-          : '';
       } else {
-        const marker = new maplibregl.Marker({
-          color: m.highlighted ? '#f97316' : '#16a85f',
-        })
+        const customEl = createMarkerDOMElement(m.highlighted);
+        const marker = new maplibregl.Marker({ element: customEl })
           .setLngLat([m.longitude, m.latitude])
           .addTo(map);
 
         if (m.onClick) {
-          marker.getElement().style.cursor = 'pointer';
           marker.getElement().addEventListener('click', m.onClick);
         }
         markersRef.current.set(m.id, marker);
       }
     }
 
-    // If there are markers and no explicit center, fit bounds to them
+    // Auto fit bounds logic
     if (nextMarkers.length > 0 && latitude == null && longitude == null) {
       const bounds = new maplibregl.LngLatBounds();
-      nextMarkers.forEach(m => bounds.extend([m.longitude, m.latitude]));
-      map.fitBounds(bounds, { padding: 60, maxZoom: 14, duration: 500 });
+      nextMarkers.forEach((m) => bounds.extend([m.longitude, m.latitude]));
+      map.fitBounds(bounds, { padding: 60, maxZoom: 14, duration: 600 });
     } else if (nextMarkers.length === 1 && latitude == null) {
       map.easeTo({
         center: [nextMarkers[0].longitude, nextMarkers[0].latitude],
         zoom: 13,
-        duration: 400,
+        duration: 500,
       });
     }
   }, [markers, latitude, longitude]);
 
   return (
     <div
-      ref={containerRef}
-      className={`w-full overflow-hidden rounded-2xl border border-ink-100 ${className}`}
+      className={`relative overflow-hidden rounded-3xl border border-slate-200/80 bg-slate-100 shadow-md transition-all dark:border-slate-800 dark:bg-slate-900 ${className}`}
       style={{ height }}
-    />
+    >
+      <div ref={containerRef} className="h-full w-full" />
+    </div>
   );
 }

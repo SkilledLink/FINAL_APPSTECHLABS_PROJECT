@@ -1,495 +1,411 @@
-// src/features/portfolio/components/PortfolioWorkForm.tsx
-import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
-import {
-  X,
-  Upload,
-  Image as ImageIcon,
-  Loader2,
-  Briefcase,
-  MapPin,
-  Calendar,
-  Clock,
-  Users,
-  Tag,
-  FileText,
-  Trash2,
-  Sparkles,
-} from 'lucide-react';
-import type { Work } from '../../../types/portfolio';
-
-export interface PortfolioWorkFormData {
-  title: string;
-  description: string;
-  service_category: string;
-  location: string;
-  completed_at?: string;
-  duration_value?: number;
-  duration_unit: string;
-  team_size?: number;
-  client_type: string;
-}
+import { useEffect, useState } from 'react';
+import { Loader2, Save, X, Briefcase, Star } from 'lucide-react';
+import type {
+  ClientType,
+  DurationUnit,
+  Service,
+  Work,
+  WorkCreateInput,
+} from '../types/portfolio.types';
+import { CLIENT_TYPES, DURATION_UNITS } from '../types/portfolio.types';
 
 interface PortfolioWorkFormProps {
-  work?: Work | null;
+  open: boolean;
+  initial?: Work | null;
+  services: Service[];
+  saving?: boolean;
   onClose: () => void;
-  onSave: (data: PortfolioWorkFormData, files?: { before?: File; after?: File }) => Promise<void>;
-  loading?: boolean;
+  onSubmit: (input: WorkCreateInput) => Promise<void>;
 }
 
-const initialFormState: PortfolioWorkFormData = {
+const EMPTY: WorkCreateInput = {
   title: '',
   description: '',
   service_category: '',
   location: '',
-  completed_at: '',
+  completed_at: undefined,
   duration_value: undefined,
-  duration_unit: 'days',
+  duration_unit: undefined,
   team_size: undefined,
-  client_type: '',
+  client_type: undefined,
+  cost: undefined,
+  client_name: '',
+  client_testimonial: '',
+  rating: undefined,
+  service_id: undefined,
 };
 
-export default function PortfolioWorkForm({ work, onClose, onSave, loading = false }: PortfolioWorkFormProps) {
-  const [formData, setFormData] = useState<PortfolioWorkFormData>(initialFormState);
-  const [rawDuration, setRawDuration] = useState<string>('');
-  const [rawTeamSize, setRawTeamSize] = useState<string>('');
+const inputCls =
+  'w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-all duration-200 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/10 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-cyan-400 dark:focus:ring-cyan-400/20';
 
-  const [beforeFile, setBeforeFile] = useState<File | null>(null);
-  const [afterFile, setAfterFile] = useState<File | null>(null);
-  const [beforePreview, setBeforePreview] = useState<string | null>(null);
-  const [afterPreview, setAfterPreview] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+const labelCls =
+  'mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300';
 
-  const beforeInputRef = useRef<HTMLInputElement>(null);
-  const afterInputRef = useRef<HTMLInputElement>(null);
+export default function PortfolioWorkForm({
+  open,
+  initial,
+  services,
+  saving = false,
+  onClose,
+  onSubmit,
+}: PortfolioWorkFormProps) {
+  const [form, setForm] = useState<WorkCreateInput>(EMPTY);
+  const [error, setError] = useState<string | null>(null);
 
-  // Close on Escape key press
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
-
-  // Populate or reset form when work prop changes
-  useEffect(() => {
-    if (work) {
-      setFormData({
-        title: work.title || '',
-        description: work.description || '',
-        service_category: work.service_category || '',
-        location: work.location || '',
-        completed_at: work.completed_at ? work.completed_at.split('T')[0] : '',
-        duration_unit: work.duration_unit || 'days',
-        client_type: work.client_type || '',
+    if (!open) return;
+    if (initial) {
+      setForm({
+        title: initial.title,
+        description: initial.description ?? '',
+        service_category: initial.service_category ?? '',
+        location: initial.location ?? '',
+        completed_at: initial.completed_at ?? undefined,
+        duration_value: initial.duration_value ?? undefined,
+        duration_unit: (initial.duration_unit ?? undefined) as DurationUnit | undefined,
+        team_size: initial.team_size ?? undefined,
+        client_type: (initial.client_type ?? undefined) as ClientType | undefined,
+        cost: initial.cost ?? undefined,
+        client_name: initial.client_name ?? '',
+        client_testimonial: initial.client_testimonial ?? '',
+        rating: initial.rating ?? undefined,
+        service_id: initial.service_id ?? undefined,
       });
-      setRawDuration(work.duration_value?.toString() || '');
-      setRawTeamSize(work.team_size?.toString() || '');
-      setBeforePreview(work.before_image_url || null);
-      setAfterPreview(work.after_image_url || null);
     } else {
-      setFormData(initialFormState);
-      setRawDuration('');
-      setRawTeamSize('');
-      setBeforePreview(null);
-      setAfterPreview(null);
-      setBeforeFile(null);
-      setAfterFile(null);
+      setForm(EMPTY);
     }
-  }, [work]);
+    setError(null);
+  }, [open, initial]);
 
-  // Clean up object URLs on unmount
-  useEffect(() => {
-    return () => {
-      if (beforePreview && beforePreview.startsWith('blob:')) URL.revokeObjectURL(beforePreview);
-      if (afterPreview && afterPreview.startsWith('blob:')) URL.revokeObjectURL(afterPreview);
-    };
-  }, [beforePreview, afterPreview]);
+  if (!open) return null;
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'before' | 'after') => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const objectUrl = URL.createObjectURL(file);
-
-    if (type === 'before') {
-      if (beforePreview && beforePreview.startsWith('blob:')) URL.revokeObjectURL(beforePreview);
-      setBeforeFile(file);
-      setBeforePreview(objectUrl);
-    } else {
-      if (afterPreview && afterPreview.startsWith('blob:')) URL.revokeObjectURL(afterPreview);
-      setAfterFile(file);
-      setAfterPreview(objectUrl);
-    }
-  };
-
-  const removeImage = (type: 'before' | 'after') => {
-    if (type === 'before') {
-      if (beforePreview && beforePreview.startsWith('blob:')) URL.revokeObjectURL(beforePreview);
-      setBeforeFile(null);
-      setBeforePreview(null);
-      if (beforeInputRef.current) beforeInputRef.current.value = '';
-    } else {
-      if (afterPreview && afterPreview.startsWith('blob:')) URL.revokeObjectURL(afterPreview);
-      setAfterFile(null);
-      setAfterPreview(null);
-      if (afterInputRef.current) afterInputRef.current.value = '';
-    }
-  };
+  const update = (patch: Partial<WorkCreateInput>) =>
+    setForm((prev) => ({ ...prev, ...patch }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
-    try {
-      const payload: PortfolioWorkFormData = {
-        ...formData,
-        duration_value: rawDuration ? parseInt(rawDuration, 10) : undefined,
-        team_size: rawTeamSize ? parseInt(rawTeamSize, 10) : undefined,
-        completed_at: formData.completed_at ? new Date(formData.completed_at).toISOString() : undefined,
-      };
-      await onSave(payload, { before: beforeFile || undefined, after: afterFile || undefined });
-    } finally {
-      setSubmitting(false);
+    setError(null);
+    if (!form.title.trim() || form.title.trim().length < 2) {
+      setError('Title must be at least 2 characters.');
+      return;
     }
+    await onSubmit({
+      ...form,
+      title: form.title.trim(),
+      description: form.description?.trim() || undefined,
+      service_category: form.service_category?.trim() || undefined,
+      location: form.location?.trim() || undefined,
+      client_name: form.client_name?.trim() || undefined,
+      client_testimonial: form.client_testimonial?.trim() || undefined,
+      completed_at: form.completed_at
+        ? new Date(form.completed_at).toISOString()
+        : undefined,
+    });
   };
 
-  const isProcessing = submitting || loading;
-
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto"
-      onClick={onClose}
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center sm:p-6"
+      role="dialog"
+      aria-modal="true"
     >
-      <motion.div
-        initial={{ scale: 0.95, y: 20, opacity: 0 }}
-        animate={{ scale: 1, y: 0, opacity: 1 }}
-        exit={{ scale: 0.95, y: 20, opacity: 0 }}
-        transition={{ type: 'spring', damping: 25, stiffness: 320 }}
-        className="relative bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-slate-200/80 dark:border-slate-800/80 rounded-3xl shadow-2xl max-w-2xl w-full p-6 sm:p-8 max-h-[90vh] flex flex-col overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Ambient glows */}
-        <div className="absolute top-0 left-1/4 -mt-10 w-48 h-48 bg-blue-500/10 dark:bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute top-0 right-10 -mt-10 w-40 h-40 bg-indigo-500/10 dark:bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity dark:bg-slate-950/80"
+        onClick={!saving ? onClose : undefined}
+      />
 
+      {/* Modal Container */}
+      <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl dark:border-slate-800/80 dark:bg-slate-900">
+        
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-200/60 dark:border-slate-800/80 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-2xl">
-              <Sparkles size={22} />
+        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 dark:border-slate-800">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-400">
+              <Briefcase className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                {work ? 'Edit Project Details' : 'Showcase New Project'}
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                {initial ? 'Edit work project' : 'Add new work project'}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                {work ? 'Update your portfolio work entry below' : 'Add details and before/after images for your portfolio'}
+                Showcase your portfolio project details and feedback
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-full transition-all"
-            aria-label="Close form"
+            disabled={saving}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
           >
-            <X size={20} />
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Form Body */}
-        <form id="portfolio-work-form" onSubmit={handleSubmit} className="space-y-5 overflow-y-auto pr-1 py-4 custom-scrollbar flex-1">
+        {/* Form Content */}
+        <form
+          onSubmit={handleSubmit}
+          className="flex-1 space-y-5 overflow-y-auto p-6"
+        >
+          {error && (
+            <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-medium text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-400">
+              {error}
+            </div>
+          )}
+
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-              Project Title <span className="text-rose-500">*</span>
+            <label className={labelCls}>
+              Title <span className="text-rose-500">*</span>
             </label>
-            <div className="relative">
-              <Briefcase size={16} className="absolute left-3.5 top-3 text-slate-400 pointer-events-none" />
+            <input
+              value={form.title}
+              onChange={(e) => update({ title: e.target.value })}
+              placeholder="e.g. House Electrical Installation"
+              className={inputCls}
+            />
+          </div>
+
+          <div>
+            <label className={labelCls}>Description</label>
+            <textarea
+              value={form.description ?? ''}
+              onChange={(e) => update({ description: e.target.value })}
+              rows={3}
+              placeholder="What did you do? Challenges, materials, outcome…"
+              className={`${inputCls} resize-none`}
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className={labelCls}>Category</label>
               <input
-                type="text"
-                required
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 focus:outline-none transition-all"
-                placeholder="e.g., Custom Full-Stack Web Platform"
+                value={form.service_category ?? ''}
+                onChange={(e) => update({ service_category: e.target.value })}
+                placeholder="e.g. Electrical"
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Location</label>
+              <input
+                value={form.location ?? ''}
+                onChange={(e) => update({ location: e.target.value })}
+                placeholder="e.g. Odza, Yaoundé"
+                className={inputCls}
               />
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-              Description
-            </label>
-            <div className="relative">
-              <FileText size={16} className="absolute left-3.5 top-3 text-slate-400 pointer-events-none" />
-              <textarea
-                rows={3}
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 focus:outline-none transition-all"
-                placeholder="Summarize key tasks, tech stack, and goals achieved..."
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Service Category
-              </label>
-              <div className="relative">
-                <Tag size={16} className="absolute left-3.5 top-3 text-slate-400 pointer-events-none" />
-                <input
-                  type="text"
-                  value={formData.service_category}
-                  onChange={(e) => setFormData({ ...formData, service_category: e.target.value })}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 focus:outline-none transition-all"
-                  placeholder="e.g., Web Development"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Location
-              </label>
-              <div className="relative">
-                <MapPin size={16} className="absolute left-3.5 top-3 text-slate-400 pointer-events-none" />
-                <input
-                  type="text"
-                  value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 focus:outline-none transition-all"
-                  placeholder="e.g., Remote / Yaoundé"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-              Completed Date
-            </label>
-            <div className="relative">
-              <Calendar size={16} className="absolute left-3.5 top-3 text-slate-400 pointer-events-none" />
+              <label className={labelCls}>Completed on</label>
               <input
                 type="date"
-                value={formData.completed_at || ''}
-                onChange={(e) => setFormData({ ...formData, completed_at: e.target.value })}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 focus:outline-none transition-all"
+                value={form.completed_at?.slice(0, 10) ?? ''}
+                onChange={(e) =>
+                  update({ completed_at: e.target.value || undefined })
+                }
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Linked service</label>
+              <select
+                value={form.service_id ?? ''}
+                onChange={(e) =>
+                  update({ service_id: e.target.value || undefined })
+                }
+                className={inputCls}
+              >
+                <option value="" className="dark:bg-slate-900">
+                  None
+                </option>
+                {services.map((s) => (
+                  <option key={s.id} value={s.id} className="dark:bg-slate-900">
+                    {s.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div>
+              <label className={labelCls}>Duration</label>
+              <input
+                type="number"
+                min={0}
+                value={form.duration_value ?? ''}
+                onChange={(e) =>
+                  update({
+                    duration_value:
+                      e.target.value === '' ? undefined : Number(e.target.value),
+                  })
+                }
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Unit</label>
+              <select
+                value={form.duration_unit ?? ''}
+                onChange={(e) =>
+                  update({
+                    duration_unit: (e.target.value || undefined) as
+                      | DurationUnit
+                      | undefined,
+                  })
+                }
+                className={inputCls}
+              >
+                <option value="" className="dark:bg-slate-900">
+                  —
+                </option>
+                {DURATION_UNITS.map((u) => (
+                  <option key={u} value={u} className="dark:bg-slate-900">
+                    {u}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Team size</label>
+              <input
+                type="number"
+                min={1}
+                value={form.team_size ?? ''}
+                onChange={(e) =>
+                  update({
+                    team_size:
+                      e.target.value === '' ? undefined : Number(e.target.value),
+                  })
+                }
+                className={inputCls}
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Duration
-              </label>
-              <div className="relative">
-                <Clock size={16} className="absolute left-3.5 top-3 text-slate-400 pointer-events-none" />
-                <input
-                  type="number"
-                  min="0"
-                  value={rawDuration}
-                  onChange={(e) => setRawDuration(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 focus:outline-none transition-all"
-                  placeholder="3"
-                />
-              </div>
+              <label className={labelCls}>Client type</label>
+              <select
+                value={form.client_type ?? ''}
+                onChange={(e) =>
+                  update({
+                    client_type: (e.target.value || undefined) as
+                      | ClientType
+                      | undefined,
+                  })
+                }
+                className={inputCls}
+              >
+                <option value="" className="dark:bg-slate-900">
+                  —
+                </option>
+                {CLIENT_TYPES.map((c) => (
+                  <option key={c} value={c} className="dark:bg-slate-900">
+                    {c.charAt(0).toUpperCase() + c.slice(1)}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Unit
-              </label>
-              <select
-                value={formData.duration_unit}
-                onChange={(e) => setFormData({ ...formData, duration_unit: e.target.value })}
-                className="w-full px-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 focus:outline-none transition-all"
-              >
-                <option value="minutes">Minutes</option>
-                <option value="hours">Hours</option>
-                <option value="days">Days</option>
-                <option value="weeks">Weeks</option>
-                <option value="months">Months</option>
-              </select>
+              <label className={labelCls}>Cost (XAF)</label>
+              <input
+                type="number"
+                min={0}
+                step={500}
+                value={form.cost ?? ''}
+                onChange={(e) =>
+                  update({
+                    cost: e.target.value === '' ? undefined : Number(e.target.value),
+                  })
+                }
+                className={inputCls}
+              />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Team Size
-              </label>
-              <div className="relative">
-                <Users size={16} className="absolute left-3.5 top-3 text-slate-400 pointer-events-none" />
+          {/* Client feedback section */}
+          <div className="space-y-4 rounded-2xl border border-slate-200/80 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-950/40">
+            <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <Star className="h-3.5 w-3.5 text-amber-500" />
+              <span>Client feedback (optional)</span>
+            </div>
+            
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className={labelCls}>Client name</label>
                 <input
-                  type="number"
-                  min="1"
-                  value={rawTeamSize}
-                  onChange={(e) => setRawTeamSize(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 focus:outline-none transition-all"
-                  placeholder="2"
+                  value={form.client_name ?? ''}
+                  onChange={(e) => update({ client_name: e.target.value })}
+                  placeholder="e.g. Mrs. Ngu"
+                  className={inputCls}
                 />
               </div>
+              <div>
+                <label className={labelCls}>Rating</label>
+                <div className="flex gap-1.5 pt-0.5">
+                  {[1, 2, 3, 4, 5].map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() =>
+                        update({ rating: form.rating === r ? undefined : r })
+                      }
+                      className={`flex h-9 flex-1 items-center justify-center rounded-xl text-sm font-semibold transition-all duration-200 ${
+                        form.rating === r
+                          ? 'bg-amber-400 text-slate-950 shadow-sm shadow-amber-400/30 dark:bg-amber-400 dark:text-slate-950'
+                          : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      {r} ★
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
+
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Client Type
-              </label>
-              <select
-                value={formData.client_type}
-                onChange={(e) => setFormData({ ...formData, client_type: e.target.value })}
-                className="w-full px-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 focus:outline-none transition-all"
-              >
-                <option value="">Select Client Type…</option>
-                <option value="individual">Individual</option>
-                <option value="household">Household</option>
-                <option value="business">Business</option>
-                <option value="organization">Organization</option>
-                <option value="government">Government</option>
-                <option value="professional">Professional</option>
-                <option value="contractor">Contractor</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Media Uploads */}
-          <div className="border-t border-slate-200/80 dark:border-slate-800/80 pt-4 mt-3">
-            <div className="flex items-center justify-between mb-3">
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                Transformation Media (Before & After)
-              </label>
-              <span className="text-[11px] text-slate-400">Recommended 16:9</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Before */}
-              <div className="flex flex-col">
-                <div className="relative aspect-video bg-slate-100/70 dark:bg-slate-800/40 rounded-2xl overflow-hidden border-2 border-dashed border-slate-300/80 dark:border-slate-700/80 hover:border-blue-500 transition-all group flex items-center justify-center">
-                  <span className="absolute top-2 left-2 px-2 py-0.5 bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 rounded-md text-[10px] font-extrabold uppercase tracking-widest backdrop-blur-sm z-10">
-                    Before
-                  </span>
-                  {beforePreview ? (
-                    <>
-                      <img src={beforePreview} alt="Before preview" className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => beforeInputRef.current?.click()}
-                          className="p-2 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white rounded-xl text-xs font-medium transition-all flex items-center gap-1"
-                        >
-                          <Upload size={14} /> Replace
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => removeImage('before')}
-                          className="p-2 bg-rose-500/80 hover:bg-rose-600 backdrop-blur-md text-white rounded-xl text-xs font-medium transition-all"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => beforeInputRef.current?.click()}
-                      className="w-full h-full flex flex-col items-center justify-center p-4 text-slate-400 hover:text-blue-500 transition-colors"
-                    >
-                      <ImageIcon size={28} className="mb-1.5 opacity-80" />
-                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Upload Initial State</span>
-                      <span className="text-[10px] text-slate-400 mt-0.5">Click to browse</span>
-                    </button>
-                  )}
-                  <input
-                    ref={beforeInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => handleFileChange(e, 'before')}
-                  />
-                </div>
-              </div>
-
-              {/* After */}
-              <div className="flex flex-col">
-                <div className="relative aspect-video bg-slate-100/70 dark:bg-slate-800/40 rounded-2xl overflow-hidden border-2 border-dashed border-slate-300/80 dark:border-slate-700/80 hover:border-emerald-500 transition-all group flex items-center justify-center">
-                  <span className="absolute top-2 left-2 px-2 py-0.5 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-md text-[10px] font-extrabold uppercase tracking-widest backdrop-blur-sm z-10">
-                    After
-                  </span>
-                  {afterPreview ? (
-                    <>
-                      <img src={afterPreview} alt="After preview" className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => afterInputRef.current?.click()}
-                          className="p-2 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white rounded-xl text-xs font-medium transition-all flex items-center gap-1"
-                        >
-                          <Upload size={14} /> Replace
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => removeImage('after')}
-                          className="p-2 bg-rose-500/80 hover:bg-rose-600 backdrop-blur-md text-white rounded-xl text-xs font-medium transition-all"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => afterInputRef.current?.click()}
-                      className="w-full h-full flex flex-col items-center justify-center p-4 text-slate-400 hover:text-emerald-500 transition-colors"
-                    >
-                      <ImageIcon size={28} className="mb-1.5 opacity-80" />
-                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Upload Final Result</span>
-                      <span className="text-[10px] text-slate-400 mt-0.5">Click to browse</span>
-                    </button>
-                  )}
-                  <input
-                    ref={afterInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => handleFileChange(e, 'after')}
-                  />
-                </div>
-              </div>
+              <label className={labelCls}>Testimonial</label>
+              <textarea
+                value={form.client_testimonial ?? ''}
+                onChange={(e) => update({ client_testimonial: e.target.value })}
+                rows={2}
+                placeholder="What did the client say?"
+                className={`${inputCls} resize-none`}
+              />
             </div>
           </div>
         </form>
 
-        {/* Fixed Footer Actions */}
-        <div className="flex gap-3 pt-4 border-t border-slate-200/60 dark:border-slate-800/80 shrink-0">
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 border-t border-slate-100 bg-slate-50/50 px-6 py-4 dark:border-slate-800 dark:bg-slate-900/50">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 py-2.5 rounded-xl text-sm font-semibold transition-all"
+            disabled={saving}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
           >
             Cancel
           </button>
           <button
-            type="submit"
-            form="portfolio-work-form"
-            disabled={isProcessing}
-            className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-all shadow-lg shadow-blue-500/25 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            type="button"
+            onClick={handleSubmit}
+            disabled={saving}
+            className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-cyan-500 disabled:opacity-60 dark:bg-cyan-500 dark:text-slate-950 dark:hover:bg-cyan-400"
           >
-            {isProcessing ? (
-              <>
-                <Loader2 size={18} className="animate-spin" /> Saving…
-              </>
-            ) : work ? (
-              'Save Changes'
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              'Create Showcase'
+              <Save className="h-4 w-4" />
             )}
+            {initial ? 'Save changes' : 'Add project'}
           </button>
         </div>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 }

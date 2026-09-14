@@ -47,6 +47,7 @@ import NearbyProfessionalsPage from "./features/location/pages/NearbyProfessiona
 // Jobs
 import JobsPage from "./features/jobs/pages/JobsPage";
 import JobDetailsPage from "./features/jobs/pages/JobDetailsPage";
+import CreateJobPage from "./features/jobs/pages/CreateJobPage";
 import PortfolioDashboard from "./features/portfolio/pages/PortfolioDashboard";
 import { PortfolioPage } from "./features/Portfo/pages/PortfolioPage";
 
@@ -97,7 +98,7 @@ return <Outlet />;
 }
 
 // ============================================================
-// DYNAMIC ROUTE WRAPPERS
+// DYNAMIC ROUTE WRAPPERS & ALIAS REDIRECTS
 // ============================================================
 function ProfileRoute() {
 const { id } = useParams<{ id: string }>();
@@ -127,6 +128,11 @@ return ( <PortfolioPage
    onNavigateCreate={handleNavigateCreate}
  />
 );
+}
+
+function JobDetailsRedirect() {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/home/jobs/${id}`} replace />;
 }
 
 // ============================================================
@@ -189,6 +195,42 @@ return ( <AuthProvider> <BrowserRouter> <ToastContainer
           <Route path="profile/:id" element={<ProfileRoute />} />
         </Route>
       </Route>
+          {/* ==================================================
+              AUTHENTICATED APPLICATION (PROTECTED)
+              ================================================== */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/home" element={<AppLayout />}>
+              <Route index element={<HomePage />} />
+              <Route path="dashboard" element={<DashboardPage />} />
+              <Route path="feed" element={<Feed />} />
+              <Route path="jobs" element={<JobsPage />} />
+              <Route path="jobs/create" element={<CreateJobPage />} />
+              <Route path="jobs/:id" element={<JobDetailsRoute />} />
+              <Route path="discover" element={<NearbyProfessionalsPage />} />
+              <Route path="portfolio" element={<PortfolioDashboard />} />
+              <Route path="messages" element={<MessagesPage />} />
+              <Route path="professionals" element={<ProfessionalsPage />} />
+              <Route path="users" element={<UsersPage />} />
+              <Route path="verification" element={<VerificationPage />} />
+              <Route path="marketplace" element={<MarketplacePage />} />
+              <Route path="profile" element={<ProfileRoute />} />
+              <Route path="profile/:id" element={<ProfileRoute />} />
+            </Route>
+
+            {/* Direct URL Aliases / Fallbacks */}
+            <Route
+              path="/jobs"
+              element={<Navigate to="/home/jobs" replace />}
+            />
+            <Route
+              path="/jobs/create"
+              element={<Navigate to="/home/jobs/create" replace />}
+            />
+            <Route
+              path="/jobs/:id"
+              element={<JobDetailsRedirect />}
+            />
+          </Route>
 
       {/* ==================================================
           PUBLIC PORTFOLIO

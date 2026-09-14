@@ -1,153 +1,82 @@
-// src/features/portfolio/components/PortfolioStats.tsx
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Briefcase, Star, Clock, Eye, CheckCircle2, XCircle } from 'lucide-react';
-import type { Portfolio } from '../../../types/portfolio';
+import { Briefcase, MapPin, Star, Users } from 'lucide-react';
+import type { Portfolio, Service, Work } from '../types/portfolio.types';
 
 interface PortfolioStatsProps {
   portfolio: Portfolio;
-  worksCount: number;
-  servicesCount: number;
+  services: Service[];
+  works: Work[];
 }
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.08,
-    },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 15 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      type: 'spring',
-      stiffness: 300,
-      damping: 24,
-    },
-  },
-};
-
-export default function PortfolioStats({
-  portfolio,
-  worksCount,
-  servicesCount,
-}: PortfolioStatsProps) {
+export default function PortfolioStats({ portfolio, services, works }: PortfolioStatsProps) {
   const stats = [
     {
-      label: 'Completed Works',
-      value: worksCount,
-      icon: Briefcase,
-      color: 'blue',
-      badge: 'Projects',
+      label: 'Active Services',
+      value: services.filter((s) => s.is_active).length,
+      icon: <Briefcase className="h-4 w-4" />,
+      iconClass: 'text-cyan-600 dark:text-cyan-400',
+      iconBg: 'border-cyan-500/20 bg-cyan-500/10',
+      glow: 'bg-cyan-500/5 group-hover:bg-cyan-500/15',
     },
     {
-      label: 'Services Offered',
-      value: servicesCount,
-      icon: Star,
-      color: 'amber',
-      badge: 'Catalog',
+      label: 'Works Showcased',
+      value: works.length,
+      icon: <Users className="h-4 w-4" />,
+      iconClass: 'text-blue-600 dark:text-blue-400',
+      iconBg: 'border-blue-500/20 bg-blue-500/10',
+      glow: 'bg-blue-500/5 group-hover:bg-blue-500/15',
     },
     {
-      label: 'Experience',
-      value: portfolio.years_experience ? `${portfolio.years_experience} yrs` : 'N/A',
-      icon: Clock,
-      color: 'emerald',
-      badge: 'Tenure',
+      label: 'Rating',
+      value:
+        portfolio.average_rating && portfolio.average_rating > 0
+          ? Number(portfolio.average_rating).toFixed(1)
+          : '—',
+      icon: <Star className="h-4 w-4" />,
+      iconClass: 'text-amber-600 dark:text-amber-400',
+      iconBg: 'border-amber-500/20 bg-amber-500/10',
+      glow: 'bg-amber-500/5 group-hover:bg-amber-500/15',
     },
     {
-      label: 'Visibility',
-      value: portfolio.is_public ? (
-        <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 text-sm font-bold">
-          <CheckCircle2 size={16} /> Public
-        </span>
-      ) : (
-        <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1.5 text-sm font-bold">
-          <XCircle size={16} /> Private
-        </span>
-      ),
-      icon: Eye,
-      color: 'indigo',
-      badge: 'Status',
+      label: 'Service Area',
+      value:
+        portfolio.service_radius_km != null
+          ? `${portfolio.service_radius_km} km`
+          : portfolio.city || '—',
+      icon: <MapPin className="h-4 w-4" />,
+      iconClass: 'text-emerald-600 dark:text-emerald-400',
+      iconBg: 'border-emerald-500/20 bg-emerald-500/10',
+      glow: 'bg-emerald-500/5 group-hover:bg-emerald-500/15',
     },
   ];
 
-  const colorStyles = {
-    blue: {
-      bg: 'bg-cyan-500/10 dark:bg-cyan-500/15',
-      text: 'text-cyan-600 dark:text-cyan-400',
-      border: 'border-cyan-500/20',
-      glow: 'bg-cyan-500/10',
-    },
-    amber: {
-      bg: 'bg-amber-500/10 dark:bg-amber-500/15',
-      text: 'text-amber-600 dark:text-amber-400',
-      border: 'border-amber-500/20',
-      glow: 'bg-amber-500/10',
-    },
-    emerald: {
-      bg: 'bg-emerald-500/10 dark:bg-emerald-500/15',
-      text: 'text-emerald-600 dark:text-emerald-400',
-      border: 'border-emerald-500/20',
-      glow: 'bg-emerald-500/10',
-    },
-    indigo: {
-      bg: 'bg-indigo-500/10 dark:bg-indigo-500/15',
-      text: 'text-indigo-600 dark:text-indigo-400',
-      border: 'border-indigo-500/20',
-      glow: 'bg-indigo-500/10',
-    },
-  };
-
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="show"
-      className="grid grid-cols-2 md:grid-cols-4 gap-4"
-    >
-      {stats.map((stat, idx) => {
-        const Icon = stat.icon;
-        const style = colorStyles[stat.color as keyof typeof colorStyles];
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      {stats.map((s) => (
+        <div
+          key={s.label}
+          className="group relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white/80 px-4 py-4 shadow-sm backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg dark:border-slate-800/80 dark:bg-slate-900/80 dark:hover:border-slate-700"
+        >
+          {/* Background Glow */}
+          <div
+            className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full blur-2xl transition-all duration-500 ${s.glow}`}
+          />
 
-        return (
-          <motion.div
-            key={idx}
-            variants={itemVariants}
-            whileHover={{ y: -3, transition: { duration: 0.2 } }}
-            className="group relative bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl border border-slate-200/80 dark:border-slate-800/80 hover:border-cyan-500/30 dark:hover:border-cyan-500/30 p-5 flex flex-col justify-between shadow-sm hover:shadow-xl hover:shadow-cyan-500/5 transition-all duration-300 overflow-hidden"
-          >
-            {/* Background Ambient Glow */}
-            <div
-              className={`absolute -top-10 -right-10 w-28 h-28 rounded-full blur-2xl pointer-events-none transition-all duration-500 ${style.glow} group-hover:scale-125`}
-            />
+          <div className="relative flex items-start justify-between gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              {s.label}
+            </span>
+            <span
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border ${s.iconBg} ${s.iconClass}`}
+            >
+              {s.icon}
+            </span>
+          </div>
 
-            {/* Header: Label & Icon */}
-            <div className="flex items-center justify-between mb-3 relative z-10">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                {stat.label}
-              </span>
-              <div
-                className={`p-2.5 rounded-2xl border transition-all duration-300 ${style.bg} ${style.text} ${style.border}`}
-              >
-                <Icon size={18} />
-              </div>
-            </div>
-
-            {/* Body: Value */}
-            <div className="relative z-10 mt-1">
-              <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
-                {stat.value}
-              </div>
-            </div>
-          </motion.div>
-        );
-      })}
-    </motion.div>
+          <div className="relative mt-2 truncate text-lg font-extrabold text-slate-900 tabular-nums dark:text-slate-100 sm:text-xl">
+            {s.value}
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }

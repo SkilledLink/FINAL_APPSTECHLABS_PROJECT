@@ -23,10 +23,10 @@ interface MobileNavigationProps {
 }
 
 const mobileNavItems = [
-  { icon: Home, label: "Home", path: "/" },
-  { icon: Compass, label: "Discover", path: "/discover" },
-  { icon: PlusSquare, label: "Post", path: "/create", special: true },
-  { icon: Briefcase, label: "Jobs", path: "/jobs" },
+  { icon: Home, label: "Home", path: "/home" },
+  { icon: Compass, label: "Discover", path: "/home/discover" },
+  { icon: PlusSquare, label: "Post", path: "/home/create", special: true },
+  { icon: Briefcase, label: "Jobs", path: "/home/jobs" },
 ];
 
 export default function MobileNavigation({ isDark, toggleTheme }: MobileNavigationProps) {
@@ -206,7 +206,7 @@ export default function MobileNavigation({ isDark, toggleTheme }: MobileNavigati
               {/* Menu Items */}
               <div className="py-2">
                 <button
-                  onClick={() => { navigate("/profile"); setIsProfileMenuOpen(false); }}
+                  onClick={() => { navigate("/home/profile"); setIsProfileMenuOpen(false); }}
                   className="w-full flex items-center gap-3 px-6 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                 >
                   <User size={18} className="text-slate-500 dark:text-slate-400" />

@@ -1,5 +1,11 @@
-import { SlidersHorizontal, X, User as UserIcon, Sparkles, RotateCcw } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import {
+  RotateCcw,
+  SlidersHorizontal,
+  Sparkles,
+  User as UserIcon,
+  X,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 export interface JobFiltersState {
@@ -20,17 +26,28 @@ export default function JobFilters({
   canFilterMine,
 }: JobFiltersProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const activeCount = filters.mineOnly ? 1 : 0;
 
-  // Prevent background scrolling when mobile filter drawer is open
+  // Dynamic calculation for scalable filter expansion
+  const activeCount = Object.values(filters).filter(Boolean).length;
+
+  // Prevent background scrolling & support Escape key closure for mobile drawer
   useEffect(() => {
-    if (mobileOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
+    if (!mobileOpen) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setMobileOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
     return () => {
-      document.body.style.overflow = '';
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, [mobileOpen]);
 
@@ -93,6 +110,8 @@ export default function JobFilters({
         type="button"
         onClick={() => setMobileOpen(true)}
         className="lg:hidden inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-700 transition-all active:scale-95"
+        aria-expanded={mobileOpen}
+        aria-controls="mobile-filter-drawer"
       >
         <SlidersHorizontal className="w-4 h-4 text-slate-500" />
         <span>Filters</span>
@@ -118,10 +137,16 @@ export default function JobFilters({
         </div>
       </aside>
 
-      {/* Mobile Drawer (Portaled to document body to prevent stacking context clipping) */}
+      {/* Mobile Drawer Portal */}
       {mobileOpen &&
         createPortal(
-          <div className="lg:hidden fixed inset-0 z-[99999] flex">
+          <div
+            id="mobile-filter-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Job filters"
+            className="lg:hidden fixed inset-0 z-[99999] flex"
+          >
             {/* Backdrop */}
             <div
               className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200"
