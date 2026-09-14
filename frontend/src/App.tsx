@@ -58,6 +58,11 @@ import MarketplacePage from "./features/Market/pages/Marketplace/Marketplace";
 // Verification
 import { VerificationPage } from "./verification/pages/VerificationPage";
 
+// moderation
+import { api } from "../src/Service/api";
+
+const response = await api.get("/users");
+
 // Admin
 import AdminLogin from "./features/dash_board/AdminDahboard/AdminLogin";
 import AdminDashboard from "./features/dash_board/AdminDahboard/AdminDashboard";
