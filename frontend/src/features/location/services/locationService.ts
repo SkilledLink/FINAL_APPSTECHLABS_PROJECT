@@ -1,3 +1,5 @@
+// src/features/location/services/locationService.ts
+import axios from 'axios';
 import { apiClient } from '../../../api/client';
 import type {
   DiscoverParams,
@@ -13,6 +15,33 @@ import type {
   ServiceAreaListResponse,
 } from '../types/location.types';
 
+/* ───────────────────────── Public HTTP client (no 401 logout) ───────────────────────── */
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+const publicHttp = axios.create({
+  baseURL: API_BASE_URL,
+  headers: { 'Content-Type': 'application/json' },
+  timeout: 15_000,
+});
+
+publicHttp.interceptors.request.use((config) => {
+  try {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      config.headers = config.headers ?? {};
+      // @ts-expect-error axios header typing
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  } catch {
+    /* ignore */
+  }
+  return config;
+});
+
+/* ───────────────────────── Helpers ───────────────────────── */
+
 function toMessage(err: any, fallback: string): string {
   const detail = err?.response?.data?.detail ?? err?.response?.data?.message;
   if (!detail) return err?.message || fallback;
@@ -23,9 +52,39 @@ function toMessage(err: any, fallback: string): string {
   return JSON.stringify(detail);
 }
 
-/** Normalize /professionals/ list response → DiscoverResponse */
-function normalizeListResponse(data: any): DiscoverResponse {
-  const items: DiscoverProfessional[] = (data.items ?? []).map((p: any) => ({
+/**
+ * Normalize a single professional from any of the list endpoints.
+ * Preserves public_location + distance_km when the backend sends them.
+ */
+function normalizeProfessional(p: any): DiscoverProfessional {
+  const rawLoc = p?.public_location ?? p?.location ?? null;
+
+  const public_location =
+    rawLoc && rawLoc.latitude != null && rawLoc.longitude != null
+      ? {
+          latitude: Number(rawLoc.latitude),
+          longitude: Number(rawLoc.longitude),
+          display_name:
+            rawLoc.display_name ??
+            rawLoc.location_name ??
+            [rawLoc.city, rawLoc.region, rawLoc.country]
+              .filter(Boolean)
+              .join(', ') ??
+            '',
+          city: rawLoc.city ?? null,
+          region: rawLoc.region ?? null,
+          country: rawLoc.country ?? null,
+        }
+      : null;
+
+  const distance_km =
+    typeof p?.distance_km === 'number'
+      ? p.distance_km
+      : typeof p?.distance === 'number'
+      ? p.distance
+      : null;
+
+  return {
     id: p.id,
     profession: p.profession,
     headline: p.headline,
@@ -45,17 +104,35 @@ function normalizeListResponse(data: any): DiscoverResponse {
     city: p.city,
     region: p.region,
     country: p.country,
-    // no public_location / distance_km
-  }));
+    public_location,
+    distance_km,
+  } as DiscoverProfessional;
+}
+
+function normalizeListResponse(data: any): DiscoverResponse {
+  const rawItems = Array.isArray(data)
+    ? data
+    : data?.items ?? data?.results ?? [];
+
+  const items = rawItems.map(normalizeProfessional);
 
   return {
     items,
-    total: data.total ?? 0,
-    page: data.page ?? 1,
-    size: data.size ?? items.length,
-    search_center: null,
+    total: data?.total ?? items.length,
+    page: data?.page ?? 1,
+    size: data?.size ?? items.length,
+    search_center: data?.search_center ?? null,
   };
 }
+
+function normalizeSearchResponse(data: any): LocationSearchResponse {
+  if (Array.isArray(data)) return { results: data };
+  if (Array.isArray(data?.results)) return { results: data.results };
+  if (Array.isArray(data?.items)) return { results: data.items };
+  return { results: [] };
+}
+
+/* ───────────────────────── Service ───────────────────────── */
 
 export const locationService = {
   async search(
@@ -64,30 +141,34 @@ export const locationService = {
     country?: string
   ): Promise<LocationSearchResponse> {
     try {
-      const { data } = await apiClient.get<LocationSearchResponse>(
-        '/locations/search',
-        { params: { q, limit, country: country || undefined } }
-      );
-      return data;
-    } catch (err) {
+      const { data } = await publicHttp.get('/locations/search', {
+        params: { q, limit, country: country || undefined },
+      });
+      return normalizeSearchResponse(data);
+    } catch (err: any) {
+      if (err?.response?.status === 401) {
+        throw new Error('Location search is temporarily unavailable.');
+      }
       throw new Error(toMessage(err, 'Location search failed'));
     }
   },
 
   async reverse(lat: number, lng: number): Promise<ReverseGeocodeResponse> {
     try {
-      const { data } = await apiClient.get<ReverseGeocodeResponse>(
-        '/locations/reverse',
-        { params: { lat, lng } }
-      );
+      const { data } = await publicHttp.get('/locations/reverse', {
+        params: { lat, lng },
+      });
       return data;
-    } catch (err) {
+    } catch (err: any) {
+      if (err?.response?.status === 401) {
+        throw new Error('Reverse geocoding is temporarily unavailable.');
+      }
       throw new Error(toMessage(err, 'Reverse geocoding failed'));
     }
   },
 
-  // ─── Unified discover — no location → /professionals/ (list)
-  //                    with location → /professionals/nearby (distance) ───
+  /* ─── Discover ─── */
+
   async discover(params: DiscoverParams = {}): Promise<DiscoverResponse> {
     const {
       location,
@@ -101,26 +182,34 @@ export const locationService = {
 
     try {
       if (location) {
-        const { data } = await apiClient.get<DiscoverResponse>(
-          '/professionals/nearby',
-          {
-            params: {
-              lat: location.lat,
-              lng: location.lng,
-              radius_km: radiusKm,
-              skip,
-              limit,
-              profession: profession || undefined,
-              available_only: availableOnly,
-              verified_only: verifiedOnly,
-            },
-          }
-        );
-        return data;
+        const { data } = await apiClient.get('/professionals/nearby', {
+          params: {
+            lat: location.lat,
+            lng: location.lng,
+            radius_km: radiusKm,
+            skip,
+            limit,
+            profession: profession || undefined,
+            available_only: availableOnly,
+            verified_only: verifiedOnly,
+          },
+        });
+
+        /* Dev diagnostic — remove when done debugging */
+        if (import.meta.env.DEV) {
+          console.debug(
+            '[discover:nearby] raw response shape =',
+            Array.isArray(data) ? 'array' : 'object',
+            '\nfirst item keys =',
+            data?.items?.[0] ? Object.keys(data.items[0]) : data?.[0] ? Object.keys(data[0]) : 'empty',
+            '\nfirst item =',
+            data?.items?.[0] ?? data?.[0] ?? null
+          );
+        }
+
+        return normalizeListResponse(data);
       }
 
-      // No location — use plain list endpoint
-      const page = Math.floor(skip / limit) + 1;
       const { data } = await apiClient.get('/professionals/', {
         params: {
           skip,
@@ -131,13 +220,24 @@ export const locationService = {
           sort: 'rating_desc',
         },
       });
+
+      if (import.meta.env.DEV) {
+        console.debug(
+          '[discover:list] raw response shape =',
+          Array.isArray(data) ? 'array' : 'object',
+          '\nfirst item keys =',
+          data?.items?.[0] ? Object.keys(data.items[0]) : data?.[0] ? Object.keys(data[0]) : 'empty',
+          '\nfirst item =',
+          data?.items?.[0] ?? data?.[0] ?? null
+        );
+      }
+
       return normalizeListResponse(data);
     } catch (err) {
       throw new Error(toMessage(err, 'Failed to load professionals'));
     }
   },
 
-  // Legacy method — still used if anything calls it directly
   async findNearby(params: {
     lat: number;
     lng: number;
@@ -149,17 +249,17 @@ export const locationService = {
     verified_only?: boolean;
   }): Promise<DiscoverResponse> {
     try {
-      const { data } = await apiClient.get<DiscoverResponse>(
-        '/professionals/nearby',
-        { params }
-      );
-      return data;
+      const { data } = await apiClient.get('/professionals/nearby', {
+        params,
+      });
+      return normalizeListResponse(data);
     } catch (err) {
       throw new Error(toMessage(err, 'Nearby search failed'));
     }
   },
 
-  // ─── Professional's own location ────────────────────────
+  /* ─── Professional's own location ─── */
+
   async getMyLocation(): Promise<ProfessionalLocation | null> {
     try {
       const { data } = await apiClient.get<ProfessionalLocation>(

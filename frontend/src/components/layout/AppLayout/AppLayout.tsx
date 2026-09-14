@@ -1,28 +1,29 @@
-import { useState, useEffect, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Outlet } from "react-router-dom";
-import Header from "../Header/Header";
-import Sidebar from "../Sidebar/Sidebar";
-import MobileNavigation from "../MobileNavigation/MobileNavigation";
+// src/components/layout/AppLayout/AppLayout.tsx
+import { useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Outlet } from 'react-router-dom';
+import Header from '../Header/Header';
+import Sidebar from '../Sidebar/Sidebar';
+import MobileNavigation from '../MobileNavigation/MobileNavigation';
 
 export default function AppLayout() {
-  const [isDark, setIsDark] = useState(() => 
-    document.documentElement.classList.contains("dark")
+  const [isDark, setIsDark] = useState(() =>
+    document.documentElement.classList.contains('dark')
   );
 
   const toggleTheme = () => {
     setIsDark((prev) => {
       const nextTheme = !prev;
-      document.documentElement.classList.toggle("dark", nextTheme);
+      document.documentElement.classList.toggle('dark', nextTheme);
       return nextTheme;
     });
   };
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", isDark);
+    document.documentElement.classList.toggle('dark', isDark);
   }, [isDark]);
 
-  // Stable, performance-optimized nodes representing professional connections & data mapping
+  /* Stable background nodes */
   const networkNodes = useMemo(() => {
     return Array.from({ length: 14 }, (_, i) => ({
       id: i,
@@ -44,9 +45,8 @@ export default function AppLayout() {
   }, []);
 
   return (
-    <div className="flex flex-col h-screen w-full bg-[#f8fafc] dark:bg-[#060913] text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300 overflow-hidden relative selection:bg-cyan-500 selection:text-white">
-      
-      {/* Production-Grade Intentional Dark Mode Environment Layer */}
+    <div className="relative flex h-screen w-full flex-col overflow-hidden bg-[#f8fafc] font-sans text-slate-900 transition-colors duration-300 selection:bg-blue-500 selection:text-white dark:bg-[#060913] dark:text-slate-100">
+      {/* ═══════════ Dark mode ambience ═══════════ */}
       <AnimatePresence>
         {isDark && (
           <motion.div
@@ -55,21 +55,27 @@ export default function AppLayout() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.8 }}
             aria-hidden="true"
-            className="absolute inset-0 pointer-events-none z-0 overflow-hidden"
+            className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
           >
-            {/* Restrained, Non-Distracting Atmospheric Depth Gradients */}
-            <div className="absolute top-0 left-1/4 w-[35rem] h-[35rem] bg-cyan-600/10 rounded-full blur-[140px]" />
-            <div className="absolute bottom-0 right-1/4 w-[35rem] h-[35rem] bg-blue-600/10 rounded-full blur-[140px]" />
+            {/* Only blue — no cyan */}
+            <div className="absolute left-1/4 top-0 h-[35rem] w-[35rem] rounded-full bg-blue-600/10 blur-[140px]" />
+            <div className="absolute bottom-0 right-1/4 h-[35rem] w-[35rem] rounded-full bg-blue-500/10 blur-[140px]" />
 
-            {/* Subtle, Professional Alignment Grid */}
+            {/* Alignment grid */}
             <div className="absolute inset-0 bg-[linear-gradient(to_right,#3341550a_1px,transparent_1px),linear-gradient(to_bottom,#3341550a_1px,transparent_1px)] bg-[size:3rem_3rem] opacity-40" />
 
-            {/* Purposeful, Clean Connection Vectors */}
-            <svg className="absolute inset-0 w-full h-full opacity-35">
+            {/* Connection vectors — blue only */}
+            <svg className="absolute inset-0 h-full w-full opacity-35">
               <defs>
-                <linearGradient id="prodStreamGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.6" />
-                  <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.05" />
+                <linearGradient
+                  id="prodStreamGradient"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="100%"
+                >
+                  <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.6" />
+                  <stop offset="100%" stopColor="#60a5fa" stopOpacity="0.05" />
                 </linearGradient>
               </defs>
 
@@ -91,13 +97,13 @@ export default function AppLayout() {
                     transition={{
                       duration: link.duration,
                       repeat: Infinity,
-                      ease: "easeInOut",
+                      ease: 'easeInOut',
                       delay: link.delay,
                     }}
                   />
                   <motion.circle
                     r="2"
-                    fill="#38bdf8"
+                    fill="#60a5fa"
                     animate={{
                       cx: [`${link.x1}%`, `${link.x2}%`],
                       cy: [`${link.y1}%`, `${link.y2}%`],
@@ -106,7 +112,7 @@ export default function AppLayout() {
                     transition={{
                       duration: link.duration * 0.75,
                       repeat: Infinity,
-                      ease: "easeInOut",
+                      ease: 'easeInOut',
                       delay: link.delay,
                     }}
                   />
@@ -119,7 +125,7 @@ export default function AppLayout() {
                   cx={`${node.x}%`}
                   cy={`${node.y}%`}
                   r={node.size}
-                  fill="#22d3ee"
+                  fill="#3b82f6"
                   initial={{ opacity: 0.3 }}
                   animate={{
                     opacity: [0.2, 0.6, 0.2],
@@ -128,50 +134,59 @@ export default function AppLayout() {
                   transition={{
                     duration: node.duration,
                     repeat: Infinity,
-                    ease: "easeInOut",
+                    ease: 'easeInOut',
                     delay: node.delay,
                   }}
                 />
               ))}
             </svg>
 
-            {/* Controlled Vignette for Text Legibility & Focus */}
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_50%,rgba(6,9,19,0.85)_100%)] pointer-events-none" />
+            {/* Vignette */}
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_50%,rgba(6,9,19,0.85)_100%)]" />
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Light Mode Structural Ambient Fallbacks */}
+      {/* ═══════════ Light mode ambience (blue only) ═══════════ */}
       {!isDark && (
-        <div aria-hidden="true" className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-          <div className="absolute top-1/4 -left-32 w-[30rem] h-[30rem] bg-blue-400/5 rounded-full blur-3xl" />
-          <div className="absolute bottom-1/4 -right-32 w-[30rem] h-[30rem] bg-sky-400/5 rounded-full blur-3xl" />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
+        >
+          <div className="absolute -left-32 top-1/4 h-[30rem] w-[30rem] rounded-full bg-blue-400/5 blur-3xl" />
+          <div className="absolute -right-32 bottom-1/4 h-[30rem] w-[30rem] rounded-full bg-blue-500/5 blur-3xl" />
         </div>
       )}
 
-      {/* 1. FIXED TOP HEADER */}
-      <header className="z-40 w-full shrink-0 border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-[#060913]/90 backdrop-blur-md">
+      {/* ═══════════ Fixed top header ═══════════ */}
+      <header className="z-40 w-full shrink-0 border-b border-slate-200/80 bg-white/80 backdrop-blur-md dark:border-slate-800/80 dark:bg-[#060913]/90">
         <Header isDark={isDark} toggleTheme={toggleTheme} />
       </header>
 
-      {/* 2. MAIN BODY WRAPPER (Full Width Fluid Layout) */}
-      <div className="relative z-10 flex flex-1 w-full min-h-0 overflow-hidden">
-        
-        {/* FIXED LEFT SIDEBAR */}
-        <aside aria-label="Sidebar Navigation" className="hidden md:flex flex-col shrink-0 h-full overflow-y-auto z-20 border-r border-slate-200/80 dark:border-slate-800/80 bg-white/60 dark:bg-[#060913]/60 backdrop-blur-md">
+      {/* ═══════════ Body: sidebar + outlet ═══════════ */}
+      <div className="relative z-10 flex min-h-0 w-full flex-1 overflow-hidden">
+        {/* Sidebar wrapper — NO border, Sidebar component has its own */}
+        <aside
+          aria-label="Sidebar Navigation"
+          className="relative z-20 hidden h-full shrink-0 md:flex"
+        >
           <Sidebar isDark={isDark} toggleTheme={toggleTheme} />
         </aside>
 
-        {/* SCROLLABLE OUTLET CONTAINER */}
-        <main className="flex-1 h-full overflow-y-auto overflow-x-hidden min-w-0 pb-20 md:pb-6 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 w-full" tabIndex={-1}>
-          <div className="w-full min-h-full p-4 sm:p-6 lg:p-8">
-            <Outlet />
-          </div>
+        {/* Outlet — NO padding, pages own their spacing */}
+        <main
+          tabIndex={-1}
+          className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden pb-20 focus:outline-none focus:ring-2 focus:ring-blue-500/20 md:pb-0"
+        >
+          <Outlet />
         </main>
       </div>
 
-      {/* 3. MOBILE BOTTOM NAVIGATION */}
-      <nav aria-label="Mobile Navigation" className="md:hidden z-40 shrink-0 bg-white/90 dark:bg-[#060913]/90 backdrop-blur-md border-t border-slate-200/80 dark:border-slate-800/80">
+      {/* ═══════════ Mobile bottom nav ═══════════ */}
+      <nav
+        aria-label="Mobile Navigation"
+        className="z-40 shrink-0 border-t border-slate-200/80 bg-white/90 backdrop-blur-md md:hidden dark:border-slate-800/80 dark:bg-[#060913]/90"
+      >
         <MobileNavigation isDark={isDark} toggleTheme={toggleTheme} />
       </nav>
     </div>

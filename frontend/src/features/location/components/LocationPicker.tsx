@@ -24,13 +24,13 @@ interface LocationPickerProps {
   showRadius?: boolean;
   onSave: (
     input: ProfessionalLocationInput,
-    radiusKm?: number,
+    radiusKm?: number
   ) => Promise<void>;
   onCancel?: () => void;
   saving?: boolean;
 }
 
-const DEFAULT_CENTER = { lat: 3.848, lng: 11.502 }; // Yaoundé
+const DEFAULT_CENTER = { lat: 3.848, lng: 11.502 };
 
 export default function LocationPicker({
   initialLatitude,
@@ -92,14 +92,14 @@ export default function LocationPicker({
         setResolving(false);
       }
     },
-    [],
+    []
   );
 
   const handleDragEnd = useCallback(
     (newLat: number, newLng: number) => {
       handleCurrentLocation(newLat, newLng);
     },
-    [handleCurrentLocation],
+    [handleCurrentLocation]
   );
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -118,26 +118,23 @@ export default function LocationPicker({
         location_name: name.trim(),
         ...meta,
       },
-      showRadius ? radiusKm : undefined,
+      showRadius ? radiusKm : undefined
     );
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Location Search Input */}
+    <form onSubmit={handleSubmit} className="space-y-5">
       <div className="space-y-2">
-        <label className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100">
-          <MapPin className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+        <label className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
+          <MapPin className="h-4 w-4 text-blue-600 dark:text-blue-400" />
           <span>Where are you based?</span>
         </label>
         <LocationSearch onSelect={handleSelect} autoFocus />
       </div>
 
-      {/* Geolocation Button */}
       <CurrentLocationButton onLocation={handleCurrentLocation} />
 
-      {/* Interactive Map Wrapper */}
-      <div className="relative overflow-hidden rounded-3xl border border-slate-200/80 shadow-sm transition-colors dark:border-slate-800">
+      <div className="relative overflow-hidden rounded-md border border-slate-200/70 shadow-sm dark:border-white/10">
         <LocationMap
           latitude={lat}
           longitude={lng}
@@ -148,11 +145,10 @@ export default function LocationPicker({
         />
       </div>
 
-      {/* Selected Address Preview Box */}
       {(resolving || name) && (
-        <div className="relative overflow-hidden rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50/80 via-purple-50/30 to-slate-50/50 p-4 backdrop-blur-sm dark:border-indigo-900/40 dark:from-indigo-950/30 dark:via-slate-900 dark:to-slate-900">
+        <div className="relative overflow-hidden rounded-md border border-blue-500/20 bg-blue-500/[0.04] p-4 backdrop-blur-md dark:border-blue-400/20 dark:bg-blue-500/[0.06]">
           <div className="flex items-start gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm dark:bg-indigo-500">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-blue-600 text-white shadow-sm shadow-blue-500/25">
               {resolving ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -160,8 +156,8 @@ export default function LocationPicker({
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-                Selected Address
+              <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-blue-700 dark:text-blue-300">
+                Selected address
               </span>
               <p className="mt-0.5 text-sm font-semibold text-slate-900 dark:text-slate-100">
                 {resolving ? 'Resolving address details…' : name}
@@ -171,33 +167,30 @@ export default function LocationPicker({
         </div>
       )}
 
-      {/* Service Radius Slider */}
       {showRadius && (
-        <div className="space-y-2 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <label className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100">
-            <Sparkles className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+        <div className="space-y-2 rounded-md border border-slate-200/70 bg-white/85 p-5 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/60">
+          <label className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
+            <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             <span>How far do you provide services?</span>
           </label>
           <ServiceRadiusSelector value={radiusKm} onChange={setRadiusKm} />
         </div>
       )}
 
-      {/* Error Message */}
       {error && (
-        <div className="flex items-center gap-2.5 rounded-2xl border border-rose-200/80 bg-rose-50/80 p-4 text-sm font-medium text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-300">
+        <div className="flex items-center gap-2.5 rounded-md border border-rose-500/20 bg-rose-500/8 p-4 text-sm font-medium text-rose-700 backdrop-blur-md dark:text-rose-300">
           <AlertCircle className="h-4 w-4 shrink-0 text-rose-600 dark:text-rose-400" />
           <span>{error}</span>
         </div>
       )}
 
-      {/* Action Buttons */}
       <div className="flex items-center gap-3 pt-2">
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
             disabled={saving}
-            className="flex-1 rounded-2xl border border-slate-200 bg-white py-3.5 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50 active:scale-[0.99] disabled:opacity-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+            className="flex-1 rounded border border-slate-200/80 bg-white/70 py-3 text-sm font-semibold text-slate-700 backdrop-blur-md transition-colors hover:bg-white active:scale-[0.99] disabled:opacity-50 dark:border-white/10 dark:bg-slate-800/40 dark:text-slate-200 dark:hover:bg-slate-800/70"
           >
             Cancel
           </button>
@@ -205,15 +198,15 @@ export default function LocationPicker({
         <button
           type="submit"
           disabled={saving || resolving}
-          className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 py-3.5 text-sm font-bold text-white shadow-lg shadow-indigo-500/25 transition-all hover:from-indigo-500 hover:to-violet-500 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex flex-1 items-center justify-center gap-2 rounded bg-blue-600 py-3 text-sm font-semibold text-white shadow-md shadow-blue-500/25 transition-colors hover:bg-blue-500 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {saving ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Saving...</span>
+              <span>Saving…</span>
             </>
           ) : (
-            <span>Save Location</span>
+            <span>Save location</span>
           )}
         </button>
       </div>

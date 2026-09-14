@@ -15,7 +15,6 @@ export default function ServiceRadiusSelector({
 
   return (
     <div className="space-y-3">
-      {/* Preset Radius Buttons */}
       <div className="flex flex-wrap gap-2">
         {presets.map((km) => {
           const isSelected = value === km && !isCustom;
@@ -24,10 +23,10 @@ export default function ServiceRadiusSelector({
               key={km}
               type="button"
               onClick={() => onChange(km)}
-              className={`rounded-2xl px-4 py-2 text-sm font-semibold transition-all duration-150 ${
+              className={`rounded px-3.5 py-2 text-sm font-semibold transition-colors ${
                 isSelected
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20 dark:bg-indigo-500'
-                  : 'border border-slate-200/80 bg-white text-slate-700 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-700'
+                  ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/25'
+                  : 'border border-slate-200/80 bg-white text-slate-700 hover:border-blue-500/40 hover:text-blue-700 dark:border-white/10 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-blue-500/40 dark:hover:text-blue-400'
               }`}
             >
               {km} km
@@ -36,9 +35,8 @@ export default function ServiceRadiusSelector({
         })}
       </div>
 
-      {/* Custom Radius Input */}
       <div className="flex items-center gap-2.5 pt-1">
-        <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+        <label className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
           Custom
         </label>
         <div className="flex items-center gap-1.5">
@@ -53,7 +51,7 @@ export default function ServiceRadiusSelector({
               const n = Number(e.target.value);
               if (!Number.isNaN(n) && n >= 0.5 && n <= 200) onChange(n);
             }}
-            className="w-24 rounded-xl border border-slate-200/80 bg-white px-3 py-1.5 text-sm font-semibold text-slate-900 outline-none transition-all duration-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-indigo-500 dark:focus:ring-indigo-500/20"
+            className="w-24 rounded border border-slate-200/80 bg-white px-3 py-1.5 text-sm font-semibold text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/25 dark:border-white/10 dark:bg-slate-900 dark:text-slate-100"
           />
           <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
             km
