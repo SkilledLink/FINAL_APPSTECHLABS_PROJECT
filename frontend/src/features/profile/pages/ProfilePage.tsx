@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { Flag } from 'lucide-react';
 import { useAuth } from '../../../providers/AuthProvider';
 import { useProfile } from '../hooks/useProfile';
 import { useUser } from '../hooks/useUser';
@@ -16,6 +17,7 @@ import { ProfileWorkTab } from '../components/ProfileWorkTab';
 import { EditProfileForm } from '../components/EditProfileForm';
 import { ProfileStateView } from '../components/ProfileStateView';
 import { ProfessionalOnboardingModal } from './ProfessionalOnboardingModal';
+import ReportModal from '../../reports/components/ReportModal';
 import type { ProfileTab, UserProfile } from '../types/profile.types';
 
 export const ProfilePage: React.FC = () => {
@@ -42,6 +44,7 @@ export const ProfilePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ProfileTab>('overview');
   const [isEditing, setIsEditing] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   const handleSaveProfile = useCallback(
     async (data: Partial<UserProfile>) => {
@@ -168,7 +171,31 @@ export const ProfilePage: React.FC = () => {
   const isProfessional = !!profile.professional;
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-8 sm:px-4 md:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4 pt-16 sm:pt-20 md:pt-24">
+    <div className="relative w-full max-w-6xl mx-auto px-8 sm:px-4 md:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4 pt-16 sm:pt-20 md:pt-24">
+
+      {/* ─── Report button — only on other users' profiles ─── */}
+      {!isOwnProfile && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => setShowReportModal(true)}
+            aria-label={`Report ${profile.firstName} ${profile.lastName}`}
+            title="Report this user"
+            className="inline-flex items-center gap-2 rounded-full
+                       border border-rose-200 dark:border-rose-900/60
+                       bg-rose-50 hover:bg-rose-100
+                       dark:bg-rose-950/40 dark:hover:bg-rose-950/70
+                       px-4 py-2 text-xs font-semibold
+                       text-rose-700 dark:text-rose-300
+                       shadow-sm hover:shadow
+                       transition-all active:scale-[0.97]"
+          >
+            <Flag className="h-3.5 w-3.5" />
+            Report
+          </button>
+        </div>
+      )}
+
       <ProfileHeader
         profile={profile}
         isOwnProfile={isOwnProfile}
@@ -274,6 +301,15 @@ export const ProfilePage: React.FC = () => {
           onSuccess={handleUpgradeSuccess}
         />
       )}
+
+      {/* Report modal — portal-rendered, self-guarded via `open` */}
+      <ReportModal
+        open={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        targetId={profile.id}
+        targetType="user"
+        targetLabel={`${profile.firstName} ${profile.lastName}`}
+      />
     </div>
   );
 };

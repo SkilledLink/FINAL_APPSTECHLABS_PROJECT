@@ -134,7 +134,7 @@ export default function UsersPage() {
               >
                 <div
                   className="cursor-pointer"
-                  onClick={() => navigate(`/profile/${user.id}`)}
+                  onClick={() => navigate(`/home/profile/${user.id}`)}
                 >
                   <div className="flex items-start gap-4">
                     <div className="relative shrink-0">
