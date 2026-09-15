@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  CheckCircle, XCircle, AlertTriangle, Loader2, Inbox, Eye, X, ChevronDown, ShieldAlert, ShieldCheck, ShieldQuestion,
+  CheckCircle, XCircle, AlertTriangle, Inbox, Eye, X, ChevronDown, ShieldAlert, ShieldCheck, ShieldQuestion,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useModeration } from '../../hooks/useModeration';
@@ -8,7 +8,7 @@ import type { ModerationQueueItem, ModerationDetail } from '../../types/admin.ty
 import { formatDistanceToNow } from 'date-fns';
 import ReasonPrompt from '../ReasonPrompt';
 
-// ---------- Local UI helpers ----------
+// ---------- Skeleton primitives ----------
 const SkeletonBlock: React.FC<{ className?: string; style?: React.CSSProperties }> = ({
   className = '',
   style,
@@ -16,8 +16,61 @@ const SkeletonBlock: React.FC<{ className?: string; style?: React.CSSProperties 
   <div className={`animate-pulse rounded bg-gray-200 ${className}`} style={style} />
 );
 
+const SkeletonChip: React.FC<{ w?: number }> = ({ w = 80 }) => (
+  <SkeletonBlock className="h-5 rounded-full" style={{ width: w }} />
+);
+
+const SkeletonQueueCard: React.FC = () => (
+  <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
+    <div className="flex items-start gap-3 sm:gap-4">
+      <SkeletonBlock className="rounded-xl shrink-0" style={{ width: 40, height: 40 }} />
+      <div className="flex-1 min-w-0 space-y-3">
+        {/* Chips row */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <SkeletonChip w={90} />
+          <SkeletonChip w={70} />
+          <SkeletonChip w={110} />
+        </div>
+        {/* Title + description */}
+        <div className="space-y-2">
+          <SkeletonBlock className="h-3.5 w-2/3" />
+          <SkeletonBlock className="h-2.5 w-full" />
+          <SkeletonBlock className="h-2.5 w-11/12" />
+          <SkeletonBlock className="h-2.5 w-3/4" />
+        </div>
+        {/* Media thumbs */}
+        <div className="flex gap-2 flex-wrap">
+          <SkeletonBlock className="rounded-lg w-20 h-20 sm:w-24 sm:h-24" />
+          <SkeletonBlock className="rounded-lg w-20 h-20 sm:w-24 sm:h-24" />
+          <SkeletonBlock className="rounded-lg w-20 h-20 sm:w-24 sm:h-24" />
+        </div>
+        {/* Provider line */}
+        <div className="flex items-center gap-3">
+          <SkeletonBlock className="h-2.5 w-32" />
+          <SkeletonBlock className="h-2.5 w-16" />
+        </div>
+        {/* Action buttons */}
+        <div className="flex gap-2 pt-1">
+          <SkeletonBlock className="h-8 w-24 rounded-lg" />
+          <SkeletonBlock className="h-8 w-24 rounded-lg" />
+          <SkeletonBlock className="h-8 w-24 rounded-lg" />
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+const SkeletonQueue: React.FC<{ rows?: number }> = ({ rows = 4 }) => (
+  <div className="space-y-4">
+    {Array.from({ length: rows }).map((_, i) => (
+      <SkeletonQueueCard key={i} />
+    ))}
+  </div>
+);
+
+// ---------- Local UI helpers ----------
 const EmptyState: React.FC<{ title: string; description?: string }> = ({ title, description }) => (
-  <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+  <div className="flex flex-col items-center justify-center py-12 sm:py-16 px-4 sm:px-6 text-center">
     <div className="p-4 bg-gray-50 rounded-2xl text-gray-400 mb-4">
       <Inbox size={28} />
     </div>
@@ -59,7 +112,7 @@ const Chip: React.FC<{ children: React.ReactNode; variant?: 'danger' | 'warning'
     neutral: 'bg-gray-400',
   };
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${styles[variant]}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap ${styles[variant]}`}>
       <span className={`h-1.5 w-1.5 rounded-full ${dots[variant]}`} />
       {children}
     </span>
@@ -87,7 +140,7 @@ const VerdictBanner: React.FC<{ decision: string; severity: number; confidence: 
         <p className={`font-semibold capitalize ${toneStyles.text}`}>{decision}</p>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-4">
+      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <div className="flex items-center justify-between mb-1">
             <span className="text-xs text-gray-500">Severity</span>
@@ -169,9 +222,9 @@ const SkeletonDrawer: React.FC = () => (
       <SkeletonBlock className="h-3 w-full" />
       <SkeletonBlock className="h-3 w-5/6" />
     </div>
-    <div className="flex gap-2">
-      <SkeletonBlock className="rounded-lg" style={{ width: 128, height: 128 }} />
-      <SkeletonBlock className="rounded-lg" style={{ width: 128, height: 128 }} />
+    <div className="flex flex-wrap gap-2">
+      <SkeletonBlock className="rounded-lg w-24 h-24 sm:w-32 sm:h-32" />
+      <SkeletonBlock className="rounded-lg w-24 h-24 sm:w-32 sm:h-32" />
     </div>
     <div className="space-y-2">
       <SkeletonBlock className="h-3 w-24" />
@@ -231,6 +284,26 @@ const ModerationDrawer: React.FC<DrawerProps> = ({
     };
   }, [item, fetchOne]);
 
+  // Lock body scroll while drawer is open
+  useEffect(() => {
+    if (!item) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [item]);
+
+  // Close on Escape
+  useEffect(() => {
+    if (!item) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [item, onClose]);
+
   if (!item) return null;
 
   const severity = detail?.severity ?? item.summary.severity;
@@ -250,10 +323,14 @@ const ModerationDrawer: React.FC<DrawerProps> = ({
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-2xl bg-white shadow-2xl flex flex-col">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="fixed right-0 top-0 bottom-0 z-50 w-full sm:max-w-xl lg:max-w-2xl bg-white shadow-2xl flex flex-col"
+      >
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-gray-100">
           <div className="flex items-center gap-3 min-w-0">
-            <div className={`p-2 rounded-lg ${
+            <div className={`p-2 rounded-lg shrink-0 ${
               severityVariant(severity) === 'danger'
                 ? 'bg-red-50 text-red-500'
                 : severityVariant(severity) === 'warning'
@@ -269,14 +346,14 @@ const ModerationDrawer: React.FC<DrawerProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
+            className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 shrink-0"
             aria-label="Close"
           >
             <X size={18} />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5">
           {loading && <SkeletonDrawer />}
 
           {error && !loading && (
@@ -298,7 +375,7 @@ const ModerationDrawer: React.FC<DrawerProps> = ({
                 )}
 
                 {description && (
-                  <div className="mt-3 p-3 bg-gray-50 rounded-lg text-sm text-gray-700 italic">
+                  <div className="mt-3 p-3 bg-gray-50 rounded-lg text-sm text-gray-700 italic break-words">
                     "{description}"
                   </div>
                 )}
@@ -306,13 +383,13 @@ const ModerationDrawer: React.FC<DrawerProps> = ({
                 {reason && (
                   <div className="mt-3">
                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Reason</p>
-                    <p className="text-sm text-gray-700">{reason}</p>
+                    <p className="text-sm text-gray-700 break-words">{reason}</p>
                   </div>
                 )}
 
-                <div className="mt-3 flex items-center gap-3 text-xs text-gray-400">
-                  <span>{provider} / {model}</span>
-                  <span>·</span>
+                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400">
+                  <span className="break-words">{provider} / {model}</span>
+                  <span className="hidden sm:inline">·</span>
                   <span>{formatDistanceToNow(new Date(createdAt), { addSuffix: true })}</span>
                 </div>
               </div>
@@ -324,16 +401,16 @@ const ModerationDrawer: React.FC<DrawerProps> = ({
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                   Content
                 </p>
-                <p className="font-medium text-gray-900">{item.feedTitle}</p>
-                <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">
+                <p className="font-medium text-gray-900 break-words">{item.feedTitle}</p>
+                <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap break-words">
                   {item.feedDescription}
                 </p>
                 {item.feedMedia.length > 0 && (
-                  <div className="mt-3 flex gap-2 flex-wrap">
+                  <div className="mt-3 grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {item.feedMedia.map((m) => (
                       <div
                         key={m.id}
-                        className="w-32 h-32 rounded-lg overflow-hidden border border-gray-100 bg-gray-50"
+                        className="aspect-square rounded-lg overflow-hidden border border-gray-100 bg-gray-50"
                       >
                         {m.media_type === 'video' ? (
                           <video
@@ -369,7 +446,7 @@ const ModerationDrawer: React.FC<DrawerProps> = ({
         </div>
 
         {/* Footer actions */}
-        <div className="border-t border-gray-100 px-5 py-3 flex items-center justify-end gap-2">
+        <div className="border-t border-gray-100 px-4 sm:px-5 py-3 flex flex-col-reverse sm:flex-row items-stretch sm:items-center sm:justify-end gap-2">
           <button
             onClick={() =>
               setPrompt({
@@ -383,7 +460,7 @@ const ModerationDrawer: React.FC<DrawerProps> = ({
                 },
               })
             }
-            className="px-3 py-2 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 text-sm font-medium inline-flex items-center gap-1.5"
+            className="justify-center px-3 py-2 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 text-sm font-medium inline-flex items-center gap-1.5"
           >
             <XCircle size={14} /> Reject
           </button>
@@ -400,7 +477,7 @@ const ModerationDrawer: React.FC<DrawerProps> = ({
                 },
               })
             }
-            className="px-3 py-2 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 text-sm font-medium inline-flex items-center gap-1.5"
+            className="justify-center px-3 py-2 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 text-sm font-medium inline-flex items-center gap-1.5"
           >
             <CheckCircle size={14} /> Approve
           </button>
@@ -429,24 +506,20 @@ const ModerationTab: React.FC = () => {
   const [selected, setSelected] = useState<ModerationQueueItem | null>(null);
   const [prompt, setPrompt] = useState<Prompt | null>(null);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 size={28} className="animate-spin text-blue-500" />
-      </div>
-    );
-  }
-
   if (error) return <EmptyState title="Failed to load moderation queue" description={error} />;
 
   return (
-    <div>
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900">Moderation</h2>
-        <p className="text-gray-500 mt-1">Review AI-flagged content awaiting decision</p>
+    <div className="w-full">
+      <div className="mb-6 sm:mb-8">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Moderation</h2>
+        <p className="text-sm sm:text-base text-gray-500 mt-1">
+          Review AI-flagged content awaiting decision
+        </p>
       </div>
 
-      {items.length === 0 ? (
+      {loading ? (
+        <SkeletonQueue rows={4} />
+      ) : items.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200">
           <EmptyState title="Queue is clear" description="No flagged content to review right now." />
         </div>
@@ -456,10 +529,10 @@ const ModerationTab: React.FC = () => {
             <div
               key={item.recordId}
               onClick={() => setSelected(item)}
-              className="bg-white rounded-xl border border-gray-200 p-5 cursor-pointer hover:border-blue-200 hover:shadow-sm transition-all"
+              className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 cursor-pointer hover:border-blue-200 hover:shadow-sm active:bg-gray-50 transition-all"
             >
-              <div className="flex items-start gap-4">
-                <div className={`p-2.5 rounded-xl ${
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className={`p-2 sm:p-2.5 rounded-xl shrink-0 ${
                   severityVariant(item.summary.severity) === 'danger'
                     ? 'bg-red-50 text-red-500'
                     : severityVariant(item.summary.severity) === 'warning'
@@ -480,13 +553,13 @@ const ModerationTab: React.FC = () => {
                     ))}
                   </div>
 
-                  <p className="font-medium text-gray-900 mt-3">{item.feedTitle}</p>
-                  <p className="text-sm text-gray-700 mt-1 line-clamp-3">{item.feedDescription}</p>
+                  <p className="font-medium text-gray-900 mt-3 break-words">{item.feedTitle}</p>
+                  <p className="text-sm text-gray-700 mt-1 line-clamp-3 break-words">{item.feedDescription}</p>
 
                   {item.feedMedia.length > 0 && (
-                    <div className="mt-3 flex gap-2 flex-wrap">
+                    <div className="mt-3 grid grid-cols-4 sm:grid-cols-6 gap-2">
                       {item.feedMedia.map((m) => (
-                        <div key={m.id} className="w-24 h-24 rounded-lg overflow-hidden border border-gray-100 bg-gray-50">
+                        <div key={m.id} className="aspect-square rounded-lg overflow-hidden border border-gray-100 bg-gray-50">
                           {m.media_type === 'video' ? (
                             <video src={m.media_url} className="w-full h-full object-cover" />
                           ) : (
@@ -498,19 +571,19 @@ const ModerationTab: React.FC = () => {
                   )}
 
                   {item.summary.description && (
-                    <div className="mt-3 p-3 bg-gray-50 rounded-lg text-sm text-gray-600 italic">
+                    <div className="mt-3 p-3 bg-gray-50 rounded-lg text-sm text-gray-600 italic break-words">
                       "{item.summary.description}"
                     </div>
                   )}
 
-                  <div className="mt-3 flex items-center gap-3 text-xs text-gray-400">
-                    <span>{item.summary.provider} / {item.summary.model}</span>
-                    <span>·</span>
+                  <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400">
+                    <span className="break-words">{item.summary.provider} / {item.summary.model}</span>
+                    <span className="hidden sm:inline">·</span>
                     <span>{formatDistanceToNow(new Date(item.summary.createdAt), { addSuffix: true })}</span>
                   </div>
 
                   <div
-                    className="mt-4 flex gap-2"
+                    className="mt-4 flex flex-wrap gap-2"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <button

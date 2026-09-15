@@ -193,3 +193,104 @@ export interface ModerationDetail {
   imageResults: unknown[] | null;
 }
 
+export interface JobComment {
+  id: string;
+  userId: string;
+  jobId: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+  replies: JobComment[];
+}
+
+export interface AdminJobDetail extends AdminJob {
+  commentsList: JobComment[];
+}
+export interface AdminProfessionalDetail extends AdminProfessional {
+  bio?: string;
+  experienceLevel?: string;
+  yearsOfExperience?: number;
+  companyName?: string;
+  jobTitle?: string;
+  employmentType?: string;
+  hourlyRate?: number;
+  currency: string;
+  country?: string;
+  region?: string;
+  city?: string;
+  websiteUrl?: string;
+  linkedinUrl?: string;
+  portfolioUrl?: string;
+  skills: string[];
+  services: string[];
+  languages: string[];
+  availabilityNotes?: string;
+  responseTimeHours?: number;
+  verifiedAt?: string;
+
+  // admin-only
+  verificationData?: Record<string, unknown> | null;
+  verificationAttempts: number;
+  verificationLastAttemptAt?: string;
+  adminOverrideStatus?: string;
+  adminOverrideBy?: string;
+  adminOverrideAt?: string;
+  adminOverrideReason?: string;
+  fraudNotes?: string;
+
+  // deletion
+  deletedAt?: string;
+  deletedByUserId?: string;
+  deletionType?: string;
+  deletionReason?: string;
+  retentionUntil?: string;
+
+  // snapshot
+  snapshotEmail?: string;
+  snapshotUsername?: string;
+  snapshotIp?: string;
+  snapshotUserAgent?: string;
+
+  updatedAt: string;
+}
+export interface AuditLogDetail extends AuditLog {
+  oldValue: Record<string, unknown> | null;
+  newValue: Record<string, unknown> | null;
+  userAgent?: string;
+}
+
+export interface FeedComment {
+  id: string;
+  userId: string;
+  feedId: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+  replies: FeedComment[];
+  author: {
+    id: string;
+    name: string;
+    avatar: string;
+    role: string;
+  };
+}
+
+export interface AdminFeedDetail extends AdminFeed {
+  commentsList: FeedComment[];
+  isLiked: boolean;
+  moderation: {
+    decision: string;
+    severity: number;
+    confidence: number;
+    description: string;
+    reason: string;
+    categories: string[];
+    provider: string;
+    model: string;
+    error?: string;
+    createdAt: string;
+  } | null;
+}
+
+
+

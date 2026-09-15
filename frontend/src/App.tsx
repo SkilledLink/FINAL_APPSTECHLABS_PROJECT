@@ -62,6 +62,8 @@ import { VerificationPage } from "./verification/pages/VerificationPage";
 // Admin
 import AdminDashboard from "./features/admin_dashboard/pages/AdminDashboard";
 import AdminCheck from "./features/admin_dashboard/components/AdminCheck";
+import ModeratorDashboard from "./features/moderator_dashboard/pages/ModeratorDashboard";
+
 
 // ============================================================
 // TODO: replace with a real Professionals page if it exists
@@ -261,6 +263,11 @@ function App() {
             path="/admin_dashbourd"
             element={<AdminDashboard />}
           />
+
+          {/* ==================================================
+              MODERATOR DASHBOARD (PUBLIC ROUTE)
+          ================================================== */}
+          <Route path="/moderator_dashbourd" element={<ModeratorDashboard />} />
 
           {/* ==================================================
               CATCH-ALL
