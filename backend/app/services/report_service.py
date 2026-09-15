@@ -82,7 +82,7 @@ class ReportService:
         if existing:
             raise HTTPException(
                 409,
-                "You have already reported this item",
+                "You have already reported",
             )
 
         report = Report(

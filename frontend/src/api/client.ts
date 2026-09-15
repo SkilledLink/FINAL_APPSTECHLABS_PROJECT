@@ -129,3 +129,59 @@ export const userApi = {
     return response.data;
   },
 };
+
+
+/* ───────────────────────── Report API ───────────────────────── */
+
+export type ReportTargetType = 'user' | 'professional' | 'job' | 'feed';
+
+export type ReportReason =
+  | 'spam'
+  | 'harassment'
+  | 'fraud'
+  | 'inappropriate_content'
+  | 'fake_account'
+  | 'scam'
+  | 'impersonation'
+  | 'other';
+
+export interface ReportCreatePayload {
+  target_id: string;
+  target_type: ReportTargetType;
+  reason: ReportReason;
+  description?: string | null;
+}
+
+export interface ReportResponse {
+  id: string;
+  reporter_id: string;
+  target_id: string;
+  target_type: ReportTargetType;
+  reason: ReportReason;
+  description: string | null;
+  status: 'pending' | 'reviewing' | 'resolved' | 'dismissed';
+  action_taken: string;
+  review_notes: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export const reportApi = {
+  create: async (payload: ReportCreatePayload): Promise<ReportResponse> => {
+    const response = await apiClient.post<ReportResponse>('/reports', payload);
+    return response.data;
+  },
+
+  listMine: async (skip = 0, limit = 20) => {
+    const response = await apiClient.get('/reports/me', {
+      params: { skip, limit },
+    });
+    return response.data;
+  },
+
+  withdraw: async (reportId: string): Promise<void> => {
+    await apiClient.delete(`/reports/${reportId}`);
+  },
+};
