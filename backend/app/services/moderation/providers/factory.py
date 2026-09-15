@@ -2,6 +2,9 @@ import logging
 
 from app.core.config import settings
 from app.services.moderation.provider import ModerationProvider
+from app.services.moderation.providers.fallback_provider import (
+    FallbackModerationProvider,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -23,23 +26,37 @@ def build_image_provider() -> ModerationProvider:
 
 
 def _resolve(primary: str, fallback: str, modality: str) -> ModerationProvider:
-    primary = (primary or "").lower()
-    fallback = (fallback or "").lower()
+    primary_name = (primary or "").lower()
+    fallback_name = (fallback or "").lower()
 
-    for name in (primary, fallback):
-        provider = _try_build(name)
-        if provider is not None:
-            if name != primary:
-                logger.warning(
-                    "Primary %s moderation provider %r unavailable, "
-                    "using fallback %r",
-                    modality, primary, name,
-                )
-            return provider
+    primary_provider = _try_build(primary_name)
 
-    raise RuntimeError(
-        f"No {modality} moderation provider is configured"
-    )
+    # Primary unavailable at build time — use fallback as the sole provider.
+    if primary_provider is None:
+        fallback_provider = _try_build(fallback_name)
+        if fallback_provider is None:
+            raise RuntimeError(
+                f"No {modality} moderation provider is configured"
+            )
+        logger.warning(
+            "Primary %s moderation provider %r unavailable at build time, "
+            "using %r as sole provider",
+            modality, primary_name, fallback_name,
+        )
+        return fallback_provider
+
+    # Primary available — try to build the fallback too and wrap them.
+    if fallback_name and fallback_name != primary_name:
+        fallback_provider = _try_build(fallback_name)
+        if fallback_provider is not None:
+            return FallbackModerationProvider(primary_provider, fallback_provider)
+        logger.warning(
+            "Fallback %s moderation provider %r unavailable; "
+            "running without runtime fallback",
+            modality, fallback_name,
+        )
+
+    return primary_provider
 
 
 def _try_build(name: str) -> ModerationProvider | None:

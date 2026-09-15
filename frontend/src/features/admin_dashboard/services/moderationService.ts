@@ -1,5 +1,5 @@
 import { api } from '../api/api';
-import type { ModerationQueueItem } from '../types/admin.types';
+import type { ModerationQueueItem, ModerationDetail } from '../types/admin.types';
 
 const mapItem = (i: any): ModerationQueueItem => ({
   recordId: i.record_id,
@@ -26,12 +26,33 @@ const mapItem = (i: any): ModerationQueueItem => ({
   },
 });
 
+const mapDetail = (d: any): ModerationDetail => ({
+  recordId: d.record_id,
+  decision: d.decision,
+  severity: d.severity ?? 0,
+  confidence: d.confidence ?? 0,
+  description: d.description ?? '',
+  reason: d.reason ?? '',
+  categories: d.categories ?? [],
+  provider: d.provider ?? '',
+  model: d.model ?? '',
+  error: d.error,
+  createdAt: d.created_at,
+  textResult: d.text_result ?? null,
+  imageResults: d.image_results ?? null,
+});
+
 export const moderationService = {
   async getQueue(): Promise<ModerationQueueItem[]> {
     const { data } = await api.get('/admin/moderation/queue', {
       params: { skip: 0, limit: 100 },
     });
     return (data.items ?? []).map(mapItem);
+  },
+
+  async getRecord(id: string): Promise<ModerationDetail> {
+    const { data } = await api.get(`/admin/moderation/records/${id}`);
+    return mapDetail(data);
   },
 
   async approve(recordId: string, reason: string): Promise<void> {

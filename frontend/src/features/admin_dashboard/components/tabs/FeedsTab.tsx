@@ -1,17 +1,68 @@
 import React, { useMemo, useState } from 'react';
-import { Trash2, Heart, MessageCircle, Loader2, Inbox, Search } from 'lucide-react';
+import { Trash2, Heart, MessageCircle, Inbox, Search } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useFeeds } from '../../hooks/useFeeds';
 import type { AdminFeed } from '../../types/admin.types';
 import { formatDistanceToNow } from 'date-fns';
 import ReasonPrompt from '../ReasonPrompt';
 
-const Loader: React.FC = () => (
-  <div className="flex items-center justify-center py-16">
-    <Loader2 size={28} className="animate-spin text-blue-500" />
+// ---------- Skeleton primitives ----------
+const SkeletonBlock: React.FC<{ className?: string; style?: React.CSSProperties }> = ({
+  className = '',
+  style,
+}) => (
+  <div className={`animate-pulse rounded bg-gray-200 ${className}`} style={style} />
+);
+
+const SkeletonFeedCard: React.FC = () => (
+  <div className="bg-white rounded-xl border border-gray-200 p-5">
+    <div className="flex items-start gap-4">
+      <SkeletonBlock className="rounded-full" style={{ width: 40, height: 40 }} />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <SkeletonBlock className="h-3.5 w-32" />
+              <SkeletonBlock className="h-4 w-16 rounded-full" />
+            </div>
+            <SkeletonBlock className="h-2.5 w-24" />
+          </div>
+          <SkeletonBlock className="h-5 w-20 rounded-full" />
+        </div>
+
+        <div className="mt-3 space-y-2">
+          <SkeletonBlock className="h-3.5 w-2/3" />
+          <SkeletonBlock className="h-3 w-full" />
+          <SkeletonBlock className="h-3 w-5/6" />
+        </div>
+
+        <div className="mt-3 flex gap-2">
+          <SkeletonBlock className="rounded-lg" style={{ width: 96, height: 96 }} />
+          <SkeletonBlock className="rounded-lg" style={{ width: 96, height: 96 }} />
+        </div>
+
+        <div className="mt-4 flex items-center gap-4">
+          <SkeletonBlock className="h-3 w-10" />
+          <SkeletonBlock className="h-3 w-10" />
+        </div>
+
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <SkeletonBlock className="h-7 w-24 rounded-lg" />
+        </div>
+      </div>
+    </div>
   </div>
 );
 
+const SkeletonFeedList: React.FC<{ count?: number }> = ({ count = 3 }) => (
+  <div className="space-y-4">
+    {Array.from({ length: count }).map((_, i) => (
+      <SkeletonFeedCard key={i} />
+    ))}
+  </div>
+);
+
+// ---------- Local UI helpers ----------
 const EmptyState: React.FC<{ title: string; description?: string }> = ({ title, description }) => (
   <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
     <div className="p-4 bg-gray-50 rounded-2xl text-gray-400 mb-4">
@@ -70,6 +121,60 @@ const statusVariant = (s: string): 'success' | 'warning' | 'danger' | 'info' | '
   return 'neutral';
 };
 
+// ---------- Avatar with colored initials fallback ----------
+const AVATAR_COLORS = [
+  '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4',
+  '#ef4444', '#6366f1', '#14b8a6', '#f97316', '#a855f7', '#84cc16',
+];
+
+const hashString = (s: string): number => {
+  let hash = 0;
+  for (let i = 0; i < s.length; i++) {
+    hash = (hash << 5) - hash + s.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+};
+
+const Avatar: React.FC<{ name: string; src?: string; size?: number; className?: string }> = ({
+  name, src, size = 40, className = '',
+}) => {
+  const [imgError, setImgError] = React.useState(false);
+
+  const initials =
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? '')
+      .join('') || '?';
+
+  const backgroundColor = AVATAR_COLORS[hashString(name || '?') % AVATAR_COLORS.length];
+
+  if (!src || imgError) {
+    return (
+      <div
+        className={`inline-flex items-center justify-center rounded-full font-semibold text-white select-none ${className}`}
+        style={{ width: size, height: size, fontSize: Math.round(size * 0.4), backgroundColor }}
+        aria-label={name}
+      >
+        {initials}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={name}
+      onError={() => setImgError(true)}
+      className={`rounded-full object-cover ${className}`}
+      style={{ width: size, height: size }}
+    />
+  );
+};
+
+// ---------- Tab ----------
 type Prompt = {
   title: string;
   description?: string;
@@ -99,7 +204,6 @@ const FeedsTab: React.FC = () => {
     [feeds, filter, query],
   );
 
-  if (loading) return <Loader />;
   if (error) return <EmptyState title="Failed to load feeds" description={error} />;
 
   return (
@@ -112,11 +216,12 @@ const FeedsTab: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
         <SearchInput value={query} onChange={setQuery} placeholder="Search content..." />
         <div className="flex gap-2 flex-wrap">
-          {statuses.map((f) => (
+          {(loading ? ['all'] : statuses).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium capitalize transition-colors ${
+              disabled={loading}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium capitalize transition-colors disabled:opacity-60 ${
                 filter === f
                   ? 'bg-blue-50 text-blue-600'
                   : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
@@ -128,7 +233,9 @@ const FeedsTab: React.FC = () => {
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {loading ? (
+        <SkeletonFeedList count={3} />
+      ) : filtered.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200">
           <EmptyState title="No feeds found" description="Try adjusting your filters." />
         </div>
@@ -137,7 +244,7 @@ const FeedsTab: React.FC = () => {
           {filtered.map((feed: AdminFeed) => (
             <div key={feed.id} className="bg-white rounded-xl border border-gray-200 p-5">
               <div className="flex items-start gap-4">
-                <img src={feed.author.avatar} alt={feed.author.name} className="w-10 h-10 rounded-full object-cover" />
+                <Avatar name={feed.author.name} src={feed.author.avatar} size={40} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-3">
                     <div>

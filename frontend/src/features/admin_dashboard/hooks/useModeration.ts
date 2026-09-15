@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { moderationService } from '../services/moderationService';
-import type { ModerationQueueItem } from '../types/admin.types';
+import type { ModerationQueueItem, ModerationDetail } from '../types/admin.types';
 
 export const useModeration = () => {
   const [items, setItems] = useState<ModerationQueueItem[]>([]);
@@ -23,6 +23,11 @@ export const useModeration = () => {
     load();
   }, [load]);
 
+  const fetchOne = useCallback(
+    (id: string) => moderationService.getRecord(id),
+    [],
+  );
+
   const approve = useCallback(async (recordId: string, reason: string) => {
     await moderationService.approve(recordId, reason);
     setItems((prev) => prev.filter((i) => i.recordId !== recordId));
@@ -33,5 +38,5 @@ export const useModeration = () => {
     setItems((prev) => prev.filter((i) => i.recordId !== recordId));
   }, []);
 
-  return { items, loading, error, refetch: load, approve, reject };
+  return { items, loading, error, refetch: load, fetchOne, approve, reject };
 };

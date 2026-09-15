@@ -170,3 +170,26 @@ export interface Administrator {
   lastActive?: string;
   joinedDate: string;
 }
+export interface AdminUserDetail extends AdminUser {
+  bio?: string;
+  bannerImageUrl?: string;
+  followersCount: number;
+  followingCount: number;
+  updatedAt: string;
+}
+export interface ModerationDetail {
+  recordId: string;
+  decision: string;
+  severity: number;
+  confidence: number;
+  description: string;
+  reason: string;
+  categories: string[];
+  provider: string;
+  model: string;
+  error?: string;
+  createdAt: string;
+  textResult: Record<string, unknown> | null;
+  imageResults: unknown[] | null;
+}
+

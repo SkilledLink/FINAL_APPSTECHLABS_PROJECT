@@ -15,6 +15,12 @@ class ProviderResult:
     model: str = ""
     error: Optional[str] = None
 
+    # Fallback metadata (populated only when a fallback provider was used)
+    fallback_used: bool = False
+    primary_provider: str = ""
+    primary_model: str = ""
+    primary_error: Optional[str] = None
+
     @classmethod
     def failure(cls, error: str, provider: str = "", model: str = "") -> "ProviderResult":
         return cls(
