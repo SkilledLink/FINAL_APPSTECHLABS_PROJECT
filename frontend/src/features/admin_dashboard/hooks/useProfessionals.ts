@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { professionalsService } from '../services/professionalsService';
-import type { AdminProfessional } from '../types/admin.types';
+import type { AdminProfessional, AdminProfessionalDetail } from '../types/admin.types';
 
 export const useProfessionals = () => {
   const [professionals, setProfessionals] = useState<AdminProfessional[]>([]);
@@ -22,6 +22,11 @@ export const useProfessionals = () => {
   useEffect(() => {
     load();
   }, [load]);
+
+  const fetchOne = useCallback(
+    (id: string) => professionalsService.getOne(id),
+    [],
+  );
 
   const verify = useCallback(
     async (
@@ -73,15 +78,46 @@ export const useProfessionals = () => {
     );
   }, []);
 
+  const updateTrustScore = useCallback(
+    async (id: string, newScore: number, reason: string) => {
+      await professionalsService.updateTrustScore(id, newScore, reason);
+      setProfessionals((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, trustScore: newScore } : p)),
+      );
+    },
+    [],
+  );
+
+  const remove = useCallback(
+    async (
+      id: string,
+      reason: string,
+      deletionType: 'self' | 'admin' | 'gdpr' | 'ban' = 'admin',
+    ) => {
+      await professionalsService.remove(id, reason, deletionType);
+      setProfessionals((prev) =>
+        prev.map((p) =>
+          p.id === id
+            ? { ...p, status: 'deleted' }
+            : p,
+        ),
+      );
+    },
+    [],
+  );
+
   return {
     professionals,
     loading,
     error,
     refetch: load,
+    fetchOne,
     verify,
     suspend,
     reactivate,
     flag,
     unflag,
+    updateTrustScore,
+    remove,
   };
 };

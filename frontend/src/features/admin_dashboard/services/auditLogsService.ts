@@ -1,5 +1,5 @@
 import { api } from '../api/api';
-import type { AuditLog } from '../types/admin.types';
+import type { AuditLog, AuditLogDetail } from '../types/admin.types';
 
 const mapLog = (l: any): AuditLog => ({
   id: l.id,
@@ -16,11 +16,32 @@ const mapLog = (l: any): AuditLog => ({
   timestamp: l.created_at,
 });
 
+const mapLogDetail = (l: any): AuditLogDetail => ({
+  ...mapLog(l),
+  oldValue: l.old_value ?? null,
+  newValue: l.new_value ?? null,
+  userAgent: l.user_agent,
+});
+
+export interface AuditLogFilters {
+  actorUserId?: string;
+  entityType?: string;
+  action?: string;
+}
+
 export const auditLogsService = {
-  async getAll(): Promise<AuditLog[]> {
-    const { data } = await api.get('/admin/audit-logs', {
-      params: { skip: 0, limit: 200 },
-    });
+  async getAll(filters: AuditLogFilters = {}): Promise<AuditLog[]> {
+    const params: Record<string, unknown> = { skip: 0, limit: 200 };
+    if (filters.actorUserId) params.actor_user_id = filters.actorUserId;
+    if (filters.entityType) params.entity_type = filters.entityType;
+    if (filters.action) params.action = filters.action;
+
+    const { data } = await api.get('/admin/audit-logs', { params });
     return (data.items ?? []).map(mapLog);
+  },
+
+  async getOne(id: string): Promise<AuditLogDetail> {
+    const { data } = await api.get(`/admin/audit-logs/${id}`);
+    return mapLogDetail(data);
   },
 };

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { feedsService } from '../services/feedsService';
-import type { AdminFeed } from '../types/admin.types';
+import type { AdminFeed, AdminFeedDetail } from '../types/admin.types';
 
 export const useFeeds = () => {
   const [feeds, setFeeds] = useState<AdminFeed[]>([]);
@@ -23,6 +23,11 @@ export const useFeeds = () => {
     load();
   }, [load]);
 
+  const fetchOne = useCallback(
+    (id: string) => feedsService.getOne(id),
+    [],
+  );
+
   const remove = useCallback(
     async (id: string, reason: string, hard = false) => {
       await feedsService.remove(id, reason, hard);
@@ -35,5 +40,27 @@ export const useFeeds = () => {
     [],
   );
 
-  return { feeds, loading, error, refetch: load, remove };
+  const removeComment = useCallback(
+    async (feedId: string, commentId: string, reason: string) => {
+      await feedsService.removeComment(commentId, reason);
+      setFeeds((prev) =>
+        prev.map((f) =>
+          f.id === feedId
+            ? { ...f, comments: Math.max(0, f.comments - 1) }
+            : f,
+        ),
+      );
+    },
+    [],
+  );
+
+  return {
+    feeds,
+    loading,
+    error,
+    refetch: load,
+    fetchOne,
+    remove,
+    removeComment,
+  };
 };

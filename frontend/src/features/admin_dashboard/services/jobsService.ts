@@ -1,23 +1,65 @@
-import type { AdminJob } from '../types/admin.types';
+import { api } from '../api/api';
+import type { AdminJob, AdminJobDetail, JobComment } from '../types/admin.types';
 
-const delay = (ms = 400) => new Promise((r) => setTimeout(r, ms));
+const mapComment = (c: any): JobComment => ({
+  id: c.id,
+  userId: c.user_id,
+  jobId: c.job_id,
+  content: c.content,
+  createdAt: c.created_at,
+  updatedAt: c.updated_at,
+  replies: (c.replies ?? []).map(mapComment),
+});
 
-const jobs: AdminJob[] = [
-  { id: 'j1', title: 'Emergency plumbing repair', category: 'Plumbing', location: 'Douala, Cameroon', budget: 45_000, status: 'open', postedDate: '2025-01-15', deadline: '2025-01-20', applicants: 7, client: { id: 'u2', name: 'Sarah Mbah', avatar: 'https://i.pravatar.cc/80?img=45' } },
-  { id: 'j2', title: 'Full apartment rewiring', category: 'Electrical', location: 'Yaoundé, Cameroon', budget: 320_000, status: 'in_progress', postedDate: '2025-01-08', deadline: '2025-01-30', applicants: 12, client: { id: 'u1', name: 'Paul Biya', avatar: 'https://i.pravatar.cc/80?img=33' }, professional: { id: 'p1', name: 'Jean-Pierre Mbock', avatar: 'https://i.pravatar.cc/80?img=12' } },
-  { id: 'j3', title: 'Custom wardrobe build', category: 'Carpentry', location: 'Bafoussam, Cameroon', budget: 180_000, status: 'completed', postedDate: '2024-12-20', deadline: '2025-01-10', applicants: 5, client: { id: 'u5', name: 'Bertrand Njoya', avatar: 'https://i.pravatar.cc/80?img=51' }, professional: { id: 'p3', name: 'Alain Tchoumi', avatar: 'https://i.pravatar.cc/80?img=59' } },
-  { id: 'j4', title: 'Living room painting', category: 'Painting', location: 'Yaoundé, Cameroon', budget: 95_000, status: 'disputed', postedDate: '2025-01-03', deadline: '2025-01-18', applicants: 9, client: { id: 'u4', name: 'Claudine Etoundi', avatar: 'https://i.pravatar.cc/80?img=27' }, professional: { id: 'p5', name: 'Kevin Essomba', avatar: 'https://i.pravatar.cc/80?img=68' } },
-  { id: 'j5', title: 'Office deep cleaning', category: 'Cleaning', location: 'Douala, Cameroon', budget: 60_000, status: 'cancelled', postedDate: '2025-01-12', applicants: 3, client: { id: 'u1', name: 'Paul Biya', avatar: 'https://i.pravatar.cc/80?img=33' } },
-];
+const mapJob = (j: any): AdminJob => {
+  const u = j.user ?? {};
+  return {
+    id: j.id,
+    title: j.title ?? '',
+    description: j.description ?? '',
+    status: j.status ?? 'unknown',
+    userId: j.user_id,
+    client: {
+      id: u.id ?? j.user_id,
+      name:
+        [u.first_name, u.last_name].filter(Boolean).join(' ') ||
+        u.username ||
+        'Unknown',
+      avatar: u.profile_image_url || '',
+    },
+    images: (j.images ?? []).map((i: any) => i.image_url),
+    likes: j.likes_count ?? 0,
+    comments: j.comments_count ?? 0,
+    postedDate: j.created_at,
+    updatedAt: j.updated_at,
+  };
+};
+
+const mapJobDetail = (j: any): AdminJobDetail => ({
+  ...mapJob(j),
+  commentsList: (j.comments ?? []).map(mapComment),
+});
 
 export const jobsService = {
   async getAll(): Promise<AdminJob[]> {
-    await delay();
-    return jobs;
+    const { data } = await api.get('/admin/jobs', {
+      params: { skip: 0, limit: 100 },
+    });
+    return (data.items ?? []).map(mapJob);
   },
-  async updateStatus(id: string, status: AdminJob['status']): Promise<void> {
-    await delay(200);
-    const j = jobs.find((x) => x.id === id);
-    if (j) j.status = status;
+
+  async getOne(id: string): Promise<AdminJobDetail> {
+    const { data } = await api.get(`/admin/jobs/${id}`);
+    return mapJobDetail(data);
+  },
+
+  async remove(id: string, reason: string, hard = false): Promise<void> {
+    await api.delete(`/admin/jobs/${id}`, { params: { reason, hard } });
+  },
+
+  async removeComment(commentId: string, reason: string): Promise<void> {
+    await api.delete(`/admin/jobs/comments/${commentId}`, {
+      params: { reason },
+    });
   },
 };

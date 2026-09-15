@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { jobsService } from '../services/jobsService';
-import type { AdminJob } from '../types/admin.types';
+import type { AdminJob, AdminJobDetail } from '../types/admin.types';
 
 export const useJobs = () => {
   const [jobs, setJobs] = useState<AdminJob[]>([]);
@@ -23,10 +23,30 @@ export const useJobs = () => {
     load();
   }, [load]);
 
-  const remove = useCallback(async (id: string, reason: string, hard = false) => {
-    await jobsService.remove(id, reason, hard);
-    setJobs((prev) => prev.filter((j) => j.id !== id));
-  }, []);
+  const fetchOne = useCallback(
+    (id: string) => jobsService.getOne(id),
+    [],
+  );
 
-  return { jobs, loading, error, refetch: load, remove };
+  const remove = useCallback(
+    async (id: string, reason: string, hard = false) => {
+      await jobsService.remove(id, reason, hard);
+      setJobs((prev) => prev.filter((j) => j.id !== id));
+    },
+    [],
+  );
+
+  const removeComment = useCallback(
+    async (jobId: string, commentId: string, reason: string) => {
+      await jobsService.removeComment(commentId, reason);
+      setJobs((prev) =>
+        prev.map((j) =>
+          j.id === jobId ? { ...j, comments: Math.max(0, j.comments - 1) } : j,
+        ),
+      );
+    },
+    [],
+  );
+
+  return { jobs, loading, error, refetch: load, fetchOne, remove, removeComment };
 };
