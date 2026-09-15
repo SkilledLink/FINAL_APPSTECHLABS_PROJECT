@@ -57,28 +57,25 @@ import MarketplacePage from "./features/Market/pages/Marketplace/Marketplace";
 // Verification
 import { VerificationPage } from "./verification/pages/VerificationPage";
 
-// moderation
-import { api } from "../src/Service/api";
-
-const response = await api.get("/users");
-
 // Admin
 import AdminDashboard from "./features/admin_dashboard/pages/AdminDashboard";
-
-// TODO: replace with a real Professionals page if it exists
-const ProfessionalsPage = UsersPage;
-
-// Marketplace
-import Marketplace from "./features/Market/pages/Marketplace/Marketplace";
-
 import AdminCheck from "./features/admin_dashboard/components/AdminCheck";
+
+// ============================================================
+// TODO: replace with a real Professionals page if it exists
+// ============================================================
+const ProfessionalsPage = UsersPage;
 
 // ============================================================
 // PUBLIC-ONLY ROUTE
 // ============================================================
 function PublicOnlyRoute() {
   const { isAuthenticated } = useAuth();
-  if (isAuthenticated()) return <Navigate to="/home" replace />;
+
+  if (isAuthenticated()) {
+    return <Navigate to="/home" replace />;
+  }
+
   return <Outlet />;
 }
 
@@ -87,7 +84,11 @@ function PublicOnlyRoute() {
 // ============================================================
 function ProtectedRoute() {
   const { isAuthenticated } = useAuth();
-  if (!isAuthenticated()) return <Navigate to="/login" replace />;
+
+  if (!isAuthenticated()) {
+    return <Navigate to="/login" replace />;
+  }
+
   return <Outlet />;
 }
 
@@ -96,13 +97,20 @@ function ProtectedRoute() {
 // ============================================================
 function ProfileRoute() {
   const { id } = useParams<{ id: string }>();
+
   return <ProfilePage userId={id ?? ""} />;
 }
 
 function JobDetailsRoute() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  return <JobDetailsPage jobId={id ?? ""} onBack={() => navigate(-1)} />;
+
+  return (
+    <JobDetailsPage
+      jobId={id ?? ""}
+      onBack={() => navigate(-1)}
+    />
+  );
 }
 
 // ============================================================
@@ -127,6 +135,7 @@ function PublicPortfolioRoute() {
 
 function JobDetailsRedirect() {
   const { id } = useParams<{ id: string }>();
+
   return <Navigate to={`/home/jobs/${id}`} replace />;
 }
 
@@ -167,8 +176,14 @@ function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/verify-email" element={<VerifyEmailPage />} />
-              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
+              <Route
+                path="/forgot-password"
+                element={<ForgotPasswordPage />}
+              />
+              <Route
+                path="/reset-password"
+                element={<ResetPasswordPage />}
+              />
             </Route>
           </Route>
 
@@ -182,15 +197,33 @@ function App() {
               <Route path="jobs" element={<JobsPage />} />
               <Route path="jobs/create" element={<CreateJobPage />} />
               <Route path="jobs/:id" element={<JobDetailsRoute />} />
-              <Route path="discover" element={<NearbyProfessionalsPage />} />
-              <Route path="portfolio" element={<PortfolioDashboard />} />
+              <Route
+                path="discover"
+                element={<NearbyProfessionalsPage />}
+              />
+              <Route
+                path="portfolio"
+                element={<PortfolioDashboard />}
+              />
               <Route path="messages" element={<MessagesPage />} />
-              <Route path="professionals" element={<ProfessionalsPage />} />
+              <Route
+                path="professionals"
+                element={<ProfessionalsPage />}
+              />
               <Route path="users" element={<UsersPage />} />
-              <Route path="verification" element={<VerificationPage />} />
-              <Route path="marketplace" element={<MarketplacePage />} />
+              <Route
+                path="verification"
+                element={<VerificationPage />}
+              />
+              <Route
+                path="marketplace"
+                element={<MarketplacePage />}
+              />
               <Route path="profile" element={<ProfileRoute />} />
-              <Route path="profile/:id" element={<ProfileRoute />} />
+              <Route
+                path="profile/:id"
+                element={<ProfileRoute />}
+              />
             </Route>
 
             {/* Direct URL Aliases / Fallbacks */}
@@ -198,10 +231,12 @@ function App() {
               path="/jobs"
               element={<Navigate to="/home/jobs" replace />}
             />
+
             <Route
               path="/jobs/create"
               element={<Navigate to="/home/jobs/create" replace />}
             />
+
             <Route
               path="/jobs/:id"
               element={<JobDetailsRedirect />}
@@ -218,14 +253,20 @@ function App() {
           />
 
           {/* ==================================================
-              ADMIN DASHBOARD (PUBLIC ROUTE)
+              ADMIN DASHBOARD
               ================================================== */}
-          <Route path="/admin_dashbourd" element={<AdminDashboard />} />
+          <Route
+            path="/admin_dashbourd"
+            element={<AdminDashboard />}
+          />
 
           {/* ==================================================
               CATCH-ALL
               ================================================== */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route
+            path="*"
+            element={<Navigate to="/" replace />}
+          />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
