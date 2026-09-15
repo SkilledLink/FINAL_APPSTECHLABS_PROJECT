@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { AdminSidebar, type AdminTab } from './AdminSidebar';
-import AdminHeader from './AdminHeader';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -42,11 +41,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <AdminHeader
-          title={title}
-          subtitle={subtitle}
-          onOpenMobileSidebar={() => setMobileOpen(true)}
-        />
         <main className="min-h-0 flex-1 overflow-y-auto">
           <div className="p-4 sm:p-6 lg:p-8">{children}</div>
         </main>

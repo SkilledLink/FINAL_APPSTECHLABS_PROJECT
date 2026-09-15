@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { usersService } from '../services/usersService';
-import type { AdminUser } from '../types/admin.types';
+import type { AdminUser, AdminUserDetail } from '../types/admin.types';
 
 export const useUsers = () => {
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -22,6 +22,11 @@ export const useUsers = () => {
   useEffect(() => {
     load();
   }, [load]);
+
+  const fetchOne = useCallback(
+    (id: string) => usersService.getOne(id),
+    [],
+  );
 
   const suspend = useCallback(async (id: string, reason: string) => {
     await usersService.suspend(id, reason);
@@ -46,5 +51,38 @@ export const useUsers = () => {
     );
   }, []);
 
-  return { users, loading, error, refetch: load, suspend, reactivate, remove };
+  const updateRole = useCallback(
+    async (
+      id: string,
+      updates: { isAdmin?: boolean; isModerator?: boolean },
+      reason: string,
+    ) => {
+      const updated = await usersService.updateRole(id, updates, reason);
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === id
+            ? {
+                ...u,
+                isAdmin: updated.isAdmin,
+                isModerator: updated.isModerator,
+              }
+            : u,
+        ),
+      );
+      return updated;
+    },
+    [],
+  );
+
+  return {
+    users,
+    loading,
+    error,
+    refetch: load,
+    fetchOne,
+    suspend,
+    reactivate,
+    remove,
+    updateRole,
+  };
 };

@@ -1,5 +1,5 @@
 import { api } from '../api/api';
-import type { AdminUser } from '../types/admin.types';
+import type { AdminUser, AdminUserDetail } from '../types/admin.types';
 
 const mapUser = (u: any): AdminUser => ({
   id: u.id,
@@ -9,7 +9,7 @@ const mapUser = (u: any): AdminUser => ({
     u.email,
   email: u.email,
   username: u.username,
-  avatar: u.profile_image_url ?? `https://i.pravatar.cc/80?u=${u.id}`,
+  avatar: u.profile_image_url || '',   // ← no more pravatar fallback
   location: u.location,
   joinedDate: u.created_at,
   status: u.status,
@@ -20,12 +20,26 @@ const mapUser = (u: any): AdminUser => ({
   lastActive: u.last_login_at,
 });
 
+const mapUserDetail = (u: any): AdminUserDetail => ({
+  ...mapUser(u),
+  bio: u.bio,
+  bannerImageUrl: u.banner_image_url,
+  followersCount: u.followers_count ?? 0,
+  followingCount: u.following_count ?? 0,
+  updatedAt: u.updated_at,
+});
+
 export const usersService = {
   async getAll(): Promise<AdminUser[]> {
     const { data } = await api.get('/admin/users', {
       params: { skip: 0, limit: 100 },
     });
     return (data.items ?? []).map(mapUser);
+  },
+
+  async getOne(id: string): Promise<AdminUserDetail> {
+    const { data } = await api.get(`/admin/users/${id}`);
+    return mapUserDetail(data);
   },
 
   async suspend(id: string, reason: string): Promise<void> {
@@ -38,5 +52,17 @@ export const usersService = {
 
   async remove(id: string, reason: string): Promise<void> {
     await api.delete(`/admin/users/${id}`, { params: { reason } });
+  },
+
+  async updateRole(
+    id: string,
+    updates: { isAdmin?: boolean; isModerator?: boolean },
+    reason: string,
+  ): Promise<AdminUserDetail> {
+    const body: Record<string, unknown> = { reason };
+    if (updates.isAdmin !== undefined) body.is_admin = updates.isAdmin;
+    if (updates.isModerator !== undefined) body.is_moderator = updates.isModerator;
+    const { data } = await api.patch(`/admin/users/${id}/role`, body);
+    return mapUserDetail(data);
   },
 };

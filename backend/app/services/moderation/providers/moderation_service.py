@@ -221,8 +221,12 @@ class ModerationService:
             "model": r.model,
             "error": r.error,
             "raw": r.raw,
+            # Fallback metadata
+            "fallback_used": r.fallback_used,
+            "primary_provider": r.primary_provider,
+            "primary_model": r.primary_model,
+            "primary_error": r.primary_error,
         }
 
     def _filter_categories(self, categories: list[str]) -> list[str]:
         return [c for c in categories if c in CANONICAL_CATEGORIES]
-    # ger errrrrrrrrrrrrrrrr
