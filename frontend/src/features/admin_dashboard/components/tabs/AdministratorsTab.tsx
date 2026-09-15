@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { Plus, ShieldCheck, UserX, Loader2, Inbox, Search } from 'lucide-react';
+import { ShieldCheck, Loader2, Inbox, Search } from 'lucide-react';
+import { toast } from 'react-toastify';
 import { useAdministrators } from '../../hooks/useAdministrators';
-import type { AdminRole, Administrator } from '../../types/admin.types';
+import type { Administrator } from '../../types/admin.types';
 import { formatDistanceToNow } from 'date-fns';
+import ReasonPrompt from '../ReasonPrompt';
 
-// ---------- Local UI helpers ----------
 const Loader: React.FC = () => (
   <div className="flex items-center justify-center py-16">
     <Loader2 size={28} className="animate-spin text-blue-500" />
@@ -36,20 +37,18 @@ const SearchInput: React.FC<{ value: string; onChange: (v: string) => void; plac
   </div>
 );
 
-const RoleBadge: React.FC<{ role: AdminRole }> = ({ role }) => {
-  const styles: Record<AdminRole, string> = {
-    super_admin: 'bg-red-50 text-red-700 border-red-200',
-    admin: 'bg-blue-50 text-blue-700 border-blue-200',
-    moderator: 'bg-purple-50 text-purple-700 border-purple-200',
-    support: 'bg-gray-100 text-gray-700 border-gray-200',
-  };
-  return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${styles[role]}`}>
-      <ShieldCheck size={11} />
-      {role.replace('_', ' ')}
-    </span>
-  );
-};
+const RoleBadge: React.FC<{ role: 'admin' | 'moderator' }> = ({ role }) => (
+  <span
+    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${
+      role === 'admin'
+        ? 'bg-blue-50 text-blue-700 border-blue-200'
+        : 'bg-purple-50 text-purple-700 border-purple-200'
+    }`}
+  >
+    <ShieldCheck size={11} />
+    {role}
+  </span>
+);
 
 const StatusBadge: React.FC<{ status: 'active' | 'inactive' }> = ({ status }) => (
   <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${
@@ -60,11 +59,18 @@ const StatusBadge: React.FC<{ status: 'active' | 'inactive' }> = ({ status }) =>
   </span>
 );
 
-// ---------- Tab ----------
+type Prompt = {
+  title: string;
+  description?: string;
+  submitLabel: string;
+  onConfirm: (reason: string) => Promise<void>;
+};
+
 const AdministratorsTab: React.FC = () => {
-  const { administrators, loading, error } = useAdministrators();
+  const { administrators, loading, error, updateRole } = useAdministrators();
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState<'all' | AdminRole>('all');
+  const [filter, setFilter] = useState<'all' | 'admin' | 'moderator'>('all');
+  const [prompt, setPrompt] = useState<Prompt | null>(null);
 
   const filtered = useMemo(
     () =>
@@ -85,17 +91,14 @@ const AdministratorsTab: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Administrators</h2>
-          <p className="text-gray-500 mt-1">Manage team members and their permissions</p>
+          <p className="text-gray-500 mt-1">Manage admin and moderator access</p>
         </div>
-        <button className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-medium transition-colors flex items-center gap-2">
-          <Plus size={18} /> Add Administrator
-        </button>
       </div>
 
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
         <SearchInput value={query} onChange={setQuery} placeholder="Search by name or email..." />
         <div className="flex gap-2 flex-wrap">
-          {(['all', 'super_admin', 'admin', 'moderator', 'support'] as const).map((f) => (
+          {(['all', 'admin', 'moderator'] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
@@ -105,7 +108,7 @@ const AdministratorsTab: React.FC = () => {
                   : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
               }`}
             >
-              {f.replace('_', ' ')}
+              {f}
             </button>
           ))}
         </div>
@@ -121,7 +124,6 @@ const AdministratorsTab: React.FC = () => {
                 <tr className="bg-gray-50 border-b border-gray-100">
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Administrator</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Role</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Permissions</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Last Active</th>
                   <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider"></th>
@@ -140,21 +142,48 @@ const AdministratorsTab: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-5 py-4"><RoleBadge role={a.role} /></td>
-                    <td className="px-5 py-4 text-xs text-gray-500">
-                      {a.permissions.includes('all') ? 'All permissions' : a.permissions.join(', ')}
-                    </td>
                     <td className="px-5 py-4"><StatusBadge status={a.status} /></td>
                     <td className="px-5 py-4 text-xs text-gray-500">
-                      {formatDistanceToNow(new Date(a.lastActive), { addSuffix: true })}
+                      {a.lastActive
+                        ? formatDistanceToNow(new Date(a.lastActive), { addSuffix: true })
+                        : '—'}
                     </td>
-                    <td className="px-5 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        {a.role !== 'super_admin' && (
-                          <button className="p-2 rounded-lg text-red-500 hover:bg-red-50" title="Deactivate">
-                            <UserX size={16} />
-                          </button>
-                        )}
-                      </div>
+                    <td className="px-5 py-4 text-right">
+                      {a.role === 'moderator' ? (
+                        <button
+                          onClick={() =>
+                            setPrompt({
+                              title: 'Promote to Admin',
+                              description: a.email,
+                              submitLabel: 'Promote',
+                              onConfirm: async (reason) => {
+                                await updateRole(a.id, true, reason);
+                                toast.success('Promoted to admin');
+                              },
+                            })
+                          }
+                          className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-medium"
+                        >
+                          Promote
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() =>
+                            setPrompt({
+                              title: 'Demote to Moderator',
+                              description: a.email,
+                              submitLabel: 'Demote',
+                              onConfirm: async (reason) => {
+                                await updateRole(a.id, false, reason);
+                                toast.success('Demoted to moderator');
+                              },
+                            })
+                          }
+                          className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 text-xs font-medium"
+                        >
+                          Demote
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -163,6 +192,19 @@ const AdministratorsTab: React.FC = () => {
           </div>
         )}
       </div>
+
+      {prompt && (
+        <ReasonPrompt
+          title={prompt.title}
+          description={prompt.description}
+          submitLabel={prompt.submitLabel}
+          onSubmit={async (reason) => {
+            await prompt.onConfirm(reason);
+            setPrompt(null);
+          }}
+          onCancel={() => setPrompt(null)}
+        />
+      )}
     </div>
   );
 };

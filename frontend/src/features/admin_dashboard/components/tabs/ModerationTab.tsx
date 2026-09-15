@@ -1,10 +1,11 @@
-import React, { useMemo, useState } from 'react';
-import { CheckCircle, XCircle, AlertTriangle, Loader2, Inbox, Search } from 'lucide-react';
+import React, { useState } from 'react';
+import { CheckCircle, XCircle, AlertTriangle, Loader2, Inbox } from 'lucide-react';
+import { toast } from 'react-toastify';
 import { useModeration } from '../../hooks/useModeration';
-import type { ModerationReport, ReportPriority, ReportStatus } from '../../types/admin.types';
+import type { ModerationQueueItem } from '../../types/admin.types';
 import { formatDistanceToNow } from 'date-fns';
+import ReasonPrompt from '../ReasonPrompt';
 
-// ---------- Local UI helpers ----------
 const Loader: React.FC = () => (
   <div className="flex items-center justify-center py-16">
     <Loader2 size={28} className="animate-spin text-blue-500" />
@@ -21,20 +22,11 @@ const EmptyState: React.FC<{ title: string; description?: string }> = ({ title, 
   </div>
 );
 
-const SearchInput: React.FC<{ value: string; onChange: (v: string) => void; placeholder?: string }> = ({
-  value, onChange, placeholder = 'Search...',
-}) => (
-  <div className="relative w-full max-w-sm">
-    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-    <input
-      type="text"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      className="h-10 w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-all hover:border-gray-300 hover:bg-white focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
-    />
-  </div>
-);
+const severityVariant = (severity: number): 'danger' | 'warning' | 'neutral' => {
+  if (severity >= 7) return 'danger';
+  if (severity >= 4) return 'warning';
+  return 'neutral';
+};
 
 const Chip: React.FC<{ children: React.ReactNode; variant?: 'danger' | 'warning' | 'info' | 'success' | 'neutral' }> = ({
   children, variant = 'neutral',
@@ -61,124 +53,138 @@ const Chip: React.FC<{ children: React.ReactNode; variant?: 'danger' | 'warning'
   );
 };
 
-const priorityVariant = (p: ReportPriority): 'danger' | 'warning' | 'neutral' => {
-  if (p === 'high') return 'danger';
-  if (p === 'medium') return 'warning';
-  return 'neutral';
+type Prompt = {
+  title: string;
+  description?: string;
+  submitLabel: string;
+  onConfirm: (reason: string) => Promise<void>;
 };
 
-const statusVariant = (s: ReportStatus): 'success' | 'warning' | 'info' | 'neutral' => {
-  if (s === 'resolved') return 'success';
-  if (s === 'pending') return 'warning';
-  if (s === 'reviewing') return 'info';
-  return 'neutral';
-};
-
-// ---------- Tab ----------
 const ModerationTab: React.FC = () => {
-  const { reports, loading, error, updateStatus } = useModeration();
-  const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState<'all' | ReportStatus>('all');
-
-  const filtered = useMemo(
-    () =>
-      reports.filter(
-        (r) =>
-          (filter === 'all' || r.status === filter) &&
-          (r.description.toLowerCase().includes(query.toLowerCase()) ||
-            r.targetPreview.toLowerCase().includes(query.toLowerCase())),
-      ),
-    [reports, filter, query],
-  );
+  const { items, loading, error, approve, reject } = useModeration();
+  const [prompt, setPrompt] = useState<Prompt | null>(null);
 
   if (loading) return <Loader />;
-  if (error) return <EmptyState title="Failed to load reports" description={error} />;
+  if (error) return <EmptyState title="Failed to load moderation queue" description={error} />;
 
   return (
     <div>
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-gray-900">Moderation</h2>
-        <p className="text-gray-500 mt-1">Review and act on user-submitted reports</p>
+        <p className="text-gray-500 mt-1">Review AI-flagged content awaiting decision</p>
       </div>
 
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
-        <SearchInput value={query} onChange={setQuery} placeholder="Search reports..." />
-        <div className="flex gap-2 flex-wrap">
-          {(['all', 'pending', 'reviewing', 'resolved', 'dismissed'] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium capitalize transition-colors ${
-                filter === f
-                  ? 'bg-blue-50 text-blue-600'
-                  : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {filtered.length === 0 ? (
+      {items.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200">
-          <EmptyState title="No reports found" description="The moderation queue is clear." />
+          <EmptyState title="Queue is clear" description="No flagged content to review right now." />
         </div>
       ) : (
         <div className="space-y-4">
-          {filtered.map((r: ModerationReport) => (
-            <div key={r.id} className="bg-white rounded-xl border border-gray-200 p-5">
+          {items.map((item: ModerationQueueItem) => (
+            <div key={item.recordId} className="bg-white rounded-xl border border-gray-200 p-5">
               <div className="flex items-start gap-4">
                 <div className={`p-2.5 rounded-xl ${
-                  r.priority === 'high'
+                  severityVariant(item.summary.severity) === 'danger'
                     ? 'bg-red-50 text-red-500'
-                    : r.priority === 'medium'
-                    ? 'bg-yellow-50 text-yellow-600'
-                    : 'bg-gray-50 text-gray-500'
+                    : severityVariant(item.summary.severity) === 'warning'
+                      ? 'bg-yellow-50 text-yellow-600'
+                      : 'bg-gray-50 text-gray-500'
                 }`}>
                   <AlertTriangle size={18} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <Chip variant={priorityVariant(r.priority)}>{r.priority} priority</Chip>
-                    <Chip variant="neutral">{r.targetType}</Chip>
-                    <Chip variant={statusVariant(r.status)}>{r.status}</Chip>
+                    <Chip variant={severityVariant(item.summary.severity)}>
+                      severity {item.summary.severity}
+                    </Chip>
+                    <Chip variant="neutral">{item.summary.decision}</Chip>
+                    <Chip variant="info">confidence {item.summary.confidence}%</Chip>
+                    {item.summary.categories.map((c) => (
+                      <Chip key={c} variant="warning">{c}</Chip>
+                    ))}
                   </div>
 
-                  <p className="text-sm text-gray-700 mt-3">{r.description}</p>
+                  <p className="font-medium text-gray-900 mt-3">{item.feedTitle}</p>
+                  <p className="text-sm text-gray-700 mt-1 line-clamp-3">{item.feedDescription}</p>
 
-                  <div className="mt-3 p-3 bg-gray-50 rounded-lg text-sm text-gray-600 italic">
-                    "{r.targetPreview}"
-                  </div>
-
-                  <div className="mt-3 flex items-center gap-3 text-xs text-gray-400">
-                    <img src={r.reporter.avatar} alt="" className="w-5 h-5 rounded-full" />
-                    <span>Reported by {r.reporter.name}</span>
-                    <span>·</span>
-                    <span>{formatDistanceToNow(new Date(r.createdAt), { addSuffix: true })}</span>
-                  </div>
-
-                  {(r.status === 'pending' || r.status === 'reviewing') && (
-                    <div className="mt-4 flex gap-2">
-                      <button
-                        onClick={() => updateStatus(r.id, 'resolved')}
-                        className="px-3 py-1.5 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 text-xs font-medium inline-flex items-center gap-1.5"
-                      >
-                        <CheckCircle size={14} /> Resolve
-                      </button>
-                      <button
-                        onClick={() => updateStatus(r.id, 'dismissed')}
-                        className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 text-xs font-medium inline-flex items-center gap-1.5"
-                      >
-                        <XCircle size={14} /> Dismiss
-                      </button>
+                  {item.feedMedia.length > 0 && (
+                    <div className="mt-3 flex gap-2 flex-wrap">
+                      {item.feedMedia.map((m) => (
+                        <div key={m.id} className="w-24 h-24 rounded-lg overflow-hidden border border-gray-100 bg-gray-50">
+                          {m.media_type === 'video' ? (
+                            <video src={m.media_url} className="w-full h-full object-cover" />
+                          ) : (
+                            <img src={m.media_url} alt="" className="w-full h-full object-cover" />
+                          )}
+                        </div>
+                      ))}
                     </div>
                   )}
+
+                  {item.summary.description && (
+                    <div className="mt-3 p-3 bg-gray-50 rounded-lg text-sm text-gray-600 italic">
+                      "{item.summary.description}"
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex items-center gap-3 text-xs text-gray-400">
+                    <span>{item.summary.provider} / {item.summary.model}</span>
+                    <span>·</span>
+                    <span>{formatDistanceToNow(new Date(item.summary.createdAt), { addSuffix: true })}</span>
+                  </div>
+
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      onClick={() =>
+                        setPrompt({
+                          title: 'Approve content',
+                          description: item.feedTitle,
+                          submitLabel: 'Approve',
+                          onConfirm: async (reason) => {
+                            await approve(item.recordId, reason);
+                            toast.success('Content approved');
+                          },
+                        })
+                      }
+                      className="px-3 py-1.5 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 text-xs font-medium inline-flex items-center gap-1.5"
+                    >
+                      <CheckCircle size={14} /> Approve
+                    </button>
+                    <button
+                      onClick={() =>
+                        setPrompt({
+                          title: 'Reject content',
+                          description: item.feedTitle,
+                          submitLabel: 'Reject',
+                          onConfirm: async (reason) => {
+                            await reject(item.recordId, reason);
+                            toast.success('Content rejected');
+                          },
+                        })
+                      }
+                      className="px-3 py-1.5 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 text-xs font-medium inline-flex items-center gap-1.5"
+                    >
+                      <XCircle size={14} /> Reject
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           ))}
         </div>
+      )}
+
+      {prompt && (
+        <ReasonPrompt
+          title={prompt.title}
+          description={prompt.description}
+          submitLabel={prompt.submitLabel}
+          onSubmit={async (reason) => {
+            await prompt.onConfirm(reason);
+            setPrompt(null);
+          }}
+          onCancel={() => setPrompt(null)}
+        />
       )}
     </div>
   );

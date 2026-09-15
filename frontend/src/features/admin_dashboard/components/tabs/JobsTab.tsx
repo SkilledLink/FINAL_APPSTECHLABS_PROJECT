@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { Loader2, Inbox, Search } from 'lucide-react';
+import { Trash2, Loader2, Inbox, Search } from 'lucide-react';
+import { toast } from 'react-toastify';
 import { useJobs } from '../../hooks/useJobs';
-import type { AdminJob, JobStatus } from '../../types/admin.types';
+import type { AdminJob } from '../../types/admin.types';
+import { formatDistanceToNow } from 'date-fns';
+import ReasonPrompt from '../ReasonPrompt';
 
-// ---------- Local UI helpers ----------
 const Loader: React.FC = () => (
   <div className="flex items-center justify-center py-16">
     <Loader2 size={28} className="animate-spin text-blue-500" />
@@ -35,44 +37,33 @@ const SearchInput: React.FC<{ value: string; onChange: (v: string) => void; plac
   </div>
 );
 
-const StatusBadge: React.FC<{ status: JobStatus }> = ({ status }) => {
-  const styles: Record<JobStatus, string> = {
-    open: 'bg-blue-50 text-blue-700 border-blue-200',
-    in_progress: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-    completed: 'bg-green-50 text-green-700 border-green-200',
-    cancelled: 'bg-gray-100 text-gray-700 border-gray-200',
-    disputed: 'bg-red-50 text-red-700 border-red-200',
-  };
-  const dots: Record<JobStatus, string> = {
-    open: 'bg-blue-500',
-    in_progress: 'bg-yellow-500',
-    completed: 'bg-green-500',
-    cancelled: 'bg-gray-400',
-    disputed: 'bg-red-500',
-  };
-  return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${styles[status]}`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${dots[status]}`} />
-      {status.replace('_', ' ')}
-    </span>
-  );
+const StatusBadge: React.FC<{ status: string }> = ({ status }) => (
+  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border bg-gray-100 text-gray-700 border-gray-200 capitalize">
+    <span className="h-1.5 w-1.5 rounded-full bg-gray-400" />
+    {status.replace(/_/g, ' ')}
+  </span>
+);
+
+type Prompt = {
+  title: string;
+  description?: string;
+  submitLabel: string;
+  onConfirm: (reason: string) => Promise<void>;
 };
 
-// ---------- Tab ----------
 const JobsTab: React.FC = () => {
-  const { jobs, loading, error } = useJobs();
+  const { jobs, loading, error, remove } = useJobs();
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState<'all' | JobStatus>('all');
+  const [prompt, setPrompt] = useState<Prompt | null>(null);
 
   const filtered = useMemo(
     () =>
       jobs.filter(
         (j) =>
-          (filter === 'all' || j.status === filter) &&
-          (j.title.toLowerCase().includes(query.toLowerCase()) ||
-            j.category.toLowerCase().includes(query.toLowerCase())),
+          j.title.toLowerCase().includes(query.toLowerCase()) ||
+          j.description.toLowerCase().includes(query.toLowerCase()),
       ),
-    [jobs, filter, query],
+    [jobs, query],
   );
 
   if (loading) return <Loader />;
@@ -86,22 +77,7 @@ const JobsTab: React.FC = () => {
       </div>
 
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
-        <SearchInput value={query} onChange={setQuery} placeholder="Search by title or category..." />
-        <div className="flex gap-2 flex-wrap">
-          {(['all', 'open', 'in_progress', 'completed', 'cancelled', 'disputed'] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium capitalize transition-colors ${
-                filter === f
-                  ? 'bg-blue-50 text-blue-600'
-                  : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              {f.replace('_', ' ')}
-            </button>
-          ))}
-        </div>
+        <SearchInput value={query} onChange={setQuery} placeholder="Search by title or description..." />
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -113,12 +89,10 @@ const JobsTab: React.FC = () => {
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100">
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Job</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Location</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Client</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Professional</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Budget</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Applicants</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Posted</th>
+                  <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -126,28 +100,37 @@ const JobsTab: React.FC = () => {
                   <tr key={j.id} className="hover:bg-gray-50/70 transition-colors">
                     <td className="px-5 py-4">
                       <p className="font-medium text-gray-900">{j.title}</p>
-                      <p className="text-xs text-gray-500">{j.category}</p>
+                      <p className="text-xs text-gray-500 line-clamp-1">{j.description}</p>
                     </td>
-                    <td className="px-5 py-4 text-sm text-gray-700">{j.location}</td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2">
                         <img src={j.client.avatar} alt="" className="w-7 h-7 rounded-full object-cover" />
                         <span className="text-sm">{j.client.name}</span>
                       </div>
                     </td>
-                    <td className="px-5 py-4">
-                      {j.professional ? (
-                        <div className="flex items-center gap-2">
-                          <img src={j.professional.avatar} alt="" className="w-7 h-7 rounded-full object-cover" />
-                          <span className="text-sm">{j.professional.name}</span>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-gray-400">—</span>
-                      )}
-                    </td>
-                    <td className="px-5 py-4 text-sm text-gray-700">{j.budget.toLocaleString()} FCFA</td>
-                    <td className="px-5 py-4 text-sm text-gray-700">{j.applicants}</td>
                     <td className="px-5 py-4"><StatusBadge status={j.status} /></td>
+                    <td className="px-5 py-4 text-xs text-gray-500">
+                      {formatDistanceToNow(new Date(j.postedDate), { addSuffix: true })}
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      <button
+                        onClick={() =>
+                          setPrompt({
+                            title: 'Remove job',
+                            description: j.title,
+                            submitLabel: 'Remove',
+                            onConfirm: async (reason) => {
+                              await remove(j.id, reason);
+                              toast.success('Job removed');
+                            },
+                          })
+                        }
+                        className="p-2 rounded-lg text-red-500 hover:bg-red-50"
+                        title="Remove"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -155,6 +138,19 @@ const JobsTab: React.FC = () => {
           </div>
         )}
       </div>
+
+      {prompt && (
+        <ReasonPrompt
+          title={prompt.title}
+          description={prompt.description}
+          submitLabel={prompt.submitLabel}
+          onSubmit={async (reason) => {
+            await prompt.onConfirm(reason);
+            setPrompt(null);
+          }}
+          onCancel={() => setPrompt(null)}
+        />
+      )}
     </div>
   );
 };

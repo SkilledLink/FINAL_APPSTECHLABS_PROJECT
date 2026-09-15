@@ -1,10 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { Loader2, Inbox, Search } from 'lucide-react';
 import { useAuditLogs } from '../../hooks/useAuditLogs';
-import type { AuditLog, AuditSeverity } from '../../types/admin.types';
+import type { AuditLog } from '../../types/admin.types';
 import { formatDistanceToNow } from 'date-fns';
 
-// ---------- Local UI helpers ----------
 const Loader: React.FC = () => (
   <div className="flex items-center justify-center py-16">
     <Loader2 size={28} className="animate-spin text-blue-500" />
@@ -36,40 +35,21 @@ const SearchInput: React.FC<{ value: string; onChange: (v: string) => void; plac
   </div>
 );
 
-const SeverityBadge: React.FC<{ severity: AuditSeverity }> = ({ severity }) => {
-  const styles: Record<AuditSeverity, string> = {
-    info: 'bg-blue-50 text-blue-700 border-blue-200',
-    warning: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-    critical: 'bg-red-50 text-red-700 border-red-200',
-  };
-  const dots: Record<AuditSeverity, string> = {
-    info: 'bg-blue-500',
-    warning: 'bg-yellow-500',
-    critical: 'bg-red-500',
-  };
-  return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${styles[severity]}`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${dots[severity]}`} />
-      {severity}
-    </span>
-  );
-};
+const shortId = (id?: string) => (id ? id.slice(0, 8) : '—');
 
-// ---------- Tab ----------
 const AuditLogsTab: React.FC = () => {
   const { logs, loading, error } = useAuditLogs();
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState<'all' | AuditSeverity>('all');
 
   const filtered = useMemo(
     () =>
       logs.filter(
         (l) =>
-          (filter === 'all' || l.severity === filter) &&
-          (l.description.toLowerCase().includes(query.toLowerCase()) ||
-            l.action.toLowerCase().includes(query.toLowerCase())),
+          l.description.toLowerCase().includes(query.toLowerCase()) ||
+          l.action.toLowerCase().includes(query.toLowerCase()) ||
+          (l.actorRole ?? '').toLowerCase().includes(query.toLowerCase()),
       ),
-    [logs, filter, query],
+    [logs, query],
   );
 
   if (loading) return <Loader />;
@@ -84,21 +64,6 @@ const AuditLogsTab: React.FC = () => {
 
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
         <SearchInput value={query} onChange={setQuery} placeholder="Search actions..." />
-        <div className="flex gap-2 flex-wrap">
-          {(['all', 'info', 'warning', 'critical'] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium capitalize transition-colors ${
-                filter === f
-                  ? 'bg-blue-50 text-blue-600'
-                  : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -109,10 +74,10 @@ const AuditLogsTab: React.FC = () => {
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Admin</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actor</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Description</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Severity</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Entity</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Reason</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">IP</th>
                   <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">When</th>
                 </tr>
@@ -121,19 +86,19 @@ const AuditLogsTab: React.FC = () => {
                 {filtered.map((l: AuditLog) => (
                   <tr key={l.id} className="hover:bg-gray-50/70 transition-colors">
                     <td className="px-5 py-4">
-                      <div className="flex items-center gap-2">
-                        <img src={l.admin.avatar} alt="" className="w-8 h-8 rounded-full object-cover" />
-                        <span className="font-medium text-gray-900">{l.admin.name}</span>
-                      </div>
+                      <p className="text-sm font-medium text-gray-900">{l.actorRole ?? 'system'}</p>
+                      <p className="text-xs text-gray-500 font-mono">{shortId(l.actorUserId)}</p>
                     </td>
                     <td className="px-5 py-4">
                       <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-gray-100 text-gray-700 text-xs font-mono">
                         {l.action}
                       </span>
                     </td>
-                    <td className="px-5 py-4 text-sm text-gray-700">{l.description}</td>
-                    <td className="px-5 py-4"><SeverityBadge severity={l.severity} /></td>
-                    <td className="px-5 py-4 text-xs text-gray-500 font-mono">{l.ipAddress}</td>
+                    <td className="px-5 py-4 text-xs text-gray-500 font-mono">
+                      {l.entityType}:{shortId(l.entityId)}
+                    </td>
+                    <td className="px-5 py-4 text-sm text-gray-700">{l.reason ?? '—'}</td>
+                    <td className="px-5 py-4 text-xs text-gray-500 font-mono">{l.ipAddress ?? '—'}</td>
                     <td className="px-5 py-4 text-xs text-gray-500">
                       {formatDistanceToNow(new Date(l.timestamp), { addSuffix: true })}
                     </td>

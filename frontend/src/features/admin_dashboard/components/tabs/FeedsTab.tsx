@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { Flag, Trash2, CheckCircle, Heart, MessageCircle, Share2, Loader2, Inbox, Search } from 'lucide-react';
+import { Trash2, Heart, MessageCircle, Loader2, Inbox, Search } from 'lucide-react';
+import { toast } from 'react-toastify';
 import { useFeeds } from '../../hooks/useFeeds';
-import type { AdminFeed, FeedStatus } from '../../types/admin.types';
+import type { AdminFeed } from '../../types/admin.types';
 import { formatDistanceToNow } from 'date-fns';
+import ReasonPrompt from '../ReasonPrompt';
 
-// ---------- Local UI helpers ----------
 const Loader: React.FC = () => (
   <div className="flex items-center justify-center py-16">
     <Loader2 size={28} className="animate-spin text-blue-500" />
@@ -61,18 +62,32 @@ const Chip: React.FC<{ children: React.ReactNode; variant?: 'success' | 'warning
   );
 };
 
-const feedStatusVariant = (s: FeedStatus): 'success' | 'warning' | 'danger' | 'neutral' => {
+const statusVariant = (s: string): 'success' | 'warning' | 'danger' | 'info' | 'neutral' => {
   if (s === 'published') return 'success';
-  if (s === 'flagged') return 'warning';
-  if (s === 'removed') return 'danger';
+  if (s === 'pending_moderation' || s === 'pending_review') return 'warning';
+  if (s === 'rejected' || s === 'archived') return 'danger';
+  if (s === 'draft') return 'info';
   return 'neutral';
 };
 
-// ---------- Tab ----------
+type Prompt = {
+  title: string;
+  description?: string;
+  submitLabel: string;
+  onConfirm: (reason: string) => Promise<void>;
+};
+
 const FeedsTab: React.FC = () => {
-  const { feeds, loading, error, updateStatus } = useFeeds();
+  const { feeds, loading, error, remove } = useFeeds();
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState<'all' | FeedStatus>('all');
+  const [filter, setFilter] = useState<string>('all');
+  const [prompt, setPrompt] = useState<Prompt | null>(null);
+
+  const statuses = useMemo(() => {
+    const s = new Set<string>();
+    feeds.forEach((f) => s.add(f.status));
+    return ['all', ...Array.from(s)];
+  }, [feeds]);
 
   const filtered = useMemo(
     () =>
@@ -97,7 +112,7 @@ const FeedsTab: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
         <SearchInput value={query} onChange={setQuery} placeholder="Search content..." />
         <div className="flex gap-2 flex-wrap">
-          {(['all', 'published', 'flagged', 'removed', 'pending'] as const).map((f) => (
+          {statuses.map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
@@ -107,7 +122,7 @@ const FeedsTab: React.FC = () => {
                   : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
               }`}
             >
-              {f}
+              {f.replace(/_/g, ' ')}
             </button>
           ))}
         </div>
@@ -128,22 +143,22 @@ const FeedsTab: React.FC = () => {
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-semibold text-gray-900">{feed.author.name}</span>
-                        <Chip variant={feed.author.role === 'professional' ? 'info' : 'neutral'}>
-                          {feed.author.role}
-                        </Chip>
-                        <Chip variant="neutral">{feed.type}</Chip>
+                        <Chip variant="neutral">{feed.author.role}</Chip>
                       </div>
                       <p className="text-xs text-gray-400 mt-0.5">
                         {formatDistanceToNow(new Date(feed.createdAt), { addSuffix: true })}
                       </p>
                     </div>
-                    <Chip variant={feedStatusVariant(feed.status)}>{feed.status}</Chip>
+                    <Chip variant={statusVariant(feed.status)}>{feed.status.replace(/_/g, ' ')}</Chip>
                   </div>
 
-                  <p className="text-sm text-gray-700 mt-3">{feed.content}</p>
+                  {feed.title && (
+                    <p className="font-medium text-gray-900 mt-3">{feed.title}</p>
+                  )}
+                  <p className="text-sm text-gray-700 mt-1">{feed.description}</p>
 
                   {feed.images.length > 0 && (
-                    <div className="mt-3 flex gap-2">
+                    <div className="mt-3 flex gap-2 flex-wrap">
                       {feed.images.map((img, i) => (
                         <img key={i} src={img} alt="" className="w-24 h-24 rounded-lg object-cover" />
                       ))}
@@ -153,34 +168,22 @@ const FeedsTab: React.FC = () => {
                   <div className="mt-4 flex items-center gap-4 text-xs text-gray-500">
                     <span className="inline-flex items-center gap-1"><Heart size={13} /> {feed.likes}</span>
                     <span className="inline-flex items-center gap-1"><MessageCircle size={13} /> {feed.comments}</span>
-                    <span className="inline-flex items-center gap-1"><Share2 size={13} /> {feed.shares}</span>
-                    {feed.reports > 0 && (
-                      <span className="inline-flex items-center gap-1 text-red-500 font-medium">
-                        <Flag size={13} /> {feed.reports} reports
-                      </span>
-                    )}
                   </div>
 
                   <div className="mt-4 pt-4 border-t border-gray-100 flex gap-2">
-                    {feed.status !== 'published' && (
+                    {!feed.isDeleted && (
                       <button
-                        onClick={() => updateStatus(feed.id, 'published')}
-                        className="px-3 py-1.5 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 text-xs font-medium inline-flex items-center gap-1.5"
-                      >
-                        <CheckCircle size={14} /> Approve
-                      </button>
-                    )}
-                    {feed.status !== 'flagged' && feed.status !== 'removed' && (
-                      <button
-                        onClick={() => updateStatus(feed.id, 'flagged')}
-                        className="px-3 py-1.5 rounded-lg bg-yellow-50 text-yellow-700 hover:bg-yellow-100 text-xs font-medium inline-flex items-center gap-1.5"
-                      >
-                        <Flag size={14} /> Flag
-                      </button>
-                    )}
-                    {feed.status !== 'removed' && (
-                      <button
-                        onClick={() => updateStatus(feed.id, 'removed')}
+                        onClick={() =>
+                          setPrompt({
+                            title: 'Remove feed',
+                            description: feed.title || feed.description.slice(0, 80),
+                            submitLabel: 'Remove',
+                            onConfirm: async (reason) => {
+                              await remove(feed.id, reason);
+                              toast.success('Feed removed');
+                            },
+                          })
+                        }
                         className="px-3 py-1.5 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 text-xs font-medium inline-flex items-center gap-1.5"
                       >
                         <Trash2 size={14} /> Remove
@@ -192,6 +195,19 @@ const FeedsTab: React.FC = () => {
             </div>
           ))}
         </div>
+      )}
+
+      {prompt && (
+        <ReasonPrompt
+          title={prompt.title}
+          description={prompt.description}
+          submitLabel={prompt.submitLabel}
+          onSubmit={async (reason) => {
+            await prompt.onConfirm(reason);
+            setPrompt(null);
+          }}
+          onCancel={() => setPrompt(null)}
+        />
       )}
     </div>
   );

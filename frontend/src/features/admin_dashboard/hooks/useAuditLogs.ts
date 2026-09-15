@@ -10,12 +10,18 @@ export const useAuditLogs = () => {
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
-    try { setLogs(await auditLogsService.getAll()); }
-    catch (e) { setError(e instanceof Error ? e.message : 'Failed to load audit logs'); }
-    finally { setLoading(false); }
+    try {
+      setLogs(await auditLogsService.getAll());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load audit logs');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   return { logs, loading, error, refetch: load };
 };

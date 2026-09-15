@@ -1,68 +1,79 @@
+import { api } from '../api/api';
 import type { AdminFeed } from '../types/admin.types';
 
-const delay = (ms = 400) => new Promise((r) => setTimeout(r, ms));
+type FeedUser = {
+  id?: string;
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+  profile_image_url?: string;
+  account_type?: string;
+};
 
-const feeds: AdminFeed[] = [
-  {
-    id: 'f1',
-    author: { id: 'p1', name: 'Jean-Pierre Mbock', avatar: 'https://i.pravatar.cc/80?img=12', role: 'professional' },
-    type: 'service',
-    content: 'Just finished a full rewiring job in Bonapriso. Available for new electrical contracts this week.',
-    images: ['https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=400'],
-    likes: 42, comments: 6, shares: 3, reports: 0,
-    createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-    status: 'published',
-  },
-  {
-    id: 'f2',
-    author: { id: 'u2', name: 'Sarah Mbah', avatar: 'https://i.pravatar.cc/80?img=45', role: 'client' },
-    type: 'post',
-    content: 'Looking for a reliable plumber in Douala for an emergency leak repair tonight. Please DM.',
-    images: [],
-    likes: 8, comments: 14, shares: 1, reports: 0,
-    createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-    status: 'published',
-  },
-  {
-    id: 'f3',
-    author: { id: 'p3', name: 'Alain Tchoumi', avatar: 'https://i.pravatar.cc/80?img=59', role: 'professional' },
-    type: 'post',
-    content: 'CHEAPEST CARPENTRY IN TOWN!!! CALL NOW!!! 100% GUARANTEED!!!',
-    images: [],
-    likes: 2, comments: 0, shares: 0, reports: 9,
-    createdAt: new Date(Date.now() - 1000 * 60 * 240).toISOString(),
-    status: 'flagged',
-  },
-  {
-    id: 'f4',
-    author: { id: 'u5', name: 'Bertrand Njoya', avatar: 'https://i.pravatar.cc/80?img=51', role: 'client' },
-    type: 'job',
-    content: 'Need someone to install a new water heater in Buea this weekend. Budget negotiable.',
-    images: [],
-    likes: 5, comments: 3, shares: 0, reports: 0,
-    createdAt: new Date(Date.now() - 1000 * 60 * 480).toISOString(),
-    status: 'published',
-  },
-  {
-    id: 'f5',
-    author: { id: 'u4', name: 'Claudine Etoundi', avatar: 'https://i.pravatar.cc/80?img=27', role: 'client' },
-    type: 'post',
-    content: 'Scam alert! Do not trust this provider... (removed)',
-    images: [],
-    likes: 1, comments: 22, shares: 4, reports: 15,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
-    status: 'removed',
-  },
-];
+type FeedMedia = {
+  media_url: string;
+};
+
+type FeedHashtag = {
+  name: string;
+};
+
+type FeedResponse = {
+  id: string;
+  title?: string;
+  description?: string;
+  status?: string;
+  is_public?: boolean;
+  is_deleted?: boolean;
+  user_id?: string;
+  user?: FeedUser;
+  media?: FeedMedia[];
+  hashtags?: FeedHashtag[];
+  likes_count?: number;
+  comments_count?: number;
+  created_at?: string;
+  updated_at?: string;
+};
+
+const mapFeed = (f: FeedResponse): AdminFeed => {
+  const u = f.user ?? {};
+  return {
+    id: f.id,
+    title: f.title ?? '',
+    description: f.description ?? '',
+    content: [f.title, f.description].filter(Boolean).join(' — '),
+    status: f.status ?? 'unknown',
+    isPublic: !!f.is_public,
+    isDeleted: !!f.is_deleted,
+    userId: f.user_id ?? u.id ?? '',
+    author: {
+      id: u.id ?? f.user_id ?? '',
+      name:
+        [u.first_name, u.last_name].filter(Boolean).join(' ') ||
+        u.username ||
+        'Unknown',
+      avatar:
+        u.profile_image_url ?? `https://i.pravatar.cc/80?u=${u.id ?? f.user_id}`,
+      role: u.account_type ?? 'user',
+    },
+    images: (f.media ?? []).map((m) => m.media_url),
+    hashtags: (f.hashtags ?? []).map((h) => h.name),
+    likes: f.likes_count ?? 0,
+    comments: f.comments_count ?? 0,
+    createdAt: f.created_at ?? '',
+    updatedAt: f.updated_at ?? '',
+  };
+};
 
 export const feedsService = {
   async getAll(): Promise<AdminFeed[]> {
-    await delay();
-    return feeds;
+    const { data } = await api.get('/admin/feeds', {
+      params: { skip: 0, limit: 100, include_deleted: true },
+    });
+    return (data.items ?? []).map(mapFeed);
   },
-  async updateStatus(id: string, status: AdminFeed['status']): Promise<void> {
-    await delay(200);
-    const f = feeds.find((x) => x.id === id);
-    if (f) f.status = status;
+
+  async remove(id: string, reason: string, hard = false): Promise<void> {
+    await api.delete(`/admin/feeds/${id}`, { params: { reason, hard } });
   },
 };

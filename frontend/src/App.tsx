@@ -71,6 +71,8 @@ const ProfessionalsPage = UsersPage;
 // Marketplace
 import Marketplace from "./features/Market/pages/Marketplace/Marketplace";
 
+import AdminCheck from "./features/admin_dashboard/components/AdminCheck";
+
 // ============================================================
 // PUBLIC-ONLY ROUTE
 // ============================================================
