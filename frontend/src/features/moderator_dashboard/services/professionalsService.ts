@@ -1,31 +1,64 @@
-import type { AdminProfessional } from '../types/moderator.types';
+import { api } from '../api/api';
+import type { AdminProfessional, AdminProfessionalDetail } from '../types/moderator.types';
 
-const delay = (ms = 400) => new Promise((r) => setTimeout(r, ms));
+const mapPro = (p: any): AdminProfessional => {
+  const u = p.user ?? {};
+  return {
+    id: p.id,
+    userId: p.user_id,
+    name:
+      [u.first_name, u.last_name].filter(Boolean).join(' ') ||
+      u.username ||
+      'Unknown',
+    avatar: u.profile_image_url || '',
+    profession: p.profession ?? '',
+    headline: p.headline,
+    location:
+      [p.city, p.region, p.country].filter(Boolean).join(', ') || '—',
+    status: p.status ?? (p.is_verified ? 'active' : 'pending'),
+    isVerified: !!p.is_verified,
+    rating: p.rating ?? 0,
+    totalReviews: p.total_reviews ?? 0,
+    totalJobs: p.completed_jobs ?? 0,
+    joinedDate: p.created_at ?? '',
+    available: !!p.available,
+  };
+};
 
-const professionals: AdminProfessional[] = [
-  { id: 'p1', name: 'Jean-Pierre Mbock', email: 'jp.mbock@example.cm', avatar: 'https://i.pravatar.cc/80?img=12', profession: 'Electrician', location: 'Douala, Cameroon', status: 'verified', rating: 4.8, totalJobs: 142, warnings: 0, joinedDate: '2024-03-10', verified: true },
-  { id: 'p2', name: 'Marie Nkeng', email: 'marie.nkeng@example.cm', avatar: 'https://i.pravatar.cc/80?img=47', profession: 'Plumber', location: 'Yaoundé, Cameroon', status: 'verified', rating: 4.6, totalJobs: 98, warnings: 0, joinedDate: '2024-04-22', verified: true },
-  { id: 'p3', name: 'Alain Tchoumi', email: 'alain.t@example.cm', avatar: 'https://i.pravatar.cc/80?img=59', profession: 'Carpenter', location: 'Bafoussam, Cameroon', status: 'pending', rating: 0, totalJobs: 0, warnings: 3, joinedDate: '2025-01-14', verified: false },
-  { id: 'p4', name: 'Estelle Ngo', email: 'estelle.ngo@example.cm', avatar: 'https://i.pravatar.cc/80?img=31', profession: 'Cleaner', location: 'Douala, Cameroon', status: 'suspended', rating: 3.9, totalJobs: 54, warnings: 5, joinedDate: '2024-07-03', verified: true },
-  { id: 'p5', name: 'Kevin Essomba', email: 'kevin.e@example.cm', avatar: 'https://i.pravatar.cc/80?img=68', profession: 'Painter', location: 'Yaoundé, Cameroon', status: 'verified', rating: 4.9, totalJobs: 187, warnings: 0, joinedDate: '2023-11-15', verified: true },
-];
+const mapProDetail = (p: any): AdminProfessionalDetail => ({
+  ...mapPro(p),
+  bio: p.bio,
+  experienceLevel: p.experience_level,
+  yearsOfExperience: p.years_of_experience,
+  hourlyRate: p.hourly_rate,
+  currency: p.currency ?? 'XAF',
+  country: p.country,
+  region: p.region,
+  city: p.city,
+  skills: p.skills ?? [],
+  services: p.services ?? [],
+  languages: p.languages ?? [],
+  updatedAt: p.updated_at,
+});
 
 export const professionalsService = {
   async getAll(): Promise<AdminProfessional[]> {
-    await delay();
-    return professionals;
+    const { data } = await api.get('/moderator/professionals', {
+      params: { skip: 0, limit: 100 },
+    });
+    return (data.items ?? []).map(mapPro);
   },
-  async updateStatus(id: string, status: AdminProfessional['status']): Promise<void> {
-    await delay(200);
-    const p = professionals.find((x) => x.id === id);
-    if (p) {
-      p.status = status;
-      p.verified = status === 'verified';
-    }
+
+  async getOne(id: string): Promise<AdminProfessionalDetail> {
+    const { data } = await api.get(`/moderator/professionals/${id}`);
+    return mapProDetail(data);
   },
-  async warn(id: string): Promise<void> {
-    await delay(200);
-    const p = professionals.find((x) => x.id === id);
-    if (p) p.warnings += 1;
+
+  async suspend(id: string, reason: string): Promise<void> {
+    await api.post(`/moderator/professionals/${id}/suspend`, { reason });
+  },
+
+  async reactivate(id: string, reason: string): Promise<void> {
+    await api.post(`/moderator/professionals/${id}/reactivate`, { reason });
   },
 };

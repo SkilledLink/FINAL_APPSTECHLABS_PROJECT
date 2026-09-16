@@ -1,161 +1,229 @@
-// ============ Shared ============
-export type Status = 'active' | 'inactive' | 'suspended' | 'pending';
-
+// ============ Overview (reuses /admin/dashboard) ============
 export interface ModeratorOverviewStats {
-  pendingReports: number;
-  pendingReportsChange: number;
-  resolvedToday: number;
-  resolvedTodayChange: number;
-  flaggedContent: number;
-  flaggedContentChange: number;
+  totalUsers: number;
+  activeUsers: number;
   suspendedUsers: number;
-  suspendedUsersChange: number;
-  avgResponseTime: number;
-  avgResponseTimeChange: number;
-  actionsThisWeek: number;
-  actionsThisWeekChange: number;
-}
-
-export interface ModeratorAnalyticsData {
-  reportsHandled: { date: string; count: number }[];
-  reportsByReason: { name: string; count: number }[];
-  topReportedCategories: { name: string; count: number }[];
-}
-
-export interface ModeratorActivityItem {
-  id: string;
-  type: 'report_resolved' | 'content_removed' | 'user_suspended' | 'user_warned' | 'report_dismissed';
-  description: string;
-  actor: { name: string; avatar?: string };
-  timestamp: string;
+  totalProfessionals: number;
+  verifiedProfessionals: number;
+  pendingProfessionals: number;
+  totalFeeds: number;
+  totalJobs: number;
+  totalAdmins: number;
+  totalModerators: number;
+  generatedAt: string;
 }
 
 // ============ Users ============
-export type UserStatus = 'active' | 'suspended' | 'pending';
+export type UserStatus =
+  | 'pending_verification'
+  | 'active'
+  | 'suspended'
+  | 'deactivated';
 
 export interface AdminUser {
   id: string;
   name: string;
   email: string;
-  phone: string;
+  username?: string;
   avatar: string;
-  location: string;
+  location?: string;
   joinedDate: string;
-  status: UserStatus;
+  status: UserStatus | string;
   verified: boolean;
-  warnings: number;
-  totalRequests: number;
+  accountType: string;
+  lastActive?: string;
 }
 
-// ============ Professionals ============
-export type ProfessionalStatus = 'verified' | 'pending' | 'suspended' | 'rejected';
+export interface AdminUserDetail extends AdminUser {
+  bio?: string;
+  followersCount: number;
+  followingCount: number;
+  updatedAt: string;
+}
+
+// ============ Professionals (public shapes only) ============
+export type ProfessionalAccountStatus =
+  | 'pending'
+  | 'active'
+  | 'suspended'
+  | 'under_review'
+  | 'deactivated'
+  | 'deleted';
 
 export interface AdminProfessional {
   id: string;
+  userId: string;
   name: string;
-  email: string;
   avatar: string;
   profession: string;
+  headline?: string;
   location: string;
-  status: ProfessionalStatus;
+  status: ProfessionalAccountStatus | string;
+  isVerified: boolean;
   rating: number;
+  totalReviews: number;
   totalJobs: number;
-  warnings: number;
   joinedDate: string;
-  verified: boolean;
+  available: boolean;
+}
+
+export interface AdminProfessionalDetail extends AdminProfessional {
+  bio?: string;
+  experienceLevel?: string;
+  yearsOfExperience?: number;
+  hourlyRate?: number;
+  currency: string;
+  country?: string;
+  region?: string;
+  city?: string;
+  skills: string[];
+  services: string[];
+  languages: string[];
+  updatedAt: string;
 }
 
 // ============ Feeds ============
-export type FeedStatus = 'published' | 'flagged' | 'removed' | 'pending';
-export type FeedType = 'post' | 'service' | 'job';
-
 export interface AdminFeed {
   id: string;
+  title: string;
+  description: string;
+  content: string;
+  status: string;
+  isPublic: boolean;
+  isDeleted: boolean;
+  userId: string;
   author: {
     id: string;
     name: string;
     avatar: string;
-    role: 'client' | 'professional';
+    role: string;
   };
-  type: FeedType;
-  content: string;
   images: string[];
+  hashtags: string[];
   likes: number;
   comments: number;
-  shares: number;
-  reports: number;
   createdAt: string;
-  status: FeedStatus;
+  updatedAt: string;
+}
+
+export interface FeedComment {
+  id: string;
+  userId: string;
+  feedId: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+  replies: FeedComment[];
+  author: {
+    id: string;
+    name: string;
+    avatar: string;
+    role: string;
+  };
+}
+
+export interface AdminFeedDetail extends AdminFeed {
+  commentsList: FeedComment[];
+  isLiked: boolean;
+  moderation: {
+    decision: string;
+    severity: number;
+    confidence: number;
+    description: string;
+    reason: string;
+    categories: string[];
+    provider: string;
+    model: string;
+    error?: string;
+    createdAt: string;
+  } | null;
 }
 
 // ============ Jobs ============
-export type JobStatus = 'open' | 'in_progress' | 'completed' | 'cancelled' | 'disputed';
-
 export interface AdminJob {
   id: string;
   title: string;
-  category: string;
-  location: string;
-  budget: number;
-  status: JobStatus;
+  description: string;
+  status: string;
+  userId: string;
+  client: {
+    id: string;
+    name: string;
+    avatar: string;
+  };
+  images: string[];
+  likes: number;
+  comments: number;
   postedDate: string;
-  reports: number;
-  client: { id: string; name: string; avatar: string };
-  professional?: { id: string; name: string; avatar: string };
+  updatedAt: string;
 }
 
-// ============ Moderation ============
-export type ReportTargetType = 'user' | 'professional' | 'feed' | 'job' | 'comment';
-export type ReportReason =
-  | 'spam'
-  | 'harassment'
-  | 'fake'
-  | 'inappropriate'
-  | 'fraud'
-  | 'other';
-export type ReportStatus = 'pending' | 'reviewing' | 'resolved' | 'dismissed';
-export type ReportPriority = 'low' | 'medium' | 'high';
-
-export interface ModerationReport {
+export interface JobComment {
   id: string;
-  targetType: ReportTargetType;
-  targetId: string;
-  targetPreview: string;
-  reporter: { id: string; name: string; avatar: string };
-  reason: ReportReason;
-  description: string;
-  status: ReportStatus;
-  priority: ReportPriority;
+  userId: string;
+  jobId: string;
+  content: string;
   createdAt: string;
-  assignedTo?: string;
+  updatedAt: string;
+  replies: JobComment[];
 }
 
-// ============ Audit Logs ============
-export type AuditSeverity = 'info' | 'warning' | 'critical';
+export interface AdminJobDetail extends AdminJob {
+  commentsList: JobComment[];
+}
 
-export interface AuditLog {
-  id: string;
-  moderator: { id: string; name: string; avatar: string };
-  action: string;
-  targetType: string;
-  targetId: string;
+// ============ Moderation (AI queue) ============
+export interface ModerationQueueItem {
+  recordId: string;
+  feedId: string;
+  feedTitle: string;
+  feedDescription: string;
+  feedAuthorId: string;
+  feedMedia: Array<{ id: string; media_url: string; media_type: string }>;
+  summary: {
+    decision: string;
+    severity: number;
+    confidence: number;
+    description: string;
+    reason: string;
+    categories: string[];
+    provider: string;
+    model: string;
+    error?: string;
+    createdAt: string;
+  };
+}
+
+export interface ModerationDetail {
+  recordId: string;
+  decision: string;
+  severity: number;
+  confidence: number;
   description: string;
-  ipAddress: string;
-  timestamp: string;
-  severity: AuditSeverity;
+  reason: string;
+  categories: string[];
+  provider: string;
+  model: string;
+  error?: string;
+  createdAt: string;
+  textResult: Record<string, unknown> | null;
+  imageResults: unknown[] | null;
 }
 
-// ============ Team ============
-export type ModeratorRole = 'lead_moderator' | 'senior_moderator' | 'moderator' | 'trainee';
-
-export interface TeamMember {
+// ============ My Activity ============
+export interface ActivityLog {
   id: string;
-  name: string;
-  email: string;
-  avatar: string;
-  role: ModeratorRole;
-  status: 'active' | 'inactive';
-  actionsToday: number;
-  lastActive: string;
-  joinedDate: string;
+  action: string;
+  entityType: string;
+  entityId?: string;
+  reason?: string;
+  description: string;
+  ipAddress?: string;
+  timestamp: string;
+}
+
+export interface ActivityLogDetail extends ActivityLog {
+  oldValue: Record<string, unknown> | null;
+  newValue: Record<string, unknown> | null;
+  userAgent?: string;
 }

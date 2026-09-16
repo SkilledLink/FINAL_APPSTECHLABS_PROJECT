@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { feedsService } from '../services/feedsService';
-import type { AdminFeed, FeedStatus } from '../types/moderator.types';
+import type { AdminFeed, AdminFeedDetail } from '../types/moderator.types';
 
 export const useFeeds = () => {
   const [feeds, setFeeds] = useState<AdminFeed[]>([]);
@@ -17,10 +17,17 @@ export const useFeeds = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  const updateStatus = useCallback(async (id: string, status: FeedStatus) => {
-    await feedsService.updateStatus(id, status);
-    setFeeds((prev) => prev.map((f) => (f.id === id ? { ...f, status } : f)));
+  const fetchOne = useCallback((id: string) => feedsService.getOne(id), []);
+
+  const remove = useCallback(async (id: string, reason: string) => {
+    await feedsService.remove(id, reason);
+    setFeeds((prev) => prev.map((f) => (f.id === id ? { ...f, status: 'removed', isDeleted: true } : f)));
   }, []);
 
-  return { feeds, loading, error, refetch: load, updateStatus };
+  const removeComment = useCallback(async (feedId: string, commentId: string, reason: string) => {
+    await feedsService.removeComment(commentId, reason);
+    setFeeds((prev) => prev.map((f) => (f.id === feedId ? { ...f, comments: Math.max(0, f.comments - 1) } : f)));
+  }, []);
+
+  return { feeds, loading, error, refetch: load, fetchOne, remove, removeComment };
 };
