@@ -1,15 +1,26 @@
-// src/features/auth/types/auth.types.ts
-
 export type AccountType = "user" | "professional" | "business";
 
 export interface AuthUser {
   id: string;
   email: string;
+  username?: string | null;
   first_name: string;
   last_name: string;
+  bio?: string | null;
+  location?: string | null;
   account_type: AccountType;
+  status: string;
+  is_email_verified: boolean;
   is_admin: boolean;
   is_moderator: boolean;
+  profile_image_url?: string | null;
+  banner_image_url?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  last_login_at?: string | null;
+  followers_count?: number;
+  following_count?: number;
+  is_following?: boolean;
 }
 
 export interface LoginCredentials {
@@ -22,7 +33,6 @@ export interface RegisterData {
   last_name: string;
   email: string;
   password: string;
-  account_type?: AccountType; // optional, defaults to "user" on backend
 }
 
 export interface ForgotPasswordData {
@@ -30,7 +40,7 @@ export interface ForgotPasswordData {
 }
 
 export interface ResetPasswordData {
-  email?: string;   // optional – some flows pass it from URL
+  email?: string;
   code: string;
   new_password: string;
 }
@@ -54,4 +64,9 @@ export interface AuthResponse {
 
 export interface MessageResponse {
   message: string;
+}
+
+export interface RegisterResponse {
+  message: string;
+  user_id: string;
 }

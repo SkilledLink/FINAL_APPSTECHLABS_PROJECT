@@ -1,3 +1,4 @@
+// types/ai.types.ts
 export type UserRole = 'hirer' | 'worker' | null;
 
 export interface Profile {
@@ -44,6 +45,10 @@ export interface MatchRecommendation {
   isAvailable?: boolean;
   skills?: string[];
   description?: string;
+  /** From backend: distance in km when a location search ran */
+  distanceKm?: number;
+  /** From backend: profile image URL */
+  profileImageUrl?: string;
 }
 
 export interface ActionCard {
@@ -52,10 +57,28 @@ export interface ActionCard {
   payload?: Record<string, unknown>;
 }
 
+/** Structured image analysis returned by /chat/ when an image was sent */
+export interface ImageAnalysis {
+  description: string;
+  possible_profession: string | null;
+  possible_services: string[];
+  skills: string[];
+  work_category: string | null;
+  search_terms: string[];
+  confidence: number;
+  language: string;
+}
+
 export interface ChatMessage {
   id: string;
   sender: 'user' | 'assistant';
   content: string;
   recommendations?: MatchRecommendation[];
   actionCards?: ActionCard[];
+  /** Deep link to /discovery with search params — present on search responses */
+  redirectUrl?: string;
+  /** Structured image analysis — present when user attached an image */
+  imageAnalysis?: ImageAnalysis;
+  /** Total result count (may exceed recommendations length) */
+  totalResults?: number;
 }

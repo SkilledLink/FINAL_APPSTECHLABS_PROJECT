@@ -19,7 +19,7 @@ export default function UserCard({ user, onMessage }: UserCardProps) {
   const handleMessage = async () => {
     try {
       const conv = await getOrCreateDirect(user.id);
-      navigate(`/messages/${conv.id}`);
+      navigate(`/home/messages/${conv.id}`);
     } catch (err) {
       console.error('Failed to start conversation:', err);
     }
@@ -37,7 +37,7 @@ export default function UserCard({ user, onMessage }: UserCardProps) {
     >
       <div className="flex items-start gap-4">
         {/* Avatar */}
-        <Link to={`/profile/${user.id}`} className="shrink-0">
+        <Link to={`/home/profile/${user.id}`} className="shrink-0">
           <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800">
             {user.profile_image_url ? (
               <img src={user.profile_image_url} alt={user.first_name} className="w-full h-full object-cover" />
@@ -50,7 +50,7 @@ export default function UserCard({ user, onMessage }: UserCardProps) {
         </Link>
 
         <div className="flex-1 min-w-0">
-          <Link to={`/profile/${user.id}`} className="hover:underline">
+          <Link to={`/home/profile/${user.id}`} className="hover:underline">
             <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 truncate">
               {user.first_name} {user.last_name}
             </h3>

@@ -1,6 +1,7 @@
 // src/features/profile/components/ProfileHeader.tsx
 
 import React, { useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   BadgeCheck,
   UserPlus,
@@ -44,6 +45,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   onImageUpload,
   onShare,
 }) => {
+  const navigate = useNavigate();
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const profileInputRef = useRef<HTMLInputElement>(null);
 
@@ -73,7 +75,6 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     profile.bannerImageUrl ?? profileData.banner_image_url ?? '';
   const accountType = profile.accountType ?? profileData.account_type;
 
-  // Normalise both 'standard' and legacy 'user' values.
   const isStandardAccount =
     accountType === 'standard' || accountType === 'user';
 
@@ -106,6 +107,12 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   const openProfilePicker = () => {
     if (!onImageUpload) return;
     profileInputRef.current?.click();
+  };
+
+  // ✅ NEW — go to onboarding when user wants to upgrade
+  const handleUpgrade = () => {
+    onUpgrade?.();          // keep the parent callback working if it's wired
+    navigate('/onboarding'); // then push to the chooser
   };
 
   return (
@@ -186,7 +193,6 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 {profile.professional?.isVerified && (
                   <BadgeCheck className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500 fill-blue-500/10 shrink-0" />
                 )}
-                {/* NEW – "Follows you" badge */}
                 {!isOwnProfile && followsYou && (
                   <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-full border border-slate-200 dark:border-slate-700">
                     Follows you
@@ -226,8 +232,8 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             {isOwnProfile && isStandardAccount && (
               <button
                 type="button"
-                onClick={onUpgrade}
-                className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl sm:rounded-2xl shadow-xs transition active:scale-[0.98]"
+                onClick={handleUpgrade}
+                className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl sm:rounded-2xl shadow-xs transition active:scale-[0.98] cursor-pointer"
               >
                 <Wrench className="w-3.5 h-3.5 shrink-0" />
                 <span>Become a Professional</span>

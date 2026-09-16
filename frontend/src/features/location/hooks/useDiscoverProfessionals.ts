@@ -1,3 +1,5 @@
+// src/features/location/hooks/useDiscoverProfessionals.ts
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { locationService } from '../services/locationService';
 import type {
@@ -26,17 +28,15 @@ export function useDiscoverProfessionals(
 
   const requestId = useRef(0);
 
-  // Destructure to primitive-ish values so the effect only fires on real changes.
-  const {
-    lat = null,
-    lng = null,
-    radiusKm = 10,
-    profession = '',
-    verifiedOnly = false,
-    availableOnly = true,
-    skip = 0,
-    limit = 20,
-  } = (params as any) || {};
+  /* Coordinates live inside params.location, not at the top level. */
+  const lat = params?.location?.lat ?? null;
+  const lng = params?.location?.lng ?? null;
+  const radiusKm = params?.radiusKm ?? 10;
+  const profession = params?.profession ?? '';
+  const verifiedOnly = params?.verifiedOnly ?? false;
+  const availableOnly = params?.availableOnly ?? true;
+  const skip = params?.skip ?? 0;
+  const limit = params?.limit ?? 20;
 
   const hasLocation = lat !== null && lng !== null;
 
@@ -47,7 +47,7 @@ export function useDiscoverProfessionals(
 
     try {
       const res = await locationService.discover({
-        location: hasLocation ? { lat, lng } : null,
+        location: hasLocation ? { lat: lat as number, lng: lng as number } : null,
         radiusKm,
         profession: profession || undefined,
         verifiedOnly,
@@ -67,7 +67,17 @@ export function useDiscoverProfessionals(
     } finally {
       if (id === requestId.current) setLoading(false);
     }
-  }, [lat, lng, radiusKm, profession, verifiedOnly, availableOnly, skip, limit, hasLocation]);
+  }, [
+    lat,
+    lng,
+    radiusKm,
+    profession,
+    verifiedOnly,
+    availableOnly,
+    skip,
+    limit,
+    hasLocation,
+  ]);
 
   useEffect(() => {
     fetch_();

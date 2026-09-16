@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react";
-import { apiClient } from "../../../api/client";
+import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+
+import { apiClient } from "../../../api/client";
 import type {
+  AuthUser,
+  ForgotPasswordData,
   LoginCredentials,
   RegisterData,
-  ForgotPasswordData,
   ResetPasswordData,
 } from "../types/auth.types";
 
@@ -12,14 +14,13 @@ export function useAuth() {
   const [loading, setLoading] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [user, setUser] = useState<any | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
 
-  // Load user from localStorage on mount
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
+    const stored = localStorage.getItem("user");
+    if (stored) {
       try {
-        setUser(JSON.parse(storedUser));
+        setUser(JSON.parse(stored));
       } catch {
         setUser(null);
       }
@@ -43,7 +44,7 @@ export function useAuth() {
       localStorage.setItem("refresh_token", loginData.refresh_token);
 
       const userResponse = await apiClient.get("/users/me");
-      const userData = userResponse.data;
+      const userData = userResponse.data as AuthUser;
 
       localStorage.setItem("user", JSON.stringify(userData));
       setUser(userData);
@@ -51,7 +52,9 @@ export function useAuth() {
       toast.success("Welcome back! 🎉");
       return true;
     } catch (err: any) {
-      const msg = err.response?.data?.detail || "Login failed. Please check your credentials.";
+      const msg =
+        err.response?.data?.detail ||
+        "Login failed. Please check your credentials.";
       setError(msg);
       toast.error(msg);
       return false;
@@ -60,7 +63,9 @@ export function useAuth() {
     }
   };
 
-  const register = async (data: RegisterData): Promise<{ success: boolean; user_id?: string }> => {
+  const register = async (
+    data: RegisterData,
+  ): Promise<{ success: boolean; user_id?: string }> => {
     setLoading(true);
     setError(null);
     try {
@@ -69,7 +74,6 @@ export function useAuth() {
         first_name: data.first_name,
         last_name: data.last_name,
         password: data.password,
-        account_type: data.account_type || "user",
       });
       toast.success("Account created! Please verify your email.");
       return { success: true, user_id: response.data.user_id };
@@ -87,11 +91,26 @@ export function useAuth() {
     setLoading(true);
     setError(null);
     try {
-      await apiClient.post("/auth/verify-email", { email, code });
-      toast.success("Email verified successfully! You can now log in.");
+      const response = await apiClient.post("/auth/verify-email", {
+        email,
+        code,
+      });
+      const { access_token, refresh_token } = response.data;
+
+      localStorage.setItem("access_token", access_token);
+      localStorage.setItem("refresh_token", refresh_token);
+
+      const userResponse = await apiClient.get("/users/me");
+      const userData = userResponse.data as AuthUser;
+      localStorage.setItem("user", JSON.stringify(userData));
+      setUser(userData);
+
+      toast.success("Email verified! 🎉");
       return true;
     } catch (err: any) {
-      const msg = err.response?.data?.detail || "Invalid or expired verification code.";
+      const msg =
+        err.response?.data?.detail ||
+        "Invalid or expired verification code.";
       setError(msg);
       toast.error(msg);
       return false;
@@ -100,15 +119,19 @@ export function useAuth() {
     }
   };
 
-  const forgotPassword = async (data: ForgotPasswordData): Promise<boolean> => {
+  const forgotPassword = async (
+    data: ForgotPasswordData,
+  ): Promise<boolean> => {
     setLoading(true);
     setError(null);
     try {
-      await apiClient.post("/auth/password-reset/request", { email: data.email });
-      toast.success("If an account exists, a reset link has been sent.");
+      await apiClient.post("/auth/password-reset/request", {
+        email: data.email,
+      });
+      toast.success("If an account exists, a reset code has been sent.");
       return true;
     } catch (err: any) {
-      const msg = err.response?.data?.detail || "Failed to send reset link.";
+      const msg = err.response?.data?.detail || "Failed to send reset code.";
       setError(msg);
       toast.error(msg);
       return false;
@@ -117,7 +140,9 @@ export function useAuth() {
     }
   };
 
-  const resetPassword = async (data: ResetPasswordData): Promise<boolean> => {
+  const resetPassword = async (
+    data: ResetPasswordData,
+  ): Promise<boolean> => {
     setLoading(true);
     setError(null);
     try {
@@ -142,18 +167,25 @@ export function useAuth() {
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
     localStorage.removeItem("user");
-    localStorage.removeItem("pending_verification_user_id");
     setUser(null);
     toast.info("Logged out.");
   };
 
-  const getCurrentUser = (): any | null => {
-    return user;
+  const refreshUser = async (): Promise<AuthUser | null> => {
+    try {
+      const res = await apiClient.get("/users/me");
+      const userData = res.data as AuthUser;
+      localStorage.setItem("user", JSON.stringify(userData));
+      setUser(userData);
+      return userData;
+    } catch {
+      return null;
+    }
   };
 
-  const isAuthenticated = (): boolean => {
-    return !!localStorage.getItem("access_token");
-  };
+  const getCurrentUser = (): AuthUser | null => user;
+  const isAuthenticated = (): boolean =>
+    Boolean(localStorage.getItem("access_token"));
 
   return {
     login,
@@ -162,12 +194,13 @@ export function useAuth() {
     forgotPassword,
     resetPassword,
     logout,
+    refreshUser,
     getCurrentUser,
     isAuthenticated,
     loading,
     authLoading,
     error,
     clearError,
-    user, // ✅ reactive user state
+    user,
   };
 }

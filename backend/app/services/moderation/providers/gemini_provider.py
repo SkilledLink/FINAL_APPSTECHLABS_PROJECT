@@ -1,3 +1,4 @@
+# app/services/moderation/providers/gemini_provider.py
 import json
 import logging
 import re
@@ -30,82 +31,131 @@ def _extract_json(content: str) -> Optional[dict]:
     return None
 
 
+_gemini_client: Optional[genai.Client] = None
+
+
+def _client() -> Optional[genai.Client]:
+    global _gemini_client
+    if _gemini_client is None:
+        if not settings.GEMINI_API_KEY:
+            return None
+        try:
+            _gemini_client = genai.Client(
+                api_key=settings.GEMINI_API_KEY,
+                http_options={
+                    "timeout": settings.MODERATION_TIMEOUT_SECONDS * 1000,
+                },
+            )
+        except Exception as e:
+            logger.error("Gemini moderation client init failed: %s", e)
+            return None
+    return _gemini_client
+
+
 class GeminiModerationProvider(ModerationProvider):
     name = "gemini"
 
     def __init__(self):
-        self.api_key = settings.GEMINI_API_KEY
         self.model = settings.MODERATION_GEMINI_MODEL
-        self._client: Optional[genai.Client] = None
-
-    def _client_or_none(self) -> Optional[genai.Client]:
-        if not self.api_key:
-            return None
-        if self._client is None:
-            try:
-                self._client = genai.Client(
-                    api_key=self.api_key,
-                    http_options={"timeout": settings.MODERATION_TIMEOUT_SECONDS * 1000},
-                )
-            except Exception as e:
-                logger.error(f"Gemini client init failed: {e}")
-                return None
-        return self._client
+        self.max_images = 4  # cap images per multimodal call
 
     # ─── Public API ─────────────────────────────────────────
     def moderate_text(self, system_prompt: str, user_text: str) -> ProviderResult:
-        client = self._client_or_none()
+        client = _client()
         if client is None:
-            return ProviderResult.failure("missing_gemini_api_key", self.name, self.model)
-
-        full_prompt = f"{system_prompt}\n\n{user_text}"
+            return ProviderResult.failure(
+                "missing_gemini_api_key", self.name, self.model
+            )
         try:
             response = client.models.generate_content(
                 model=self.model,
-                contents=full_prompt,
+                contents=user_text,
                 config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
                     temperature=0.0,
+                    max_output_tokens=1024,
                     response_mime_type="application/json",
                 ),
             )
         except Exception as e:
-            return ProviderResult.failure(f"provider_error: {e}", self.name, self.model)
-
-        return self._parse_response(response, raw_text=None)
+            return ProviderResult.failure(
+                f"provider_error: {e}", self.name, self.model
+            )
+        return self._parse_response(response)
 
     def moderate_image(
         self, system_prompt: str, image_bytes: bytes, mime_type: str,
     ) -> ProviderResult:
-        client = self._client_or_none()
+        client = _client()
         if client is None:
-            return ProviderResult.failure("missing_gemini_api_key", self.name, self.model)
-
+            return ProviderResult.failure(
+                "missing_gemini_api_key", self.name, self.model
+            )
         try:
             part = types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
             response = client.models.generate_content(
                 model=self.model,
-                contents=[
-                    system_prompt + "\n\nModerate the attached image.",
-                    part,
-                ],
+                contents=["Moderate the attached image.", part],
                 config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
                     temperature=0.0,
+                    max_output_tokens=1024,
                     response_mime_type="application/json",
                 ),
             )
         except Exception as e:
-            return ProviderResult.failure(f"provider_error: {e}", self.name, self.model)
+            return ProviderResult.failure(
+                f"provider_error: {e}", self.name, self.model
+            )
+        return self._parse_response(response)
 
-        return self._parse_response(response, raw_text=None)
+    def moderate_multimodal(
+        self,
+        system_prompt: str,
+        user_text: str,
+        images: list[tuple[bytes, str]],
+    ) -> ProviderResult:
+        """
+        Native Gemini path: text + N images in ONE call.
+
+        Uses Gemini's 1M TPM budget instead of burning multiple RPM slots.
+        This is the free-tier win.
+        """
+        client = _client()
+        if client is None:
+            return ProviderResult.failure(
+                "missing_gemini_api_key", self.name, self.model
+            )
+
+        contents: list = [user_text]
+        for img_bytes, mime in images[: self.max_images]:
+            if not img_bytes:
+                continue
+            contents.append(types.Part.from_bytes(data=img_bytes, mime_type=mime))
+
+        try:
+            response = client.models.generate_content(
+                model=self.model,
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    temperature=0.0,
+                    max_output_tokens=1024,
+                    response_mime_type="application/json",
+                ),
+            )
+        except Exception as e:
+            return ProviderResult.failure(
+                f"provider_error: {e}", self.name, self.model
+            )
+        return self._parse_response(response)
 
     # ─── Internals ──────────────────────────────────────────
-    def _parse_response(self, response, raw_text: Optional[str]) -> ProviderResult:
+    def _parse_response(self, response) -> ProviderResult:
         try:
             content = (response.text or "").strip() if hasattr(response, "text") else ""
         except Exception:
             content = ""
-        if not content and raw_text:
-            content = raw_text
 
         parsed = _extract_json(content)
         if parsed is None:
@@ -121,9 +171,13 @@ class GeminiModerationProvider(ModerationProvider):
                 "invalid_severity_or_confidence", self.name, self.model
             )
         if not (1 <= severity <= 10):
-            return ProviderResult.failure("severity_out_of_range", self.name, self.model)
+            return ProviderResult.failure(
+                "severity_out_of_range", self.name, self.model
+            )
         if not (0 <= confidence <= 100):
-            return ProviderResult.failure("confidence_out_of_range", self.name, self.model)
+            return ProviderResult.failure(
+                "confidence_out_of_range", self.name, self.model
+            )
 
         description = str(parsed.get("description", ""))[:200]
         reason = str(parsed.get("reason", ""))[:200]
