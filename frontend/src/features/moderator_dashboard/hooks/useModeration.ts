@@ -1,33 +1,33 @@
 import { useEffect, useState, useCallback } from 'react';
 import { moderationService } from '../services/moderationService';
-import type { ModerationReport, ReportStatus } from '../types/moderator.types';
+import type { ModerationQueueItem, ModerationDetail } from '../types/moderator.types';
 
 export const useModeration = () => {
-  const [reports, setReports] = useState<ModerationReport[]>([]);
+  const [items, setItems] = useState<ModerationQueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
-    try { setReports(await moderationService.getAll()); }
-    catch (e) { setError(e instanceof Error ? e.message : 'Failed to load reports'); }
+    try { setItems(await moderationService.getQueue()); }
+    catch (e) { setError(e instanceof Error ? e.message : 'Failed to load moderation queue'); }
     finally { setLoading(false); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const updateStatus = useCallback(async (id: string, status: ReportStatus) => {
-    await moderationService.updateStatus(id, status);
-    setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
+  const fetchOne = useCallback((id: string) => moderationService.getOne(id), []);
+
+  const approve = useCallback(async (recordId: string, reason: string) => {
+    await moderationService.approve(recordId, reason);
+    setItems((prev) => prev.filter((i) => i.recordId !== recordId));
   }, []);
 
-  const assign = useCallback(async (id: string, moderatorName: string) => {
-    await moderationService.assign(id, moderatorName);
-    setReports((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, assignedTo: moderatorName, status: 'reviewing' } : r)),
-    );
+  const reject = useCallback(async (recordId: string, reason: string) => {
+    await moderationService.reject(recordId, reason);
+    setItems((prev) => prev.filter((i) => i.recordId !== recordId));
   }, []);
 
-  return { reports, loading, error, refetch: load, updateStatus, assign };
+  return { items, loading, error, refetch: load, fetchOne, approve, reject };
 };

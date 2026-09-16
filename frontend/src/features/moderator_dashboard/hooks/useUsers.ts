@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { usersService } from '../services/usersService';
-import type { AdminUser, UserStatus } from '../types/moderator.types';
+import type { AdminUser, AdminUserDetail } from '../types/moderator.types';
 
 export const useUsers = () => {
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -17,15 +17,17 @@ export const useUsers = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  const updateStatus = useCallback(async (id: string, status: UserStatus) => {
-    await usersService.updateStatus(id, status);
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status } : u)));
+  const fetchOne = useCallback((id: string) => usersService.getOne(id), []);
+
+  const suspend = useCallback(async (id: string, reason: string) => {
+    await usersService.suspend(id, reason);
+    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status: 'suspended' } : u)));
   }, []);
 
-  const warn = useCallback(async (id: string) => {
-    await usersService.warn(id);
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, warnings: u.warnings + 1 } : u)));
+  const reactivate = useCallback(async (id: string, reason: string) => {
+    await usersService.reactivate(id, reason);
+    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, status: 'active' } : u)));
   }, []);
 
-  return { users, loading, error, refetch: load, updateStatus, warn };
+  return { users, loading, error, refetch: load, fetchOne, suspend, reactivate };
 };

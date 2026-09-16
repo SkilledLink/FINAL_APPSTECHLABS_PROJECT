@@ -1,30 +1,71 @@
-import type { ModerationReport } from '../types/moderator.types';
+import { api } from '../api/api';
+import type { ModerationQueueItem, ModerationDetail } from '../types/moderator.types';
 
-const delay = (ms = 400) => new Promise((r) => setTimeout(r, ms));
+const mapItem = (i: any): ModerationQueueItem => ({
+  recordId: i.record_id,
+  feedId: i.feed_id,
+  feedTitle: i.feed_title ?? '',
+  feedDescription: i.feed_description ?? '',
+  feedAuthorId: i.feed_author_id,
+  feedMedia: (i.feed_media ?? []).map((m: any) => ({
+    id: m.id,
+    media_url: m.media_url,
+    media_type: m.media_type,
+  })),
+  summary: {
+    decision: i.summary?.decision ?? 'review',
+    severity: i.summary?.severity ?? 0,
+    confidence: i.summary?.confidence ?? 0,
+    description: i.summary?.description ?? '',
+    reason: i.summary?.reason ?? '',
+    categories: i.summary?.categories ?? [],
+    provider: i.summary?.provider ?? '',
+    model: i.summary?.model ?? '',
+    error: i.summary?.error,
+    createdAt: i.summary?.created_at ?? new Date().toISOString(),
+  },
+});
 
-const reports: ModerationReport[] = [
-  { id: 'r1', targetType: 'feed', targetId: 'f3', targetPreview: 'CHEAPEST CARPENTRY IN TOWN!!! CALL NOW!!!', reporter: { id: 'u2', name: 'Sarah Mbah', avatar: 'https://i.pravatar.cc/80?img=45' }, reason: 'spam', description: 'Repeated promotional spam posted multiple times per day.', status: 'pending', priority: 'medium', createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString() },
-  { id: 'r2', targetType: 'user', targetId: 'u4', targetPreview: 'Claudine Etoundi', reporter: { id: 'p5', name: 'Kevin Essomba', avatar: 'https://i.pravatar.cc/80?img=68' }, reason: 'harassment', description: 'Sent abusive messages after job dispute.', status: 'pending', priority: 'high', createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString() },
-  { id: 'r3', targetType: 'professional', targetId: 'p3', targetPreview: 'Alain Tchoumi', reporter: { id: 'u5', name: 'Bertrand Njoya', avatar: 'https://i.pravatar.cc/80?img=51' }, reason: 'fake', description: 'Suspicious profile — credentials cannot be verified.', status: 'reviewing', priority: 'high', createdAt: new Date(Date.now() - 1000 * 60 * 300).toISOString(), assignedTo: 'Marie Moderator' },
-  { id: 'r4', targetType: 'comment', targetId: 'c991', targetPreview: 'You are a total scam artist...', reporter: { id: 'p1', name: 'Jean-Pierre Mbock', avatar: 'https://i.pravatar.cc/80?img=12' }, reason: 'inappropriate', description: 'Offensive language in public comment.', status: 'resolved', priority: 'low', createdAt: new Date(Date.now() - 1000 * 60 * 60 * 20).toISOString(), assignedTo: 'Paul Supervisor' },
-];
+const mapDetail = (d: any): ModerationDetail => ({
+  recordId: d.record_id,
+  decision: d.decision,
+  severity: d.severity ?? 0,
+  confidence: d.confidence ?? 0,
+  description: d.description ?? '',
+  reason: d.reason ?? '',
+  categories: d.categories ?? [],
+  provider: d.provider ?? '',
+  model: d.model ?? '',
+  error: d.error,
+  createdAt: d.created_at,
+  textResult: d.text_result ?? null,
+  imageResults: d.image_results ?? null,
+});
 
 export const moderationService = {
-  async getAll(): Promise<ModerationReport[]> {
-    await delay();
-    return reports;
+  async getQueue(): Promise<ModerationQueueItem[]> {
+    const { data } = await api.get('/moderator/moderation/queue', {
+      params: { skip: 0, limit: 100 },
+    });
+    return (data.items ?? []).map(mapItem);
   },
-  async updateStatus(id: string, status: ModerationReport['status']): Promise<void> {
-    await delay(200);
-    const r = reports.find((x) => x.id === id);
-    if (r) r.status = status;
+
+  async getOne(recordId: string): Promise<ModerationDetail> {
+    const { data } = await api.get(`/moderator/moderation/queue/${recordId}`);
+    // The moderator endpoint returns ModerationSummary, not ModerationFull.
+    // There is no text_result/image_results field on this route.
+    return {
+      ...mapDetail(data),
+      textResult: null,
+      imageResults: null,
+    };
   },
-  async assign(id: string, moderatorName: string): Promise<void> {
-    await delay(200);
-    const r = reports.find((x) => x.id === id);
-    if (r) {
-      r.assignedTo = moderatorName;
-      r.status = 'reviewing';
-    }
+
+  async approve(recordId: string, reason: string): Promise<void> {
+    await api.post(`/moderator/moderation/queue/${recordId}/approve`, { reason });
+  },
+
+  async reject(recordId: string, reason: string): Promise<void> {
+    await api.post(`/moderator/moderation/queue/${recordId}/reject`, { reason });
   },
 };

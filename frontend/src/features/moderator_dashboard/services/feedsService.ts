@@ -1,23 +1,101 @@
-import type { AdminFeed } from '../types/moderator.types';
+import { api } from '../api/api';
+import type { AdminFeed, AdminFeedDetail, FeedComment } from '../types/moderator.types';
 
-const delay = (ms = 400) => new Promise((r) => setTimeout(r, ms));
+const mapComment = (c: any): FeedComment => {
+  const u = c.user ?? {};
+  return {
+    id: c.id,
+    userId: c.user_id,
+    feedId: c.feed_id,
+    content: c.content,
+    createdAt: c.created_at,
+    updatedAt: c.updated_at,
+    replies: (c.replies ?? []).map(mapComment),
+    author: {
+      id: u.id ?? c.user_id,
+      name:
+        [u.first_name, u.last_name].filter(Boolean).join(' ') ||
+        u.username ||
+        'Unknown',
+      avatar: u.profile_image_url || '',
+      role: u.account_type ?? 'user',
+    },
+  };
+};
 
-const feeds: AdminFeed[] = [
-  { id: 'f1', author: { id: 'p1', name: 'Jean-Pierre Mbock', avatar: 'https://i.pravatar.cc/80?img=12', role: 'professional' }, type: 'service', content: 'Just finished a full rewiring job in Bonapriso. Available for new electrical contracts this week.', images: ['https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=400'], likes: 42, comments: 6, shares: 3, reports: 0, createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(), status: 'published' },
-  { id: 'f2', author: { id: 'u2', name: 'Sarah Mbah', avatar: 'https://i.pravatar.cc/80?img=45', role: 'client' }, type: 'post', content: 'Looking for a reliable plumber in Douala for an emergency leak repair tonight. Please DM.', images: [], likes: 8, comments: 14, shares: 1, reports: 0, createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(), status: 'published' },
-  { id: 'f3', author: { id: 'p3', name: 'Alain Tchoumi', avatar: 'https://i.pravatar.cc/80?img=59', role: 'professional' }, type: 'post', content: 'CHEAPEST CARPENTRY IN TOWN!!! CALL NOW!!! 100% GUARANTEED!!!', images: [], likes: 2, comments: 0, shares: 0, reports: 9, createdAt: new Date(Date.now() - 1000 * 60 * 240).toISOString(), status: 'flagged' },
-  { id: 'f4', author: { id: 'u5', name: 'Bertrand Njoya', avatar: 'https://i.pravatar.cc/80?img=51', role: 'client' }, type: 'job', content: 'Need someone to install a new water heater in Buea this weekend. Budget negotiable.', images: [], likes: 5, comments: 3, shares: 0, reports: 0, createdAt: new Date(Date.now() - 1000 * 60 * 480).toISOString(), status: 'published' },
-  { id: 'f5', author: { id: 'u4', name: 'Claudine Etoundi', avatar: 'https://i.pravatar.cc/80?img=27', role: 'client' }, type: 'post', content: 'Scam alert! Do not trust this provider... (removed)', images: [], likes: 1, comments: 22, shares: 4, reports: 15, createdAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(), status: 'removed' },
-];
+const mapFeed = (f: any): AdminFeed => {
+  const u = f.user ?? {};
+  return {
+    id: f.id,
+    title: f.title ?? '',
+    description: f.description ?? '',
+    content: [f.title, f.description].filter(Boolean).join(' — '),
+    status: f.status ?? 'unknown',
+    isPublic: !!f.is_public,
+    isDeleted: !!f.is_deleted,
+    userId: f.user_id ?? u.id ?? '',
+    author: {
+      id: u.id ?? f.user_id ?? '',
+      name:
+        [u.first_name, u.last_name].filter(Boolean).join(' ') ||
+        u.username ||
+        'Unknown',
+      avatar: u.profile_image_url || '',
+      role: u.account_type ?? 'user',
+    },
+    images: (f.media ?? []).map((m: any) => m.media_url),
+    hashtags: (f.hashtags ?? []).map((h: any) => h.name),
+    likes: f.likes_count ?? 0,
+    comments: f.comments_count ?? 0,
+    createdAt: f.created_at ?? '',
+    updatedAt: f.updated_at ?? '',
+  };
+};
+
+const mapFeedDetail = (f: any): AdminFeedDetail => {
+  const base = mapFeed(f);
+  const m = f.moderation;
+  return {
+    ...base,
+    isLiked: !!f.is_liked,
+    commentsList: (f.comments ?? []).map(mapComment),
+    moderation: m
+      ? {
+          decision: m.decision ?? 'review',
+          severity: m.severity ?? 0,
+          confidence: m.confidence ?? 0,
+          description: m.description ?? '',
+          reason: m.reason ?? '',
+          categories: m.categories ?? [],
+          provider: m.provider ?? '',
+          model: m.model ?? '',
+          error: m.error,
+          createdAt: m.created_at ?? new Date().toISOString(),
+        }
+      : null,
+  };
+};
 
 export const feedsService = {
   async getAll(): Promise<AdminFeed[]> {
-    await delay();
-    return feeds;
+    const { data } = await api.get('/moderator/feeds', {
+      params: { skip: 0, limit: 100, include_deleted: true },
+    });
+    return (data.items ?? []).map(mapFeed);
   },
-  async updateStatus(id: string, status: AdminFeed['status']): Promise<void> {
-    await delay(200);
-    const f = feeds.find((x) => x.id === id);
-    if (f) f.status = status;
+
+  async getOne(id: string): Promise<AdminFeedDetail> {
+    const { data } = await api.get(`/moderator/feeds/${id}`);
+    return mapFeedDetail(data);
+  },
+
+  async remove(id: string, reason: string): Promise<void> {
+    await api.delete(`/moderator/feeds/${id}`, { params: { reason } });
+  },
+
+  async removeComment(commentId: string, reason: string): Promise<void> {
+    await api.delete(`/moderator/feeds/comments/${commentId}`, {
+      params: { reason },
+    });
   },
 };

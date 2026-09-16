@@ -7,7 +7,6 @@ import {
   ShieldCheck,
   AlertTriangle,
   ScrollText,
-  UserCog,
   ChevronLeft,
   ChevronRight,
   X,
@@ -15,13 +14,12 @@ import {
 
 export type ModeratorTab =
   | 'overview'
+  | 'moderation'
   | 'feeds'
-  | 'jobs'
   | 'users'
   | 'professionals'
-  | 'moderation'
-  | 'audit_logs'
-  | 'team';
+  | 'jobs'
+  | 'audit_logs';
 
 interface NavItem {
   id: ModeratorTab;
@@ -42,23 +40,17 @@ interface ModeratorSidebarProps {
 
 const navItems: NavItem[] = [
   { id: 'overview', label: 'Overview', icon: <LayoutDashboard className="w-5 h-5" /> },
-  { id: 'moderation', label: 'Moderation', icon: <AlertTriangle className="w-5 h-5" />, badge: 27 },
+  { id: 'moderation', label: 'Moderation', icon: <AlertTriangle className="w-5 h-5" /> },
   { id: 'feeds', label: 'Feeds', icon: <Rss className="w-5 h-5" /> },
   { id: 'users', label: 'Users', icon: <Users className="w-5 h-5" /> },
   { id: 'professionals', label: 'Professionals', icon: <ShieldCheck className="w-5 h-5" /> },
   { id: 'jobs', label: 'Jobs', icon: <Briefcase className="w-5 h-5" /> },
   { id: 'audit_logs', label: 'My Activity', icon: <ScrollText className="w-5 h-5" /> },
-  { id: 'team', label: 'Team', icon: <UserCog className="w-5 h-5" /> },
 ];
 
 export const ModeratorSidebar: React.FC<ModeratorSidebarProps> = ({
-  activeTab,
-  onTabChange,
-  isCollapsed = false,
-  onToggleCollapse,
-  isMobileOpen = false,
-  onMobileClose,
-  isMobile = false,
+  activeTab, onTabChange, isCollapsed = false, onToggleCollapse,
+  isMobileOpen = false, onMobileClose, isMobile = false,
 }) => {
   useEffect(() => {
     const onEsc = (e: KeyboardEvent) => {
@@ -79,15 +71,11 @@ export const ModeratorSidebar: React.FC<ModeratorSidebarProps> = ({
       <div className={`p-4 border-b border-gray-200 ${isCollapsed && !isMobile ? 'text-center' : ''}`}>
         {isCollapsed && !isMobile ? (
           <div className="flex justify-center">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500 text-sm font-bold text-white">
-              M
-            </div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500 text-sm font-bold text-white">M</div>
           </div>
         ) : (
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500 text-sm font-bold text-white flex-shrink-0">
-              M
-            </div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500 text-sm font-bold text-white flex-shrink-0">M</div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-gray-900 truncate">Servio Moderator</p>
               <p className="text-xs text-gray-500 truncate">Review Center</p>
@@ -114,27 +102,12 @@ export const ModeratorSidebar: React.FC<ModeratorSidebarProps> = ({
                   <span className={`flex-shrink-0 ${active ? 'text-emerald-600' : 'text-gray-500 group-hover:text-gray-700'}`}>
                     {item.icon}
                   </span>
-
                   {(!isCollapsed || isMobile) && (
                     <span className="flex-1 text-left text-sm font-medium">{item.label}</span>
                   )}
-
-                  {(!isCollapsed || isMobile) && item.badge && (
-                    <span className="px-2 py-0.5 text-xs font-medium bg-red-500 text-white rounded-full">
-                      {item.badge}
-                    </span>
-                  )}
-
-                  {isCollapsed && !isMobile && item.badge && (
-                    <span className="absolute -top-1 -right-1 px-1.5 py-0.5 text-xs font-medium bg-red-500 text-white rounded-full">
-                      {item.badge}
-                    </span>
-                  )}
-
                   {isCollapsed && !isMobile && (
                     <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50">
                       {item.label}
-                      {item.badge ? ` (${item.badge})` : ''}
                     </div>
                   )}
                 </button>
@@ -175,17 +148,11 @@ export const ModeratorSidebar: React.FC<ModeratorSidebarProps> = ({
     return (
       <>
         {isMobileOpen && (
-          <div
-            className="fixed inset-0 bg-black/50 z-40 transition-opacity duration-300"
-            onClick={onMobileClose}
-            aria-hidden="true"
-          />
+          <div className="fixed inset-0 bg-black/50 z-40 transition-opacity duration-300" onClick={onMobileClose} aria-hidden="true" />
         )}
-        <div
-          className={`fixed top-0 left-0 bottom-0 z-50 w-72 bg-white shadow-2xl transition-transform duration-300 ease-in-out ${
-            isMobileOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}
-        >
+        <div className={`fixed top-0 left-0 bottom-0 z-50 w-72 bg-white shadow-2xl transition-transform duration-300 ease-in-out ${
+          isMobileOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}>
           <div className="h-full flex flex-col overflow-hidden">{content}</div>
         </div>
       </>
@@ -193,11 +160,9 @@ export const ModeratorSidebar: React.FC<ModeratorSidebarProps> = ({
   }
 
   return (
-    <aside
-      className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-300 h-full ${
-        isCollapsed ? 'w-20' : 'w-64'
-      }`}
-    >
+    <aside className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-300 h-full ${
+      isCollapsed ? 'w-20' : 'w-64'
+    }`}>
       {content}
     </aside>
   );

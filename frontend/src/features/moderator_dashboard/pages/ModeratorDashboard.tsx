@@ -3,24 +3,22 @@ import ModeratorLayout from '../components/ModeratorLayout';
 import type { ModeratorTab } from '../components/ModeratorSidebar';
 import {
   OverviewTab,
+  ModerationTab,
   FeedsTab,
-  JobsTab,
   UsersTab,
   ProfessionalsTab,
-  ModerationTab,
-  AuditLogsTab,
-  TeamTab,
+  JobsTab,
+  MyActivityTab,
 } from '../components/tabs';
 
 const tabMeta: Record<ModeratorTab, { title: string; subtitle: string }> = {
-  overview: { title: 'Overview', subtitle: 'Your moderation activity at a glance' },
-  moderation: { title: 'Moderation', subtitle: 'Review reports and take action' },
+  overview: { title: 'Overview', subtitle: 'Platform-wide metrics' },
+  moderation: { title: 'Moderation', subtitle: 'Review AI-flagged content' },
   feeds: { title: 'Feeds', subtitle: 'Moderate community content' },
   users: { title: 'Users', subtitle: 'Review user accounts' },
   professionals: { title: 'Professionals', subtitle: 'Review provider accounts' },
   jobs: { title: 'Jobs', subtitle: 'Monitor platform jobs' },
   audit_logs: { title: 'My Activity', subtitle: 'Your moderation history' },
-  team: { title: 'Team', subtitle: 'Your fellow moderators' },
 };
 
 const ModeratorDashboard: React.FC = () => {
@@ -34,8 +32,7 @@ const ModeratorDashboard: React.FC = () => {
       case 'users': return <UsersTab />;
       case 'professionals': return <ProfessionalsTab />;
       case 'jobs': return <JobsTab />;
-      case 'audit_logs': return <AuditLogsTab />;
-      case 'team': return <TeamTab />;
+      case 'audit_logs': return <MyActivityTab />;
       default: return <OverviewTab />;
     }
   };
