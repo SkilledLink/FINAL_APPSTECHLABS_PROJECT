@@ -51,7 +51,6 @@ class ProfessionalSearchService:
         filters_applied: List[str] = []
 
         try:
-            # ── Strategy 1: nearby ─────────────────────────
             if params.latitude is not None and params.longitude is not None:
                 filters_applied.append("nearby")
                 if params.verified_only:
@@ -60,32 +59,25 @@ class ProfessionalSearchService:
                     filters_applied.append("available_only")
                 if params.profession:
                     filters_applied.append(f"profession={params.profession}")
-
                 return self._search_nearby(params, filters_applied)
 
-            # ── Strategy 2: hybrid (semantic + keyword) ────
             if params.query and params.query.strip():
                 filters_applied.append("hybrid")
                 if params.city:
                     filters_applied.append(f"city={params.city}")
                 if params.region:
                     filters_applied.append(f"region={params.region}")
-
                 return self._search_hybrid(params, filters_applied)
 
-            # ── Strategy 3: filtered only ──────────────────
             filters_applied.append("filtered")
             return self._search_filtered(params, filters_applied)
 
         except Exception as e:
             logger.exception("ProfessionalSearchService.search failed: %s", e)
-            # Failure must never fabricate results.
             return ProfessionalSearchResult(
                 professionals=[],
                 metadata=SearchMetadata(
-                    total=0,
-                    returned=0,
-                    strategy="failed",
+                    total=0, returned=0, strategy="failed",
                     filters_applied=filters_applied,
                 ),
             )
@@ -111,11 +103,8 @@ class ProfessionalSearchService:
         return ProfessionalSearchResult(
             professionals=cards,
             metadata=SearchMetadata(
-                total=total,
-                returned=len(cards),
-                strategy="nearby",
-                had_location=True,
-                filters_applied=filters,
+                total=total, returned=len(cards), strategy="nearby",
+                had_location=True, filters_applied=filters,
             ),
         )
 
@@ -138,20 +127,12 @@ class ProfessionalSearchService:
             min_relevance=0.35,
         )
         cards = self._cards_from_hybrid(rows)
-
-        # Post-filter: verified/rating/available are not applied by
-        # hybrid_search (its SQL is scoring-focused). Apply them in
-        # Python on the small result set.
         cards = self._apply_soft_filters(cards, params)
-
         return ProfessionalSearchResult(
             professionals=cards,
             metadata=SearchMetadata(
-                total=len(cards),
-                returned=len(cards),
-                strategy="hybrid",
-                had_location=False,
-                filters_applied=filters,
+                total=len(cards), returned=len(cards), strategy="hybrid",
+                had_location=False, filters_applied=filters,
             ),
         )
 
@@ -169,11 +150,8 @@ class ProfessionalSearchService:
         return ProfessionalSearchResult(
             professionals=cards,
             metadata=SearchMetadata(
-                total=len(cards),
-                returned=len(cards),
-                strategy="keyword",
-                had_location=False,
-                filters_applied=filters,
+                total=len(cards), returned=len(cards), strategy="keyword",
+                had_location=False, filters_applied=filters,
             ),
         )
 
@@ -195,23 +173,19 @@ class ProfessionalSearchService:
         return ProfessionalSearchResult(
             professionals=cards,
             metadata=SearchMetadata(
-                total=total,
-                returned=len(cards),
-                strategy="filtered",
-                had_location=False,
-                filters_applied=filters,
+                total=total, returned=len(cards), strategy="filtered",
+                had_location=False, filters_applied=filters,
             ),
         )
 
     # ────────────────────────────────────────────────────────
-    #  MAPPERS — always to flat, JSON-safe dicts
+    #  MAPPERS
     # ────────────────────────────────────────────────────────
 
     def _cards_from_nearby(self, rows: list) -> List[ProfessionalCard]:
         cards: List[ProfessionalCard] = []
         for r in rows:
             prof = r.get("professional")
-            loc = r.get("location")
             dist = r.get("distance_km")
             if not prof:
                 continue
@@ -220,33 +194,54 @@ class ProfessionalSearchService:
 
     def _cards_from_hybrid(self, rows: list[dict]) -> List[ProfessionalCard]:
         """
-        hybrid_search / keyword_search return raw dicts from the
-        professionals + users join. We only trust fields we know
-        are public and present.
+        hybrid_search / keyword_search return dicts from a
+        professionals + users join. Populate what's available.
         """
         cards: List[ProfessionalCard] = []
         for row in rows:
             try:
+                first = row.get("first_name")
+                last = row.get("last_name")
+                username = row.get("username")
+                headline = row.get("headline")
+                profession = row.get("profession") or ""
+                display = (
+                    (f"{first or ''} {last or ''}".strip())
+                    or headline
+                    or profession
+                    or "Professional"
+                )
+
                 cards.append(
                     ProfessionalCard(
                         id=row["id"],
                         user_id=row["user_id"],
-                        name=(
-                            row.get("headline")
-                            or row.get("profession")
-                            or "Professional"
-                        ),
-                        profession=row.get("profession") or "",
-                        headline=row.get("headline"),
+                        name=display,
+                        first_name=first,
+                        last_name=last,
+                        username=username,
+                        profession=profession,
+                        headline=headline,
+                        company_name=row.get("company_name"),
                         city=row.get("city"),
+                        region=row.get("region"),
                         country=row.get("country"),
                         years_of_experience=row.get("years_of_experience"),
+                        skills=row.get("skills"),
+                        services=row.get("services"),
+                        hourly_rate=(
+                            float(row["hourly_rate"])
+                            if row.get("hourly_rate") is not None
+                            else None
+                        ),
+                        currency=row.get("currency") or "XAF",
                         rating=(
                             float(row["rating"])
                             if row.get("rating") is not None
                             else None
                         ),
                         total_reviews=row.get("total_reviews") or 0,
+                        completed_jobs=row.get("completed_jobs") or 0,
                         is_verified=bool(row.get("is_verified", False)),
                         available=bool(row.get("available", True)),
                         profile_image_url=row.get("profile_image_url"),
@@ -261,22 +256,50 @@ class ProfessionalSearchService:
     def _cards_from_orm(self, rows: list) -> List[ProfessionalCard]:
         return [self._card_from_orm(p) for p in rows]
 
-    def _card_from_orm(self, p, distance_km: Optional[float] = None) -> ProfessionalCard:
+    def _card_from_orm(
+        self, p, distance_km: Optional[float] = None
+    ) -> ProfessionalCard:
+        # Try to read related user. `p.user` is a lazy relationship.
+        user = getattr(p, "user", None)
+        first = getattr(user, "first_name", None) if user else None
+        last = getattr(user, "last_name", None) if user else None
+        username = getattr(user, "username", None) if user else None
+        profile_img = getattr(user, "profile_image_url", None) if user else None
+
+        display = (
+            (f"{first or ''} {last or ''}".strip())
+            or p.headline
+            or p.profession
+            or "Professional"
+        )
+
         return ProfessionalCard(
             id=p.id,
             user_id=p.user_id,
-            name=p.headline or p.profession or "Professional",
+            name=display,
+            first_name=first,
+            last_name=last,
+            username=username,
             profession=p.profession or "",
             headline=p.headline,
+            company_name=getattr(p, "company_name", None),
             city=p.city,
+            region=p.region,
             country=p.country,
+            distance_km=distance_km,
             years_of_experience=p.years_of_experience,
+            skills=getattr(p, "skills", None),
+            services=getattr(p, "services", None),
+            hourly_rate=(
+                float(p.hourly_rate) if p.hourly_rate is not None else None
+            ),
+            currency=getattr(p, "currency", None) or "XAF",
             rating=float(p.rating) if p.rating is not None else None,
             total_reviews=p.total_reviews or 0,
+            completed_jobs=getattr(p, "completed_jobs", 0) or 0,
             is_verified=bool(p.is_verified),
             available=bool(p.available),
-            profile_image_url=None,   # enriched by caller if needed
-            distance_km=distance_km,
+            profile_image_url=profile_img,
             profile_url=f"/professionals/{p.id}",
         )
 

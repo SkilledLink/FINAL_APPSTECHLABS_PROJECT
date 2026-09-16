@@ -1,5 +1,6 @@
+// components/AIMessage.tsx
 import React from 'react';
-import { Bot, User } from 'lucide-react';
+import { Bot, User, ArrowRight } from 'lucide-react';
 import type { ChatMessage, ActionCard } from '../types/ai.types';
 import { AIRecommendationCard } from './AIRecommendationCard';
 import { AIActionCard } from './AIActionCard';
@@ -62,6 +63,11 @@ function renderContent(content: string) {
 
 export function AIMessage({ message, onActionClick }: AIMessageProps) {
   const isUser = message.sender === 'user';
+  const hasCards =
+    !isUser &&
+    message.recommendations &&
+    message.recommendations.length > 0;
+  const hasRedirect = !isUser && !!message.redirectUrl;
 
   return (
     <div className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'} w-full`}>
@@ -85,12 +91,22 @@ export function AIMessage({ message, onActionClick }: AIMessageProps) {
           </div>
         </div>
 
-        {message.recommendations && message.recommendations.length > 0 && (
+        {hasCards && (
           <div className="mt-3 grid gap-3 grid-cols-1 sm:grid-cols-2 w-full">
-            {message.recommendations.map((rec) => (
+            {message.recommendations!.map((rec) => (
               <AIRecommendationCard key={rec.id} rec={rec} />
             ))}
           </div>
+        )}
+
+        {hasRedirect && (
+          <a
+            href={`#${message.redirectUrl}`}
+            className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold rounded-xl transition-colors"
+          >
+            See all results
+            <ArrowRight className="w-4 h-4" />
+          </a>
         )}
 
         {message.actionCards && message.actionCards.length > 0 && (

@@ -1,9 +1,11 @@
+# app/api/v1/chat.py
 import logging
+from collections import defaultdict
+from datetime import datetime, timedelta, timezone
 from typing import Dict
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
-from collections import defaultdict
-from datetime import datetime, timedelta
 
 from app.dependencies.current_user import get_current_active_user
 from app.database.session import get_session
@@ -21,16 +23,14 @@ RATE_LIMIT = 10  # requests per minute
 
 
 def check_rate_limit(user_id: str) -> bool:
-    """Return True if rate limit is exceeded."""
-    now = datetime.utcnow()
+    """Return True if the request is allowed."""
+    now = datetime.now(timezone.utc)
     cutoff = now - timedelta(minutes=1)
-
-    # Clean old entries
-    _rate_limit_store[user_id] = [ts for ts in _rate_limit_store[user_id] if ts > cutoff]
-
+    _rate_limit_store[user_id] = [
+        ts for ts in _rate_limit_store[user_id] if ts > cutoff
+    ]
     if len(_rate_limit_store[user_id]) >= RATE_LIMIT:
         return False
-
     _rate_limit_store[user_id].append(now)
     return True
 
@@ -43,13 +43,20 @@ def chat(
 ):
     """
     Send a message to the AI chatbot.
-    The bot will answer questions about the platform using a knowledge base.
+
+    The bot responds with text; when the message is a professional
+    search, the response also includes:
+      - `results`: structured professional cards
+      - `redirect_url`: deep link to /discovery pre-filled with the
+         same search parameters (frontend may use to hand off)
     """
-    # Rate limiting
     if not check_rate_limit(str(current_user.id)):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Rate limit exceeded. Please wait a moment before sending another message."
+            detail=(
+                "Rate limit exceeded. Please wait a moment before "
+                "sending another message."
+            ),
         )
 
     try:
@@ -57,13 +64,16 @@ def chat(
         result = service.process_message(current_user.id, request.message)
 
         return ChatResponse(
-            response=result["response"],
-            sources=result["sources"]
+            response=result.get("response", ""),
+            sources=result.get("sources"),
+            results=result.get("results"),
+            image_analysis=result.get("image_analysis"),
+            redirect_url=result.get("redirect_url"),
         )
 
     except Exception as e:
-        logger.error(f"Chat error for user {current_user.id}: {e}")
+        logger.error("Chat error for user %s: %s", current_user.id, e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to process your message. Please try again later."
+            detail="Failed to process your message. Please try again later.",
         )

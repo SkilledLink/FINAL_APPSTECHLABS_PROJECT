@@ -25,7 +25,7 @@ export default function AIAssistantPage() {
       id: 1,
       role: 'assistant',
       content:
-        'Hi! I’m the SkillHub Assistant. Tell me what you need, and I’ll help you find the right skilled people or opportunities.',
+        'Hi! I’m the SkilledLink Assistant. Tell me what you need, and I’ll help you find the right skilled people or opportunities.',
     },
   ]);
 

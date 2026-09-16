@@ -1,6 +1,7 @@
 # app/ai/providers/groq.py
 import logging
 import time
+from typing import Optional
 
 import httpx
 
@@ -13,8 +14,7 @@ from app.ai.providers.base import (
 
 logger = logging.getLogger(__name__)
 
-# ── Async client ─────────────────────────────────────────────
-_async_client: httpx.AsyncClient | None = None
+_async_client: Optional[httpx.AsyncClient] = None
 
 
 def _client() -> httpx.AsyncClient:
@@ -31,8 +31,7 @@ def _client() -> httpx.AsyncClient:
     return _async_client
 
 
-# ── Sync client ──────────────────────────────────────────────
-_sync_client: httpx.Client | None = None
+_sync_client: Optional[httpx.Client] = None
 
 
 def _sync_client_get() -> httpx.Client:
@@ -50,11 +49,8 @@ def _sync_client_get() -> httpx.Client:
 
 
 def _build_payload(
-    model: str,
-    prompt: str,
-    system_prompt: str,
-    max_tokens: int,
-    temperature: float,
+    model: str, prompt: str, system_prompt: str,
+    max_tokens: int, temperature: float,
 ) -> dict:
     return {
         "model": model,
@@ -68,15 +64,13 @@ def _build_payload(
     }
 
 
-def _classify_http_status(status: int) -> type[AIProviderError]:
-    """Map HTTP status to our error classes."""
+def _classify_http_status(status: int) -> type:
     if status == 429 or status >= 500:
         return AITransientError
     return AIPermanentError
 
 
 def _parse_response(resp: httpx.Response) -> tuple[str, dict]:
-    """Extract text + usage from a Groq chat completion response."""
     if resp.status_code >= 400:
         raise _classify_http_status(resp.status_code)(
             f"groq_http_{resp.status_code}: {resp.text[:200]}"
@@ -101,8 +95,7 @@ def _parse_response(resp: httpx.Response) -> tuple[str, dict]:
 def _log_usage(model: str, usage: dict, ms: int) -> None:
     logger.info(
         "ai.provider groq model=%s ms=%d in_tokens=%s out_tokens=%s total_tokens=%s",
-        model,
-        ms,
+        model, ms,
         usage.get("in_tokens"),
         usage.get("out_tokens"),
         usage.get("total_tokens"),
@@ -113,7 +106,6 @@ class GroqProvider(ChatProvider):
     name = "groq"
     model = settings.GROQ_CHAT_MODEL
 
-    # ── async ────────────────────────────────────────────────
     async def generate(
         self,
         *,
@@ -121,9 +113,10 @@ class GroqProvider(ChatProvider):
         system_prompt: str,
         max_tokens: int,
         temperature: float,
+        model: Optional[str] = None,
     ) -> str:
         payload = _build_payload(
-            self.model, prompt, system_prompt, max_tokens, temperature
+            model or self.model, prompt, system_prompt, max_tokens, temperature
         )
         started = time.perf_counter()
         try:
@@ -134,10 +127,9 @@ class GroqProvider(ChatProvider):
             raise AITransientError(f"groq_network: {e}") from e
 
         text, usage = _parse_response(resp)
-        _log_usage(self.model, usage, int((time.perf_counter() - started) * 1000))
+        _log_usage(payload["model"], usage, int((time.perf_counter() - started) * 1000))
         return text
 
-    # ── sync ─────────────────────────────────────────────────
     def generate_sync(
         self,
         *,
@@ -145,9 +137,10 @@ class GroqProvider(ChatProvider):
         system_prompt: str,
         max_tokens: int,
         temperature: float,
+        model: Optional[str] = None,
     ) -> str:
         payload = _build_payload(
-            self.model, prompt, system_prompt, max_tokens, temperature
+            model or self.model, prompt, system_prompt, max_tokens, temperature
         )
         started = time.perf_counter()
         try:
@@ -158,5 +151,5 @@ class GroqProvider(ChatProvider):
             raise AITransientError(f"groq_network: {e}") from e
 
         text, usage = _parse_response(resp)
-        _log_usage(self.model, usage, int((time.perf_counter() - started) * 1000))
+        _log_usage(payload["model"], usage, int((time.perf_counter() - started) * 1000))
         return text

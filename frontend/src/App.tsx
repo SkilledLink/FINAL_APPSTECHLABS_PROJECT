@@ -28,6 +28,10 @@ import ForgotPasswordPage from "./features/auth/pages/ForgotPasswordPage";
 import ResetPasswordPage from "./features/auth/pages/ResetPasswordPage";
 import VerifyEmailPage from "./features/auth/pages/VerifyEmailPage";
 
+// Onboarding pages  ← NEW
+import ChooseAccountTypePage from "./features/onboarding/pages/ChooseAccountTypePage";
+import ProfessionalWizardPage from "./features/onboarding/pages/ProfessionalWizardPage";
+
 // Auth hook
 import { useAuth } from "./features/auth/hooks/useAuth";
 
@@ -66,8 +70,6 @@ import ModeratorDashboard from "./features/moderator_dashboard/pages/ModeratorDa
 
 
 // ============================================================
-// TODO: replace with a real Professionals page if it exists
-// ============================================================
 const ProfessionalsPage = UsersPage;
 
 // ============================================================
@@ -101,14 +103,12 @@ function ProtectedRoute() {
 // ============================================================
 function ProfileRoute() {
   const { id } = useParams<{ id: string }>();
-
   return <ProfilePage userId={id ?? ""} />;
 }
 
 function JobDetailsRoute() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-
   return (
     <JobDetailsPage
       jobId={id ?? ""}
@@ -117,18 +117,9 @@ function JobDetailsRoute() {
   );
 }
 
-// ============================================================
-// PUBLIC PORTFOLIO ROUTE
-// ============================================================
 function PublicPortfolioRoute() {
-  const handleSelectProject = () => {
-    // Portfolio page is public and does not require project selection handling here.
-  };
-
-  const handleNavigateCreate = () => {
-    // Portfolio page is public and does not require creation handling here.
-  };
-
+  const handleSelectProject = () => {};
+  const handleNavigateCreate = () => {};
   return (
     <PortfolioPage
       onSelectProject={handleSelectProject}
@@ -139,7 +130,6 @@ function PublicPortfolioRoute() {
 
 function JobDetailsRedirect() {
   const { id } = useParams<{ id: string }>();
-
   return <Navigate to={`/home/jobs/${id}`} replace />;
 }
 
@@ -163,106 +153,68 @@ function App() {
           theme="light"
         />
 
-        {/* AI Widget */}
         <AIFloatingWidget />
 
         <Routes>
-          {/* ==================================================
-              LANDING PAGE (PUBLIC)
-              ================================================== */}
+          {/* LANDING (PUBLIC) */}
           <Route path="/" element={<LandingPage />} />
 
-          {/* ==================================================
-              AUTH ROUTES (PUBLIC-ONLY)
-              ================================================== */}
+          {/* AUTH ROUTES (PUBLIC-ONLY) — unchanged */}
           <Route element={<PublicOnlyRoute />}>
             <Route element={<AuthLayout />}>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/verify-email" element={<VerifyEmailPage />} />
-              <Route
-                path="/forgot-password"
-                element={<ForgotPasswordPage />}
-              />
-              <Route
-                path="/reset-password"
-                element={<ResetPasswordPage />}
-              />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
             </Route>
           </Route>
 
-          {/* ==================================================
-              AUTHENTICATED APPLICATION (PROTECTED)
-              ================================================== */}
+          {/* AUTHENTICATED (PROTECTED) */}
           <Route element={<ProtectedRoute />}>
+            {/* Onboarding — full-screen, siblings of /home  ← NEW */}
+            <Route path="/onboarding" element={<ChooseAccountTypePage />} />
+            <Route
+              path="/onboarding/professional"
+              element={<ProfessionalWizardPage />}
+            />
+
+            {/* Home (unchanged) */}
             <Route path="/home" element={<AppLayout />}>
               <Route index element={<HomePage />} />
               <Route path="feed" element={<Feed />} />
               <Route path="jobs" element={<JobsPage />} />
               <Route path="jobs/create" element={<CreateJobPage />} />
               <Route path="jobs/:id" element={<JobDetailsRoute />} />
-              <Route
-                path="discover"
-                element={<NearbyProfessionalsPage />}
-              />
-              <Route
-                path="portfolio"
-                element={<PortfolioDashboard />}
-              />
+              <Route path="discover" element={<NearbyProfessionalsPage />} />
+              <Route path="portfolio" element={<PortfolioDashboard />} />
+
+              {/* ✅ Messages — list-only and with an open conversation */}
               <Route path="messages" element={<MessagesPage />} />
-              <Route
-                path="professionals"
-                element={<ProfessionalsPage />}
-              />
+              <Route path="messages/:conversationId" element={<MessagesPage />} />
+
+              <Route path="professionals" element={<ProfessionalsPage />} />
               <Route path="users" element={<UsersPage />} />
-              <Route
-                path="verification"
-                element={<VerificationPage />}
-              />
-              <Route
-                path="marketplace"
-                element={<MarketplacePage />}
-              />
+              <Route path="verification" element={<VerificationPage />} />
+              <Route path="marketplace" element={<MarketplacePage />} />
               <Route path="profile" element={<ProfileRoute />} />
-              <Route
-                path="profile/:id"
-                element={<ProfileRoute />}
-              />
+              <Route path="profile/:id" element={<ProfileRoute />} />
             </Route>
 
-            {/* Direct URL Aliases / Fallbacks */}
-            <Route
-              path="/jobs"
-              element={<Navigate to="/home/jobs" replace />}
-            />
-
+            {/* Aliases (unchanged) */}
+            <Route path="/jobs" element={<Navigate to="/home/jobs" replace />} />
             <Route
               path="/jobs/create"
               element={<Navigate to="/home/jobs/create" replace />}
             />
-
-            <Route
-              path="/jobs/:id"
-              element={<JobDetailsRedirect />}
-            />
+            <Route path="/jobs/:id" element={<JobDetailsRedirect />} />
           </Route>
 
-          {/* ==================================================
-              PUBLIC PORTFOLIO
-              Accessible regardless of authentication
-              ================================================== */}
-          <Route
-            path="/portfolio"
-            element={<PublicPortfolioRoute />}
-          />
+          {/* PUBLIC PORTFOLIO */}
+          <Route path="/portfolio" element={<PublicPortfolioRoute />} />
 
-          {/* ==================================================
-              ADMIN DASHBOARD
-              ================================================== */}
-          <Route
-            path="/admin_dashbourd"
-            element={<AdminDashboard />}
-          />
+          {/* ADMIN */}
+          <Route path="/admin_dashbourd" element={<AdminDashboard />} />
 
           {/* ==================================================
               MODERATOR DASHBOARD (PUBLIC ROUTE)
@@ -276,6 +228,8 @@ function App() {
             path="*"
             element={<Navigate to="/" replace />}
           />
+          {/* CATCH-ALL */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

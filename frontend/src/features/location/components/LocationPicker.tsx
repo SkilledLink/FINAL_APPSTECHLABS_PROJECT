@@ -1,4 +1,6 @@
-import { useCallback, useState } from 'react';
+// src/features/location/components/LocationPicker.tsx
+
+import { useCallback, useEffect, useState } from 'react';
 import {
   AlertCircle,
   CheckCircle2,
@@ -28,6 +30,15 @@ interface LocationPickerProps {
   ) => Promise<void>;
   onCancel?: () => void;
   saving?: boolean;
+
+  /* ── NEW: embedded / wizard mode ─────────────────────── */
+  /** When true, hides the built-in Save/Cancel buttons and
+   *  reports the current value on every change via onLiveChange. */
+  live?: boolean;
+  onLiveChange?: (
+    input: ProfessionalLocationInput | null,
+    radiusKm: number
+  ) => void;
 }
 
 const DEFAULT_CENTER = { lat: 3.848, lng: 11.502 };
@@ -41,6 +52,8 @@ export default function LocationPicker({
   onSave,
   onCancel,
   saving = false,
+  live = false,
+  onLiveChange,
 }: LocationPickerProps) {
   const [lat, setLat] = useState(initialLatitude ?? DEFAULT_CENTER.lat);
   const [lng, setLng] = useState(initialLongitude ?? DEFAULT_CENTER.lng);
@@ -101,6 +114,25 @@ export default function LocationPicker({
     },
     [handleCurrentLocation]
   );
+
+  /* ── Live mode: report value upward on every change ───── */
+  useEffect(() => {
+    if (!live) return;
+    const trimmed = name.trim();
+    if (!trimmed) {
+      onLiveChange?.(null, radiusKm);
+      return;
+    }
+    onLiveChange?.(
+      {
+        latitude: lat,
+        longitude: lng,
+        location_name: trimmed,
+        ...meta,
+      },
+      radiusKm
+    );
+  }, [live, lat, lng, name, meta, radiusKm, onLiveChange]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -184,32 +216,35 @@ export default function LocationPicker({
         </div>
       )}
 
-      <div className="flex items-center gap-3 pt-2">
-        {onCancel && (
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={saving}
-            className="flex-1 rounded border border-slate-200/80 bg-white/70 py-3 text-sm font-semibold text-slate-700 backdrop-blur-md transition-colors hover:bg-white active:scale-[0.99] disabled:opacity-50 dark:border-white/10 dark:bg-slate-800/40 dark:text-slate-200 dark:hover:bg-slate-800/70"
-          >
-            Cancel
-          </button>
-        )}
-        <button
-          type="submit"
-          disabled={saving || resolving}
-          className="inline-flex flex-1 items-center justify-center gap-2 rounded bg-blue-600 py-3 text-sm font-semibold text-white shadow-md shadow-blue-500/25 transition-colors hover:bg-blue-500 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {saving ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Saving…</span>
-            </>
-          ) : (
-            <span>Save location</span>
+      {/* ── Built-in buttons hidden in live mode ───────────── */}
+      {!live && (
+        <div className="flex items-center gap-3 pt-2">
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={saving}
+              className="flex-1 rounded border border-slate-200/80 bg-white/70 py-3 text-sm font-semibold text-slate-700 backdrop-blur-md transition-colors hover:bg-white active:scale-[0.99] disabled:opacity-50 dark:border-white/10 dark:bg-slate-800/40 dark:text-slate-200 dark:hover:bg-slate-800/70"
+            >
+              Cancel
+            </button>
           )}
-        </button>
-      </div>
+          <button
+            type="submit"
+            disabled={saving || resolving}
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded bg-blue-600 py-3 text-sm font-semibold text-white shadow-md shadow-blue-500/25 transition-colors hover:bg-blue-500 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {saving ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Saving…</span>
+              </>
+            ) : (
+              <span>Save location</span>
+            )}
+          </button>
+        </div>
+      )}
     </form>
   );
 }

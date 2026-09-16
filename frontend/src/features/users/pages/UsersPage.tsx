@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -14,7 +14,7 @@ import {
   Users as UsersIcon,
 } from 'lucide-react';
 import { useUsers } from '../../../hooks/useUsers';
-import { useConversations } from '../../../hooks/useConversations';
+import { useConversations } from '../../messages/hooks/useConversations';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { useFollow } from '../../../hooks/useFollow';
 import type { User as UserType } from '../../../types/user';
@@ -26,6 +26,12 @@ export default function UsersPage() {
   const { getOrCreateDirect } = useConversations();
   const { follow, unfollow } = useFollow();
   const [searchQuery, setSearchQuery] = useState('');
+  const [localUsers, setLocalUsers] = useState<UserType[]>(users);
+  const [messagingId, setMessagingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLocalUsers(users);
+  }, [users]);
 
   if (!isAuthenticated()) {
     return (
@@ -41,11 +47,17 @@ export default function UsersPage() {
   };
 
   const handleMessage = async (targetUserId: string) => {
+    if (messagingId) return; // prevent double-clicks
+    setMessagingId(targetUserId);
     try {
       const conversation = await getOrCreateDirect(targetUserId);
-      navigate(`/messages/${conversation.id}`);
+      navigate(`/home/messages/${conversation.id}`);
     } catch (err: any) {
-      toast.error(err.message || 'Failed to start conversation');
+      toast.error(
+        err?.response?.data?.detail || err?.message || 'Failed to start conversation',
+      );
+    } finally {
+      setMessagingId(null);
     }
   };
 
@@ -53,19 +65,19 @@ export default function UsersPage() {
     try {
       if (isFollowing) {
         await unfollow(targetUserId);
-        setUsers(prev => prev.map(u =>
-          u.id === targetUserId ? { ...u, is_following: false } : u
-        ));
+        setLocalUsers(prev =>
+          prev.map(u => (u.id === targetUserId ? { ...u, is_following: false } : u)),
+        );
         toast.success('Unfollowed');
       } else {
         await follow(targetUserId);
-        setUsers(prev => prev.map(u =>
-          u.id === targetUserId ? { ...u, is_following: true } : u
-        ));
+        setLocalUsers(prev =>
+          prev.map(u => (u.id === targetUserId ? { ...u, is_following: true } : u)),
+        );
         toast.success('Followed');
       }
     } catch (err: any) {
-      toast.error(err.message || 'Failed to update follow status');
+      toast.error(err?.response?.data?.detail || err?.message || 'Failed to update follow status');
     }
   };
 
@@ -110,7 +122,7 @@ export default function UsersPage() {
         <input
           type="text"
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={e => setSearchQuery(e.target.value)}
           placeholder="Search users by name, skill, or location..."
           className="w-full pl-10 pr-4 py-2.5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:outline-none text-sm"
         />
@@ -118,10 +130,11 @@ export default function UsersPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <AnimatePresence mode="popLayout">
-          {users.map((user) => {
+          {users.map(user => {
             const isProfessional = user.account_type?.toLowerCase() === 'professional';
             const isCurrentUser = currentUser?.id === user.id;
             const isFollowing = user.is_following || false;
+            const isMessaging = messagingId === user.id;
 
             return (
               <motion.div
@@ -136,6 +149,7 @@ export default function UsersPage() {
                   className="cursor-pointer"
                   onClick={() => navigate(`/home/profile/${user.id}`)}
                 >
+                <div className="cursor-pointer" onClick={() => navigate(`/profile/${user.id}`)}>
                   <div className="flex items-start gap-4">
                     <div className="relative shrink-0">
                       <div className="w-14 h-14 rounded-full overflow-hidden bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800 border-2 border-white dark:border-slate-700 shadow-md">
@@ -147,7 +161,8 @@ export default function UsersPage() {
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold text-xl">
-                            {user.first_name?.[0]}{user.last_name?.[0]}
+                            {user.first_name?.[0]}
+                            {user.last_name?.[0]}
                           </div>
                         )}
                       </div>
@@ -170,7 +185,9 @@ export default function UsersPage() {
                         )}
                       </div>
                       {user.username && (
-                        <p className="text-xs text-slate-500 dark:text-slate-400">@{user.username}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          @{user.username}
+                        </p>
                       )}
                       {user.location && (
                         <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
@@ -200,9 +217,18 @@ export default function UsersPage() {
                     <>
                       <button
                         onClick={() => handleMessage(user.id)}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition-all shadow-sm hover:shadow-md active:scale-95"
+                        disabled={isMessaging}
+                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition-all shadow-sm hover:shadow-md active:scale-95 disabled:opacity-60 disabled:cursor-wait"
                       >
-                        <MessageCircle size={14} /> Message
+                        {isMessaging ? (
+                          <>
+                            <Loader2 size={14} className="animate-spin" /> Opening…
+                          </>
+                        ) : (
+                          <>
+                            <MessageCircle size={14} /> Message
+                          </>
+                        )}
                       </button>
                       <button
                         onClick={() => handleFollowToggle(user.id, isFollowing)}
@@ -217,7 +243,9 @@ export default function UsersPage() {
                     </>
                   )}
                   {isCurrentUser && (
-                    <span className="text-xs text-slate-400 dark:text-slate-500 italic">This is you</span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500 italic">
+                      This is you
+                    </span>
                   )}
                   <button
                     onClick={() => navigate(`/profile/${user.id}`)}
@@ -235,7 +263,9 @@ export default function UsersPage() {
       {users.length === 0 && !loading && (
         <div className="text-center py-16">
           <User size={48} className="mx-auto text-slate-300 dark:text-slate-600 mb-3" />
-          <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300">No users found</h3>
+          <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300">
+            No users found
+          </h3>
           <p className="text-sm text-slate-500 dark:text-slate-400">Try adjusting your search</p>
         </div>
       )}
