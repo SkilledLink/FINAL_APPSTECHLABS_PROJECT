@@ -1,3 +1,4 @@
+
 # app/main.py
 
 from contextlib import asynccontextmanager
@@ -27,6 +28,10 @@ from app.api.v1 import chat
 from app.api.v1.chat import router as chat_router
 from app.api.v1.ai_search import router as ai_search_router          # ✅ NEW
 from app.models.audit_log import AuditLog  # noqa: F401
+from app.models.audit_log import AuditLog  # noqa: F401 registers with SQLModel.metadata
+
+# ─── Contact Messages ──────────────────────────────────────
+from app.api.v1.contact_messages import router as contact_messages_router
 
 # ─── Webhooks ──────────────────────────────────────────────
 from app.webhooks import router as webhooks_router
@@ -46,6 +51,11 @@ from app.models.professional_audit_log import ProfessionalAuditLog
 from app.models.job import Job, JobImage, JobLike, JobComment
 from app.api.v1.admin import admin_router
 from app.api.v1.moderator import moderator_router
+from app.models.contact_messages import Contact2_Message
+from app.models.job import Job, JobImage, JobLike, JobComment
+from app.api.v1.admin import admin_router
+from app.api.v1.moderator import moderator_router
+
 from app.models.professional_portfolio import (
     ProfessionalCategory,
     ProfessionalSpecialty,
@@ -55,6 +65,7 @@ from app.models.professional_portfolio import (
     ProfessionalService,
     ProfessionalAvailability,
 )
+
 from app.models.feed import (
     Feed,
     FeedMedia,
@@ -63,6 +74,7 @@ from app.models.feed import (
     Hashtag,
     FeedHashtag,
 )
+
 from app.models.moderation_record import ModerationRecord  # noqa: F401
 from app.models.notification import Notification  # noqa: F401
 from app.api.v1.notifications import router as notifications_router
@@ -73,23 +85,33 @@ from app.api.v1.reports import router as report_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("⏳ Attempting to connect to the database...")
+
     try:
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
+
         print("✅ Database connection successful!")
+
         SQLModel.metadata.create_all(engine)
+
         print("✅ Database tables are ready.")
+
     except OperationalError as e:
         print("❌ Database connection FAILED.")
         print(f"Error details: {e}")
         raise e
+
     yield
+
     print("⏳ Shutting down...")
     engine.dispose()
 
 
 # ─── App instance ──────────────────────────────────────────
-app = FastAPI(title="Appstect API", lifespan=lifespan)
+app = FastAPI(
+    title="Appstect API",
+    lifespan=lifespan,
+)
 
 
 # ─── CORS ──────────────────────────────────────────────────
@@ -108,6 +130,12 @@ app.include_router(conversations_router)
 app.include_router(messages_router)
 app.include_router(uploads_router)
 app.include_router(users_router)
+
+# ─── Contact Messages ──────────────────────────────────────
+# Public POST /contact-messages
+# Admin-only GET/PATCH/POST-reply endpoints are protected
+# inside the contact_messages router.
+app.include_router(contact_messages_router)
 
 # Professionals — static-prefix routers first
 app.include_router(location_router)
@@ -131,7 +159,7 @@ app.include_router(moderator_router)
 app.include_router(notifications_router)
 app.include_router(report_router)
 
-# Webhooks (global)
+# ─── Webhooks (global) ─────────────────────────────────────
 app.include_router(webhooks_router)
 
 
@@ -141,6 +169,12 @@ def health_check():
     try:
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
+
         return {"status": "connected"}
+
     except Exception as e:
-        return {"status": "disconnected", "error": str(e)}
+        return {
+            "status": "disconnected",
+            "error": str(e),
+        }
+
