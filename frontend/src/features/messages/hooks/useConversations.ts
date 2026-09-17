@@ -50,12 +50,8 @@ function mapBackendConversation(backend: any): Conversation {
       audioDetails: isVoice
         ? {
             url: attachmentUrl,
-            duration: lm.duration_seconds
-              ? `${Math.floor(lm.duration_seconds)}s`
-              : '0s',
-            waveform: Array.from({ length: 15 }, () =>
-              Math.floor(Math.random() * 75 + 25),
-            ),
+            duration: lm.duration_seconds ? `${Math.floor(lm.duration_seconds)}s` : '0s',
+            waveform: Array.from({ length: 15 }, () => Math.floor(Math.random() * 75 + 25)),
           }
         : undefined,
       fileDetails: lm.attachment_name
@@ -90,13 +86,11 @@ export function useConversations() {
   const [error, setError] = useState<Error | null>(null);
   const fetchingRef = useRef(false);
 
-  // ── List ──────────────────────────────────────────────────
   const fetchConversations = useCallback(async () => {
     if (!isAuthenticated() || !user || fetchingRef.current) {
       setLoading(false);
       return;
     }
-
     try {
       fetchingRef.current = true;
       setLoading(true);
@@ -115,29 +109,49 @@ export function useConversations() {
     fetchConversations();
   }, [fetchConversations]);
 
-  // ── Direct conversation (used by UsersPage / UserCard) ────
   const getOrCreateDirect = useCallback(async (userId: string) => {
     const raw = await conversationsApi.getOrCreateDirect(userId);
     const mapped = mapBackendConversation(raw);
-
-    // Merge into local state so the list updates immediately
-    setConversations((prev) => {
-      const exists = prev.some((c) => c.id === mapped.id);
+    setConversations(prev => {
+      const exists = prev.some(c => c.id === mapped.id);
       return exists ? prev : [mapped, ...prev];
     });
-
     return mapped;
   }, []);
 
-  // ── Update one in place (used by MessagesPage) ────────────
-  const updateConversation = useCallback(
-    (id: string, updates: Partial<Conversation>) => {
-      setConversations((prev) =>
-        prev.map((c) => (c.id === id ? { ...c, ...updates } : c)),
-      );
+  const updateConversation = useCallback((id: string, updates: Partial<Conversation>) => {
+    setConversations(prev => prev.map(c => (c.id === id ? { ...c, ...updates } : c)));
+  }, []);
+
+  const applyIncomingMessage = useCallback(
+    (message: Message, isActiveConversation: boolean, currentUserId: string) => {
+      setConversations(prev => {
+        const idx = prev.findIndex(c => c.id === message.conversation_id);
+        if (idx === -1) return prev;
+
+        const conv = prev[idx];
+        const isFromSelf = message.sender_id === currentUserId;
+
+        const updated: Conversation = {
+          ...conv,
+          lastMessage: message,
+          updated_at: message.created_at,
+          unreadCount:
+            isActiveConversation || isFromSelf ? conv.unreadCount : (conv.unreadCount || 0) + 1,
+        };
+
+        const next = [...prev];
+        next.splice(idx, 1);
+        next.unshift(updated);
+        return next;
+      });
     },
     [],
   );
+
+  const clearUnread = useCallback((id: string) => {
+    setConversations(prev => prev.map(c => (c.id === id ? { ...c, unreadCount: 0 } : c)));
+  }, []);
 
   return {
     conversations,
@@ -145,7 +159,9 @@ export function useConversations() {
     error,
     refetch: fetchConversations,
     fetchConversations,
-    getOrCreateDirect,   // ← now available to UsersPage / UserCard
+    getOrCreateDirect,
     updateConversation,
+    applyIncomingMessage,
+    clearUnread,
   };
 }

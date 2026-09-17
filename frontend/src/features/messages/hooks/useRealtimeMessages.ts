@@ -1,84 +1,50 @@
 import { useEffect, useRef } from 'react';
-import { supabase } from '../lib/supabase';
+import { useSocketContext } from '../../../contexts/SocketContext';
+import { SocketEvents } from '../../../Service/socket/socketEvents';
 import type { Message } from '../types/message.types';
-import { mapBackendMessage } from './useMessages';
+import { mapBackendMessage } from '../../../hooks/useMessages';
 
 export function useRealtimeMessages(
-  conversationId: string | null,
   onNewMessage: (message: Message) => void,
   onMessageUpdate?: (message: Message) => void,
-  onMessageDelete?: (messageId: string) => void
+  onMessageDelete?: (messageId: string) => void,
 ) {
-  const channelRef = useRef<any>(null);
-  const onNewMessageRef = useRef(onNewMessage);
-  const onMessageUpdateRef = useRef(onMessageUpdate);
-  const onMessageDeleteRef = useRef(onMessageDelete);
+  const { socket } = useSocketContext();
+  const onNewRef = useRef(onNewMessage);
+  const onUpdRef = useRef(onMessageUpdate);
+  const onDelRef = useRef(onMessageDelete);
+
+  useEffect(() => { onNewRef.current = onNewMessage; }, [onNewMessage]);
+  useEffect(() => { onUpdRef.current = onMessageUpdate; }, [onMessageUpdate]);
+  useEffect(() => { onDelRef.current = onMessageDelete; }, [onMessageDelete]);
 
   useEffect(() => {
-    onNewMessageRef.current = onNewMessage;
-  }, [onNewMessage]);
-  useEffect(() => {
-    onMessageUpdateRef.current = onMessageUpdate;
-  }, [onMessageUpdate]);
-  useEffect(() => {
-    onMessageDeleteRef.current = onMessageDelete;
-  }, [onMessageDelete]);
+    if (!socket) return;
 
-  useEffect(() => {
-    if (!conversationId) {
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
-      }
-      return;
-    }
+    const handleNew = (payload: any) => {
+      const mapped = mapBackendMessage(payload);
+      mapped.status = 'sent';
+      onNewRef.current(mapped);
+    };
+    const handleUpdated = (payload: any) => {
+      if (!onUpdRef.current) return;
+      onUpdRef.current(mapBackendMessage(payload));
+    };
+    const handleDeleted = (payload: { message_id: string }) => {
+      if (!onDelRef.current) return;
+      onDelRef.current(payload.message_id);
+    };
 
-    if (channelRef.current) {
-      supabase.removeChannel(channelRef.current);
-      channelRef.current = null;
-    }
-
-    const channel = supabase.channel(`conversation:${conversationId}`);
-
-    channel
-      .on('broadcast', { event: 'message_created' }, ({ payload }) => {
-        const mapped = mapBackendMessage(payload.message);
-        // Ensure status is 'sent' for real-time messages
-        mapped.status = 'sent';
-        onNewMessageRef.current(mapped);
-      })
-      .on('broadcast', { event: 'message_updated' }, ({ payload }) => {
-        if (onMessageUpdateRef.current) {
-          const mapped = mapBackendMessage(payload.message);
-          onMessageUpdateRef.current(mapped);
-        }
-      })
-      .on('broadcast', { event: 'message_deleted' }, ({ payload }) => {
-        if (onMessageDeleteRef.current) {
-          onMessageDeleteRef.current(payload.messageId);
-        }
-      })
-      .subscribe();
-
-    channelRef.current = channel;
+    socket.on(SocketEvents.NEW_MESSAGE, handleNew);
+    socket.on('message_updated', handleUpdated);
+    socket.on('message_deleted', handleDeleted);
 
     return () => {
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
-      }
+      socket.off(SocketEvents.NEW_MESSAGE, handleNew);
+      socket.off('message_updated', handleUpdated);
+      socket.off('message_deleted', handleDeleted);
     };
-  }, [conversationId]);
+  }, [socket]);
 
-  const broadcastMessage = (message: any) => {
-    if (channelRef.current) {
-      channelRef.current.send({
-        type: 'broadcast',
-        event: 'message_created',
-        payload: { message },
-      });
-    }
-  };
-
-  return { broadcastMessage };
+  return { broadcastMessage: (_: any) => {} };
 }

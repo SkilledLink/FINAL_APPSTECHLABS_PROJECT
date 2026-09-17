@@ -4,22 +4,23 @@ import { normalizeId } from '../utils/idUtils';
 
 export function useAuth() {
   const [user, setUser] = useState<any>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const stored = localStorage.getItem('user');
-    console.log('📦 Raw user from localStorage:', stored);
+
+    // JWT may live at various keys depending on your login flow — check them all.
+    const jwt =
+      localStorage.getItem('access_token') ||
+      localStorage.getItem('token') ||
+      localStorage.getItem('jwt') ||
+      null;
 
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        console.log('📦 Parsed user object:', parsed);
-
-        const rawId = parsed.user_id || parsed.id;
-        console.log('🔑 Raw ID from parsed object:', rawId);
-
-        const cleanId = normalizeId(rawId);
-        console.log('🧹 Cleaned ID:', cleanId);
+        const cleanId = normalizeId(parsed.user_id || parsed.id);
 
         setUser({
           id: cleanId,
@@ -28,16 +29,18 @@ export function useAuth() {
           last_name: parsed.last_name,
           account_type: parsed.account_type,
         });
+        setToken(parsed.access_token || parsed.token || jwt);
       } catch (err) {
         console.error('❌ Failed to parse user:', err);
         setUser(null);
+        setToken(jwt);
       }
     } else {
-      console.warn('⚠️ No user found in localStorage');
       setUser(null);
+      setToken(jwt);
     }
     setLoading(false);
   }, []);
 
-  return { user, loading };
+  return { user, token, loading };
 }
