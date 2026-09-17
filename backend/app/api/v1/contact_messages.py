@@ -39,7 +39,7 @@ def get_contact_messages(
     _: object = Depends(require_admin),
 ):
     service = ContactMessageService(session)
-    return service.repo.list_all()
+    return service.repo.get_all()
 
 
 @router.get(

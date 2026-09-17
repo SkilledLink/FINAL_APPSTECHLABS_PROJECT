@@ -10,6 +10,7 @@ import {
   ModerationTab,
   AuditLogsTab,
   AdministratorsTab,
+  ContactMessagesTab,
 } from '../components/tabs';
 
 const tabMeta: Record<AdminTab, { title: string; subtitle: string }> = {
@@ -21,6 +22,7 @@ const tabMeta: Record<AdminTab, { title: string; subtitle: string }> = {
   moderation: { title: 'Moderation', subtitle: 'Review reports and take action' },
   audit_logs: { title: 'Audit Logs', subtitle: 'Administrator activity history' },
   administrators: { title: 'Administrators', subtitle: 'Manage admin team members' },
+  contact_messages: { title: 'Contact Messages', subtitle: 'View and respond to messages from users' },
 };
 
 const AdminDashboard: React.FC = () => {
@@ -36,6 +38,7 @@ const AdminDashboard: React.FC = () => {
       case 'moderation': return <ModerationTab />;
       case 'audit_logs': return <AuditLogsTab />;
       case 'administrators': return <AdministratorsTab />;
+      case 'contact_messages': return <ContactMessagesTab />;
       default: return <OverviewTab />;
     }
   };
