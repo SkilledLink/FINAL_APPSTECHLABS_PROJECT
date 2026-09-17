@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -13,6 +14,7 @@ import "react-toastify/dist/ReactToastify.css";
 
 // Providers
 import { AuthProvider } from "./providers/AuthProvider";
+import { SocketProvider } from "./contexts/SocketContext";   // ← NEW
 
 // Layouts
 import { AuthLayout } from "./features/auth/components/AuthLayout";
@@ -28,7 +30,7 @@ import ForgotPasswordPage from "./features/auth/pages/ForgotPasswordPage";
 import ResetPasswordPage from "./features/auth/pages/ResetPasswordPage";
 import VerifyEmailPage from "./features/auth/pages/VerifyEmailPage";
 
-// Onboarding pages  ← NEW
+// Onboarding pages
 import ChooseAccountTypePage from "./features/onboarding/pages/ChooseAccountTypePage";
 import ProfessionalWizardPage from "./features/onboarding/pages/ProfessionalWizardPage";
 
@@ -61,16 +63,44 @@ import MarketplacePage from "./features/Market/pages/Marketplace/Marketplace";
 // Verification
 import { VerificationPage } from "./verification/pages/VerificationPage";
 
-
- 
 // Admin
 import AdminDashboard from "./features/admin_dashboard/pages/AdminDashboard";
 import AdminCheck from "./features/admin_dashboard/components/AdminCheck";
 import ModeratorDashboard from "./features/moderator_dashboard/pages/ModeratorDashboard";
 
-
 // ============================================================
 const ProfessionalsPage = UsersPage;
+
+// ============================================================
+// SOCKET AUTH BRIDGE
+// Reads the JWT from localStorage (same source the messages
+// useAuth hook reads from) and forwards it to SocketProvider.
+// Replace the key names below if your login stores the token
+// under a different localStorage key.
+// ============================================================
+function AuthedSocketProvider({ children }: { children: React.ReactNode }) {
+  const readToken = () =>
+    localStorage.getItem("access_token") ||
+    localStorage.getItem("token") ||
+    localStorage.getItem("jwt") ||
+    null;
+
+  const [token, setToken] = useState<string | null>(() => readToken());
+
+  useEffect(() => {
+    // Re-read token when login/logout happens in this tab (focus)
+    // or another tab (storage event).
+    const sync = () => setToken(readToken());
+    window.addEventListener("storage", sync);
+    window.addEventListener("focus", sync);
+    return () => {
+      window.removeEventListener("storage", sync);
+      window.removeEventListener("focus", sync);
+    };
+  }, []);
+
+  return <SocketProvider token={token}>{children}</SocketProvider>;
+}
 
 // ============================================================
 // PUBLIC-ONLY ROUTE
@@ -139,99 +169,92 @@ function JobDetailsRedirect() {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <ToastContainer
-          position="top-right"
-          autoClose={3000}
-          hideProgressBar={false}
-          newestOnTop
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="light"
-        />
-
-        <AIFloatingWidget />
-
-        <Routes>
-          {/* LANDING (PUBLIC) */}
-          <Route path="/" element={<LandingPage />} />
-
-          {/* AUTH ROUTES (PUBLIC-ONLY) — unchanged */}
-          <Route element={<PublicOnlyRoute />}>
-            <Route element={<AuthLayout />}>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/verify-email" element={<VerifyEmailPage />} />
-              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
-            </Route>
-          </Route>
-
-          {/* AUTHENTICATED (PROTECTED) */}
-          <Route element={<ProtectedRoute />}>
-            {/* Onboarding — full-screen, siblings of /home  ← NEW */}
-            <Route path="/onboarding" element={<ChooseAccountTypePage />} />
-            <Route
-              path="/onboarding/professional"
-              element={<ProfessionalWizardPage />}
-            />
-
-            {/* Home (unchanged) */}
-            <Route path="/home" element={<AppLayout />}>
-              <Route index element={<HomePage />} />
-              <Route path="feed" element={<Feed />} />
-              <Route path="jobs" element={<JobsPage />} />
-              <Route path="jobs/create" element={<CreateJobPage />} />
-              <Route path="jobs/:id" element={<JobDetailsRoute />} />
-              <Route path="discover" element={<NearbyProfessionalsPage />} />
-              <Route path="portfolio" element={<PortfolioDashboard />} />
-
-              {/* ✅ Messages — list-only and with an open conversation */}
-              <Route path="messages" element={<MessagesPage />} />
-              <Route path="messages/:conversationId" element={<MessagesPage />} />
-
-              <Route path="professionals" element={<ProfessionalsPage />} />
-              <Route path="users" element={<UsersPage />} />
-              <Route path="verification" element={<VerificationPage />} />
-              <Route path="marketplace" element={<MarketplacePage />} />
-              <Route path="profile" element={<ProfileRoute />} />
-              <Route path="profile/:id" element={<ProfileRoute />} />
-            </Route>
-
-            {/* Aliases (unchanged) */}
-            <Route path="/jobs" element={<Navigate to="/home/jobs" replace />} />
-            <Route
-              path="/jobs/create"
-              element={<Navigate to="/home/jobs/create" replace />}
-            />
-            <Route path="/jobs/:id" element={<JobDetailsRedirect />} />
-          </Route>
-
-          {/* PUBLIC PORTFOLIO */}
-          <Route path="/portfolio" element={<PublicPortfolioRoute />} />
-
-          {/* ADMIN */}
-          <Route path="/admin_dashbourd" element={<AdminDashboard />} />
-
-          {/* ==================================================
-              MODERATOR DASHBOARD (PUBLIC ROUTE)
-          ================================================== */}
-          <Route path="/moderator_dashbourd" element={<ModeratorDashboard />} />
-
-          {/* ==================================================
-              CATCH-ALL
-              ================================================== */}
-          <Route
-            path="*"
-            element={<Navigate to="/" replace />}
+      <AuthedSocketProvider>
+        <BrowserRouter>
+          <ToastContainer
+            position="top-right"
+            autoClose={3000}
+            hideProgressBar={false}
+            newestOnTop
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme="light"
           />
-          {/* CATCH-ALL */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
+
+          <AIFloatingWidget />
+
+          <Routes>
+            {/* LANDING (PUBLIC) */}
+            <Route path="/" element={<LandingPage />} />
+
+            {/* AUTH ROUTES (PUBLIC-ONLY) */}
+            <Route element={<PublicOnlyRoute />}>
+              <Route element={<AuthLayout />}>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/verify-email" element={<VerifyEmailPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
+              </Route>
+            </Route>
+
+            {/* AUTHENTICATED (PROTECTED) */}
+            <Route element={<ProtectedRoute />}>
+              {/* Onboarding — full-screen, siblings of /home */}
+              <Route path="/onboarding" element={<ChooseAccountTypePage />} />
+              <Route
+                path="/onboarding/professional"
+                element={<ProfessionalWizardPage />}
+              />
+
+              {/* Home */}
+              <Route path="/home" element={<AppLayout />}>
+                <Route index element={<HomePage />} />
+                <Route path="feed" element={<Feed />} />
+                <Route path="jobs" element={<JobsPage />} />
+                <Route path="jobs/create" element={<CreateJobPage />} />
+                <Route path="jobs/:id" element={<JobDetailsRoute />} />
+                <Route path="discover" element={<NearbyProfessionalsPage />} />
+                <Route path="portfolio" element={<PortfolioDashboard />} />
+
+                {/* ✅ Messages — list-only and with an open conversation */}
+                <Route path="messages" element={<MessagesPage />} />
+                <Route path="messages/:conversationId" element={<MessagesPage />} />
+
+                <Route path="professionals" element={<ProfessionalsPage />} />
+                <Route path="users" element={<UsersPage />} />
+                <Route path="verification" element={<VerificationPage />} />
+                <Route path="marketplace" element={<MarketplacePage />} />
+                <Route path="profile" element={<ProfileRoute />} />
+                <Route path="profile/:id" element={<ProfileRoute />} />
+              </Route>
+
+              {/* Aliases */}
+              <Route path="/jobs" element={<Navigate to="/home/jobs" replace />} />
+              <Route
+                path="/jobs/create"
+                element={<Navigate to="/home/jobs/create" replace />}
+              />
+              <Route path="/jobs/:id" element={<JobDetailsRedirect />} />
+            </Route>
+
+            {/* PUBLIC PORTFOLIO */}
+            <Route path="/portfolio" element={<PublicPortfolioRoute />} />
+
+            {/* ADMIN */}
+            <Route path="/admin_dashbourd" element={<AdminDashboard />} />
+
+            {/* MODERATOR DASHBOARD (PUBLIC ROUTE) */}
+            <Route path="/moderator_dashbourd" element={<ModeratorDashboard />} />
+
+            {/* CATCH-ALL */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthedSocketProvider>
     </AuthProvider>
   );
 }

@@ -26,6 +26,8 @@ interface ChatWindowProps {
   onBack?: () => void;
   onReplyMessage?: (message: Message) => void;
   onReactMessage?: (messageId: string, emoji: string) => void;
+  onTypingChange?: (isTyping: boolean) => void;                // ← NEW
+  typingUsers?: Record<string, boolean>;                       // ← NEW
 }
 
 // ─── 🌌 Canvas Universe Animated Background (Active in Dark Mode) ───
@@ -52,7 +54,6 @@ const UniverseBackground: React.FC = () => {
     updateSize();
     window.addEventListener('resize', updateSize);
 
-    // Generate Stars
     const starCount = 140;
     const stars = Array.from({ length: starCount }, () => ({
       x: Math.random() * (width || 1000),
@@ -64,7 +65,6 @@ const UniverseBackground: React.FC = () => {
       color: Math.random() > 0.7 ? '#93c5fd' : Math.random() > 0.4 ? '#c084fc' : '#ffffff',
     }));
 
-    // Draw Loop
     const render = () => {
       if (width === 0 || height === 0) updateSize();
       ctx.clearRect(0, 0, width, height);
@@ -101,7 +101,6 @@ const UniverseBackground: React.FC = () => {
 
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 hidden dark:block">
-      {/* Dynamic Animated Ambient Space Nebulae */}
       <motion.div
         animate={{
           scale: [1, 1.3, 1],
@@ -131,7 +130,6 @@ const UniverseBackground: React.FC = () => {
         className="absolute -bottom-40 left-1/3 w-[28rem] h-[28rem] bg-gradient-to-t from-fuchsia-600/30 via-indigo-600/20 to-transparent rounded-full blur-3xl"
       />
 
-      {/* Canvas Starfield */}
       <canvas ref={canvasRef} className="w-full h-full block opacity-100" />
     </div>
   );
@@ -160,6 +158,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   onBack,
   onReplyMessage,
   onReactMessage,
+  onTypingChange,          // ← NEW
+  typingUsers,             // ← NEW
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -194,7 +194,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   };
 
-  // Group messages by sender within 1 minute
   const groupedMessages = messages.reduce((acc, msg, index) => {
     const prev = messages[index - 1];
     const isSameSender = prev && prev.sender_id === msg.sender_id;
@@ -207,6 +206,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     }
     return acc;
   }, [] as Message[][]);
+
+  // ← NEW: is anyone currently typing?
+  const someoneIsTyping = !!typingUsers && Object.values(typingUsers).some(Boolean);
 
   // ── EMPTY WORKSPACE STATE ──
   if (!conversation) {
@@ -265,17 +267,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   // ── ACTIVE CONVERSATION WINDOW ──
   return (
     <div className="flex flex-col h-[100dvh] lg:h-full max-h-[100dvh] lg:max-h-full w-full min-h-0 overflow-hidden bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 relative">
-      {/* Light Mode Soft Blue Background Glow */}
       <LightAmbientGlow />
-
-      {/* Dark Mode Galaxy Universe Canvas & Nebulae */}
       <UniverseBackground />
 
       {/* ── PERMANENTLY FIXED TOP HEADER ── */}
       <header className="flex-none shrink-0 w-full relative z-30 bg-white/95 dark:bg-slate-950/90 backdrop-blur-xl border-b border-blue-100/80 dark:border-slate-800/80 shadow-xs shadow-blue-500/5 pt-safe">
         <ChatHeader user={conversation.participant} onBack={onBack} />
 
-        {/* Security Badge Sub-header */}
         <div className="flex items-center justify-center gap-2 py-1 px-4 bg-blue-50/50 dark:bg-indigo-950/40 border-t border-blue-100/60 dark:border-slate-800/40 text-[11px] font-semibold text-slate-500 dark:text-slate-400 backdrop-blur-sm">
           <motion.div
             animate={{ scale: [1, 1.25, 1] }}
@@ -325,6 +323,28 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             );
           })}
         </AnimatePresence>
+
+        {/* ← NEW: typing indicator anchored to the bottom of the message list */}
+        <AnimatePresence>
+          {someoneIsTyping && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 6 }}
+              className="flex items-center gap-2 pl-2 pt-1"
+            >
+              <div className="flex items-center gap-1 px-3 py-2 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/60">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+              <span className="text-xs italic text-slate-400 dark:text-slate-500">
+                {conversation.participant?.name || 'Someone'} is typing…
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div ref={messagesEndRef} />
       </main>
 
@@ -337,6 +357,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           onSendImage={onSendImage}
           uploading={uploading}
           uploadProgress={uploadProgress}
+          onTypingChange={onTypingChange}       // ← NEW
         />
       </footer>
     </div>

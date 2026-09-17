@@ -246,5 +246,9 @@ class Settings(BaseSettings):
     MODERATION_GROQ_BASE_URL: str = "https://api.groq.com/openai/v1"
     MODERATION_GEMINI_MODEL: str = "models/gemini-3.6-flash"
 
+        # ── Socket.IO ───────────────────────────────────────────
+    SOCKET_CORS_ORIGINS: str = "http://localhost:5173"
+    SOCKET_PATH: str = "socket.io"
+
 
 settings = Settings()

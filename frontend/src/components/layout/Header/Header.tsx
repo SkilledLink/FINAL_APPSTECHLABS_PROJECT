@@ -105,11 +105,11 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
 
   return (
     <>
-      <header className="h-20 w-full bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border-b border-blue-400/20 dark:border-blue-400/20 flex items-center justify-between px-6 sm:px-8 z-30 shadow-sm transition-colors duration-300 shrink-0 relative overflow-hidden">
+      <header className="h-20 w-full bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border-b border-blue-300/30 dark:border-blue-400/20 flex items-center justify-between px-6 sm:px-8 z-30 shadow-sm transition-colors duration-300 shrink-0 relative overflow-hidden">
         {/* Background lightning */}
         <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
           <svg
-            className="w-full h-full opacity-35 dark:opacity-45"
+            className="w-full h-full opacity-40 dark:opacity-45"
             viewBox="0 0 1200 80"
             preserveAspectRatio="none"
             fill="none"
@@ -137,9 +137,9 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
                 x2="100%"
                 y2="0%"
               >
-                <stop offset="0%" stopColor="#93c5fd" stopOpacity="0.6" />
-                <stop offset="50%" stopColor="#60a5fa" stopOpacity="0.8" />
-                <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.2" />
+                <stop offset="0%" stopColor="#93c5fd" stopOpacity="0.8" />
+                <stop offset="50%" stopColor="#93c5fd" stopOpacity="0.9" />
+                <stop offset="100%" stopColor="#60a5fa" stopOpacity="0.3" />
               </linearGradient>
             </defs>
 
@@ -151,7 +151,7 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
               filter="url(#light-blue-glow-header)"
               initial={{ opacity: 0.3 }}
               animate={{
-                opacity: [0.25, 0.6, 0.3, 0.7, 0.35],
+                opacity: [0.3, 0.7, 0.3, 0.8, 0.4],
                 strokeWidth: [0.9, 1.2, 0.9, 1.3, 1],
               }}
               transition={{
@@ -167,10 +167,10 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
               stroke="#93c5fd"
               strokeWidth="0.75"
               strokeLinecap="round"
-              opacity="0.4"
+              opacity="0.5"
               filter="url(#light-blue-glow-header)"
               initial={{ opacity: 0.15 }}
-              animate={{ opacity: [0.1, 0.5, 0.15, 0.55, 0.1] }}
+              animate={{ opacity: [0.15, 0.6, 0.2, 0.65, 0.15] }}
               transition={{
                 duration: 2.8,
                 repeat: Infinity,
@@ -180,7 +180,8 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
             />
           </svg>
 
-          <div className="absolute -top-10 left-1/3 w-72 h-24 bg-blue-400/10 dark:bg-blue-500/15 rounded-full blur-3xl" />
+          {/* Glowing gradient aura with blue-300 accent for light mode */}
+          <div className="absolute -top-10 left-1/3 w-72 h-24 bg-blue-300/20 dark:bg-blue-500/15 rounded-full blur-3xl" />
         </div>
 
         {/* Logo */}
@@ -189,7 +190,7 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
             to="/"
             className="text-2xl font-black tracking-tight text-slate-900 dark:text-white shrink-0 select-none"
           >
-            Skilled<span className="text-blue-600 dark:text-blue-400">Link</span>
+            Skilled<span className="text-blue-500 dark:text-blue-400">Link</span>
           </Link>
         </div>
 
@@ -197,23 +198,23 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
         <div className="flex items-center gap-2.5 sm:gap-3 z-10 relative shrink-0">
           <button
             onClick={() => setIsSearchOpen(true)}
-            className="p-2 text-slate-700 dark:text-slate-200 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-all relative border border-transparent hover:border-white/50 dark:hover:border-slate-700/50"
+            className="p-2 text-slate-700 dark:text-slate-200 hover:bg-blue-50/60 dark:hover:bg-slate-800/60 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-all relative border border-transparent hover:border-blue-200/50 dark:hover:border-slate-700/50"
             aria-label="Search"
           >
             <Search size={20} />
           </button>
 
           <button
-            className="p-2 text-slate-700 dark:text-slate-200 hover:bg-white/60 dark:hover:bg-slate-800/60 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-all relative border border-transparent hover:border-white/50 dark:hover:border-slate-700/50"
+            className="p-2 text-slate-700 dark:text-slate-200 hover:bg-blue-50/60 dark:hover:bg-slate-800/60 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-all relative border border-transparent hover:border-blue-200/50 dark:hover:border-slate-700/50"
             aria-label="Notifications"
           >
             <Bell size={20} />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-600 rounded-full ring-2 ring-white dark:ring-slate-900" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-500 rounded-full ring-2 ring-white dark:ring-slate-900" />
           </button>
         </div>
       </header>
 
-      {/* Search Modal */}
+      {/* Fullscreen Search Modal Overlay */}
       <AnimatePresence>
         {isSearchOpen && (
           <motion.div
@@ -221,7 +222,7 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 bg-slate-50/95 dark:bg-slate-950/95 backdrop-blur-xl overflow-y-auto"
+            className="fixed inset-0 z-[9999] w-screen h-screen bg-slate-50/90 dark:bg-slate-950/90 backdrop-blur-2xl overflow-y-auto"
             onMouseDown={(e) => {
               if (e.target === e.currentTarget) {
                 closeSearch();
@@ -242,7 +243,7 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
                 {/* Search header */}
                 <div className="flex items-center justify-between mb-8">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-1">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-blue-500 dark:text-blue-400 mb-1">
                       SkilledLink
                     </p>
 
@@ -278,7 +279,7 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search professionals, jobs, services..."
-                    className="w-full h-16 pl-14 pr-16 text-base sm:text-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 dark:focus:border-blue-400 transition-all text-slate-900 dark:text-white placeholder:text-slate-400"
+                    className="w-full h-16 pl-14 pr-16 text-base sm:text-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-300/30 focus:border-blue-400 dark:focus:border-blue-400 transition-all text-slate-900 dark:text-white placeholder:text-slate-400"
                     autoFocus
                   />
 
@@ -295,7 +296,7 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
                 {/* Searching */}
                 {isSearching && (
                   <div className="mt-10 flex flex-col items-center justify-center py-12">
-                    <div className="w-9 h-9 border-2 border-blue-100 dark:border-blue-900 border-t-blue-600 dark:border-t-blue-400 rounded-full animate-spin mb-4" />
+                    <div className="w-9 h-9 border-2 border-blue-100 dark:border-blue-900 border-t-blue-500 dark:border-t-blue-400 rounded-full animate-spin mb-4" />
 
                     <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
                       Finding professionals...
@@ -380,7 +381,7 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
                                         className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover border border-slate-200 dark:border-slate-700"
                                       />
                                     ) : (
-                                      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800/50 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-lg">
+                                      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-blue-50 dark:bg-blue-900/30 border border-blue-200/60 dark:border-blue-800/50 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-lg">
                                         {professional.first_name?.[0]?.toUpperCase()}
                                         {professional.last_name?.[0]?.toUpperCase()}
                                       </div>

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { ConversationList } from '../components/ConversationList';
 import { ChatWindow } from '../components/ChatWindow';
 import { useConversations } from '../../../hooks/useConversations';
@@ -8,40 +8,105 @@ import { useSendMessage } from '../hooks/useSendMessage';
 import { useVoiceUpload } from '../hooks/useVoiceUpload';
 import { useFileUpload } from '../hooks/useFileUpload';
 import { useAuth } from '../hooks/useAuth';
+import { useTyping } from '../hooks/useTyping';
+import { usePresence } from '../hooks/usePresence';
+import { useSocketContext } from '../../../contexts/SocketContext';
 import { formatFileSize, getFileIcon } from '../utils/fileUtils';
 import { normalizeId } from '../utils/idUtils';
 
 export const MessagesPage: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
+  const { socket } = useSocketContext();
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [displayConversations, setDisplayConversations] = useState<any[]>([]);
 
-  const { conversations, loading: convLoading, error: convError, updateConversation } = useConversations();
-  const { messages, setMessages, confirmMessage, addOptimistic } = useMessages(activeConversationId);
-  const { send, sending } = useSendMessage(activeConversationId);
+  const { conversations, loading: convLoading, error: convError } = useConversations();
+
+  useEffect(() => {
+    setDisplayConversations(conversations);
+  }, [conversations]);
+
+  const { messages, setMessages, confirmMessage, addOptimistic } =
+    useMessages(activeConversationId);
+  const { send } = useSendMessage(activeConversationId);
   const { uploadVoice, uploading: voiceUploading } = useVoiceUpload();
   const { uploadFile, uploading: fileUploading, progress: uploadProgress } = useFileUpload();
 
-  const isUploading = voiceUploading || fileUploading || sending;
+  const isUploading = voiceUploading || fileUploading;
   const currentUserId = normalizeId(user?.id);
 
-  const handleNewMessage = useCallback(
+  // ✅ GLOBAL presence — not tied to active conversation.
+  const { onlineUsers } = usePresence(currentUserId);
+
+  // ✅ GLOBAL typing (still per-conversation on the server side, but hook always
+  // listens so switching conversations works instantly).
+  const { typingUsers, sendTyping } = useTyping(activeConversationId, currentUserId);
+
+  // ✅ GLOBAL new_message listener — updates conversation list even when
+  // the user is on a different conversation or on the list view.
+  const handleGlobalNewMessage = useCallback(
     (newMsg: any) => {
-      setMessages((prev) => {
-        if (prev.some((m) => m.id === newMsg.id)) return prev;
-        const withoutTemp = prev.filter((m) => m.id !== newMsg.id && !m.id.startsWith('temp-'));
-        return [...withoutTemp, newMsg];
-      });
-      if (updateConversation) {
-        updateConversation(newMsg.conversation_id, {
+      const isActive = newMsg.conversation_id === activeConversationId;
+
+      // Update the sidebar: lastMessage, unread badge, move to top.
+      setDisplayConversations(prev => {
+        const index = prev.findIndex(conversation => conversation.id === newMsg.conversation_id);
+        if (index < 0) return prev;
+
+        const updated = {
+          ...prev[index],
           lastMessage: newMsg,
-          updated_at: newMsg.created_at,
+          last_message: newMsg,
+          unreadCount: isActive
+            ? 0
+            : (prev[index].unreadCount ?? prev[index].unread_count ?? 0) + 1,
+          unread_count: isActive
+            ? 0
+            : (prev[index].unread_count ?? prev[index].unreadCount ?? 0) + 1,
+        };
+        return [updated, ...prev.filter((_, itemIndex) => itemIndex !== index)];
+      });
+
+      // If this is the active conversation, add to the messages list too.
+      if (isActive) {
+        setMessages(prev => {
+          if (prev.some(m => m.id === newMsg.id)) return prev;
+          const withoutTemp = prev.filter(
+            m =>
+              m.id !== newMsg.id &&
+              !(
+                typeof m.id === 'string' &&
+                m.id.startsWith('temp-') &&
+                m.client_message_id === newMsg.client_message_id
+              ),
+          );
+          return [...withoutTemp, newMsg];
         });
+
+        // User is looking at this conversation → tell server it's read.
+        if (socket) {
+          socket.emit('message_read', { conversation_id: newMsg.conversation_id });
+        }
       }
     },
-    [setMessages, updateConversation]
+    [activeConversationId, setMessages, currentUserId, socket],
   );
 
-  const { broadcastMessage } = useRealtimeMessages(activeConversationId, handleNewMessage);
+  useRealtimeMessages(handleGlobalNewMessage);
+
+  // When user opens a conversation, clear its unread badge locally and mark
+  // it read on the server.
+  useEffect(() => {
+    if (!activeConversationId || !socket) return;
+    setDisplayConversations(prev =>
+      prev.map(conversation =>
+        conversation.id === activeConversationId
+          ? { ...conversation, unreadCount: 0, unread_count: 0 }
+          : conversation,
+      ),
+    );
+    socket.emit('message_read', { conversation_id: activeConversationId });
+  }, [activeConversationId, socket]);
 
   const handleSelectConversation = useCallback((id: string) => {
     setActiveConversationId(id);
@@ -51,7 +116,6 @@ export const MessagesPage: React.FC = () => {
   const handleSendMessage = useCallback(
     async (text: string) => {
       if (!activeConversationId) return;
-      // ✅ Generate clientMessageId once
       const clientMessageId = crypto.randomUUID();
       const tempId = `temp-${clientMessageId}`;
 
@@ -69,26 +133,20 @@ export const MessagesPage: React.FC = () => {
       };
       addOptimistic(tempMessage);
 
-      // ✅ Pass clientMessageId to send
-      const { realMessage, rawMessage, error } = await send(clientMessageId, text, 'text');
-      if (realMessage && rawMessage) {
+      const { realMessage, error } = await send(clientMessageId, text, 'text');
+      if (realMessage) {
         confirmMessage(realMessage);
-        broadcastMessage(rawMessage);
-        if (updateConversation) {
-          updateConversation(activeConversationId, {
-            lastMessage: realMessage,
-            updated_at: realMessage.created_at,
-          });
-        }
       } else if (error) {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === tempId ? { ...m, content: '❌ Failed to send', text: '❌ Failed to send', status: 'failed' } : m
-          )
+        setMessages(prev =>
+          prev.map(m =>
+            m.id === tempId
+              ? { ...m, content: '❌ Failed to send', text: '❌ Failed to send', status: 'failed' }
+              : m,
+          ),
         );
       }
     },
-    [activeConversationId, send, confirmMessage, broadcastMessage, updateConversation, setMessages, addOptimistic, currentUserId]
+    [activeConversationId, send, confirmMessage, setMessages, addOptimistic, currentUserId],
   );
 
   // ── Send File / Image ──────────────────────────────────────
@@ -124,7 +182,7 @@ export const MessagesPage: React.FC = () => {
         };
         addOptimistic(tempMessage);
 
-        const { realMessage, rawMessage, error } = await send(
+        const { realMessage, error } = await send(
           clientMessageId,
           null,
           isImage ? 'image' : 'file',
@@ -132,37 +190,38 @@ export const MessagesPage: React.FC = () => {
           undefined,
           name,
           type,
-          size
+          size,
         );
 
-        if (realMessage && rawMessage) {
+        if (realMessage) {
           confirmMessage(realMessage);
-          broadcastMessage(rawMessage);
-          if (updateConversation) {
-            updateConversation(activeConversationId, {
-              lastMessage: realMessage,
-              updated_at: realMessage.created_at,
-            });
-          }
         } else if (error) {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === tempId ? { ...m, attachment_path: undefined, status: 'failed' } : m
-            )
+          setMessages(prev =>
+            prev.map(m =>
+              m.id === tempId ? { ...m, attachment_path: undefined, status: 'failed' } : m,
+            ),
           );
         }
       } catch (err) {
         console.error('File upload failed', err);
       }
     },
-    [activeConversationId, uploadFile, send, confirmMessage, broadcastMessage, updateConversation, setMessages, addOptimistic, currentUserId]
+    [
+      activeConversationId,
+      uploadFile,
+      send,
+      confirmMessage,
+      setMessages,
+      addOptimistic,
+      currentUserId,
+    ],
   );
 
   const handleSendImage = useCallback(
     async (file: File) => {
       await handleSendFile(file);
     },
-    [handleSendFile]
+    [handleSendFile],
   );
 
   // ── Send Voice Note ────────────────────────────────────────
@@ -197,70 +256,77 @@ export const MessagesPage: React.FC = () => {
         };
         addOptimistic(tempMessage);
 
-        const { realMessage, rawMessage, error } = await send(
+        const { realMessage, error } = await send(
           clientMessageId,
           null,
           'voice',
           publicUrl,
-          durationNum
+          durationNum,
         );
 
-        if (realMessage && rawMessage) {
+        if (realMessage) {
           confirmMessage(realMessage);
-          broadcastMessage(rawMessage);
-          if (updateConversation) {
-            updateConversation(activeConversationId, {
-              lastMessage: realMessage,
-              updated_at: realMessage.created_at,
-            });
-          }
         } else if (error) {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === tempId ? { ...m, attachment_path: undefined, status: 'failed' } : m
-            )
+          setMessages(prev =>
+            prev.map(m =>
+              m.id === tempId ? { ...m, attachment_path: undefined, status: 'failed' } : m,
+            ),
           );
         }
       } catch (err) {
         console.error('Voice upload failed', err);
       }
     },
-    [activeConversationId, uploadVoice, send, confirmMessage, broadcastMessage, updateConversation, setMessages, addOptimistic, currentUserId]
+    [
+      activeConversationId,
+      uploadVoice,
+      send,
+      confirmMessage,
+      setMessages,
+      addOptimistic,
+      currentUserId,
+    ],
   );
 
+  // ✅ Enrich EVERY conversation with online status from the presence hook.
+  const conversationsWithPresence = useMemo(() => {
+    return displayConversations.map(c => {
+      if (!c.participant) return c;
+      const isOnline = onlineUsers.includes(c.participant.id);
+      return { ...c, participant: { ...c.participant, isOnline } };
+    });
+  }, [displayConversations, onlineUsers]);
+
   const activeConversation = useMemo(
-    () => conversations.find((c) => c.id === activeConversationId) || null,
-    [conversations, activeConversationId]
+    () => conversationsWithPresence.find(c => c.id === activeConversationId) || null,
+    [conversationsWithPresence, activeConversationId],
   );
 
   if (authLoading || convLoading) {
-    return <div className="flex items-center justify-center h-screen">Loading conversations...</div>;
+    return (
+      <div className="flex items-center justify-center h-screen">Loading conversations...</div>
+    );
   }
-
   if (convError) {
-    return <div className="text-red-500 p-4">Error: {convError.message}</div>;
+    return <div className="text-red-500 p-4">Error: {convError}</div>;
   }
 
   return (
     <div className="h-screen w-full flex overflow-hidden border-x border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-2xl">
       <div
-        className={`${
-          activeConversationId ? 'hidden lg:block' : 'w-full'
-        } lg:w-auto h-full shrink-0 transition-all duration-300 ease-in-out`}
+        className={`${activeConversationId ? 'hidden lg:block' : 'w-full'} lg:w-auto h-full shrink-0 transition-all duration-300 ease-in-out`}
       >
         <ConversationList
-          conversations={conversations}
+          conversations={conversationsWithPresence as any}
           activeId={activeConversationId}
           onSelectConversation={handleSelectConversation}
         />
       </div>
       <div
-        className={`${
-          !activeConversationId ? 'hidden lg:flex' : 'flex'
-        } flex-1 h-full transition-all duration-300 ease-in-out`}
+        className={`${!activeConversationId ? 'hidden lg:flex' : 'flex'} flex-1 h-full transition-all duration-300 ease-in-out`}
       >
         <ChatWindow
-          conversation={activeConversation}
+          conversation={activeConversation as any}
           messages={messages}
           currentUserId={currentUserId}
           onSendMessage={handleSendMessage}
@@ -270,6 +336,8 @@ export const MessagesPage: React.FC = () => {
           uploading={isUploading}
           uploadProgress={uploadProgress}
           onBack={() => setActiveConversationId(null)}
+          onTypingChange={sendTyping}
+          typingUsers={typingUsers}
         />
       </div>
     </div>

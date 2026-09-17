@@ -1,3 +1,4 @@
+# app/repositories/conversation_repository.py
 from sqlmodel import Session, select, func
 from uuid import UUID
 from typing import List, Optional
@@ -6,6 +7,7 @@ from app.models.conversation_participant import ConversationParticipant
 from app.models.message import Message
 from datetime import datetime
 
+
 class ConversationRepository:
     def __init__(self, session: Session):
         self.session = session
@@ -13,7 +15,7 @@ class ConversationRepository:
     def is_participant(self, conversation_id: UUID, user_id: UUID) -> bool:
         stmt = select(ConversationParticipant).where(
             ConversationParticipant.conversation_id == conversation_id,
-            ConversationParticipant.user_id == user_id
+            ConversationParticipant.user_id == user_id,
         )
         return self.session.exec(stmt).first() is not None
 
@@ -21,7 +23,11 @@ class ConversationRepository:
         subq = select(ConversationParticipant.conversation_id).where(
             ConversationParticipant.user_id == user_id
         ).subquery()
-        stmt = select(Conversation).where(Conversation.id.in_(subq)).order_by(Conversation.updated_at.desc())
+        stmt = (
+            select(Conversation)
+            .where(Conversation.id.in_(subq))
+            .order_by(Conversation.updated_at.desc())
+        )
         return self.session.exec(stmt).all()
 
     def create_conversation(self, conv_data: dict, participant_ids: List[UUID]) -> Conversation:
@@ -33,7 +39,7 @@ class ConversationRepository:
             participant = ConversationParticipant(
                 conversation_id=conv.id,
                 user_id=uid,
-                last_read_at=None
+                last_read_at=None,
             )
             self.session.add(participant)
         self.session.commit()
@@ -43,7 +49,7 @@ class ConversationRepository:
     def update_last_read(self, conversation_id: UUID, user_id: UUID) -> None:
         stmt = select(ConversationParticipant).where(
             ConversationParticipant.conversation_id == conversation_id,
-            ConversationParticipant.user_id == user_id
+            ConversationParticipant.user_id == user_id,
         )
         participant = self.session.exec(stmt).first()
         if participant:
@@ -55,7 +61,6 @@ class ConversationRepository:
         """
         Find a direct conversation (type='direct') between exactly these two users.
         """
-        # Get conversation IDs where both are participants
         stmt = (
             select(ConversationParticipant.conversation_id)
             .where(ConversationParticipant.user_id.in_([user_id1, user_id2]))
@@ -66,7 +71,6 @@ class ConversationRepository:
         if not conv_ids:
             return None
         conv_id = conv_ids[0]
-        # Ensure it's a direct conversation (optional but safe)
         conv = self.session.get(Conversation, conv_id)
         if conv and conv.type == "direct":
             return conv
@@ -79,9 +83,12 @@ class ConversationRepository:
         return self.session.exec(stmt).all()
 
     def get_last_message(self, conversation_id: UUID) -> Optional[dict]:
-        stmt = select(Message).where(
-            Message.conversation_id == conversation_id
-        ).order_by(Message.created_at.desc()).limit(1)
+        stmt = (
+            select(Message)
+            .where(Message.conversation_id == conversation_id)
+            .order_by(Message.created_at.desc())
+            .limit(1)
+        )
         msg = self.session.exec(stmt).first()
         if msg:
             return {
@@ -94,19 +101,28 @@ class ConversationRepository:
         return None
 
     def count_unread(self, conversation_id: UUID, user_id: UUID) -> int:
-        # Find user's last_read_at
+        """
+        Count messages the user hasn't read yet.
+
+        - Excludes messages the user themselves sent.
+        - Uses `last_read_at` if set; otherwise falls back to `joined_at`,
+          so messages that existed before the user joined don't count.
+        """
         participant = self.session.exec(
             select(ConversationParticipant).where(
                 ConversationParticipant.conversation_id == conversation_id,
-                ConversationParticipant.user_id == user_id
+                ConversationParticipant.user_id == user_id,
             )
         ).first()
-        if not participant or participant.last_read_at is None:
-            # Count all messages in conversation
-            stmt = select(func.count()).where(Message.conversation_id == conversation_id)
-        else:
-            stmt = select(func.count()).where(
-                Message.conversation_id == conversation_id,
-                Message.created_at > participant.last_read_at
-            )
+
+        if not participant:
+            return 0
+
+        baseline = participant.last_read_at or participant.joined_at
+
+        stmt = select(func.count()).where(
+            Message.conversation_id == conversation_id,
+            Message.sender_id != user_id,
+            Message.created_at > baseline,
+        )
         return self.session.exec(stmt).first() or 0
