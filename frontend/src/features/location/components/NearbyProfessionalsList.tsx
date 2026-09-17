@@ -1,6 +1,7 @@
 // src/features/location/components/NearbyProfessionalsList.tsx
 import { AlertCircle, Loader2, MapPin, MapPinOff, SearchX } from 'lucide-react';
 import { useEffect, useMemo, useRef } from 'react';
+import { useProfileNavigation } from '../../profile/hooks/useProfileNavigation';
 import type { DiscoverProfessional, PublicLocation } from '../types/location.types';
 import LocationMap, { type MapMarker } from './LocationMap';
 import NearbyProfessionalCard from './NearbyProfessionalCard';
@@ -159,6 +160,9 @@ export default function NearbyProfessionalsList({
   /* Geocoded fallback for professionals without a public_location */
   const fallbacks = useFallbackGeocoding(list);
 
+  /* Profile navigation for map pins (imperative — links don't work in map portals) */
+  const { href: buildProfileHref } = useProfileNavigation(undefined);
+
   useEffect(() => {
     if (!activeId) return;
     const el = cardRefs.current[activeId];
@@ -180,6 +184,11 @@ export default function NearbyProfessionalsList({
 
           const isApproximate = !real && !!fallback;
 
+          // Prefer the professional record's user id when present,
+          // otherwise fall back to the record's own id.
+          const profileUserId =
+            (p.user as { id?: string } | undefined)?.id ?? p.id;
+
           return {
             id: p.id,
             latitude: lat,
@@ -190,11 +199,17 @@ export default function NearbyProfessionalsList({
             name: `${p.user?.first_name ?? ''} ${
               p.user?.last_name ?? ''
             }`.trim(),
-            onClick: onHover ? () => onHover(p.id) : undefined,
+            onClick: () => {
+              // Keep hover state in sync for the highlighted card,
+              // then navigate to the profile.
+              onHover?.(p.id);
+              const href = buildProfileHref(profileUserId);
+              if (href) window.location.assign(href);
+            },
           } as MapMarker;
         })
         .filter((m): m is MapMarker => m !== null),
-    [list, fallbacks, activeId, onHover]
+    [list, fallbacks, activeId, onHover, buildProfileHref]
   );
 
   const missingCount = list.filter(
@@ -343,6 +358,8 @@ export default function NearbyProfessionalsList({
                     : ''
                 }`}
               >
+                {/* NearbyProfessionalCard is responsible for wrapping the
+                    avatar + name in ProfileLink. See notes below. */}
                 <NearbyProfessionalCard professional={p} />
 
                 {hasReal && (

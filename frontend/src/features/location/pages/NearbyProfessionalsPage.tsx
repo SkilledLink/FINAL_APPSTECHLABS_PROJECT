@@ -72,11 +72,8 @@ export default function NearbyProfessionalsPage() {
   );
 
   const hasSearched = useMemo(
-    () =>
-      isAI
-        ? aiSearch.total > 0 || aiSearch.imageAnalysis != null
-        : Boolean(form.profession || form.location || form.verifiedOnly),
-    [isAI, aiSearch.total, aiSearch.imageAnalysis, form]
+    () => Boolean(form.profession || form.location || form.verifiedOnly),
+    [form]
   );
 
   /* ── Auto-trigger AI search from URL params ───────────── */
@@ -226,37 +223,34 @@ export default function NearbyProfessionalsPage() {
               </div>
             </div>
 
-            {/* View toggle — hidden in AI mode */}
-            {!isAI && (
-              <div className="self-start lg:self-end">
-                <div className="inline-flex items-center rounded border border-white/10 bg-white/5 p-1 backdrop-blur-md">
-                  <button
-                    type="button"
-                    onClick={() => setView('map')}
-                    aria-pressed={view === 'map'}
-                    className={`inline-flex items-center gap-2 rounded-sm px-3.5 py-1.5 text-xs font-semibold transition-colors ${
-                      view === 'map'
-                        ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/25'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <MapIcon className="h-3.5 w-3.5" />
-                    <span>Map</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setView('list')}
-                    aria-pressed={view === 'list'}
-                    className={`inline-flex items-center gap-2 rounded-sm px-3.5 py-1.5 text-xs font-semibold transition-colors ${
-                      view === 'list'
-                        ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/25'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <List className="h-3.5 w-3.5" />
-                    <span>List</span>
-                  </button>
-                </div>
+            <div className="self-start lg:self-end">
+              <div className="inline-flex items-center rounded border border-white/10 bg-white/5 p-1 backdrop-blur-md">
+                <button
+                  type="button"
+                  onClick={() => setView('map')}
+                  aria-pressed={view === 'map'}
+                  className={`inline-flex items-center gap-2 rounded-sm px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+                    view === 'map'
+                      ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/25'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <MapIcon className="h-3.5 w-3.5" />
+                  <span>Map</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setView('list')}
+                  aria-pressed={view === 'list'}
+                  className={`inline-flex items-center gap-2 rounded-sm px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+                    view === 'list'
+                      ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/25'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <List className="h-3.5 w-3.5" />
+                  <span>List</span>
+                </button>
               </div>
             )}
           </div>

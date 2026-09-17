@@ -42,12 +42,28 @@ const mapDetail = (d: any): ModerationDetail => ({
   imageResults: d.image_results ?? null,
 });
 
+export interface ModerationQueuePage {
+  items: ModerationQueueItem[];
+  total: number;
+}
+
 export const moderationService = {
-  async getQueue(): Promise<ModerationQueueItem[]> {
+  async getQueuePage(
+    skip: number,
+    limit: number,
+  ): Promise<ModerationQueuePage> {
     const { data } = await api.get('/admin/moderation/queue', {
-      params: { skip: 0, limit: 100 },
+      params: { skip, limit },
     });
-    return (data.items ?? []).map(mapItem);
+    return {
+      items: (data.items ?? []).map(mapItem),
+      total: data.total ?? 0,
+    };
+  },
+
+  async getQueue(limit = 100): Promise<ModerationQueueItem[]> {
+    const { items } = await this.getQueuePage(0, limit);
+    return items;
   },
 
   async getRecord(id: string): Promise<ModerationDetail> {
