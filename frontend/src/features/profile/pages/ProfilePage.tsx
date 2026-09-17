@@ -14,6 +14,8 @@ import { ProfileAbout } from '../components/ProfileAbout';
 import { ProfileSkills } from '../components/ProfileSkills';
 import { ProfileExperience } from '../components/ProfileExperience';
 import { ProfileWorkTab } from '../components/ProfileWorkTab';
+import { ProfileMediaTab } from '../components/ProfileMediaTab';
+import { ProfilePostsTab } from '../components/ProfilePostsTab';
 import { EditProfileForm } from '../components/EditProfileForm';
 import { ProfileStateView } from '../components/ProfileStateView';
 import { ProfessionalOnboardingModal } from './ProfessionalOnboardingModal';
@@ -274,15 +276,15 @@ export const ProfilePage: React.FC = () => {
         </div>
       )}
 
+      {activeTab === 'media' && (
+        <ProfileMediaTab
+          userId={profile.id}
+          isOwnProfile={isOwnProfile}
+        />
+      )}
+
       {activeTab === 'posts' && (
-        <div className="p-6 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs">
-          <h3 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">
-            Posts
-          </h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-            No posts yet.
-          </p>
-        </div>
+        <ProfilePostsTab userId={profile.id} />
       )}
 
       {/* Modals (self-guarded) */}

@@ -16,6 +16,7 @@ export const ProfileTabs: React.FC<ProfileTabsProps> = ({
 }) => {
   const baseTabs: { id: ProfileTab; label: string }[] = [
     { id: 'overview', label: 'Overview' },
+    { id: 'media', label: 'Media' },
     { id: 'posts', label: 'Posts' },
   ];
 
