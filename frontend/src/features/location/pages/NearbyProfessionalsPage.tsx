@@ -252,7 +252,7 @@ export default function NearbyProfessionalsPage() {
                   <span>List</span>
                 </button>
               </div>
-            )}
+            </div>
           </div>
         </div>
       </section>
