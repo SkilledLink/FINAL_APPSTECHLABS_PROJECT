@@ -15,7 +15,6 @@ import PostCard from '../../posts/components/PostCard';
 import { FeedSkeleton } from '../../posts/components/FeedSkeleton';
 import { useInfiniteFeed } from '../../posts/hooks/useInfiniteFeed';
 import { useFeedMutations } from '../../posts/hooks/useFeedMutations';
-import type { Post } from '../../posts/types/post.types';
 
 interface ProfilePostsTabProps {
   userId: string;
@@ -166,7 +165,7 @@ export const ProfilePostsTab: React.FC<ProfilePostsTabProps> = ({
   // ─── Initial loading ─────────────────────────────────────
   if (loading && posts.length === 0) {
     return (
-      <div className="space-y-4">
+      <div className="mx-auto w-full max-w-2xl space-y-4">
         <FeedSkeleton />
         <FeedSkeleton />
         <FeedSkeleton />
@@ -177,59 +176,63 @@ export const ProfilePostsTab: React.FC<ProfilePostsTabProps> = ({
   // ─── Error ───────────────────────────────────────────────
   if (error && !loading && posts.length === 0) {
     return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.96 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="relative overflow-hidden my-4 rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-gradient-to-br from-rose-50/80 via-white to-rose-50/30 dark:from-rose-950/30 dark:via-slate-900 dark:to-rose-950/10 p-5 text-center backdrop-blur-xl shadow-xs"
-      >
-        <div className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-xl bg-rose-100 text-rose-600 dark:bg-rose-900/40 dark:text-rose-400 ring-4 ring-rose-50 dark:ring-rose-950/20">
-          <AlertCircle className="h-5 w-5" />
-        </div>
-        <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-          Unable to fetch posts
-        </h4>
-        <p className="mt-1 text-xs text-slate-600 dark:text-slate-400 max-w-xs mx-auto leading-relaxed">
-          {error}
-        </p>
-        <motion.button
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
-          onClick={refresh}
-          className="mt-3.5 inline-flex items-center gap-2 rounded-xl bg-rose-600 hover:bg-rose-700 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all"
+      <div className="mx-auto w-full max-w-2xl">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="relative overflow-hidden my-4 rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-gradient-to-br from-rose-50/80 via-white to-rose-50/30 dark:from-rose-950/30 dark:via-slate-900 dark:to-rose-950/10 p-5 text-center backdrop-blur-xl shadow-xs"
         >
-          <RefreshCw className="h-3.5 w-3.5" />
-          Try again
-        </motion.button>
-      </motion.div>
+          <div className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-xl bg-rose-100 text-rose-600 dark:bg-rose-900/40 dark:text-rose-400 ring-4 ring-rose-50 dark:ring-rose-950/20">
+            <AlertCircle className="h-5 w-5" />
+          </div>
+          <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+            Unable to fetch posts
+          </h4>
+          <p className="mt-1 text-xs text-slate-600 dark:text-slate-400 max-w-xs mx-auto leading-relaxed">
+            {error}
+          </p>
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={refresh}
+            className="mt-3.5 inline-flex items-center gap-2 rounded-xl bg-rose-600 hover:bg-rose-700 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Try again
+          </motion.button>
+        </motion.div>
+      </div>
     );
   }
 
   // ─── Empty ───────────────────────────────────────────────
   if (!loading && posts.length === 0 && !error) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden my-4 rounded-2xl border border-dashed border-slate-300/80 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60 p-8 text-center backdrop-blur-xl shadow-xs"
-      >
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 bg-blue-500/10 dark:bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20">
-          <MessageSquarePlus className="h-6 w-6" />
-          <Sparkles className="absolute -top-1 -right-1 h-4 w-4 text-amber-400 animate-pulse" />
-        </div>
-        <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-          No posts yet
-        </h3>
-        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto leading-relaxed">
-          When this user shares something, it will show up here.
-        </p>
-      </motion.div>
+      <div className="mx-auto w-full max-w-2xl">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden my-4 rounded-2xl border border-dashed border-slate-300/80 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60 p-8 text-center backdrop-blur-xl shadow-xs"
+        >
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 bg-blue-500/10 dark:bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+          <div className="relative mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20">
+            <MessageSquarePlus className="h-6 w-6" />
+            <Sparkles className="absolute -top-1 -right-1 h-4 w-4 text-amber-400 animate-pulse" />
+          </div>
+          <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+            No posts yet
+          </h3>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto leading-relaxed">
+            When this user shares something, it will show up here.
+          </p>
+        </motion.div>
+      </div>
     );
   }
 
   // ─── List ────────────────────────────────────────────────
   return (
-    <div className="space-y-4">
+    <div className="mx-auto w-full max-w-2xl space-y-4">
       <motion.div
         variants={containerVariants}
         initial="hidden"
@@ -259,7 +262,6 @@ export const ProfilePostsTab: React.FC<ProfilePostsTabProps> = ({
         </AnimatePresence>
       </motion.div>
 
-      {/* Sentinel + loading indicator */}
       {hasMore && (
         <div
           ref={loadMoreRef}
@@ -278,7 +280,6 @@ export const ProfilePostsTab: React.FC<ProfilePostsTabProps> = ({
         </div>
       )}
 
-      {/* End of list */}
       {!hasMore && posts.length > 0 && (
         <motion.div
           initial={{ opacity: 0 }}

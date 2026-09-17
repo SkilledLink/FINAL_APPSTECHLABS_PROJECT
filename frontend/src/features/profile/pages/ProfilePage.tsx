@@ -173,7 +173,7 @@ export const ProfilePage: React.FC = () => {
   const isProfessional = !!profile.professional;
 
   return (
-    <div className="relative w-full max-w-6xl mx-auto px-8 sm:px-4 md:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4 pt-16 sm:pt-20 md:pt-24">
+    <div className="relative w-full  px-8 sm:px-4 md:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4 pt-16 sm:pt-20 md:pt-24">
 
       {/* ─── Report button — only on other users' profiles ─── */}
       {!isOwnProfile && (
