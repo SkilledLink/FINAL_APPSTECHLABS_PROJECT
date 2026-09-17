@@ -1,3 +1,5 @@
+// src/features/posts/components/PostCard.tsx
+
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -21,6 +23,7 @@ import {
 } from 'lucide-react';
 import PostActions from './PostActions';
 import ShareModal from './ShareModal';
+import ProfileLink from '../../profile/components/ProfileLink';
 import type { Post } from '../types/post.types';
 
 interface PostCardProps {
@@ -32,6 +35,12 @@ interface PostCardProps {
   onHashtagClick?: (hashtag: string) => void;
   onRetry?: (post: Post) => void;
   onDismiss?: (post: Post) => void;
+  /**
+   * Whether the currently authenticated user is an admin.
+   * Controls whether the "Delete post" action is available in the menu.
+   * Defaults to false so non-admin callers don't accidentally expose it.
+   */
+  isCurrentUserAdmin?: boolean;
 }
 
 type VisualState = 'normal' | 'uploading' | 'failed' | 'rejected' | 'pending';
@@ -183,6 +192,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   onHashtagClick,
   onRetry,
   onDismiss,
+  isCurrentUserAdmin = false,
 }) => {
   const [isMediaOpen, setIsMediaOpen] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -208,6 +218,15 @@ export const PostCard: React.FC<PostCardProps> = ({
 
   const visualState = getVisualState(post);
   const isLocked = visualState !== 'normal';
+
+  // Only admins can see the delete action.
+  // Requires: the caller passed `onDelete`, the user is an admin,
+  // and the post isn't locked (uploading / failed / pending / rejected).
+  const canDelete = isCurrentUserAdmin && !!onDelete && !isLocked;
+
+  // Whether the dropdown has any items at all. If not, we still render
+  // the 3-dots button, but clicking it won't open an empty menu.
+  const hasMenuItems = canDelete;
 
   const formatTimeAgo = (dateStr: string) => {
     const diff = Date.now() - new Date(dateStr).getTime();
@@ -318,7 +337,11 @@ export const PostCard: React.FC<PostCardProps> = ({
         {/* HEADER */}
         <div className="flex items-center justify-between p-4 sm:p-5 pb-3">
           <div className="flex items-center gap-3.5 min-w-0 flex-1">
-            <div className="relative group/avatar cursor-pointer shrink-0">
+            <ProfileLink
+              userId={user?.id}
+              ariaLabel={`View ${displayName}'s profile`}
+              className="relative group/avatar cursor-pointer shrink-0 inline-block"
+            >
               {user?.profile_image_url ? (
                 <img
                   src={user.profile_image_url}
@@ -337,13 +360,16 @@ export const PostCard: React.FC<PostCardProps> = ({
                 </div>
               )}
               <span className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900" />
-            </div>
+            </ProfileLink>
 
             <div className="flex flex-col min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                <span className="font-extrabold text-slate-900 dark:text-slate-100 text-base tracking-tight hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer break-words">
+                <ProfileLink
+                  userId={user?.id}
+                  className="font-extrabold text-slate-900 dark:text-slate-100 text-base tracking-tight hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer break-words"
+                >
                   {displayName}
-                </span>
+                </ProfileLink>
 
                 {user?.account_type === 'professional' ? (
                   <span className="inline-flex items-center gap-1 rounded-md bg-gradient-to-r from-blue-600 to-indigo-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-xs shrink-0">
@@ -356,7 +382,12 @@ export const PostCard: React.FC<PostCardProps> = ({
               </div>
 
               <div className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 font-medium mt-0.5 min-w-0">
-                <span className="truncate max-w-[140px]">{username}</span>
+                <ProfileLink
+                  userId={user?.id}
+                  className="truncate max-w-[140px] inline-block hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                >
+                  {username}
+                </ProfileLink>
                 <span className="shrink-0">•</span>
                 <span className="shrink-0">{formatTimeAgo(post.created_at)}</span>
                 <span className="shrink-0">•</span>
@@ -367,49 +398,56 @@ export const PostCard: React.FC<PostCardProps> = ({
             </div>
           </div>
 
-          {onDelete && !isLocked && (
-            <div className="relative shrink-0">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setShowMenu(!showMenu)}
-                className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                aria-label="Post settings"
-              >
-                <MoreHorizontal className="w-5 h-5" />
-              </motion.button>
+          {/* 3-dots menu — always rendered. Contents are gated by role. */}
+          <div className="relative shrink-0">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                // Only open if there's something to show — avoids an
+                // empty floating card for non-admins.
+                if (hasMenuItems) setShowMenu((v) => !v);
+              }}
+              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+              aria-label="Post options"
+              aria-haspopup="menu"
+              aria-expanded={showMenu}
+            >
+              <MoreHorizontal className="w-5 h-5" />
+            </motion.button>
 
-              <AnimatePresence>
-                {showMenu && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-20"
-                      onClick={() => setShowMenu(false)}
-                    />
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.92, y: 6 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.92, y: 6 }}
-                      transition={{ duration: 0.15, ease: 'easeOut' }}
-                      className="absolute right-0 top-10 z-30 min-w-[170px] overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 p-1.5 shadow-xl backdrop-blur-xl"
-                    >
+            <AnimatePresence>
+              {showMenu && hasMenuItems && (
+                <>
+                  <div
+                    className="fixed inset-0 z-20"
+                    onClick={() => setShowMenu(false)}
+                  />
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.92, y: 6 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.92, y: 6 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                    className="absolute right-0 top-10 z-30 min-w-[170px] overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 p-1.5 shadow-xl backdrop-blur-xl"
+                  >
+                    {canDelete && (
                       <button
                         type="button"
                         onClick={() => {
                           setShowMenu(false);
-                          onDelete(post.id);
+                          onDelete!(post.id);
                         }}
                         className="flex w-full items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
                       >
                         <Trash2 className="w-4 h-4 text-rose-500" />
                         <span>Delete post</span>
                       </button>
-                    </motion.div>
-                  </>
-                )}
-              </AnimatePresence>
-            </div>
-          )}
+                    )}
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
 
         {/* CONTENT */}
@@ -566,30 +604,39 @@ export const PostCard: React.FC<PostCardProps> = ({
                     className="group/comment flex items-start justify-between gap-2.5 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-2xl border border-slate-100 dark:border-slate-800"
                   >
                     <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                      {comment.user?.profile_image_url ? (
-                        <img
-                          src={comment.user.profile_image_url}
-                          alt=""
-                          className="h-7 w-7 rounded-full object-cover ring-1 ring-slate-200 dark:ring-slate-700 mt-0.5 shrink-0"
-                        />
-                      ) : (
-                        <div
-                          className={`h-7 w-7 rounded-full bg-gradient-to-br ${getAvatarColor(
-                            comment.user?.id || comment.id,
-                          )} flex items-center justify-center ring-1 ring-slate-200 dark:ring-slate-700 mt-0.5 shrink-0`}
-                        >
-                          <span className="text-white font-bold text-[10px] tracking-tight select-none">
-                            {getInitials(
-                              comment.user?.first_name,
-                              comment.user?.last_name,
-                            )}
-                          </span>
-                        </div>
-                      )}
+                      <ProfileLink
+                        userId={comment.user?.id}
+                        ariaLabel={`View ${comment.user?.first_name ?? ''} ${comment.user?.last_name ?? ''}'s profile`.trim()}
+                        className="mt-0.5 shrink-0 inline-block"
+                      >
+                        {comment.user?.profile_image_url ? (
+                          <img
+                            src={comment.user.profile_image_url}
+                            alt=""
+                            className="h-7 w-7 rounded-full object-cover ring-1 ring-slate-200 dark:ring-slate-700"
+                          />
+                        ) : (
+                          <div
+                            className={`h-7 w-7 rounded-full bg-gradient-to-br ${getAvatarColor(
+                              comment.user?.id || comment.id,
+                            )} flex items-center justify-center ring-1 ring-slate-200 dark:ring-slate-700`}
+                          >
+                            <span className="text-white font-bold text-[10px] tracking-tight select-none">
+                              {getInitials(
+                                comment.user?.first_name,
+                                comment.user?.last_name,
+                              )}
+                            </span>
+                          </div>
+                        )}
+                      </ProfileLink>
                       <div className="flex-1 min-w-0">
-                        <span className="font-bold text-slate-900 dark:text-slate-100 text-xs break-words">
+                        <ProfileLink
+                          userId={comment.user?.id}
+                          className="font-bold text-slate-900 dark:text-slate-100 text-xs break-words hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                        >
                           {comment.user?.first_name} {comment.user?.last_name}
-                        </span>
+                        </ProfileLink>
                         <p className="text-xs text-slate-700 dark:text-slate-300 mt-0.5 leading-relaxed break-words [overflow-wrap:anywhere]">
                           {comment.content}
                         </p>

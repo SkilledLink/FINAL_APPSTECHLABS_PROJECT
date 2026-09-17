@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, List, Dict
 from uuid import UUID
 
 from sqlmodel import Session, func, select
@@ -31,6 +31,38 @@ class ModerationRepository:
             .limit(1)
         )
         return self.session.exec(stmt).first()
+
+    def get_active_for_feeds(
+        self, feed_ids: List[UUID]
+    ) -> Dict[UUID, ModerationRecord]:
+        """
+        Bulk version of get_active_for_feed().
+
+        Returns {feed_id: latest_non_superseded_record} for every feed in
+        `feed_ids` that currently has an active moderation record. Feeds
+        with no active record are absent from the result.
+
+        Same semantics as get_active_for_feed(): only rows where
+        superseded_at IS NULL, newest created_at wins.
+        """
+        if not feed_ids:
+            return {}
+
+        stmt = (
+            select(ModerationRecord)
+            .where(
+                ModerationRecord.feed_id.in_(feed_ids),
+                ModerationRecord.superseded_at.is_(None),
+            )
+            .order_by(ModerationRecord.created_at.desc())
+        )
+
+        # Newest first globally; setdefault keeps the first (= newest)
+        # record seen for each feed.
+        result: Dict[UUID, ModerationRecord] = {}
+        for record in self.session.exec(stmt).all():
+            result.setdefault(record.feed_id, record)
+        return result
 
     def supersede_for_feed(self, feed_id: UUID) -> int:
         """Mark all active records for this feed as superseded."""

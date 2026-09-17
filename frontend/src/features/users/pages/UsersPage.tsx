@@ -130,7 +130,7 @@ export default function UsersPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <AnimatePresence mode="popLayout">
-          {users.map(user => {
+          {localUsers.map(user => {
             const isProfessional = user.account_type?.toLowerCase() === 'professional';
             const isCurrentUser = currentUser?.id === user.id;
             const isFollowing = user.is_following || false;
@@ -145,10 +145,6 @@ export default function UsersPage() {
                 exit={{ opacity: 0, scale: 0.95 }}
                 className="group bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-5 shadow-sm hover:shadow-xl hover:border-blue-400/30 transition-all duration-300"
               >
-                <div
-                  className="cursor-pointer"
-                  onClick={() => navigate(`/home/profile/${user.id}`)}
-                >
                 <div className="cursor-pointer" onClick={() => navigate(`/profile/${user.id}`)}>
                   <div className="flex items-start gap-4">
                     <div className="relative shrink-0">
@@ -260,7 +256,7 @@ export default function UsersPage() {
         </AnimatePresence>
       </div>
 
-      {users.length === 0 && !loading && (
+      {localUsers.length === 0 && !loading && (
         <div className="text-center py-16">
           <User size={48} className="mx-auto text-slate-300 dark:text-slate-600 mb-3" />
           <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300">

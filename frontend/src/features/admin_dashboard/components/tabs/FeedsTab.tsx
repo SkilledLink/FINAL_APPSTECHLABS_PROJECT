@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Trash2, Heart, MessageCircle, Inbox, Search, Eye, X, ExternalLink,
-  Ban, Clock, AlertTriangle,
+  Ban, Clock, AlertTriangle, Loader2,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useFeeds } from '../../hooks/useFeeds';
@@ -622,7 +622,16 @@ type Prompt = {
 const DEFAULT_DELETE_REASON = 'Cleanup of already removed content';
 
 const FeedsTab: React.FC = () => {
-  const { feeds, loading, error, fetchOne, remove, removeComment } = useFeeds();
+  const {
+    feeds,
+    loading,
+    loadingMore,
+    error,
+    fetchOne,
+    remove,
+    removeComment,
+  } = useFeeds();
+
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<string>('all');
   const [prompt, setPrompt] = useState<Prompt | null>(null);
@@ -686,7 +695,10 @@ const FeedsTab: React.FC = () => {
     });
   };
 
-  if (error) return <EmptyState title="Failed to load feeds" description={error} />;
+  // Hard failure before anything loaded → full-page error state.
+  if (error && feeds.length === 0) {
+    return <EmptyState title="Failed to load feeds" description={error} />;
+  }
 
   return (
     <div>
@@ -715,6 +727,17 @@ const FeedsTab: React.FC = () => {
         </div>
       </div>
 
+      {/* Soft error banner — partial load failed but we still have content. */}
+      {error && feeds.length > 0 && (
+        <div className="mb-4 flex items-start gap-3 p-3 rounded-xl bg-red-50 border border-red-200">
+          <AlertTriangle size={16} className="text-red-600 shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-red-800">Some feeds failed to load</p>
+            <p className="text-xs text-red-700 mt-0.5">{error}</p>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <SkeletonFeedList count={3} />
       ) : filtered.length === 0 ? (
@@ -722,106 +745,116 @@ const FeedsTab: React.FC = () => {
           <EmptyState title="No feeds found" description="Try adjusting your filters." />
         </div>
       ) : (
-        <div className="space-y-4">
-          {filtered.map((feed: AdminFeed) => {
-            const state = getFeedState(feed);
-            return (
-              <div
-                key={feed.id}
-                onClick={() => setSelected(feed)}
-                className={feedCardClass(state)}
-              >
-                <div className="flex items-start gap-4">
-                  <Avatar name={feed.author.name} src={feed.author.avatar} size={40} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-gray-900">{feed.author.name}</span>
-                          <Chip variant="neutral">{feed.author.role}</Chip>
+        <>
+          <div className="space-y-4">
+            {filtered.map((feed: AdminFeed) => {
+              const state = getFeedState(feed);
+              return (
+                <div
+                  key={feed.id}
+                  onClick={() => setSelected(feed)}
+                  className={feedCardClass(state)}
+                >
+                  <div className="flex items-start gap-4">
+                    <Avatar name={feed.author.name} src={feed.author.avatar} size={40} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-gray-900">{feed.author.name}</span>
+                            <Chip variant="neutral">{feed.author.role}</Chip>
+                          </div>
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            {formatDistanceToNow(new Date(feed.createdAt), { addSuffix: true })}
+                          </p>
                         </div>
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          {formatDistanceToNow(new Date(feed.createdAt), { addSuffix: true })}
-                        </p>
+                        <Chip variant={statusVariant(feed.status)}>
+                          {feed.status.replace(/_/g, ' ')}
+                        </Chip>
                       </div>
-                      <Chip variant={statusVariant(feed.status)}>
-                        {feed.status.replace(/_/g, ' ')}
-                      </Chip>
-                    </div>
 
-                    {state === 'deleted' && (
-                      <div className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-red-700">
-                        <Ban size={12} />
-                        {feed.isDeleted
-                          ? 'This feed has been deleted'
-                          : `Status: ${feed.status.replace(/_/g, ' ')}`}
-                      </div>
-                    )}
-                    {state === 'pending' && (
-                      <div className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-amber-700">
-                        <Clock size={12} />
-                        Awaiting moderation review
-                      </div>
-                    )}
-
-                    {feed.title && (
-                      <p className="font-medium text-gray-900 mt-3">{feed.title}</p>
-                    )}
-                    <p className="text-sm text-gray-700 mt-1">{feed.description}</p>
-
-                    {feed.images.length > 0 && (
-                      <div className="mt-3 flex gap-2 flex-wrap">
-                        {feed.images.map((img, i) => (
-                          <img
-                            key={i}
-                            src={img}
-                            alt=""
-                            className={`w-24 h-24 rounded-lg object-cover ${
-                              state === 'deleted' ? 'opacity-60 grayscale' : ''
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="mt-4 flex items-center gap-4 text-xs text-gray-500">
-                      <span className="inline-flex items-center gap-1"><Heart size={13} /> {feed.likes}</span>
-                      <span className="inline-flex items-center gap-1"><MessageCircle size={13} /> {feed.comments}</span>
-                    </div>
-
-                    <div
-                      className="mt-4 pt-4 border-t border-gray-100 flex gap-2"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <button
-                        onClick={() => setSelected(feed)}
-                        className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 text-xs font-medium inline-flex items-center gap-1.5"
-                      >
-                        <Eye size={14} /> Details
-                      </button>
-                      {state === 'deleted' ? (
-                        <button
-                          onClick={() => handleRemove(feed)}
-                          className="px-3 py-1.5 rounded-lg bg-red-100 text-red-800 hover:bg-red-200 text-xs font-medium inline-flex items-center gap-1.5"
-                          title="Delete permanently (already removed)"
-                        >
-                          <Trash2 size={14} /> Delete permanently
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleRemove(feed)}
-                          className="px-3 py-1.5 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 text-xs font-medium inline-flex items-center gap-1.5"
-                        >
-                          <Trash2 size={14} /> Remove
-                        </button>
+                      {state === 'deleted' && (
+                        <div className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-red-700">
+                          <Ban size={12} />
+                          {feed.isDeleted
+                            ? 'This feed has been deleted'
+                            : `Status: ${feed.status.replace(/_/g, ' ')}`}
+                        </div>
                       )}
+                      {state === 'pending' && (
+                        <div className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-amber-700">
+                          <Clock size={12} />
+                          Awaiting moderation review
+                        </div>
+                      )}
+
+                      {feed.title && (
+                        <p className="font-medium text-gray-900 mt-3">{feed.title}</p>
+                      )}
+                      <p className="text-sm text-gray-700 mt-1">{feed.description}</p>
+
+                      {feed.images.length > 0 && (
+                        <div className="mt-3 flex gap-2 flex-wrap">
+                          {feed.images.map((img, i) => (
+                            <img
+                              key={i}
+                              src={img}
+                              alt=""
+                              className={`w-24 h-24 rounded-lg object-cover ${
+                                state === 'deleted' ? 'opacity-60 grayscale' : ''
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="mt-4 flex items-center gap-4 text-xs text-gray-500">
+                        <span className="inline-flex items-center gap-1"><Heart size={13} /> {feed.likes}</span>
+                        <span className="inline-flex items-center gap-1"><MessageCircle size={13} /> {feed.comments}</span>
+                      </div>
+
+                      <div
+                        className="mt-4 pt-4 border-t border-gray-100 flex gap-2"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          onClick={() => setSelected(feed)}
+                          className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 text-xs font-medium inline-flex items-center gap-1.5"
+                        >
+                          <Eye size={14} /> Details
+                        </button>
+                        {state === 'deleted' ? (
+                          <button
+                            onClick={() => handleRemove(feed)}
+                            className="px-3 py-1.5 rounded-lg bg-red-100 text-red-800 hover:bg-red-200 text-xs font-medium inline-flex items-center gap-1.5"
+                            title="Delete permanently (already removed)"
+                          >
+                            <Trash2 size={14} /> Delete permanently
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleRemove(feed)}
+                            className="px-3 py-1.5 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 text-xs font-medium inline-flex items-center gap-1.5"
+                          >
+                            <Trash2 size={14} /> Remove
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+
+          {/* Bottom-of-list indicator while more batches stream in. */}
+          {loadingMore && (
+            <div className="mt-6 flex items-center justify-center gap-2 text-sm text-gray-500">
+              <Loader2 size={16} className="animate-spin" />
+              Loading more feeds…
+            </div>
+          )}
+        </>
       )}
 
       {prompt && (
