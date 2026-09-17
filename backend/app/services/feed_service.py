@@ -932,6 +932,7 @@ class FeedService:
                     title=feed.title,
                     thumbnail_url=thumbnail_url,
                     media_type=media.media_type,
+                    media_url=media.media_url,      # ← new
                     media_count=media_count,
                     created_at=feed.created_at,
                 )

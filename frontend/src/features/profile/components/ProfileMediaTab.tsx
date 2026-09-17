@@ -1,10 +1,12 @@
 // src/features/profile/components/ProfileMediaTab.tsx
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ImageOff } from 'lucide-react';
 import { useUserMedia } from '../hooks/useUserMedia';
 import { MediaGrid } from './MediaGrid';
+import { MediaLightbox } from './MediaLightbox';
+import type { FeedThumbnail } from '../types/profile.types';
 
 interface ProfileMediaTabProps {
   userId: string;
@@ -16,6 +18,7 @@ export const ProfileMediaTab: React.FC<ProfileMediaTabProps> = ({
   isOwnProfile,
 }) => {
   const navigate = useNavigate();
+  const [selectedItem, setSelectedItem] = useState<FeedThumbnail | null>(null);
 
   const {
     items,
@@ -27,7 +30,12 @@ export const ProfileMediaTab: React.FC<ProfileMediaTabProps> = ({
     refetch,
   } = useUserMedia(userId);
 
-  const handleCardClick = (feedId: string) => {
+  const handleCardClick = (item: FeedThumbnail) => {
+    setSelectedItem(item);
+  };
+
+  const handleViewPost = (feedId: string) => {
+    setSelectedItem(null);
     navigate(`/feeds/${feedId}`);
   };
 
@@ -50,16 +58,24 @@ export const ProfileMediaTab: React.FC<ProfileMediaTabProps> = ({
   );
 
   return (
-    <MediaGrid
-      items={items}
-      status={status}
-      error={error}
-      hasMore={hasMore}
-      isLoadingMore={isLoadingMore}
-      onLoadMore={loadMore}
-      onCardClick={handleCardClick}
-      onRetry={refetch}
-      emptyState={emptyState}
-    />
+    <>
+      <MediaGrid
+        items={items}
+        status={status}
+        error={error}
+        hasMore={hasMore}
+        isLoadingMore={isLoadingMore}
+        onLoadMore={loadMore}
+        onCardClick={handleCardClick}
+        onRetry={refetch}
+        emptyState={emptyState}
+      />
+
+      <MediaLightbox
+        item={selectedItem}
+        onClose={() => setSelectedItem(null)}
+        onViewPost={handleViewPost}
+      />
+    </>
   );
 };

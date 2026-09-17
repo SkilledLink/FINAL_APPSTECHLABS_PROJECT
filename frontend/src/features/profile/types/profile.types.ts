@@ -106,3 +106,12 @@ export interface FeedThumbnailPage {
   items: FeedThumbnail[];
   total: number;
 }
+export interface FeedThumbnail {
+  feedId: string;
+  title: string;
+  thumbnailUrl: string;
+  mediaUrl: string;         // ← new
+  mediaType: 'image' | 'video';
+  mediaCount: number;
+  createdAt: string;
+}

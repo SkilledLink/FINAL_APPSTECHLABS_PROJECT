@@ -226,6 +226,7 @@ class FeedThumbnailResponse(BaseModel):
     thumbnail_url: str
     media_type: str          # "image" | "video"
     media_count: int
+    media_url: str          # ← new
     created_at: datetime
 
     class Config:

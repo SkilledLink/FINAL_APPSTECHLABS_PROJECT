@@ -20,6 +20,7 @@ const mapThumbnailFromAPI = (raw: any): FeedThumbnail => ({
   feedId: raw.feed_id,
   title: raw.title ?? '',
   thumbnailUrl: raw.thumbnail_url,
+  mediaUrl: raw.media_url,
   mediaType: raw.media_type === 'video' ? 'video' : 'image',
   mediaCount: raw.media_count ?? 1,
   createdAt: raw.created_at,
@@ -53,9 +54,7 @@ export const fetchUserMedia = async (
   );
 
   if (!response.ok) {
-    throw new Error(
-      `Failed to fetch media: ${response.status}`
-    );
+    throw new Error(`Failed to fetch media: ${response.status}`);
   }
 
   const data = await response.json();

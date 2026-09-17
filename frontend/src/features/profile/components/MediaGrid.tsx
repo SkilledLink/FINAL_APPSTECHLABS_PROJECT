@@ -13,7 +13,7 @@ interface MediaGridProps {
   hasMore: boolean;
   isLoadingMore: boolean;
   onLoadMore: () => void;
-  onCardClick: (feedId: string) => void;
+  onCardClick: (item: FeedThumbnail) => void;
   onRetry: () => void;
   emptyState: React.ReactNode;
 }
@@ -84,7 +84,7 @@ export const MediaGrid: React.FC<MediaGridProps> = ({
             title={item.title}
             mediaType={item.mediaType}
             mediaCount={item.mediaCount}
-            onClick={() => onCardClick(item.feedId)}
+            onClick={() => onCardClick(item)}
           />
         ))}
       </div>
