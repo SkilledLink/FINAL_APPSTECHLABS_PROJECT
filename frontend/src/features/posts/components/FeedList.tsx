@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import type { Variants } from 'framer-motion';
 import { MessageSquare, Sparkles, ChevronDown } from 'lucide-react';
 import type { Post } from '../types/post.types';
 import PostCard from './PostCard';
@@ -31,7 +32,7 @@ const listVariants = {
   },
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { opacity: 0, y: 16, scale: 0.98 },
   visible: {
     opacity: 1,

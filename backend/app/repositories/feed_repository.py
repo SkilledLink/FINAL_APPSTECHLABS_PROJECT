@@ -330,3 +330,94 @@ class FeedRepository:
         for fid, hashtag in self.session.exec(stmt).all():
             result.setdefault(fid, []).append(hashtag)
         return result
+
+    # ─── Thumbnails (media-only profile grid) ───────────────
+    def list_feeds_with_first_media(
+        self,
+        skip: int,
+        limit: int,
+        user_id: Optional[UUID],
+        status: str,
+    ) -> Tuple[List[Tuple[Feed, FeedMedia, int]], int]:
+        """
+        Return (feed, cover_media, media_count) tuples for feeds that:
+
+          - match the given status
+          - are not soft-deleted
+          - have at least one media row
+          - optionally belong to `user_id`
+
+        Ordered by Feed.created_at DESC. Feeds with zero media are excluded
+        by the inner join.
+
+        Uses a constant number of SQL queries regardless of page size.
+        """
+        # Base set: distinct feed IDs with at least one media row
+        base = (
+            select(Feed.id)
+            .join(FeedMedia, FeedMedia.feed_id == Feed.id)
+            .where(Feed.deleted_at.is_(None))
+            .where(Feed.status == status)
+            .distinct()
+        )
+        if user_id is not None:
+            base = base.where(Feed.user_id == user_id)
+
+        # Count — session.exec already returns a ScalarResult, so .one()
+        # gives the int directly. Do NOT call .scalars() on it.
+        total = self.session.exec(
+            select(func.count()).select_from(base.subquery())
+        ).one()
+
+        if not total:
+            return [], 0
+
+        # Page of feed IDs, newest first.
+        feed_ids_stmt = (
+            select(Feed.id)
+            .where(Feed.id.in_(base))
+            .order_by(Feed.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+        )
+
+        # session.exec(...).all() can yield either bare UUIDs (ScalarResult)
+        # or Row objects depending on the SQLModel/SQLAlchemy version.
+        # Normalize to a plain List[UUID] so .in_() below gets UUIDs.
+        raw_ids = self.session.exec(feed_ids_stmt).all()
+        feed_ids: List[UUID] = [
+            (r if isinstance(r, UUID) else r[0]) for r in raw_ids
+        ]
+
+        if not feed_ids:
+            return [], total
+
+        # Hydrate feeds, preserving newest-first order.
+        feeds_stmt = select(Feed).where(Feed.id.in_(feed_ids))
+        feeds_by_id: Dict[UUID, Feed] = {
+            f.id: f for f in self.session.exec(feeds_stmt).all()
+        }
+        feeds = [feeds_by_id[fid] for fid in feed_ids if fid in feeds_by_id]
+
+        # All media for the page — first by created_at wins as cover.
+        media_stmt = (
+            select(FeedMedia)
+            .where(FeedMedia.feed_id.in_(feed_ids))
+            .order_by(
+                FeedMedia.feed_id,
+                FeedMedia.created_at.asc(),
+            )
+        )
+
+        first_media: Dict[UUID, FeedMedia] = {}
+        media_counts: Dict[UUID, int] = {}
+        for m in self.session.exec(media_stmt).all():
+            media_counts[m.feed_id] = media_counts.get(m.feed_id, 0) + 1
+            first_media.setdefault(m.feed_id, m)
+
+        rows = [
+            (f, first_media[f.id], media_counts.get(f.id, 0))
+            for f in feeds
+            if f.id in first_media
+        ]
+        return rows, total

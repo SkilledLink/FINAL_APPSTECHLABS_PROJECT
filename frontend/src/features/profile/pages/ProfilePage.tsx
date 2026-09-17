@@ -14,6 +14,8 @@ import { ProfileAbout } from '../components/ProfileAbout';
 import { ProfileSkills } from '../components/ProfileSkills';
 import { ProfileExperience } from '../components/ProfileExperience';
 import { ProfileWorkTab } from '../components/ProfileWorkTab';
+import { ProfileMediaTab } from '../components/ProfileMediaTab';
+import { ProfilePostsTab } from '../components/ProfilePostsTab';
 import { EditProfileForm } from '../components/EditProfileForm';
 import { ProfileStateView } from '../components/ProfileStateView';
 import { ProfessionalOnboardingModal } from './ProfessionalOnboardingModal';
@@ -171,7 +173,7 @@ export const ProfilePage: React.FC = () => {
   const isProfessional = !!profile.professional;
 
   return (
-    <div className="relative w-full max-w-6xl mx-auto px-8 sm:px-4 md:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4 pt-16 sm:pt-20 md:pt-24">
+    <div className="relative w-full  px-8 sm:px-4 md:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4 pt-16 sm:pt-20 md:pt-24">
 
       {/* ─── Report button — only on other users' profiles ─── */}
       {!isOwnProfile && (
@@ -274,15 +276,15 @@ export const ProfilePage: React.FC = () => {
         </div>
       )}
 
+      {activeTab === 'media' && (
+        <ProfileMediaTab
+          userId={profile.id}
+          isOwnProfile={isOwnProfile}
+        />
+      )}
+
       {activeTab === 'posts' && (
-        <div className="p-6 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs">
-          <h3 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">
-            Posts
-          </h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-            No posts yet.
-          </p>
-        </div>
+        <ProfilePostsTab userId={profile.id} />
       )}
 
       {/* Modals (self-guarded) */}

@@ -19,6 +19,8 @@ from app.schemas.feed import (
     FeedCommentCreate,
     FeedCommentResponse,
     HashtagResponse,
+    FeedThumbnailResponse,
+    FeedThumbnailListResponse,
 )
 from app.schemas.user import UserResponse
 from app.schemas.moderation import ModerationSummary
@@ -28,6 +30,14 @@ from app.services.audit_service import AuditService
 from app.enums.moderation import FeedStatus, ModerationDecision
 
 logger = getLogger(__name__)
+
+
+# ─── Cloudinary thumbnail transforms ───────────────────────
+# Inserted between /upload/ and the version segment of the URL.
+# 400px square, auto format (WebP/AVIF where supported), auto quality.
+# Video adds so_0.1 — capture the frame at 0.1s.
+_CLOUDINARY_IMAGE_TRANSFORM = "c_fill,f_auto,h_400,q_auto,w_400"
+_CLOUDINARY_VIDEO_TRANSFORM = "c_fill,f_auto,h_400,q_auto,so_0.1,w_400"
 
 
 class FeedService:
@@ -834,6 +844,106 @@ class FeedService:
             HashtagResponse.model_validate(h)
             for h in hashtags
         ]
+
+    # ─── Thumbnails (media-only profile grid) ───────────────
+    def _derive_thumbnail_url(self, media: FeedMedia) -> Optional[str]:
+        """
+        Build a lightweight, CDN-transformed thumbnail URL from a stored
+        Cloudinary media URL.
+
+        Preference order:
+          1. media.thumbnail_url  (if ever populated in future — unused today)
+          2. Transform derived from media_url (Cloudinary image/video pattern)
+          3. Raw media_url as a fallback (non-Cloudinary or malformed URL)
+
+        Never performs I/O, never writes to the DB, never fails.
+        """
+        if not media.media_url:
+            return None
+
+        # 1. Explicit thumbnail already stored.
+        if media.thumbnail_url:
+            return media.thumbnail_url
+
+        url = media.media_url
+
+        # 2. Cloudinary image transform — keep extension.
+        if media.media_type == "image" and "/image/upload/" in url:
+            return url.replace(
+                "/image/upload/",
+                f"/image/upload/{_CLOUDINARY_IMAGE_TRANSFORM}/",
+                1,
+            )
+
+        # 2. Cloudinary video transform — force a JPEG still frame.
+        if media.media_type == "video" and "/video/upload/" in url:
+            transformed = url.replace(
+                "/video/upload/",
+                f"/video/upload/{_CLOUDINARY_VIDEO_TRANSFORM}/",
+                1,
+            )
+            # Swap the trailing extension (.mp4 / .mov / .webm → .jpg)
+            filename = transformed.rsplit("/", 1)[-1]
+            if "." in filename:
+                head, _ = transformed.rsplit(".", 1)
+                transformed = f"{head}.jpg"
+            return transformed
+
+        # 3. Fallback — raw URL.
+        return url
+
+    def list_feed_thumbnails(
+        self,
+        current_user: User,
+        skip: int = 0,
+        limit: int = 20,
+        user_id: Optional[UUID] = None,
+    ) -> FeedThumbnailListResponse:
+        """
+        Lightweight media-only feed grid, intended for the "Media" tab on
+        a user profile.
+
+        Only PUBLISHED, non-deleted feeds that currently have at least one
+        media item are returned. Text-only posts are excluded by design —
+        they remain reachable via GET /feeds and GET /feeds/{feed_id}.
+
+        If `user_id` is omitted, the current user's grid is returned.
+        """
+        target_user_id = user_id or current_user.id
+
+        rows, total = self.repo.list_feeds_with_first_media(
+            skip=skip,
+            limit=limit,
+            user_id=target_user_id,
+            status=FeedStatus.PUBLISHED.value,
+        )
+
+        items: List[FeedThumbnailResponse] = []
+        for feed, media, media_count in rows:
+            thumbnail_url = self._derive_thumbnail_url(media)
+            if not thumbnail_url:
+                # Defensive: should not happen given the inner join, but
+                # never emit an entry without a thumbnail.
+                continue
+
+            items.append(
+                FeedThumbnailResponse(
+                    feed_id=feed.id,
+                    title=feed.title,
+                    thumbnail_url=thumbnail_url,
+                    media_type=media.media_type,
+                    media_url=media.media_url,      # ← new
+                    media_count=media_count,
+                    created_at=feed.created_at,
+                )
+            )
+
+        return FeedThumbnailListResponse(
+            items=items,
+            total=total,
+            page=skip // limit + 1 if limit else 1,
+            size=limit,
+        )
 
     # ─── Bulk pre-fetch (used by list endpoints) ────────────
     def _prefetch_feed_maps(

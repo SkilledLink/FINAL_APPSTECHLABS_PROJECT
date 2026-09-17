@@ -26,12 +26,8 @@ export interface User {
   followingCount: number;
   isFollowing: boolean;
 
-  // ── New fields ────────────────────────────────────────────────
-  /** 'public' | 'private' – controls who can see tabs. */
   visibility?: 'public' | 'private';
-  /** Set when the account is soft‑deleted. */
   deactivatedAt?: string | null;
-  /** Set when the account is suspended by moderation. */
   suspendedAt?: string | null;
 }
 
@@ -58,7 +54,6 @@ export interface Professional {
 
 export interface UserProfile extends User {
   professional?: Professional;
-  /** Viewer‑specific relationship, populated by useProfile. */
   viewerRelation?: ViewerRelation;
 }
 
@@ -66,10 +61,10 @@ export type ProfileTab =
   | 'overview'
   | 'work'
   | 'services'
+  | 'media'
   | 'posts'
   | 'reviews';
 
-// ── New: profile page state machine ─────────────────────────────
 export type ProfileStatus =
   | 'idle'
   | 'loading'
@@ -83,7 +78,6 @@ export type ProfileStatus =
   | 'unauthenticated'
   | 'error';
 
-// ── New: viewer‑centric relationship flags ──────────────────────
 export interface ViewerRelation {
   isFollowing: boolean;
   followsYou: boolean;
@@ -96,4 +90,28 @@ export interface ViewerRelation {
   canMessage: boolean;
   canRequestService: boolean;
   canViewWork: boolean;
+}
+
+// ── Media grid ─────────────────────────────────────────────────
+export interface FeedThumbnail {
+  feedId: string;
+  title: string;
+  thumbnailUrl: string;
+  mediaType: 'image' | 'video';
+  mediaCount: number;
+  createdAt: string;
+}
+
+export interface FeedThumbnailPage {
+  items: FeedThumbnail[];
+  total: number;
+}
+export interface FeedThumbnail {
+  feedId: string;
+  title: string;
+  thumbnailUrl: string;
+  mediaUrl: string;         // ← new
+  mediaType: 'image' | 'video';
+  mediaCount: number;
+  createdAt: string;
 }
