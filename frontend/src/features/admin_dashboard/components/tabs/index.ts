@@ -6,3 +6,4 @@ export { default as ProfessionalsTab } from './ProfessionalsTab';
 export { default as ModerationTab } from './ModerationTab';
 export { default as AuditLogsTab } from './AuditLogsTab';
 export { default as AdministratorsTab } from './AdministratorsTab';
+export { default as ContactMessagesTab } from './ContactMessagesTab';

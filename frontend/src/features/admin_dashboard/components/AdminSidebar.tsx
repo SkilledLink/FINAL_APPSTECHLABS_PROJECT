@@ -8,6 +8,7 @@ import {
   AlertTriangle,
   ScrollText,
   UserCog,
+  Mail,
   ChevronLeft,
   ChevronRight,
   X,
@@ -21,7 +22,8 @@ export type AdminTab =
   | 'professionals'
   | 'moderation'
   | 'audit_logs'
-  | 'administrators';
+  | 'administrators'
+  | 'contact_messages';
 
 interface NavItem {
   id: AdminTab;
@@ -49,6 +51,7 @@ const navItems: NavItem[] = [
   { id: 'moderation', label: 'Moderation', icon: <AlertTriangle className="w-5 h-5" />, badge: 27 },
   { id: 'audit_logs', label: 'Audit Logs', icon: <ScrollText className="w-5 h-5" /> },
   { id: 'administrators', label: 'Administrators', icon: <UserCog className="w-5 h-5" /> },
+  { id: 'contact_messages', label: 'Contact Messages', icon: <Mail className="w-5 h-5" /> },
 ];
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({
@@ -204,3 +207,5 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 };
 
 export default AdminSidebar;
+
+
