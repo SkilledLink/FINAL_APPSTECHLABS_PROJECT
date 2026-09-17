@@ -1,7 +1,6 @@
+// hooks/useAIChat.ts
 import { useCallback, useState } from 'react';
-import type {
-  ChatMessage,
-} from '../types/ai.types';
+import type { ChatMessage } from '../types/ai.types';
 import { sendChatMessage } from '../services/aiService';
 
 interface UseAIChatResult {
@@ -16,32 +15,26 @@ const INITIAL_MESSAGE: ChatMessage = {
   id: 'welcome',
   sender: 'assistant',
   content:
-    'Hello! I’m the Skillink AI Assistant. How can I help you today?',
+    "Hello! I'm the SkilledLink AI Assistant. Ask me anything, or describe the professional you need — you can also attach a photo.",
 };
 
 export function useAIChat(): UseAIChatResult {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    INITIAL_MESSAGE,
-  ]);
-
+  const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_MESSAGE]);
   const [isSearching, setIsSearching] = useState(false);
 
   const addMessage = useCallback((message: ChatMessage) => {
-    setMessages((previous) => [...previous, message]);
+    setMessages((prev) => [...prev, message]);
   }, []);
 
   const handleUserMessage = useCallback(
     async (message: string) => {
-      if (!message.trim() || isSearching) {
-        return;
-      }
+      if (!message.trim() || isSearching) return;
 
       const userMessage: ChatMessage = {
         id: `user-${Date.now()}`,
         sender: 'user',
         content: message,
       };
-
       addMessage(userMessage);
       setIsSearching(true);
 
@@ -52,6 +45,13 @@ export function useAIChat(): UseAIChatResult {
           id: `assistant-${Date.now()}`,
           sender: 'assistant',
           content: result.response,
+          recommendations:
+            result.recommendations.length > 0
+              ? result.recommendations
+              : undefined,
+          redirectUrl: result.redirectUrl,
+          imageAnalysis: result.imageAnalysis,
+          totalResults: result.recommendations.length || undefined,
         };
 
         addMessage(assistantMessage);
@@ -77,9 +77,8 @@ export function useAIChat(): UseAIChatResult {
     (role: 'hirer' | 'worker') => {
       const roleMessage =
         role === 'hirer'
-          ? 'I’m looking for a skilled professional.'
-          : 'I’m looking for work.';
-
+          ? "I'm looking for a skilled professional."
+          : "I'm looking for work.";
       void handleUserMessage(roleMessage);
     },
     [handleUserMessage],

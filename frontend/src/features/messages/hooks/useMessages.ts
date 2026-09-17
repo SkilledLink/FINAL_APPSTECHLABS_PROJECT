@@ -18,7 +18,7 @@ export const mapBackendMessage = (backendMsg: any): Message => {
     type: isVoice ? 'audio' : backendMsg.type,
     content: backendMsg.content,
     text: backendMsg.content,
-    attachment_path: backendMsg.attachment_path,   // ✅ preserves full URL
+    attachment_path: backendMsg.attachment_path,
     attachment_name: backendMsg.attachment_name,
     attachment_size: backendMsg.attachment_size,
     attachment_type: backendMsg.attachment_type,
@@ -26,7 +26,7 @@ export const mapBackendMessage = (backendMsg: any): Message => {
     created_at: backendMsg.created_at,
     edited_at: backendMsg.edited_at,
     deleted_at: backendMsg.deleted_at,
-    status: 'sent',   // ✅ all backend messages are sent
+    status: 'sent',
     audioDetails: isVoice ? {
       url: backendMsg.attachment_path?.startsWith('http')
         ? backendMsg.attachment_path
@@ -44,6 +44,7 @@ export const mapBackendMessage = (backendMsg: any): Message => {
   };
 };
 
+// ✅ NAMED export — matches `import { useMessages } from '...'` in MessagesPage
 export function useMessages(conversationId: string | null) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
@@ -80,12 +81,14 @@ export function useMessages(conversationId: string | null) {
 
   const confirmMessage = useCallback((real: Message) => {
     setMessages((prev) => {
-      const index = prev.findIndex(m => m.client_message_id === real.client_message_id);
-      if (index !== -1) {
-        const newMessages = [...prev];
-        newMessages[index] = { ...real, status: 'sent' };
-        return newMessages;
+      const tempIdx = prev.findIndex(m => m.client_message_id === real.client_message_id);
+      if (tempIdx !== -1) {
+        const next = [...prev];
+        next[tempIdx] = { ...real, status: 'sent' };
+        return next;
       }
+      // Broadcast already arrived — don't duplicate.
+      if (prev.some(m => m.id === real.id)) return prev;
       return [...prev, { ...real, status: 'sent' }];
     });
   }, []);
@@ -108,3 +111,6 @@ export function useMessages(conversationId: string | null) {
     setMessages,
   };
 }
+
+// Kept for backward compatibility — safe to remove once nothing imports the default.
+export default useMessages;

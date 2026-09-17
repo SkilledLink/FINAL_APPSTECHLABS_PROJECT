@@ -31,7 +31,7 @@ publicHttp.interceptors.request.use((config) => {
     const token = localStorage.getItem('access_token');
     if (token) {
       config.headers = config.headers ?? {};
-      // @ts-expect-error axios header typing
+      
       config.headers.Authorization = `Bearer ${token}`;
     }
   } catch {

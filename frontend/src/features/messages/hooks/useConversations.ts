@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+// src/hooks/useConversations.ts
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { conversationsApi } from '../api/conversations';
 import type { Conversation, Message, MessageUser } from '../types/message.types';
-import { useAuth } from '../features/auth/hooks/useAuth';
+import { useAuth } from '../../auth/hooks/useAuth';
 import { formatFileSize, getFileIcon } from '../utils/fileUtils';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -26,7 +27,9 @@ function mapBackendConversation(backend: any): Conversation {
     const isVoice = lm.type === 'voice';
     const attachmentUrl = lm.attachment_path?.startsWith('http')
       ? lm.attachment_path
-      : lm.attachment_path ? `${SUPABASE_URL}/storage/v1/object/public/messages/${lm.attachment_path}` : '';
+      : lm.attachment_path
+        ? `${SUPABASE_URL}/storage/v1/object/public/messages/${lm.attachment_path}`
+        : '';
 
     lastMessage = {
       id: lm.id,
@@ -44,18 +47,22 @@ function mapBackendConversation(backend: any): Conversation {
       created_at: lm.created_at,
       edited_at: lm.edited_at,
       deleted_at: lm.deleted_at,
-      audioDetails: isVoice ? {
-        url: attachmentUrl,
-        duration: lm.duration_seconds ? `${Math.floor(lm.duration_seconds)}s` : '0s',
-        waveform: Array.from({ length: 15 }, () => Math.floor(Math.random() * 75 + 25)),
-      } : undefined,
-      fileDetails: lm.attachment_name ? {
-        name: lm.attachment_name,
-        size: formatFileSize(lm.attachment_size || 0),
-        type: lm.attachment_type || 'application/octet-stream',
-        icon: getFileIcon(lm.attachment_type || ''),
-        extension: lm.attachment_name?.split('.').pop() || '',
-      } : undefined,
+      audioDetails: isVoice
+        ? {
+            url: attachmentUrl,
+            duration: lm.duration_seconds ? `${Math.floor(lm.duration_seconds)}s` : '0s',
+            waveform: Array.from({ length: 15 }, () => Math.floor(Math.random() * 75 + 25)),
+          }
+        : undefined,
+      fileDetails: lm.attachment_name
+        ? {
+            name: lm.attachment_name,
+            size: formatFileSize(lm.attachment_size || 0),
+            type: lm.attachment_type || 'application/octet-stream',
+            icon: getFileIcon(lm.attachment_type || ''),
+            extension: lm.attachment_name?.split('.').pop() || '',
+          }
+        : undefined,
     };
   }
 
@@ -77,22 +84,24 @@ export function useConversations() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const fetchingRef = useRef(false);
 
   const fetchConversations = useCallback(async () => {
-    if (!isAuthenticated() || !user) {
+    if (!isAuthenticated() || !user || fetchingRef.current) {
       setLoading(false);
       return;
     }
     try {
+      fetchingRef.current = true;
       setLoading(true);
       const data = await conversationsApi.list();
-      const mapped = data.map(mapBackendConversation);
-      setConversations(mapped);
+      setConversations(data.map(mapBackendConversation));
       setError(null);
     } catch (err) {
       setError(err as Error);
     } finally {
       setLoading(false);
+      fetchingRef.current = false;
     }
   }, [isAuthenticated, user]);
 
@@ -100,11 +109,59 @@ export function useConversations() {
     fetchConversations();
   }, [fetchConversations]);
 
-  const updateConversation = useCallback((id: string, updates: Partial<Conversation>) => {
-    setConversations((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, ...updates } : c))
-    );
+  const getOrCreateDirect = useCallback(async (userId: string) => {
+    const raw = await conversationsApi.getOrCreateDirect(userId);
+    const mapped = mapBackendConversation(raw);
+    setConversations(prev => {
+      const exists = prev.some(c => c.id === mapped.id);
+      return exists ? prev : [mapped, ...prev];
+    });
+    return mapped;
   }, []);
 
-  return { conversations, loading, error, refetch: fetchConversations, updateConversation };
+  const updateConversation = useCallback((id: string, updates: Partial<Conversation>) => {
+    setConversations(prev => prev.map(c => (c.id === id ? { ...c, ...updates } : c)));
+  }, []);
+
+  const applyIncomingMessage = useCallback(
+    (message: Message, isActiveConversation: boolean, currentUserId: string) => {
+      setConversations(prev => {
+        const idx = prev.findIndex(c => c.id === message.conversation_id);
+        if (idx === -1) return prev;
+
+        const conv = prev[idx];
+        const isFromSelf = message.sender_id === currentUserId;
+
+        const updated: Conversation = {
+          ...conv,
+          lastMessage: message,
+          updated_at: message.created_at,
+          unreadCount:
+            isActiveConversation || isFromSelf ? conv.unreadCount : (conv.unreadCount || 0) + 1,
+        };
+
+        const next = [...prev];
+        next.splice(idx, 1);
+        next.unshift(updated);
+        return next;
+      });
+    },
+    [],
+  );
+
+  const clearUnread = useCallback((id: string) => {
+    setConversations(prev => prev.map(c => (c.id === id ? { ...c, unreadCount: 0 } : c)));
+  }, []);
+
+  return {
+    conversations,
+    loading,
+    error,
+    refetch: fetchConversations,
+    fetchConversations,
+    getOrCreateDirect,
+    updateConversation,
+    applyIncomingMessage,
+    clearUnread,
+  };
 }

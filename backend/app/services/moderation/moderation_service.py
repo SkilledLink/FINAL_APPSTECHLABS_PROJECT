@@ -1,3 +1,5 @@
+# app/services/moderation/moderation_service.py
+import hashlib
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -5,6 +7,8 @@ from typing import Optional
 
 from sqlmodel import Session
 
+from app.ai.cache import TTLCache
+from app.core.config import settings
 from app.enums.moderation import (
     CANONICAL_CATEGORIES,
     ModerationDecision,
@@ -13,16 +17,33 @@ from app.models.feed import Feed, FeedMedia
 from app.models.moderation_record import ModerationRecord
 from app.repositories.moderation_repository import ModerationRepository
 from app.services.moderation import decision as decision_engine
-from app.services.moderation.image_moderator import ImageModerator
+from app.services.moderation.image_fetcher import (
+    CloudinaryImageFetcher,
+    ImageFetchError,
+)
+from app.services.moderation.multimodal_moderator import MultimodalModerator
 from app.services.moderation.providers.factory import (
     build_image_provider,
     build_text_provider,
 )
 from app.services.moderation.provider import ProviderResult
+from app.services.moderation.rate_limiter import SlidingWindowLimiter
 from app.services.moderation.text_moderator import TextModerator
 from app.services.moderation.video_moderator import VideoModerator
 
 logger = logging.getLogger(__name__)
+
+
+# ── Module-level caches / limiters ──────────────────────────
+# Whole-content cache: hash(title + description + image hashes) -> result
+_content_cache = TTLCache(
+    ttl_seconds=settings.MODERATION_TEXT_CACHE_TTL_SECONDS,
+    max_size=settings.MODERATION_TEXT_CACHE_MAX_SIZE,
+)
+# Process-level RPM limiter, safety-margined below Gemini free tier.
+_provider_limiter = SlidingWindowLimiter(
+    max_per_minute=settings.MODERATION_MAX_CALLS_PER_MINUTE,
+)
 
 
 @dataclass
@@ -45,15 +66,21 @@ class ModerationService:
         session: Session,
         text_provider=None,
         image_provider=None,
+        multimodal_provider=None,
     ):
         self.session = session
         self.repo = ModerationRepository(session)
+        self.fetcher = CloudinaryImageFetcher()
 
+        # On free tier, Gemini handles both text AND images. The "text"
+        # provider is used only when a feed has no images.
         self.text_provider = text_provider or build_text_provider()
         self.image_provider = image_provider or build_image_provider()
+        self.multimodal_provider = multimodal_provider or self.image_provider
 
         self.text_moderator = TextModerator(self.text_provider)
-        self.image_moderator = ImageModerator(self.image_provider)
+        self.image_moderator = None  # reserved for multi-image fallback
+        self.multimodal_moderator = MultimodalModerator(self.multimodal_provider)
         self.video_moderator = VideoModerator()
 
     # ─── Public API ─────────────────────────────────────────
@@ -61,41 +88,102 @@ class ModerationService:
         """Run moderation for a feed, persist a ModerationRecord,
         supersede any prior active record, and return the outcome."""
 
-        # Supersede previous record (edit-triggered re-moderation)
         self.repo.supersede_for_feed(feed.id)
 
-        text_result = self.text_moderator.moderate(
-            title=feed.title, description=feed.description
+        # ── Fetch images once, keep bytes for hashing + multimodal call ──
+        images_bytes: list[tuple[bytes, str]] = []
+        image_meta: list[dict] = []
+        for media in self._image_media(feed):
+            try:
+                img_bytes, mime = self.fetcher.fetch_and_resize(media.media_url)
+                images_bytes.append((img_bytes, mime))
+                image_meta.append({
+                    "media_type": "image",
+                    "url": media.media_url,
+                    "hash": hashlib.sha256(img_bytes).hexdigest(),
+                })
+            except ImageFetchError as e:
+                logger.warning("Image fetch failed for %s: %s", media.media_url, e)
+                image_meta.append({
+                    "media_type": "image",
+                    "url": media.media_url,
+                    "hash": None,
+                    "fetch_error": str(e),
+                })
+
+        # ── Cache lookup ─────────────────────────────────────
+        cache_key = self._content_key(
+            feed.title, feed.description,
+            [m.get("hash") for m in image_meta],
+        )
+        cached = _content_cache.get(cache_key)
+        if cached is not None:
+            logger.info("moderation cache hit feed=%s", feed.id)
+            return self._persist_from_cached(feed, cached, image_meta)
+
+        # ── Rate limit guard ─────────────────────────────────
+        if not _provider_limiter.allow():
+            logger.warning(
+                "moderation rate limit hit — routing feed %s to review", feed.id
+            )
+            return self._persist_review_due_to_rate_limit(feed, image_meta)
+
+        # ── Single call: text + images together ──────────────
+        result = self.multimodal_moderator.moderate(
+            title=feed.title,
+            description=feed.description,
+            images=images_bytes,
         )
 
-        image_results: list[ProviderResult] = []
-        for media in self._image_media(feed):
-            image_results.append(self.image_moderator.moderate(media.media_url))
-
-        # VideoModerator is a no-op stub for now.
+        # ── Videos: always review (no video provider) ────────
+        video_results: list[ProviderResult] = []
         for media in self._video_media(feed):
-            self.video_moderator.moderate(
+            r = self.video_moderator.moderate(
                 media_url=media.media_url,
                 duration_seconds=media.duration_seconds,
             )
+            if r is not None:
+                video_results.append(r)
+                image_meta.append({
+                    "media_type": "video",
+                    "url": media.media_url,
+                })
 
-        combined = decision_engine.combine([text_result, *image_results])
+        # ── Combine (single multimodal result + any videos) ──
+        combined = decision_engine.combine([result, *video_results])
         decision = decision_engine.decide(combined.severity)
 
+        # ── Persist ──────────────────────────────────────────
         record = ModerationRecord(
             feed_id=feed.id,
             decision=decision,
             combined_severity=combined.severity,
             combined_confidence=combined.confidence,
-            text_result=self._serialise(text_result),
-            image_results=[self._serialise(r) for r in image_results],
-            provider=combined.provider or self.text_provider.name,
+            text_result=self._serialise(result),
+            image_results=image_meta,
+            provider=combined.provider or self.multimodal_provider.name,
             model=combined.model or "",
             error=combined.error,
         )
         self.repo.create(record)
         self.session.commit()
         self.session.refresh(record)
+
+        # Cache the outcome (only successful runs — failures shouldn't stick)
+        if not result.error:
+            _content_cache.set(
+                cache_key,
+                {
+                    "decision": decision,
+                    "severity": combined.severity,
+                    "confidence": combined.confidence,
+                    "description": combined.description,
+                    "reason": combined.reason,
+                    "categories": self._filter_categories(combined.categories),
+                    "provider": record.provider,
+                    "model": record.model,
+                },
+            )
 
         logger.info(
             "Moderation for feed %s: %s (severity=%s, confidence=%s)",
@@ -115,14 +203,7 @@ class ModerationService:
             record=record,
         )
 
-    def review(
-        self,
-        record_id,
-        reviewer,
-        action: str,
-        reason: str,
-        request=None,
-    ) -> ModerationRecord:
+    def review(self, record_id, reviewer, action: str, reason: str, request=None) -> ModerationRecord:
         from app.models.user import User
         from app.services.audit_service import AuditService
         from app.services.notification_service import NotificationService
@@ -148,15 +229,12 @@ class ModerationService:
 
         feed = self.session.get(Feed, record.feed_id)
         if feed is not None:
-            feed.status = (
-                "published" if action == "approve" else "rejected"
-            )
+            feed.status = ("published" if action == "approve" else "rejected")
             feed.updated_at = now
             self.session.add(feed)
 
         self.session.flush()
 
-        # Notify author + audit
         if feed is not None:
             try:
                 NotificationService(self.session).create(
@@ -192,6 +270,95 @@ class ModerationService:
         return record
 
     # ─── Internals ──────────────────────────────────────────
+    def _content_key(
+        self, title: str, description: str, image_hashes: list[Optional[str]],
+    ) -> str:
+        h = hashlib.sha256()
+        h.update((title or "").strip().encode("utf-8"))
+        h.update(b"\x00")
+        h.update((description or "").strip().encode("utf-8"))
+        for ih in image_hashes:
+            h.update(b"\x00")
+            h.update((ih or "none").encode("ascii"))
+        return h.hexdigest()
+
+    def _persist_from_cached(
+        self, feed: Feed, cached: dict, image_meta: list[dict],
+    ) -> ModerationOutcome:
+        """Persist a fresh ModerationRecord using the cached verdict."""
+        record = ModerationRecord(
+            feed_id=feed.id,
+            decision=cached["decision"],
+            combined_severity=cached["severity"],
+            combined_confidence=cached["confidence"],
+            text_result={
+                "description": cached["description"],
+                "reason": cached["reason"],
+                "categories": cached["categories"],
+                "provider": cached["provider"],
+                "model": cached["model"],
+                "cached": True,
+            },
+            image_results=image_meta,
+            provider=cached["provider"],
+            model=cached["model"],
+            error=None,
+        )
+        self.repo.create(record)
+        self.session.commit()
+        self.session.refresh(record)
+
+        return ModerationOutcome(
+            decision=cached["decision"],
+            severity=cached["severity"],
+            confidence=cached["confidence"],
+            description=cached["description"],
+            reason=cached["reason"],
+            categories=cached["categories"],
+            provider=cached["provider"],
+            model=cached["model"],
+            error=None,
+            record=record,
+        )
+
+    def _persist_review_due_to_rate_limit(
+        self, feed: Feed, image_meta: list[dict],
+    ) -> ModerationOutcome:
+        record = ModerationRecord(
+            feed_id=feed.id,
+            decision=ModerationDecision.REVIEW.value,
+            combined_severity=6,
+            combined_confidence=0,
+            text_result={
+                "description": "Moderation deferred due to provider rate limit",
+                "reason": "Rate limit hit — post queued for review",
+                "categories": [],
+                "provider": "internal",
+                "model": "rate_limit",
+                "error": "rate_limit_hit",
+            },
+            image_results=image_meta,
+            provider="internal",
+            model="rate_limit",
+            error="rate_limit_hit",
+        )
+        self.repo.create(record)
+        self.session.commit()
+        self.session.refresh(record)
+
+        return ModerationOutcome(
+            decision=ModerationDecision.REVIEW.value,
+            severity=6,
+            confidence=0,
+            description="Moderation deferred due to provider rate limit",
+            reason="Rate limit hit — post queued for review",
+            categories=[],
+            provider="internal",
+            model="rate_limit",
+            error="rate_limit_hit",
+            record=record,
+        )
+
     def _image_media(self, feed: Feed) -> list[FeedMedia]:
         from sqlmodel import select
         return list(self.session.exec(
@@ -221,6 +388,10 @@ class ModerationService:
             "model": r.model,
             "error": r.error,
             "raw": r.raw,
+            "fallback_used": r.fallback_used,
+            "primary_provider": r.primary_provider,
+            "primary_model": r.primary_model,
+            "primary_error": r.primary_error,
         }
 
     def _filter_categories(self, categories: list[str]) -> list[str]:

@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Dict, Set
 from uuid import UUID
 
 from sqlmodel import Session, select, func
@@ -7,7 +7,6 @@ from sqlalchemy.orm import selectinload
 
 from app.models.feed import Feed, FeedMedia, FeedLike, FeedComment, Hashtag, FeedHashtag
 from app.models.user import User
-
 
 
 class FeedRepository:
@@ -279,3 +278,55 @@ class FeedRepository:
         self.session.delete(comment)
         self.session.flush()
         return True
+
+    # ─── BULK (used by list endpoints to avoid N+1) ─────────
+    def bulk_like_counts(self, feed_ids: List[UUID]) -> Dict[UUID, int]:
+        if not feed_ids:
+            return {}
+        stmt = (
+            select(FeedLike.feed_id, func.count())
+            .where(FeedLike.feed_id.in_(feed_ids))
+            .group_by(FeedLike.feed_id)
+        )
+        return {fid: count for fid, count in self.session.exec(stmt).all()}
+
+    def bulk_comment_counts(self, feed_ids: List[UUID]) -> Dict[UUID, int]:
+        if not feed_ids:
+            return {}
+        stmt = (
+            select(FeedComment.feed_id, func.count())
+            .where(FeedComment.feed_id.in_(feed_ids))
+            .group_by(FeedComment.feed_id)
+        )
+        return {fid: count for fid, count in self.session.exec(stmt).all()}
+
+    def bulk_liked_feed_ids(self, user: User, feed_ids: List[UUID]) -> Set[UUID]:
+        if not feed_ids:
+            return set()
+        stmt = select(FeedLike.feed_id).where(
+            FeedLike.user_id == user.id,
+            FeedLike.feed_id.in_(feed_ids),
+        )
+        return set(self.session.exec(stmt).all())
+
+    def bulk_media_by_feed(self, feed_ids: List[UUID]) -> Dict[UUID, List[FeedMedia]]:
+        if not feed_ids:
+            return {}
+        stmt = select(FeedMedia).where(FeedMedia.feed_id.in_(feed_ids))
+        result: Dict[UUID, List[FeedMedia]] = {}
+        for m in self.session.exec(stmt).all():
+            result.setdefault(m.feed_id, []).append(m)
+        return result
+
+    def bulk_hashtags_by_feed(self, feed_ids: List[UUID]) -> Dict[UUID, List[Hashtag]]:
+        if not feed_ids:
+            return {}
+        stmt = (
+            select(FeedHashtag.feed_id, Hashtag)
+            .join(Hashtag, Hashtag.id == FeedHashtag.hashtag_id)
+            .where(FeedHashtag.feed_id.in_(feed_ids))
+        )
+        result: Dict[UUID, List[Hashtag]] = {}
+        for fid, hashtag in self.session.exec(stmt).all():
+            result.setdefault(fid, []).append(hashtag)
+        return result

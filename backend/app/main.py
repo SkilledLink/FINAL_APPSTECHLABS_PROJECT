@@ -26,7 +26,7 @@ from app.api.v1.feeds import router as feeds_router
 from app.api.v1 import search
 from app.api.v1 import chat
 from app.api.v1.chat import router as chat_router
-from app.api.v1.ai_search import router as ai_search_router          # ✅ NEW
+from app.ai.ai_search import router as ai_search_router          # ✅ NEW
 from app.models.audit_log import AuditLog  # noqa: F401
 from app.models.audit_log import AuditLog  # noqa: F401 registers with SQLModel.metadata
 

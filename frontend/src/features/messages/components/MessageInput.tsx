@@ -9,6 +9,7 @@ interface MessageInputProps {
   onSendImage?: (file: File) => void;
   uploading?: boolean;
   uploadProgress?: number;
+  onTypingChange?: (isTyping: boolean) => void;   // ← NEW
 }
 
 export const MessageInput: React.FC<MessageInputProps> = ({
@@ -18,12 +19,15 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   onSendImage,
   uploading = false,
   uploadProgress = 0,
+  onTypingChange,                                  // ← NEW
 }) => {
   const [text, setText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);   // ← NEW
+  const isTypingRef = useRef(false);                              // ← NEW
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -35,8 +39,53 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     return () => clearInterval(interval);
   }, [isRecording]);
 
+  // ← NEW: stop typing on unmount
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    };
+  }, []);
+
+  // ← NEW: stop typing helper
+  const stopTypingNow = () => {
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+    if (isTypingRef.current && onTypingChange) {
+      isTypingRef.current = false;
+      onTypingChange(false);
+    }
+  };
+
+  // ← NEW: debounced typing emitter
+  const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setText(value);
+
+    if (!onTypingChange) return;
+
+    if (value.length === 0) {
+      stopTypingNow();
+      return;
+    }
+
+    if (!isTypingRef.current) {
+      isTypingRef.current = true;
+      onTypingChange(true);
+    }
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      isTypingRef.current = false;
+      onTypingChange(false);
+      typingTimeoutRef.current = null;
+    }, 2000);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    stopTypingNow();                                // ← NEW
     if (selectedFile) {
       if (selectedFile.type.startsWith('image/') && onSendImage) {
         onSendImage(selectedFile);
@@ -220,7 +269,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                 type="text"
                 placeholder={selectedFile ? 'File selected...' : 'Write a message...'}
                 value={text}
-                onChange={(e) => setText(e.target.value)}
+                onChange={handleTextChange}          // ← CHANGED
                 disabled={!!selectedFile}
                 className="flex-1 bg-transparent px-3 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none disabled:opacity-50"
               />

@@ -2,6 +2,7 @@
 import asyncio
 import logging
 import time
+from typing import Optional
 
 from google import genai
 from google.genai import types
@@ -15,7 +16,7 @@ from app.ai.providers.base import (
 
 logger = logging.getLogger(__name__)
 
-_gemini_client: genai.Client | None = None
+_gemini_client: Optional[genai.Client] = None
 
 
 def _client() -> genai.Client:
@@ -45,7 +46,6 @@ class GeminiProvider(ChatProvider):
     name = "gemini"
     model = settings.GEMINI_CHAT_MODEL
 
-    # ── Text ────────────────────────────────────────────────
     async def generate(
         self,
         *,
@@ -53,6 +53,7 @@ class GeminiProvider(ChatProvider):
         system_prompt: str,
         max_tokens: int,
         temperature: float,
+        model: Optional[str] = None,
     ) -> str:
         return await asyncio.to_thread(
             self.generate_sync,
@@ -60,6 +61,7 @@ class GeminiProvider(ChatProvider):
             system_prompt=system_prompt,
             max_tokens=max_tokens,
             temperature=temperature,
+            model=model,
         )
 
     def generate_sync(
@@ -69,7 +71,11 @@ class GeminiProvider(ChatProvider):
         system_prompt: str,
         max_tokens: int,
         temperature: float,
+        model: Optional[str] = None,
     ) -> str:
+        # Gemini doesn't support a fast/slow tier split in our config.
+        # The `model` hint is accepted for interface parity and ignored.
+        _ = model
         full = f"{system_prompt}\n\n{prompt}"
         started = time.perf_counter()
         try:
@@ -91,15 +97,13 @@ class GeminiProvider(ChatProvider):
         usage_meta = getattr(resp, "usage_metadata", None)
         logger.info(
             "ai.provider gemini model=%s ms=%d in_tokens=%s out_tokens=%s total_tokens=%s",
-            self.model,
-            ms,
+            self.model, ms,
             getattr(usage_meta, "prompt_token_count", None) if usage_meta else None,
             getattr(usage_meta, "candidates_token_count", None) if usage_meta else None,
             getattr(usage_meta, "total_token_count", None) if usage_meta else None,
         )
         return resp.text.strip()
 
-    # ── Image ───────────────────────────────────────────────
     def analyze_image_sync(
         self,
         *,
@@ -108,20 +112,10 @@ class GeminiProvider(ChatProvider):
         system_prompt: str,
         user_prompt: str,
     ) -> str:
-        """
-        Multimodal call. Sends system instruction + user text + image
-        to Gemini and returns the raw text response.
-
-        Uses a generous output budget because Gemini 3.x consumes
-        reasoning tokens before emitting the final JSON.
-        """
         if not image_bytes:
             raise AIPermanentError("gemini_image_empty")
 
-        model = getattr(
-            settings, "GEMINI_IMAGE_MODEL", settings.GEMINI_CHAT_MODEL
-        )
-
+        model = getattr(settings, "GEMINI_IMAGE_MODEL", settings.GEMINI_CHAT_MODEL)
         started = time.perf_counter()
         try:
             resp = _client().models.generate_content(
@@ -133,9 +127,6 @@ class GeminiProvider(ChatProvider):
                 config=types.GenerateContentConfig(
                     system_instruction=system_prompt,
                     temperature=0.2,
-                    # ⬆️ Changed from 512 → 2048.
-                    # Gemini 3.x consumes reasoning tokens before emitting
-                    # the JSON payload, so 512 was truncating the response.
                     max_output_tokens=2048,
                     response_mime_type="application/json",
                 ),
@@ -146,11 +137,8 @@ class GeminiProvider(ChatProvider):
         if not resp or not getattr(resp, "text", None):
             raise AIPermanentError("gemini_image_empty_response")
 
-        ms = int((time.perf_counter() - started) * 1000)
         logger.info(
             "ai.provider gemini.vision model=%s ms=%d chars=%d",
-            model,
-            ms,
-            len(resp.text),
+            model, int((time.perf_counter() - started) * 1000), len(resp.text),
         )
         return resp.text.strip()

@@ -1,9 +1,10 @@
+# app/services/moderation/providers/groq_provider.py
 import base64
 import json
 import logging
 import re
 import time
-from typing import Any, Optional
+from typing import Optional
 
 import httpx
 
@@ -11,7 +12,6 @@ from app.core.config import settings
 from app.services.moderation.provider import ModerationProvider, ProviderResult
 
 logger = logging.getLogger(__name__)
-
 
 _JSON_BLOCK_RE = re.compile(r"\{.*\}", re.DOTALL)
 
@@ -32,6 +32,18 @@ def _extract_json(content: str) -> Optional[dict]:
     return None
 
 
+_http_client: Optional[httpx.Client] = None
+
+
+def _client() -> httpx.Client:
+    global _http_client
+    if _http_client is None:
+        _http_client = httpx.Client(
+            timeout=settings.MODERATION_TIMEOUT_SECONDS,
+        )
+    return _http_client
+
+
 class GroqModerationProvider(ModerationProvider):
     name = "groq"
 
@@ -40,10 +52,8 @@ class GroqModerationProvider(ModerationProvider):
         self.base_url = settings.MODERATION_GROQ_BASE_URL.rstrip("/")
         self.text_model = settings.MODERATION_GROQ_TEXT_MODEL
         self.vision_model = settings.MODERATION_GROQ_VISION_MODEL
-        self.timeout = settings.MODERATION_TIMEOUT_SECONDS
         self.max_retries = settings.MODERATION_MAX_RETRIES
 
-    # ─── Public API ─────────────────────────────────────────
     def moderate_text(self, system_prompt: str, user_text: str) -> ProviderResult:
         payload = {
             "model": self.text_model,
@@ -78,7 +88,6 @@ class GroqModerationProvider(ModerationProvider):
         }
         return self._call(payload, model=self.vision_model)
 
-    # ─── Internals ──────────────────────────────────────────
     def _call(self, payload: dict, model: str) -> ProviderResult:
         if not self.api_key:
             return ProviderResult.failure("missing_groq_api_key", self.name, model)
@@ -88,13 +97,12 @@ class GroqModerationProvider(ModerationProvider):
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
-
         last_error: Optional[str] = None
+        client = _client()
 
         for attempt in range(self.max_retries + 1):
             try:
-                with httpx.Client(timeout=self.timeout) as client:
-                    r = client.post(url, headers=headers, json=payload)
+                r = client.post(url, headers=headers, json=payload)
             except httpx.TimeoutException:
                 last_error = "provider_timeout"
                 self._sleep(attempt)
@@ -107,7 +115,7 @@ class GroqModerationProvider(ModerationProvider):
             if r.status_code == 429:
                 last_error = "provider_rate_limited"
                 retry_after = r.headers.get("retry-after")
-                wait = min(float(retry_after), 5.0) if retry_after else None
+                wait = min(float(retry_after), 3.0) if retry_after else None
                 self._sleep(attempt, override=wait)
                 continue
 
@@ -142,12 +150,10 @@ class GroqModerationProvider(ModerationProvider):
     def _sleep(self, attempt: int, override: Optional[float] = None) -> None:
         if attempt >= self.max_retries:
             return
-        wait = override if override is not None else (1.0 * (3 ** attempt))
-        time.sleep(min(wait, 5.0))
+        wait = override if override is not None else (0.5 * (2 ** attempt))
+        time.sleep(min(wait, 3.0))
 
-    def _validate(
-        self, data: dict, model: str, raw: dict,
-    ) -> ProviderResult:
+    def _validate(self, data: dict, model: str, raw: dict) -> ProviderResult:
         try:
             severity = int(data.get("severity"))
             confidence = int(data.get("confidence"))
@@ -155,13 +161,10 @@ class GroqModerationProvider(ModerationProvider):
             return ProviderResult.failure(
                 "invalid_severity_or_confidence", self.name, model
             )
-
         if not (1 <= severity <= 10):
             return ProviderResult.failure("severity_out_of_range", self.name, model)
         if not (0 <= confidence <= 100):
-            return ProviderResult.failure(
-                "confidence_out_of_range", self.name, model
-            )
+            return ProviderResult.failure("confidence_out_of_range", self.name, model)
 
         description = str(data.get("description", ""))[:200]
         reason = str(data.get("reason", ""))[:200]

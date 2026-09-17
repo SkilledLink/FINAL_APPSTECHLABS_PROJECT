@@ -17,12 +17,25 @@ const mapAdmin = (u: any): Administrator => ({
   joinedDate: u.created_at,
 });
 
+export interface AdministratorsPage {
+  items: Administrator[];
+  total: number;
+}
+
 export const administratorsService = {
-  async getAll(): Promise<Administrator[]> {
+  async getPage(skip: number, limit: number): Promise<AdministratorsPage> {
     const { data } = await api.get('/admin/administrators', {
-      params: { skip: 0, limit: 100 },
+      params: { skip, limit },
     });
-    return (data.items ?? []).map(mapAdmin);
+    return {
+      items: (data.items ?? []).map(mapAdmin),
+      total: data.total ?? 0,
+    };
+  },
+
+  async getAll(limit = 100): Promise<Administrator[]> {
+    const { items } = await this.getPage(0, limit);
+    return items;
   },
 
   async updateRole(id: string, isAdmin: boolean, reason: string): Promise<void> {

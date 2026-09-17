@@ -1,3 +1,4 @@
+// src/features/location/components/NearbyProfessionalCard.tsx
 import {
   ArrowUpRight,
   BadgeCheck,
@@ -6,8 +7,8 @@ import {
   MapPin,
   Star,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import Avatar from '../../../components/ui/Avatar';
+import ProfileLink from '../../profile/components/ProfileLink';
 import type { DiscoverProfessional } from '../types/location.types';
 
 interface NearbyProfessionalCardProps {
@@ -28,9 +29,6 @@ export default function NearbyProfessionalCard({
 }: NearbyProfessionalCardProps) {
   const { user, public_location, distance_km } = professional;
   const fullName = `${user.first_name} ${user.last_name}`.trim();
-  const profileHref = user.username
-    ? `/profile/${user.username}`
-    : `/professionals/${professional.id}`;
 
   const services = professional.services ?? [];
   const skills = professional.skills ?? [];
@@ -47,16 +45,17 @@ export default function NearbyProfessionalCard({
   const hasDistance = typeof distance_km === 'number' && distance_km >= 0;
 
   return (
-    <Link
-      to={profileHref}
-      onClick={() => onSelect?.(professional.id)}
-      className="group relative block overflow-hidden rounded-md border border-slate-200/70 bg-white/85 backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-500/40 hover:shadow-[0_8px_24px_-12px_rgba(59,130,246,0.25)] dark:border-white/10 dark:bg-slate-900/60 dark:hover:border-blue-500/30"
-    >
+    <div className="group relative overflow-hidden rounded-md border border-slate-200/70 bg-white/85 backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-500/40 hover:shadow-[0_8px_24px_-12px_rgba(59,130,246,0.25)] dark:border-white/10 dark:bg-slate-900/60 dark:hover:border-blue-500/30">
       <span className="absolute inset-x-0 top-0 h-[2px] origin-left scale-x-0 bg-gradient-to-r from-blue-500 to-blue-700 transition-transform duration-300 group-hover:scale-x-100" />
 
       <div className="p-5">
         <div className="flex items-start gap-4">
-          <div className="relative shrink-0">
+          {/* ── Avatar → ProfileLink ── */}
+          <ProfileLink
+            userId={user.id}
+            ariaLabel={`View ${fullName}'s profile`}
+            className="relative shrink-0 inline-block"
+          >
             <Avatar
               name={fullName}
               avatar={user.profile_image_url ?? undefined}
@@ -68,15 +67,19 @@ export default function NearbyProfessionalCard({
                 aria-label="Available"
               />
             )}
-          </div>
+          </ProfileLink>
 
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <h3 className="truncate text-[15px] font-semibold tracking-tight text-slate-900 transition-colors group-hover:text-blue-700 dark:text-white dark:group-hover:text-blue-400">
+                  {/* ── Name → ProfileLink ── */}
+                  <ProfileLink
+                    userId={user.id}
+                    className="truncate text-[15px] font-semibold tracking-tight text-slate-900 transition-colors hover:text-blue-700 dark:text-white dark:hover:text-blue-400"
+                  >
                     {fullName}
-                  </h3>
+                  </ProfileLink>
                   {professional.is_verified && (
                     <BadgeCheck
                       className="h-4 w-4 shrink-0 fill-blue-600 text-white dark:fill-blue-500 dark:text-slate-900"
@@ -89,7 +92,9 @@ export default function NearbyProfessionalCard({
                   {professional.profession}
                   {professional.company_name && (
                     <>
-                      <span className="mx-1.5 text-slate-300 dark:text-slate-700">·</span>
+                      <span className="mx-1.5 text-slate-300 dark:text-slate-700">
+                        ·
+                      </span>
                       <span className="text-slate-500 dark:text-slate-400">
                         {professional.company_name}
                       </span>
@@ -122,7 +127,9 @@ export default function NearbyProfessionalCard({
               {professional.years_of_experience != null &&
                 professional.years_of_experience > 0 && (
                   <>
-                    <span className="text-slate-300 dark:text-slate-700">·</span>
+                    <span className="text-slate-300 dark:text-slate-700">
+                      ·
+                    </span>
                     <span className="inline-flex items-center gap-1 font-medium text-slate-500 dark:text-slate-400">
                       <Clock className="h-3 w-3" />
                       {professional.years_of_experience}{' '}
@@ -218,7 +225,18 @@ export default function NearbyProfessionalCard({
             </div>
           )}
         </div>
+
+        {/* ── View Profile button ── */}
+        <ProfileLink
+          userId={user.id}
+          ariaLabel={`View ${fullName}'s profile`}
+          onAfterNavigate={() => onSelect?.(professional.id)}
+          className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-md border border-blue-500/30 bg-blue-500/8 px-4 py-2 text-xs font-semibold text-blue-700 transition-colors hover:border-blue-500/50 hover:bg-blue-500/15 dark:border-blue-400/30 dark:text-blue-300 dark:hover:border-blue-400/50 dark:hover:bg-blue-500/15"
+        >
+          <span>View Profile</span>
+          <ArrowUpRight className="h-3.5 w-3.5" />
+        </ProfileLink>
       </div>
-    </Link>
+    </div>
   );
 }

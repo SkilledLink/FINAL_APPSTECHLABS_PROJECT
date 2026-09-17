@@ -79,3 +79,4 @@ python-socketio
 
 geoalchemy2>=0.14
 httpx>=0.27
+python-socketio[asyncio]==5.11.4

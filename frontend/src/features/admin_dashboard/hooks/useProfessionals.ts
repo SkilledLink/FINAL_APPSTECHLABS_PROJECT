@@ -1,21 +1,68 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { professionalsService } from '../services/professionalsService';
 import type { AdminProfessional, AdminProfessionalDetail } from '../types/admin.types';
 
+const BATCH_SIZE = 5;
+
 export const useProfessionals = () => {
   const [professionals, setProfessionals] = useState<AdminProfessional[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const runIdRef = useRef(0);
+
   const load = useCallback(async () => {
+    const runId = ++runIdRef.current;
+
     setLoading(true);
+    setLoadingMore(false);
     setError(null);
+    setProfessionals([]);
+    setTotal(0);
+
+    let skip = 0;
+    let accumulated: AdminProfessional[] = [];
+    let grandTotal: number | null = null;
+
     try {
-      setProfessionals(await professionalsService.getAll());
+      while (true) {
+        if (runId !== runIdRef.current) return;
+
+        const { items, total: t } = await professionalsService.getPage(skip, BATCH_SIZE);
+
+        if (runId !== runIdRef.current) return;
+
+        if (grandTotal === null) grandTotal = t;
+        if (items.length === 0) break;
+
+        accumulated = accumulated.concat(items);
+        setProfessionals(accumulated);
+        setTotal(grandTotal);
+
+        if (skip === 0) {
+          setLoading(false);
+          if (grandTotal > accumulated.length) setLoadingMore(true);
+        }
+
+        skip += items.length;
+
+        if (
+          grandTotal !== null &&
+          (accumulated.length >= grandTotal || items.length < BATCH_SIZE)
+        ) {
+          break;
+        }
+      }
     } catch (e) {
+      if (runId !== runIdRef.current) return;
       setError(e instanceof Error ? e.message : 'Failed to load professionals');
     } finally {
-      setLoading(false);
+      if (runId === runIdRef.current) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
     }
   }, []);
 
@@ -96,11 +143,7 @@ export const useProfessionals = () => {
     ) => {
       await professionalsService.remove(id, reason, deletionType);
       setProfessionals((prev) =>
-        prev.map((p) =>
-          p.id === id
-            ? { ...p, status: 'deleted' }
-            : p,
-        ),
+        prev.map((p) => (p.id === id ? { ...p, status: 'deleted' } : p)),
       );
     },
     [],
@@ -108,7 +151,9 @@ export const useProfessionals = () => {
 
   return {
     professionals,
+    total,
     loading,
+    loadingMore,
     error,
     refetch: load,
     fetchOne,

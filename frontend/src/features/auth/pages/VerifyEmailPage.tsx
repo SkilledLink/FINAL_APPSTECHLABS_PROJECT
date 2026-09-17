@@ -19,13 +19,12 @@ export default function VerifyEmailPage() {
       const success = await verifyEmail(email, value);
       if (success) {
         setVerified(true);
-        setTimeout(() => navigate("/onboarding"), 2000);
+        window.setTimeout(
+          () => navigate("/onboarding", { replace: true }),
+          1200,
+        );
       }
     }
-  };
-
-  const handleSkip = () => {
-    navigate("/login");
   };
 
   if (verified) {
@@ -38,7 +37,7 @@ export default function VerifyEmailPage() {
           Verification successful!
         </h2>
         <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-w-xs">
-          Your email has been verified. Redirecting to sign in...
+          Setting up your account...
         </p>
       </div>
     );
@@ -80,16 +79,14 @@ export default function VerifyEmailPage() {
         Didn't receive the code?{" "}
         <button
           type="button"
-          onClick={() => {
-            // Optional: resend logic
-          }}
+          onClick={() => {}}
           className="text-blue-600 dark:text-blue-400 font-semibold hover:underline transition-all ml-0.5 cursor-pointer"
         >
           Resend
         </button>
       </p>
 
-      <div className="mt-6 flex items-center justify-between">
+      <div className="mt-6 flex items-center justify-center">
         <Link
           to="/login"
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
@@ -97,13 +94,6 @@ export default function VerifyEmailPage() {
           <ArrowLeft size={14} />
           <span>Back to sign in</span>
         </Link>
-        <button
-          type="button"
-          onClick={handleSkip}
-          className="text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all px-3.5 py-1.5 rounded-xl border border-slate-300/80 dark:border-slate-800 bg-white/40 dark:bg-slate-950/40 hover:bg-white dark:hover:bg-slate-900 cursor-pointer shadow-sm"
-        >
-          Skip for now
-        </button>
       </div>
     </div>
   );

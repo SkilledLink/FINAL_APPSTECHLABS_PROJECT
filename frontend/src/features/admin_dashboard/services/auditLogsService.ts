@@ -29,15 +29,35 @@ export interface AuditLogFilters {
   action?: string;
 }
 
+export interface AuditLogsPage {
+  items: AuditLog[];
+  total: number;
+}
+
 export const auditLogsService = {
-  async getAll(filters: AuditLogFilters = {}): Promise<AuditLog[]> {
-    const params: Record<string, unknown> = { skip: 0, limit: 200 };
+  async getPage(
+    skip: number,
+    limit: number,
+    filters: AuditLogFilters = {},
+  ): Promise<AuditLogsPage> {
+    const params: Record<string, unknown> = { skip, limit };
     if (filters.actorUserId) params.actor_user_id = filters.actorUserId;
     if (filters.entityType) params.entity_type = filters.entityType;
     if (filters.action) params.action = filters.action;
 
     const { data } = await api.get('/admin/audit-logs', { params });
-    return (data.items ?? []).map(mapLog);
+    return {
+      items: (data.items ?? []).map(mapLog),
+      total: data.total ?? 0,
+    };
+  },
+
+  async getAll(
+    filters: AuditLogFilters = {},
+    limit = 200,
+  ): Promise<AuditLog[]> {
+    const { items } = await this.getPage(0, limit, filters);
+    return items;
   },
 
   async getOne(id: string): Promise<AuditLogDetail> {
