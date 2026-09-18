@@ -204,13 +204,14 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
             <Search size={20} />
           </button>
 
-          <button
+          <Link
+            to="/home/notifications"
             className="p-2 text-slate-700 dark:text-slate-200 hover:bg-blue-50/60 dark:hover:bg-slate-800/60 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-all relative border border-transparent hover:border-blue-200/50 dark:hover:border-slate-700/50"
             aria-label="Notifications"
           >
             <Bell size={20} />
             <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-500 rounded-full ring-2 ring-white dark:ring-slate-900" />
-          </button>
+          </Link>
         </div>
       </header>
 
@@ -388,11 +389,10 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
                                     )}
 
                                     <span
-                                      className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white dark:border-slate-900 ${
-                                        professional.available
+                                      className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white dark:border-slate-900 ${professional.available
                                           ? 'bg-green-500'
                                           : 'bg-slate-400'
-                                      }`}
+                                        }`}
                                     />
                                   </div>
 
@@ -422,23 +422,23 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
                                     {(professional.city ||
                                       professional.region ||
                                       professional.country) && (
-                                      <div className="flex items-center gap-1.5 mt-2 text-xs text-slate-500 dark:text-slate-400">
-                                        <MapPin
-                                          size={13}
-                                          className="shrink-0"
-                                        />
+                                        <div className="flex items-center gap-1.5 mt-2 text-xs text-slate-500 dark:text-slate-400">
+                                          <MapPin
+                                            size={13}
+                                            className="shrink-0"
+                                          />
 
-                                        <span className="truncate">
-                                          {[
-                                            professional.city,
-                                            professional.region,
-                                            professional.country,
-                                          ]
-                                            .filter(Boolean)
-                                            .join(', ')}
-                                        </span>
-                                      </div>
-                                    )}
+                                          <span className="truncate">
+                                            {[
+                                              professional.city,
+                                              professional.region,
+                                              professional.country,
+                                            ]
+                                              .filter(Boolean)
+                                              .join(', ')}
+                                          </span>
+                                        </div>
+                                      )}
 
                                     {/* Stats */}
                                     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 text-xs text-slate-500 dark:text-slate-400">
@@ -460,12 +460,12 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
                                       {professional.years_of_experience !==
                                         null &&
                                         professional.years_of_experience !==
-                                          undefined && (
+                                        undefined && (
                                           <span>
                                             {professional.years_of_experience}{' '}
                                             yr
                                             {professional.years_of_experience !==
-                                            1
+                                              1
                                               ? 's'
                                               : ''}{' '}
                                             experience
@@ -474,7 +474,7 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
 
                                       {professional.hourly_rate !== null &&
                                         professional.hourly_rate !==
-                                          undefined && (
+                                        undefined && (
                                           <span className="font-medium text-slate-700 dark:text-slate-300">
                                             {professional.hourly_rate} / hour
                                           </span>
@@ -514,18 +514,16 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
                                 {/* Availability */}
                                 <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
                                   <span
-                                    className={`inline-flex items-center gap-1.5 text-xs font-semibold ${
-                                      professional.available
+                                    className={`inline-flex items-center gap-1.5 text-xs font-semibold ${professional.available
                                         ? 'text-green-600 dark:text-green-400'
                                         : 'text-slate-400 dark:text-slate-500'
-                                    }`}
+                                      }`}
                                   >
                                     <span
-                                      className={`w-1.5 h-1.5 rounded-full ${
-                                        professional.available
+                                      className={`w-1.5 h-1.5 rounded-full ${professional.available
                                           ? 'bg-green-500'
                                           : 'bg-slate-400'
-                                      }`}
+                                        }`}
                                     />
 
                                     {professional.available

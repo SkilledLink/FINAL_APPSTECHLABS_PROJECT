@@ -30,11 +30,14 @@ const sidebarCategories: { type: NotificationType; label: string }[] = [
 ];
 
 interface NotificationsPageProps {
-  theme: 'light' | 'dark';
-  onToggleTheme: () => void;
+  theme?: 'light' | 'dark';
+  onToggleTheme?: () => void;
 }
 
-export function NotificationsPage({ theme, onToggleTheme }: NotificationsPageProps) {
+export function NotificationsPage({
+  theme = 'light',
+  onToggleTheme = () => {},
+}: NotificationsPageProps = {}) {
   const {
     notifications,
     allNotifications,
@@ -63,50 +66,7 @@ export function NotificationsPage({ theme, onToggleTheme }: NotificationsPagePro
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-800">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-brand-600 text-white">
-                <Bell className="w-5 h-5" />
-              </div>
-              <div>
-                <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-none">ProNet</h1>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Notification Center</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {/* Bell with badge */}
-              <div className="relative">
-                <button className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                  <Bell className="w-5 h-5 text-gray-700 dark:text-gray-300" />
-                </button>
-                {unreadCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 min-w-[20px] h-5 px-1 flex items-center justify-center text-[10px] font-bold text-white bg-red-500 rounded-full ring-2 ring-white dark:ring-gray-900 animate-scale-in">
-                    {unreadCount}
-                  </span>
-                )}
-              </div>
-
-              {/* Theme toggle */}
-              <button
-                onClick={onToggleTheme}
-                className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                title="Toggle theme"
-              >
-                {theme === 'light' ? (
-                  <Moon className="w-5 h-5 text-gray-700" />
-                ) : (
-                  <Sun className="w-5 h-5 text-amber-400" />
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
+    
       {/* Main layout */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex gap-6">

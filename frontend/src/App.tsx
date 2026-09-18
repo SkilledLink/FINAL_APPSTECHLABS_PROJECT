@@ -46,6 +46,9 @@ import Feed from "./features/posts/components/Feed";
 import { ProfilePage } from "./features/profile";
 import { MessagesPage } from "./features/messages";
 
+//notification
+import { NotificationsPage } from "./features/notifications";
+
 // Location-powered Discover
 import NearbyProfessionalsPage from "./features/location/pages/NearbyProfessionalsPage";
 
@@ -148,8 +151,8 @@ function JobDetailsRoute() {
 }
 
 function PublicPortfolioRoute() {
-  const handleSelectProject = () => {};
-  const handleNavigateCreate = () => {};
+  const handleSelectProject = () => { };
+  const handleNavigateCreate = () => { };
   return (
     <PortfolioPage
       onSelectProject={handleSelectProject}
@@ -219,6 +222,7 @@ function App() {
                 <Route path="jobs/:id" element={<JobDetailsRoute />} />
                 <Route path="discover" element={<NearbyProfessionalsPage />} />
                 <Route path="portfolio" element={<PortfolioDashboard />} />
+                <Route path="notifications" element={<NotificationsPage />} />
 
                 {/* ✅ Messages — list-only and with an open conversation */}
                 <Route path="messages" element={<MessagesPage />} />
