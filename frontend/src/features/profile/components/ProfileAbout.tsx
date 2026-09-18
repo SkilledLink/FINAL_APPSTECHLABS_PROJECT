@@ -39,7 +39,61 @@ const formatDate = (dateValue: unknown): string => {
 };
 
 /* ─────────────────────────────────────────────────────── */
-/*  BIO CARD — natural height, no h-full                    */
+/*  Currency formatting                                    */
+/* ─────────────────────────────────────────────────────── */
+
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
+  NGN: '₦',
+  GHS: '₵',
+  KES: 'KSh',
+  ZAR: 'R',
+  XAF: 'FCFA',
+  XOF: 'CFA',
+  JPY: '¥',
+  CNY: '¥',
+  INR: '₹',
+  CAD: 'C$',
+  AUD: 'A$',
+  CHF: 'CHF',
+};
+
+/**
+ * Format a rate + currency into a display string.
+ *
+ *   formatRate(5000, 'XAF') → "FCFA 5,000"
+ *   formatRate(50, 'USD')   → "$50.00"
+ *   formatRate(45.5, 'EUR') → "€45.50"
+ *   formatRate(1000, 'ABC') → "ABC 1,000"
+ */
+const formatRate = (rate: number, currency?: string | null): string => {
+  const code = (currency ?? 'XAF').toUpperCase();
+  const symbol = CURRENCY_SYMBOLS[code];
+
+  // Zero-decimal currencies
+  const zeroDecimal = ['XAF', 'XOF', 'JPY', 'KRW', 'VND'].includes(code);
+  const value = zeroDecimal
+    ? Math.round(rate).toLocaleString(undefined, {
+        maximumFractionDigits: 0,
+      })
+    : rate.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+
+  // Short symbol → prefix it, e.g. "$50.00"
+  if (symbol && symbol.length <= 3 && symbol !== code) {
+    return `${symbol}${value}`;
+  }
+
+  // Multi-char or unknown → code + space + amount, e.g. "FCFA 5,000"
+  return `${symbol ?? code} ${value}`;
+};
+
+/* ─────────────────────────────────────────────────────── */
+/*  BIO CARD                                               */
 /* ─────────────────────────────────────────────────────── */
 
 export const ProfileBio: React.FC<{ profile: UserProfile }> = ({ profile }) => (
@@ -65,7 +119,7 @@ export const ProfileBio: React.FC<{ profile: UserProfile }> = ({ profile }) => (
 );
 
 /* ─────────────────────────────────────────────────────── */
-/*  DETAILS CARD — natural height, no h-full                */
+/*  DETAILS CARD                                           */
 /* ─────────────────────────────────────────────────────── */
 
 export const ProfileDetails: React.FC<{ profile: UserProfile }> = ({ profile }) => (
@@ -75,10 +129,7 @@ export const ProfileDetails: React.FC<{ profile: UserProfile }> = ({ profile }) 
     </h3>
 
     <div className="space-y-2 text-sm">
-      <div className="flex items-center gap-2.5 text-slate-600 dark:text-slate-300">
-        <Mail className="w-4 h-4 text-indigo-500 shrink-0" />
-        <span className="truncate">{profile.email}</span>
-      </div>
+    
 
       {profile.location && (
         <div className="flex items-center gap-2.5 text-slate-600 dark:text-slate-300">
@@ -116,12 +167,19 @@ export const ProfileDetails: React.FC<{ profile: UserProfile }> = ({ profile }) 
             <span>{profile.professional.completedJobs || 0} jobs completed</span>
           </div>
 
-          {profile.professional.hourlyRate && (
-            <div className="flex items-center gap-2.5 text-slate-600 dark:text-slate-300">
-              <span className="font-bold shrink-0">💵</span>
-              <span>${profile.professional.hourlyRate}/hr</span>
-            </div>
-          )}
+          {profile.professional.hourlyRate != null &&
+            Number(profile.professional.hourlyRate) > 0 && (
+              <div className="flex items-center gap-2.5 text-slate-600 dark:text-slate-300">
+                <span className="font-bold shrink-0">💵</span>
+                <span>
+                  {formatRate(
+                    Number(profile.professional.hourlyRate),
+                    profile.professional.currency
+                  )}
+                  /hr
+                </span>
+              </div>
+            )}
         </>
       )}
     </div>
@@ -129,7 +187,7 @@ export const ProfileDetails: React.FC<{ profile: UserProfile }> = ({ profile }) 
 );
 
 /* ─────────────────────────────────────────────────────── */
-/*  LEGACY DEFAULT EXPORT                                   */
+/*  LEGACY DEFAULT EXPORT                                  */
 /* ─────────────────────────────────────────────────────── */
 
 const ProfileAbout: React.FC<{ profile: UserProfile }> = ({ profile }) => (

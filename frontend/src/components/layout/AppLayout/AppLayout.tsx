@@ -23,7 +23,7 @@ export default function AppLayout() {
   }, [isDark]);
 
   return (
-    <div className="relative flex h-screen w-full flex-col overflow-hidden bg-[#f0f4f8] font-sans text-slate-900 transition-colors duration-300 selection:bg-blue-500 selection:text-white dark:bg-[#0b1329] dark:text-slate-100">
+    <div className="relative flex h-screen w-full flex-col overflow-hidden bg-[#f0f4f8] font-sans text-slate-900 transition-colors duration-300 selection:bg-blue-500 selection:text-white dark:bg-slate-950 dark:text-slate-100">
       {/* ═══════════ BACKGROUND LAYER ═══════════ */}
       <div
         aria-hidden="true"
@@ -87,7 +87,7 @@ export default function AppLayout() {
       </div>
 
       {/* ═══════════ Fixed top header ═══════════ */}
-      <header className="relative z-40 w-full shrink-0 border-b border-slate-200/70 bg-white/70 backdrop-blur-xl dark:border-slate-800/70 dark:bg-[#0b1329]/70">
+      <header className="relative z-40 w-full shrink-0 border-b border-slate-200/70 bg-white/70 backdrop-blur-xl dark:border-slate-800/70 dark:bg-slate-950/70">
         <Header isDark={isDark} toggleTheme={toggleTheme} />
       </header>
 
@@ -111,7 +111,7 @@ export default function AppLayout() {
       {/* ═══════════ Mobile bottom nav ═══════════ */}
       <nav
         aria-label="Mobile Navigation"
-        className="relative z-40 shrink-0 border-t border-slate-200/70 bg-white/70 backdrop-blur-xl md:hidden dark:border-slate-800/70 dark:bg-[#0b1329]/70"
+        className="relative z-40 shrink-0 border-t border-slate-200/70 bg-white/70 backdrop-blur-xl md:hidden dark:border-slate-800/70 dark:bg-slate-950/70"
       >
         <MobileNavigation isDark={isDark} toggleTheme={toggleTheme} />
       </nav>

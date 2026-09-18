@@ -7,7 +7,17 @@
   --color-primary: #4F46E5;
   --color-secondary: #64748B;
   --color-tertiary: #F59E0B;
-  --color-neutral: #0F172A;
+
+  /* Neutral is now true black */
+  --color-neutral: #000000;
+
+  /* ═══════════ True-black dark mode ═══════════
+     Override Tailwind's slate palette for the dark surface.
+       slate-950 → page background (pure black)
+       slate-900 → cards, panels, modals (near-black for contrast)
+     Everything else in the slate scale stays Tailwind default.  */
+  --color-slate-950: #000000;
+  --color-slate-900: #0a0a0a;
 
   --font-sans: "Hanken Grotesk", sans-serif;
   --font-mono: "JetBrains Mono", monospace;
@@ -90,6 +100,7 @@
   --filter-glass3d: blur(28px) brightness(1.08) saturate(1.8);
   --color-glass3d: hsl(205 60% 98% / 0.55);
 }
+
 /* ═══════════ Water motion ═══════════ */
 @keyframes water-drift-a {
   0%, 100% { transform: translate3d(0, 0, 0) scale(1); }

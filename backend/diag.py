@@ -8,7 +8,7 @@ print()
 from app.services.moderation.providers.factory import build_text_provider
 p = build_text_provider()
 r = p.moderate_text(
-    system_prompt=(
+    system_prompt=( 
         'Respond with JSON only: {"severity": int, "confidence": int, '
         '"description": str, "reason": str, "categories": [str]}'
     ),

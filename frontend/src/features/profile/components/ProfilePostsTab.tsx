@@ -18,6 +18,8 @@ import { useFeedMutations } from '../../posts/hooks/useFeedMutations';
 
 interface ProfilePostsTabProps {
   userId: string;
+  /** True when the profile being viewed belongs to the logged-in user. */
+  isOwnProfile?: boolean;
 }
 
 const containerVariants = {
@@ -44,11 +46,13 @@ const postVariants = {
   },
 };
 
-/* Responsive grid — 1 col mobile, 2 cols tablet, 3 cols desktop */
 const GRID_CLASSES =
   'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4';
 
-export const ProfilePostsTab: React.FC<ProfilePostsTabProps> = ({ userId }) => {
+export const ProfilePostsTab: React.FC<ProfilePostsTabProps> = ({
+  userId,
+  isOwnProfile = false,
+}) => {
   const {
     posts,
     loading,
@@ -94,16 +98,24 @@ export const ProfilePostsTab: React.FC<ProfilePostsTabProps> = ({ userId }) => {
   /* ── Delete ───────────────────────────────────────── */
   const handleDelete = useCallback(
     async (postId: string) => {
-      if (!window.confirm('Are you sure you want to delete this post?')) return;
+      const confirmed = window.confirm(
+        'Are you sure you want to delete this post?'
+      );
+      if (!confirmed) return;
+
+      const snapshot = [...posts];
+      removePost(postId);
+
       try {
         await deletePost(postId);
-        removePost(postId);
-        toast.success('Post deleted successfully');
+        toast.success('Post deleted');
       } catch (err: any) {
+        // Rollback on failure
+        snapshot.forEach((p) => updatePostInList(p));
         toast.error(err.message || 'Failed to delete post');
       }
     },
-    [deletePost, removePost]
+    [posts, deletePost, removePost, updatePostInList]
   );
 
   /* ── Comments ─────────────────────────────────────── */
@@ -146,7 +158,7 @@ export const ProfilePostsTab: React.FC<ProfilePostsTabProps> = ({ userId }) => {
     [posts, deleteComment, updatePostInList]
   );
 
-  /* ── Infinite scroll sentinel ─────────────────────── */
+  /* ── Infinite scroll ──────────────────────────────── */
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -162,7 +174,7 @@ export const ProfilePostsTab: React.FC<ProfilePostsTabProps> = ({ userId }) => {
     [loading, loadingMore, hasMore, loadMore]
   );
 
-  /* ── Initial loading skeleton ─────────────────────── */
+  /* ── Loading ──────────────────────────────────────── */
   if (loading && posts.length === 0) {
     return (
       <div className={GRID_CLASSES}>
@@ -250,12 +262,21 @@ export const ProfilePostsTab: React.FC<ProfilePostsTabProps> = ({ userId }) => {
               exit="exit"
               className="rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition-colors duration-200 overflow-hidden"
             >
+              {/*
+                ─────────── THE ONLY DELETE RULE ───────────
+                If you're viewing your own profile, every post in this
+                tab was written by you (the tab filters by userId).
+                So `isOwnProfile` alone decides whether the delete menu
+                appears. Nothing else. No user-id comparison, no props
+                threading, no conditions.
+              */}
               <PostCard
                 post={post}
                 onLike={handleLike}
                 onDelete={handleDelete}
                 onComment={handleComment}
                 onDeleteComment={handleDeleteComment}
+                canDelete={isOwnProfile}
               />
             </motion.div>
           ))}
