@@ -1,4 +1,3 @@
-
 # app/main.py
 
 from contextlib import asynccontextmanager
@@ -26,9 +25,8 @@ from app.api.v1.feeds import router as feeds_router
 from app.api.v1 import search
 from app.api.v1 import chat
 from app.api.v1.chat import router as chat_router
-from app.ai.ai_search import router as ai_search_router          # ✅ NEW
-from app.models.audit_log import AuditLog  # noqa: F401
-from app.models.audit_log import AuditLog  # noqa: F401 registers with SQLModel.metadata
+from app.api.v1.reviews import router as reviews_router
+from app.ai.ai_search import router as ai_search_router
 
 # ─── Contact Messages ──────────────────────────────────────
 from app.api.v1.contact_messages import router as contact_messages_router
@@ -39,24 +37,25 @@ from app.webhooks import router as webhooks_router
 # ─── Database ──────────────────────────────────────────────
 from app.database.session import engine
 
-# ─── Models ────────────────────────────────────────────────
-from app.models.user import User
-from app.models.refresh_token import RefreshToken
-from app.models.verification_token import VerificationToken
-from app.models.conversation import Conversation
-from app.models.conversation_participant import ConversationParticipant
-from app.models.message import Message
-from app.models.professional import Professional
-from app.models.professional_audit_log import ProfessionalAuditLog
-from app.models.job import Job, JobImage, JobLike, JobComment
-from app.api.v1.admin import admin_router
-from app.api.v1.moderator import moderator_router
-from app.models.contact_messages import Contact2_Message
-from app.models.job import Job, JobImage, JobLike, JobComment
+# ─── Models (registering with SQLModel.metadata) ──────────
+from app.models.user import User  # noqa: F401
+from app.models.refresh_token import RefreshToken  # noqa: F401
+from app.models.verification_token import VerificationToken  # noqa: F401
+from app.models.conversation import Conversation  # noqa: F401
+from app.models.conversation_participant import ConversationParticipant  # noqa: F401
+from app.models.message import Message  # noqa: F401
+from app.models.professional import Professional  # noqa: F401
+from app.models.professional_audit_log import ProfessionalAuditLog  # noqa: F401
+from app.models.review import Review  # noqa: F401
+from app.models.audit_log import AuditLog  # noqa: F401
+
+from app.models.job import Job, JobImage, JobLike, JobComment  # noqa: F401
+from app.models.contact_messages import Contact2_Message  # noqa: F401
+
 from app.api.v1.admin import admin_router
 from app.api.v1.moderator import moderator_router
 
-from app.models.professional_portfolio import (
+from app.models.professional_portfolio import (  # noqa: F401
     ProfessionalCategory,
     ProfessionalSpecialty,
     PortfolioSpecialty,
@@ -66,7 +65,7 @@ from app.models.professional_portfolio import (
     ProfessionalAvailability,
 )
 
-from app.models.feed import (
+from app.models.feed import (  # noqa: F401
     Feed,
     FeedMedia,
     FeedLike,
@@ -117,7 +116,7 @@ app = FastAPI(
 # ─── CORS ──────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -132,12 +131,9 @@ app.include_router(uploads_router)
 app.include_router(users_router)
 
 # ─── Contact Messages ──────────────────────────────────────
-# Public POST /contact-messages
-# Admin-only GET/PATCH/POST-reply endpoints are protected
-# inside the contact_messages router.
 app.include_router(contact_messages_router)
 
-# Professionals — static-prefix routers first
+# ─── Professionals (static-prefix routers first) ───────────
 app.include_router(location_router)
 app.include_router(professional_location_router)
 app.include_router(professional_admin_router)
@@ -145,13 +141,16 @@ app.include_router(professional_portfolio_router)
 app.include_router(professional_kyc_router)
 app.include_router(professionals_router)
 
+# ─── Reviews ───────────────────────────────────────────────
+app.include_router(reviews_router)
+
 app.include_router(jobs_router)
 app.include_router(feeds_router)
 
 app.include_router(search.router, prefix="/api/v1")
 app.include_router(chat.router, prefix="/api/v1")
 app.include_router(chat_router)
-app.include_router(ai_search_router)          # ✅ NEW — registers /ai/search
+app.include_router(ai_search_router)
 
 # ─── Admin & Moderator ─────────────────────────────────────
 app.include_router(admin_router)
@@ -159,7 +158,7 @@ app.include_router(moderator_router)
 app.include_router(notifications_router)
 app.include_router(report_router)
 
-# ─── Webhooks (global) ─────────────────────────────────────
+# ─── Webhooks ──────────────────────────────────────────────
 app.include_router(webhooks_router)
 
 
@@ -177,4 +176,3 @@ def health_check():
             "status": "disconnected",
             "error": str(e),
         }
-

@@ -41,8 +41,7 @@ const DEFAULT_RELATION: ViewerRelation = {
 export const useProfile = (userId?: string): UseProfileReturn => {
   const { currentUser, loading: authLoading } = useAuth();
   const { fetchUser } = useUser();
-  const { fetchMyProfessional, fetchProfessionalByUserId } =
-    useProfessional();
+  const { fetchMyProfessional, fetchProfessionalByUserId } = useProfessional();
   const { checkViewerRelation } = useFollow();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -126,15 +125,16 @@ export const useProfile = (userId?: string): UseProfileReturn => {
         return;
       }
 
-      // 3. Professional data (self vs other)
+      // 3. ALWAYS try to fetch the professional record.
+      //    If the user isn't a professional, the endpoint returns 404
+      //    and the hook returns null — no error surfaced.
       let profData = userData.professional;
-      if (userData.accountType === 'professional') {
-        const fetched = own
-          ? await fetchMyProfessional()
-          : await fetchProfessionalByUserId(effectiveUserId);
-        if (cancelled) return;
-        if (fetched) profData = fetched;
-      }
+
+      const fetched = own
+        ? await fetchMyProfessional()
+        : await fetchProfessionalByUserId(effectiveUserId);
+      if (cancelled) return;
+      if (fetched) profData = fetched;
 
       // 4. Viewer relation
       let relation: ViewerRelation = { ...DEFAULT_RELATION };
@@ -146,12 +146,12 @@ export const useProfile = (userId?: string): UseProfileReturn => {
           canRequestService: false,
         };
       } else {
-        const fetched = await checkViewerRelation(effectiveUserId);
+        const fetchedRel = await checkViewerRelation(effectiveUserId);
         if (cancelled) return;
-        if (fetched) relation = fetched;
+        if (fetchedRel) relation = fetchedRel;
       }
 
-      // 5. Blocked gates (before private gate – blocked always wins)
+      // 5. Blocked gates
       if (relation.isBlockedBy) {
         setStatus('blocked_by');
         return;
@@ -161,7 +161,7 @@ export const useProfile = (userId?: string): UseProfileReturn => {
         return;
       }
 
-      // 6. Private gate – only visible to approved followers
+      // 6. Private gate
       if (
         userData.visibility === 'private' &&
         !own &&
@@ -185,9 +185,7 @@ export const useProfile = (userId?: string): UseProfileReturn => {
 
     load().catch((err) => {
       if (cancelled) return;
-      setError(
-        err instanceof Error ? err.message : 'Failed to load profile'
-      );
+      setError(err instanceof Error ? err.message : 'Failed to load profile');
       setStatus('error');
     });
 

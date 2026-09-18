@@ -1,7 +1,10 @@
+# app/models/user.py
+
 from datetime import datetime, timezone
 from typing import Optional, TYPE_CHECKING
 from uuid import UUID, uuid4
 
+from sqlalchemy import Column, String
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.enums.user import AccountStatus, AccountType
@@ -72,18 +75,26 @@ class User(SQLModel, table=True):
     # ============================================================
     # AUTHENTICATION
     # ============================================================
+    # ⚠️ These are VARCHAR columns, NOT Postgres enum columns.
+    #    The Python enum provides the allowed values, but the DB
+    #    stores plain strings so values can't be truncated by
+    #    a too-short enum definition.
 
     hashed_password: str = Field(
         nullable=False,
     )
 
     account_type: AccountType = Field(
-        nullable=False,
+        sa_column=Column(String(30), nullable=False, index=True),
     )
 
     status: AccountStatus = Field(
-        default=AccountStatus.PENDING_VERIFICATION,
-        nullable=False,
+        sa_column=Column(
+            String(30),
+            nullable=False,
+            default=AccountStatus.PENDING_VERIFICATION.value,
+            index=True,
+        ),
     )
 
     is_email_verified: bool = Field(
@@ -152,9 +163,6 @@ class User(SQLModel, table=True):
     # RELATIONSHIPS
     # ============================================================
 
-    # ⚠️ `foreign_keys` is REQUIRED because `professionals` has 3 FKs
-    # pointing at `users.id` (user_id, admin_override_by, deleted_by_user_id).
-    # Without this hint, SQLAlchemy raises AmbiguousForeignKeysError.
     professional: Optional["Professional"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={
@@ -173,13 +181,11 @@ class User(SQLModel, table=True):
 
     jobs: list["Job"] = Relationship(back_populates="user")
 
-    # ✅ Professional Portfolio (one-to-one)
     portfolio: Optional["ProfessionalPortfolio"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"uselist": False},
     )
 
-    # ✅ Feeds (one-to-many)
     feeds: list["Feed"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},

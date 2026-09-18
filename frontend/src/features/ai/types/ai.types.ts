@@ -13,7 +13,7 @@ export interface Profile {
   is_verified: boolean;
   is_available: boolean;
   bio: string;
-  skills: string[];
+  skills: string[]; 
 }
 
 export interface Job {

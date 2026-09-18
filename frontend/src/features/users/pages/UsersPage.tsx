@@ -262,7 +262,7 @@ export default function UsersPage() {
                   exit={{ opacity: 0, scale: 0.95 }}
                   className="group bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-5 shadow-sm hover:shadow-xl hover:border-blue-400/30 transition-all duration-300"
                 >
-                  <div className="cursor-pointer" onClick={() => navigate(`/profile/${user.id}`)}>
+                  <div className="cursor-pointer" onClick={() => navigate(`/home/profile/${user.id}`)}>
                     <div className="flex items-start gap-4">
                       <div className="relative shrink-0">
                         <div className="w-14 h-14 rounded-full overflow-hidden bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800 border-2 border-white dark:border-slate-700 shadow-md">

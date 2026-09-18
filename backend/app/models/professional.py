@@ -1,9 +1,11 @@
+# app/models/professional.py
+
 from datetime import datetime, timezone
 from typing import Optional, List, TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from sqlalchemy import JSON, DECIMAL
-from sqlmodel import Column, Field, Relationship, SQLModel
+from sqlalchemy import Column, DECIMAL, JSON, String
+from sqlmodel import Field, Relationship, SQLModel
 from pgvector.sqlalchemy import Vector
 
 from app.enums.professional import (
@@ -32,8 +34,14 @@ class Professional(SQLModel, table=True):
     profession: str = Field(nullable=False, max_length=100)
     headline: Optional[str] = Field(default=None, max_length=150)
     bio: Optional[str] = Field(default=None, max_length=1500)
+
+    # ⚠️ VARCHAR columns — not Postgres enums
     experience_level: ExperienceLevel = Field(
-        default=ExperienceLevel.INTERMEDIATE, nullable=False
+        sa_column=Column(
+            String(30),
+            nullable=False,
+            default=ExperienceLevel.INTERMEDIATE.value,
+        ),
     )
     years_of_experience: Optional[int] = Field(default=None, ge=0, le=80)
 
@@ -63,7 +71,7 @@ class Professional(SQLModel, table=True):
     )
     currency: str = Field(default="XAF", max_length=3, nullable=False)
 
-    # ─── Location summary (kept for compat; geographic data lives in dedicated tables) ──
+    # ─── Location ────────────────────────────────────────────
     country: Optional[str] = Field(default=None, max_length=100)
     region: Optional[str] = Field(default=None, max_length=100)
     city: Optional[str] = Field(default=None, max_length=100)
@@ -75,7 +83,12 @@ class Professional(SQLModel, table=True):
 
     # ─── Status & reputation ─────────────────────────────────
     status: ProfessionalAccountStatus = Field(
-        default=ProfessionalAccountStatus.PENDING, nullable=False, index=True
+        sa_column=Column(
+            String(30),
+            nullable=False,
+            default=ProfessionalAccountStatus.PENDING.value,
+            index=True,
+        ),
     )
     is_verified: bool = Field(default=False, nullable=False)
     rating: float = Field(default=0.0, sa_column=Column(DECIMAL(3, 2)))
@@ -85,15 +98,23 @@ class Professional(SQLModel, table=True):
 
     # ─── Verification ────────────────────────────────────────
     verification_status: VerificationStatus = Field(
-        default=VerificationStatus.NOT_STARTED, nullable=False, index=True
+        sa_column=Column(
+            String(30),
+            nullable=False,
+            default=VerificationStatus.NOT_STARTED.value,
+            index=True,
+        ),
     )
     verification_data: Optional[dict] = Field(default=None, sa_column=Column(JSON))
     verification_attempts: int = Field(default=0, nullable=False)
     verification_last_attempt_at: Optional[datetime] = Field(default=None)
     verified_at: Optional[datetime] = Field(default=None)
 
-    # ─── Admin override (fallback when Didit fails) ──────────
-    admin_override_status: Optional[VerificationStatus] = Field(default=None)
+    # ─── Admin override ──────────────────────────────────────
+    admin_override_status: Optional[VerificationStatus] = Field(
+        default=None,
+        sa_column=Column(String(30), nullable=True),
+    )
     admin_override_by: Optional[UUID] = Field(
         default=None, foreign_key="users.id", nullable=True
     )
@@ -110,11 +131,14 @@ class Professional(SQLModel, table=True):
     deleted_by_user_id: Optional[UUID] = Field(
         default=None, foreign_key="users.id"
     )
-    deletion_type: Optional[DeletionType] = Field(default=None)
+    deletion_type: Optional[DeletionType] = Field(
+        default=None,
+        sa_column=Column(String(30), nullable=True),
+    )
     deletion_reason: Optional[str] = Field(default=None, max_length=500)
     retention_until: Optional[datetime] = Field(default=None)
 
-    # ─── Admin snapshot (preserved after user deletion) ──────
+    # ─── Admin snapshot ──────────────────────────────────────
     snapshot_email: Optional[str] = Field(default=None, max_length=255)
     snapshot_username: Optional[str] = Field(default=None, max_length=50)
     snapshot_ip: Optional[str] = Field(default=None, max_length=45)
@@ -135,7 +159,6 @@ class Professional(SQLModel, table=True):
     )
 
     # ─── Relationships ───────────────────────────────────────
-    # `foreign_keys` is REQUIRED because we have 3 FKs pointing at users.id.
     user: "User" = Relationship(
         back_populates="professional",
         sa_relationship_kwargs={"foreign_keys": "[Professional.user_id]"},
