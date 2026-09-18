@@ -20,7 +20,7 @@ class AuditService:
             return "admin"
         if getattr(actor, "is_moderator", False):
             return "moderator"
-        return "user"
+        return "user" 
 
     def _request_meta(
         self, request: Optional[Request],
