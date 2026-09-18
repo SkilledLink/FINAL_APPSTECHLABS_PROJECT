@@ -21,6 +21,7 @@ import type { DiscoverParams } from '../types/location.types';
 
 import { useAISearch } from '../../ai/hooks/useAISearch';
 import AISearchBar from '../../ai/components/AISearchBar';
+import discover_hero_image from "../../../assets/images/discover_hero_image.jpeg"
 
 type SearchMode = 'manual' | 'ai';
 
@@ -167,6 +168,12 @@ export default function NearbyProfessionalsPage() {
     <div className="relative min-h-screen w-full bg-slate-50/50 transition-colors dark:bg-slate-950">
       {/* ═══════════ Hero ═══════════ */}
       <section className="relative overflow-hidden border-b border-slate-200/70 bg-slate-950 text-white dark:border-white/10">
+        <img
+          src={discover_hero_image}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        <div className="pointer-events-none absolute inset-0 bg-slate-950/65" />
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute -left-28 -top-28 h-96 w-96 rounded-full bg-blue-600/20 blur-[120px]" />
           <div className="absolute -right-20 top-12 h-80 w-80 rounded-full bg-blue-400/15 blur-[100px]" />
