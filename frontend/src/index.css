@@ -36,6 +36,43 @@
   scrollbar-width: none;
 }
 
+/* ═══════════ Global scrollbar hide ═══════════ */
+/* Hides the scrollbar everywhere while keeping scroll functionality
+   intact (wheel, trackpad, touch all still work). Matches the modern
+   app convention used by Linear, Twitter, Notion, Vercel. */
+
+/* Firefox */
+* {
+  scrollbar-width: none;
+}
+
+/* IE / old Edge */
+* {
+  -ms-overflow-style: none;
+}
+
+/* Chrome / Safari / new Edge */
+*::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* Belt-and-suspenders: explicitly target html and body since some
+   browsers use separate scroll containers for the document root. */
+html,
+body {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 /* ═══════════ glass3d ═══════════ */
 .glass3d {
   --filter-glass3d: blur(32px) brightness(0.85) saturate(2.5);

@@ -100,9 +100,10 @@ export default function AppLayout() {
           <Sidebar isDark={isDark} toggleTheme={toggleTheme} />
         </aside>
 
+        {/* ✅ scrollbar-hide added here */}
         <main
           tabIndex={-1}
-          className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden pb-20 focus:outline-none focus:ring-2 focus:ring-blue-500/20 md:pb-0"
+          className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden pb-20 md:pb-0 scrollbar-hide focus:outline-none focus:ring-2 focus:ring-blue-500/20"
         >
           <Outlet />
         </main>
