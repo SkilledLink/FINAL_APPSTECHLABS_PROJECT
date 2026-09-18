@@ -31,20 +31,52 @@ export interface User {
   suspendedAt?: string | null;
 }
 
+export type ExperienceLevel =
+  | 'BEGINNER'
+  | 'INTERMEDIATE'
+  | 'ADVANCED'
+  | 'EXPERT';
+
 export interface Professional {
   id: string;
   userId: string;
+
   profession: string;
-  bio?: string;
-  skills: string[];
+  headline?: string | null;
+  bio?: string | null;
+  experienceLevel?: ExperienceLevel;
   yearsOfExperience?: number;
+
+  companyName?: string | null;
+  jobTitle?: string | null;
+  employmentType?: string | null;
+
+  websiteUrl?: string | null;
+  linkedinUrl?: string | null;
+  portfolioUrl?: string | null;
+  facebookUrl?: string | null;
+  instagramUrl?: string | null;
+  twitterUrl?: string | null;
+
+  skills: string[];
   services: string[];
-  hourlyRate?: number;
-  country?: string;
-  region?: string;
-  city?: string;
+  certifications?: any[] | null;
+  education?: any[] | null;
+  languages?: string[] | null;
+
+  hourlyRate?: number | null;
+  currency?: string;
+
+  country?: string | null;
+  region?: string | null;
+  city?: string | null;
+
   available: boolean;
+  availabilityNotes?: string | null;
+  responseTimeHours?: number | null;
+
   isVerified: boolean;
+  verificationStatus?: string;
   rating: number;
   totalReviews: number;
   completedJobs: number;
@@ -92,11 +124,11 @@ export interface ViewerRelation {
   canViewWork: boolean;
 }
 
-// ── Media grid ─────────────────────────────────────────────────
 export interface FeedThumbnail {
   feedId: string;
   title: string;
   thumbnailUrl: string;
+  mediaUrl: string;
   mediaType: 'image' | 'video';
   mediaCount: number;
   createdAt: string;
@@ -106,12 +138,9 @@ export interface FeedThumbnailPage {
   items: FeedThumbnail[];
   total: number;
 }
-export interface FeedThumbnail {
-  feedId: string;
-  title: string;
-  thumbnailUrl: string;
-  mediaUrl: string;         // ← new
-  mediaType: 'image' | 'video';
-  mediaCount: number;
-  createdAt: string;
+
+/* Payload returned by EditProfileForm when the user saves. */
+export interface EditProfilePayload {
+  user?: Partial<UserProfile>;
+  professional?: Partial<Professional>;
 }

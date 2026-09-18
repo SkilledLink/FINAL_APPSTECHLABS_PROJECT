@@ -1,63 +1,89 @@
 // src/features/profile/components/ProfileTabs.tsx
 
 import React from 'react';
+import { LayoutDashboard, Image, FileText, Briefcase, Wrench, Star } from 'lucide-react';
 import type { ProfileTab } from '../types/profile.types';
 
 interface ProfileTabsProps {
   activeTab: ProfileTab;
   onChangeTab: (tab: ProfileTab) => void;
   isProfessional: boolean;
+  layout?: 'horizontal' | 'vertical';
 }
 
 export const ProfileTabs: React.FC<ProfileTabsProps> = ({
   activeTab,
   onChangeTab,
   isProfessional,
+  layout = 'horizontal',
 }) => {
-  const baseTabs: { id: ProfileTab; label: string }[] = [
-    { id: 'overview', label: 'Overview' },
-    { id: 'media', label: 'Media' },
-    { id: 'posts', label: 'Posts' },
+  const baseTabs: { id: ProfileTab; label: string; icon: React.ReactNode }[] = [
+    { id: 'overview', label: 'Overview', icon: <LayoutDashboard className="w-4 h-4" /> },
+    { id: 'media', label: 'Media', icon: <Image className="w-4 h-4" /> },
+    { id: 'posts', label: 'Posts', icon: <FileText className="w-4 h-4" /> },
   ];
 
-  const professionalTabs: { id: ProfileTab; label: string }[] = [
-    { id: 'work', label: 'Work' },
-    { id: 'services', label: 'Services' },
-    { id: 'reviews', label: 'Reviews' },
+  const professionalTabs: { id: ProfileTab; label: string; icon: React.ReactNode }[] = [
+    { id: 'work', label: 'Work', icon: <Briefcase className="w-4 h-4" /> },
+    { id: 'services', label: 'Services', icon: <Wrench className="w-4 h-4" /> },
+    { id: 'reviews', label: 'Reviews', icon: <Star className="w-4 h-4" /> },
   ];
 
   const tabs = isProfessional ? [...baseTabs, ...professionalTabs] : baseTabs;
 
-  return (
-    <div className="mx-auto w-full max-w-2xl">
-      <div className="w-full border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md px-1 sm:px-3 rounded-xl sm:rounded-2xl my-3 sm:my-4 overflow-x-auto no-scrollbar scroll-smooth">
-        <div
-          className={`flex items-center gap-1 sm:gap-2 ${
-            isProfessional ? 'min-w-max' : 'justify-center'
-          }`}
-        >
+  // ── Vertical sidebar ────────────────────────────────────────
+  if (layout === 'vertical') {
+    return (
+      <aside className="w-full lg:w-56 shrink-0 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-2 shadow-xs lg:sticky lg:top-20 h-fit">
+        <h3 className="px-3 pt-2 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+          Profile Menu
+        </h3>
+        <nav className="flex flex-col gap-0.5">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
-
             return (
               <button
                 key={tab.id}
                 onClick={() => onChangeTab(tab.id)}
-                className={`relative py-2.5 sm:py-3 px-3.5 sm:px-5 text-xs sm:text-sm font-bold transition-colors whitespace-nowrap ${
+                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all w-full text-left ${
                   isActive
-                    ? 'text-blue-600 dark:text-blue-400'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+                    ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/20'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100'
                 }`}
               >
-                {tab.label}
-
-                {isActive && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
-                )}
+                {tab.icon}
+                <span>{tab.label}</span>
               </button>
             );
           })}
-        </div>
+        </nav>
+      </aside>
+    );
+  }
+
+  // ── Horizontal tabs ─────────────────────────────────────────
+  return (
+    <div className="w-full border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md px-1 sm:px-3 rounded-xl overflow-x-auto">
+      <div className={`flex items-center gap-1 ${isProfessional ? 'min-w-max' : 'justify-center'}`}>
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => onChangeTab(tab.id)}
+              className={`relative py-3 px-4 text-sm font-bold transition-colors whitespace-nowrap ${
+                isActive
+                  ? 'text-blue-600 dark:text-blue-400'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+              }`}
+            >
+              {tab.label}
+              {isActive && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

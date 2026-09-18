@@ -16,22 +16,20 @@ interface UseUserReturn {
   deleteUser: () => Promise<boolean>;
 }
 
-const API_BASE =
-  import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-// Normalise backend account types to the frontend union.
+/* ── Case-insensitive + truncation-safe enum normalisation ── */
 const normaliseAccountType = (raw: unknown): UserProfile['accountType'] => {
-  switch (raw) {
-    case 'professional':
-    case 'pro':
-      return 'professional';
-    case 'business':
-      return 'business';
-    case 'user':
-    case 'standard':
-    default:
-      return 'standard';
+  const value = String(raw ?? '').toLowerCase().trim();
+
+  // Matches: "professional", "pro", "profession" (truncated), "PROFESSIONAL"
+  if (value === 'pro' || value.startsWith('profession')) {
+    return 'professional';
   }
+  if (value === 'business' || value === 'biz') {
+    return 'business';
+  }
+  return 'standard';
 };
 
 const mapUserFromAPI = (data: any): UserProfile => {
@@ -40,56 +38,42 @@ const mapUserFromAPI = (data: any): UserProfile => {
     id: data.id,
     email: data.email,
     username: data.username ?? null,
-    firstName: data.first_name ?? '',
-    lastName: data.last_name ?? '',
+    firstName: data.first_name ?? data.firstName ?? '',
+    lastName: data.last_name ?? data.lastName ?? '',
     bio: data.bio ?? null,
     location: data.location ?? null,
-    accountType: normaliseAccountType(data.account_type),
+    accountType: normaliseAccountType(data.account_type ?? data.accountType),
     status: data.status,
-    isEmailVerified: data.is_email_verified ?? false,
-    isAdmin: data.is_admin ?? false,
-    isModerator: data.is_moderator ?? false,
-    createdAt: data.created_at,
-    updatedAt: data.updated_at,
-    lastLoginAt: data.last_login_at ?? null,
-    deletedAt: data.deleted_at ?? null,
-
-    // ── New mappings ─────────────────────────────────────────
+    isEmailVerified: data.is_email_verified ?? data.isEmailVerified ?? false,
+    isAdmin: data.is_admin ?? data.isAdmin ?? false,
+    isModerator: data.is_moderator ?? data.isModerator ?? false,
+    createdAt: data.created_at ?? data.createdAt,
+    updatedAt: data.updated_at ?? data.updatedAt,
+    lastLoginAt: data.last_login_at ?? data.lastLoginAt ?? null,
+    deletedAt: data.deleted_at ?? data.deletedAt ?? null,
     visibility: data.visibility ?? 'public',
-    deactivatedAt: data.deactivated_at ?? null,
-    suspendedAt: data.suspended_at ?? null,
-
-    profileImageUrl: data.profile_image_url ?? null,
-    bannerImageUrl: data.banner_image_url ?? null,
-    followersCount: data.followers_count ?? 0,
-    followingCount: data.following_count ?? 0,
-    isFollowing: data.is_following ?? false,
-
+    deactivatedAt: data.deactivated_at ?? data.deactivatedAt ?? null,
+    suspendedAt: data.suspended_at ?? data.suspendedAt ?? null,
+    profileImageUrl: data.profile_image_url ?? data.profileImageUrl ?? null,
+    bannerImageUrl: data.banner_image_url ?? data.bannerImageUrl ?? null,
+    followersCount: data.followers_count ?? data.followersCount ?? 0,
+    followingCount: data.following_count ?? data.followingCount ?? 0,
+    isFollowing: data.is_following ?? data.isFollowing ?? false,
     professional: data.professional
       ? {
           ...data.professional,
           id: data.professional.id,
-          userId:
-            data.professional.user_id ??
-            data.professional.userId,
+          userId: data.professional.user_id ?? data.professional.userId,
           bio: data.professional.bio ?? null,
           rating: Number(data.professional.rating ?? 0),
           totalReviews:
-            data.professional.total_reviews ??
-            data.professional.totalReviews ??
-            0,
+            data.professional.total_reviews ?? data.professional.totalReviews ?? 0,
           completedJobs:
-            data.professional.completed_jobs ??
-            data.professional.completedJobs ??
-            0,
+            data.professional.completed_jobs ?? data.professional.completedJobs ?? 0,
           hourlyRate:
-            data.professional.hourly_rate ??
-            data.professional.hourlyRate ??
-            null,
+            data.professional.hourly_rate ?? data.professional.hourlyRate ?? null,
           isVerified:
-            data.professional.is_verified ??
-            data.professional.isVerified ??
-            false,
+            data.professional.is_verified ?? data.professional.isVerified ?? false,
           services: data.professional.services ?? [],
           skills: data.professional.skills ?? [],
           yearsOfExperience:
@@ -101,9 +85,7 @@ const mapUserFromAPI = (data: any): UserProfile => {
   };
 };
 
-const mapUserToAPI = (
-  data: Partial<UserProfile>
-): Record<string, unknown> => {
+const mapUserToAPI = (data: Partial<UserProfile>): Record<string, unknown> => {
   const result: Record<string, unknown> = {};
   if (data.username !== undefined) result.username = data.username;
   if (data.firstName !== undefined) result.first_name = data.firstName;
@@ -125,9 +107,7 @@ const getAuthHeaders = (): HeadersInit => {
   };
 };
 
-export const useUser = (
-  options: UseUserOptions = {}
-): UseUserReturn => {
+export const useUser = (options: UseUserOptions = {}): UseUserReturn => {
   const { autoFetch = false } = options;
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -137,24 +117,15 @@ export const useUser = (
     async (userId: string): Promise<UserProfile | null> => {
       setLoading(true);
       setError(null);
-
       try {
-        const response = await fetch(
-          `${API_BASE}/users/${userId}`,
-          { method: 'GET', headers: getAuthHeaders() }
-        );
-
-        // 404 = not found → return null *without* setting error
-        if (response.status === 404) {
-          return null;
-        }
-
+        const response = await fetch(`${API_BASE}/users/${userId}`, {
+          method: 'GET',
+          headers: getAuthHeaders(),
+        });
+        if (response.status === 404) return null;
         if (!response.ok) {
-          throw new Error(
-            `Failed to fetch user: ${response.status}`
-          );
+          throw new Error(`Failed to fetch user: ${response.status}`);
         }
-
         const data = await response.json();
         const mappedUser = mapUserFromAPI(data);
         setUser(mappedUser);
@@ -171,36 +142,29 @@ export const useUser = (
     []
   );
 
-  const fetchMe = useCallback(
-    async (): Promise<UserProfile | null> => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await fetch(`${API_BASE}/users/me`, {
-          headers: getAuthHeaders(),
-        });
-        if (!response.ok) {
-          throw new Error(
-            `Failed to fetch current user: ${response.status}`
-          );
-        }
-        const data = await response.json();
-        const mappedUser = mapUserFromAPI(data);
-        setUser(mappedUser);
-        return mappedUser;
-      } catch (err) {
-        const message =
-          err instanceof Error
-            ? err.message
-            : 'Failed to fetch current user';
-        setError(message);
-        return null;
-      } finally {
-        setLoading(false);
+  const fetchMe = useCallback(async (): Promise<UserProfile | null> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${API_BASE}/users/me`, {
+        headers: getAuthHeaders(),
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch current user: ${response.status}`);
       }
-    },
-    []
-  );
+      const data = await response.json();
+      const mappedUser = mapUserFromAPI(data);
+      setUser(mappedUser);
+      return mappedUser;
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to fetch current user';
+      setError(message);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const updateUser = useCallback(
     async (data: Partial<UserProfile>): Promise<UserProfile | null> => {
@@ -246,9 +210,7 @@ export const useUser = (
         headers: getAuthHeaders(),
       });
       if (!response.ok) {
-        throw new Error(
-          `Failed to delete user: ${response.status}`
-        );
+        throw new Error(`Failed to delete user: ${response.status}`);
       }
       setUser(null);
       return true;

@@ -1,5 +1,8 @@
+# app/api/v1/users.py
+
 from fastapi import APIRouter, Depends, Query, HTTPException, status, UploadFile, File
-from sqlmodel import Session
+from sqlmodel import Session, select
+from sqlalchemy.orm import selectinload
 from uuid import UUID
 from typing import Optional
 import logging
@@ -19,15 +22,20 @@ from app.schemas.user_follow import (
     FollowStatusResponse,
 )
 from app.models.user import User
+from app.models.professional import Professional
+from app.schemas.professional import ProfessionalResponse
 
 router = APIRouter(
     prefix="/users",
-    tags=["Users"]
+    tags=["Users"],
 )
 
 logger = logging.getLogger(__name__)
 
-# ========== CRUD endpoints ==========
+
+# ============================================================
+# CRUD endpoints
+# ============================================================
 
 @router.get("/me", response_model=UserResponse)
 def get_me(
@@ -35,7 +43,6 @@ def get_me(
     session: Session = Depends(get_session),
 ):
     service = UserService(session)
-    # Use get_user_by_id with current_user for enrichment
     return service.get_user_by_id(current_user.id, current_user)
 
 
@@ -59,6 +66,52 @@ def delete_me(
     return None
 
 
+# ============================================================
+# ✅ NEW: Professional lookup by USER ID
+# ------------------------------------------------------------
+# Returns the professional record attached to a user.
+# Eager-loads `user` so Pydantic can serialise the nested
+# ProfessionalUserPublic after the SQLAlchemy session closes.
+# ============================================================
+
+@router.get(
+    "/{user_id}/professional",
+    response_model=ProfessionalResponse,
+)
+def get_user_professional(
+    user_id: UUID,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """
+    Return the professional record attached to a user.
+
+    - 404 if the user has no professional record
+    - 404 if the professional record has been soft-deleted
+    - Otherwise, returns the full ProfessionalResponse
+    """
+    professional = session.exec(
+        select(Professional)
+        .options(selectinload(Professional.user))
+        .where(
+            Professional.user_id == user_id,
+            Professional.deleted_at.is_(None),
+        )
+    ).first()
+
+    if not professional:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This user is not a professional",
+        )
+
+    return professional
+
+
+# ============================================================
+# List users
+# ============================================================
+
 @router.get("", response_model=UserListResponse)
 def list_users(
     skip: int = Query(0, ge=0),
@@ -70,6 +123,10 @@ def list_users(
     service = UserService(session)
     return service.list_users(current_user, skip, limit, search)
 
+
+# ============================================================
+# Get single user
+# ============================================================
 
 @router.get("/{user_id}", response_model=UserResponse)
 def get_user(
@@ -91,7 +148,7 @@ def update_user(
     if user_id == current_user.id and data.is_admin is False:
         raise HTTPException(
             status_code=403,
-            detail="You cannot remove your own admin privileges"
+            detail="You cannot remove your own admin privileges",
         )
 
     service = UserService(session)
@@ -107,7 +164,7 @@ def delete_user(
     if user_id == current_user.id:
         raise HTTPException(
             status_code=403,
-            detail="Use /users/me to delete your own account"
+            detail="Use /users/me to delete your own account",
         )
 
     service = UserService(session)
@@ -115,7 +172,9 @@ def delete_user(
     return None
 
 
-# ========== Image upload endpoints ==========
+# ============================================================
+# Image upload endpoints
+# ============================================================
 
 @router.post("/me/profile-image", response_model=UserResponse)
 def upload_profile_image(
@@ -129,12 +188,10 @@ def upload_profile_image(
         if not file.content_type or not file.content_type.startswith("image/"):
             raise HTTPException(
                 status_code=400,
-                detail="Invalid image content type"
+                detail="Invalid image content type",
             )
 
         service = UserService(session)
-
-        # Fixed: removed the duplicate current_user argument
         return service.upload_profile_image(current_user, file)
 
     except HTTPException:
@@ -143,23 +200,18 @@ def upload_profile_image(
         logger.error(traceback.format_exc())
         raise HTTPException(
             status_code=500,
-            detail=f"Upload failed: {str(e)}"
+            detail=f"Upload failed: {str(e)}",
         )
 
 
 @router.post("/me/banner-image", response_model=UserResponse)
 def upload_banner_image(
-    file: UploadFile = File(
-        ...,
-        description="Image file (JPEG, PNG, WEBP, GIF)"
-    ),
+    file: UploadFile = File(..., description="Image file (JPEG, PNG, WEBP, GIF)"),
     current_user: User = Depends(get_current_active_user),
     session: Session = Depends(get_session),
 ):
     try:
-        logger.info(
-            f"Banner image upload for user {current_user.id}"
-        )
+        logger.info(f"Banner image upload for user {current_user.id}")
 
         if (
             not file.content_type
@@ -171,25 +223,21 @@ def upload_banner_image(
             )
 
         service = UserService(session)
-
-        return service.upload_banner_image(
-            current_user,
-            file,
-        )
+        return service.upload_banner_image(current_user, file)
 
     except HTTPException:
         raise
-
     except Exception as e:
         logger.error(traceback.format_exc())
-
         raise HTTPException(
             status_code=500,
             detail=f"Upload failed: {str(e)}",
         )
 
 
-# ========== Follow endpoints ==========
+# ============================================================
+# Follow endpoints
+# ============================================================
 
 @router.post("/me/follow", response_model=FollowResponse)
 def follow_user(
@@ -236,7 +284,10 @@ def get_following(
     return service.get_following(user_id, current_user, skip, limit)
 
 
-@router.get("/me/follow-status/{target_user_id}", response_model=FollowStatusResponse)
+@router.get(
+    "/me/follow-status/{target_user_id}",
+    response_model=FollowStatusResponse,
+)
 def check_follow_status(
     target_user_id: UUID,
     current_user: User = Depends(get_current_user),

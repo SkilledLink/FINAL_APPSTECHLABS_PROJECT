@@ -24,7 +24,7 @@ const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { staggerChildren: 0.06, delayChildren: 0.02 },
+    transition: { staggerChildren: 0.05, delayChildren: 0.02 },
   },
 };
 
@@ -44,9 +44,11 @@ const postVariants = {
   },
 };
 
-export const ProfilePostsTab: React.FC<ProfilePostsTabProps> = ({
-  userId,
-}) => {
+/* Responsive grid — 1 col mobile, 2 cols tablet, 3 cols desktop */
+const GRID_CLASSES =
+  'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4';
+
+export const ProfilePostsTab: React.FC<ProfilePostsTabProps> = ({ userId }) => {
   const {
     posts,
     loading,
@@ -62,7 +64,7 @@ export const ProfilePostsTab: React.FC<ProfilePostsTabProps> = ({
   const { toggleLike, deletePost, createComment, deleteComment } =
     useFeedMutations();
 
-  // ─── Like ────────────────────────────────────────────────
+  /* ── Like ─────────────────────────────────────────── */
   const handleLike = useCallback(
     async (postId: string) => {
       const post = posts.find((p) => p.id === postId);
@@ -86,10 +88,10 @@ export const ProfilePostsTab: React.FC<ProfilePostsTabProps> = ({
         toast.error(err.message || 'Failed to like post');
       }
     },
-    [posts, toggleLike, updatePostInList],
+    [posts, toggleLike, updatePostInList]
   );
 
-  // ─── Delete ──────────────────────────────────────────────
+  /* ── Delete ───────────────────────────────────────── */
   const handleDelete = useCallback(
     async (postId: string) => {
       if (!window.confirm('Are you sure you want to delete this post?')) return;
@@ -101,10 +103,10 @@ export const ProfilePostsTab: React.FC<ProfilePostsTabProps> = ({
         toast.error(err.message || 'Failed to delete post');
       }
     },
-    [deletePost, removePost],
+    [deletePost, removePost]
   );
 
-  // ─── Comments ────────────────────────────────────────────
+  /* ── Comments ─────────────────────────────────────── */
   const handleComment = useCallback(
     async (postId: string, content: string) => {
       try {
@@ -122,7 +124,7 @@ export const ProfilePostsTab: React.FC<ProfilePostsTabProps> = ({
         toast.error(err.message || 'Failed to add comment');
       }
     },
-    [posts, createComment, updatePostInList],
+    [posts, createComment, updatePostInList]
   );
 
   const handleDeleteComment = useCallback(
@@ -141,10 +143,10 @@ export const ProfilePostsTab: React.FC<ProfilePostsTabProps> = ({
         toast.error(err.message || 'Failed to delete comment');
       }
     },
-    [posts, deleteComment, updatePostInList],
+    [posts, deleteComment, updatePostInList]
   );
 
-  // ─── Infinite scroll sentinel ────────────────────────────
+  /* ── Infinite scroll sentinel ─────────────────────── */
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -152,20 +154,18 @@ export const ProfilePostsTab: React.FC<ProfilePostsTabProps> = ({
       if (observerRef.current) observerRef.current.disconnect();
 
       observerRef.current = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && hasMore) {
-          loadMore();
-        }
+        if (entries[0].isIntersecting && hasMore) loadMore();
       });
 
       if (node) observerRef.current.observe(node);
     },
-    [loading, loadingMore, hasMore, loadMore],
+    [loading, loadingMore, hasMore, loadMore]
   );
 
-  // ─── Initial loading ─────────────────────────────────────
+  /* ── Initial loading skeleton ─────────────────────── */
   if (loading && posts.length === 0) {
     return (
-      <div className="mx-auto w-full max-w-2xl space-y-4">
+      <div className={GRID_CLASSES}>
         <FeedSkeleton />
         <FeedSkeleton />
         <FeedSkeleton />
@@ -173,14 +173,14 @@ export const ProfilePostsTab: React.FC<ProfilePostsTabProps> = ({
     );
   }
 
-  // ─── Error ───────────────────────────────────────────────
+  /* ── Error ────────────────────────────────────────── */
   if (error && !loading && posts.length === 0) {
     return (
-      <div className="mx-auto w-full max-w-2xl">
+      <div className="w-full">
         <motion.div
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="relative overflow-hidden my-4 rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-gradient-to-br from-rose-50/80 via-white to-rose-50/30 dark:from-rose-950/30 dark:via-slate-900 dark:to-rose-950/10 p-5 text-center backdrop-blur-xl shadow-xs"
+          className="relative overflow-hidden my-4 rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-gradient-to-br from-rose-50/80 via-white to-rose-50/30 dark:from-rose-950/30 dark:via-slate-900 dark:to-rose-950/10 p-5 text-center backdrop-blur-xl shadow-xs max-w-md mx-auto"
         >
           <div className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-xl bg-rose-100 text-rose-600 dark:bg-rose-900/40 dark:text-rose-400 ring-4 ring-rose-50 dark:ring-rose-950/20">
             <AlertCircle className="h-5 w-5" />
@@ -205,14 +205,14 @@ export const ProfilePostsTab: React.FC<ProfilePostsTabProps> = ({
     );
   }
 
-  // ─── Empty ───────────────────────────────────────────────
+  /* ── Empty ────────────────────────────────────────── */
   if (!loading && posts.length === 0 && !error) {
     return (
-      <div className="mx-auto w-full max-w-2xl">
+      <div className="w-full">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden my-4 rounded-2xl border border-dashed border-slate-300/80 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60 p-8 text-center backdrop-blur-xl shadow-xs"
+          className="relative overflow-hidden my-4 rounded-2xl border border-dashed border-slate-300/80 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60 p-8 text-center backdrop-blur-xl shadow-xs max-w-md mx-auto"
         >
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 bg-blue-500/10 dark:bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
           <div className="relative mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20">
@@ -230,14 +230,14 @@ export const ProfilePostsTab: React.FC<ProfilePostsTabProps> = ({
     );
   }
 
-  // ─── List ────────────────────────────────────────────────
+  /* ── Posts grid ───────────────────────────────────── */
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-4">
+    <div className="w-full space-y-4">
       <motion.div
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="space-y-4"
+        className={GRID_CLASSES}
       >
         <AnimatePresence mode="popLayout" initial={false}>
           {posts.map((post) => (
