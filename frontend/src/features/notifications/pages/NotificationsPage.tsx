@@ -1,18 +1,18 @@
+// src/features/notifications/pages/NotificationsPage.tsx
+
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import {
   Bell,
-  Sun,
-  Moon,
   Inbox,
   Mail,
   CheckCheck,
   Filter,
-  UserPlus,
-  Briefcase,
-  MessageSquare,
-  MapPin,
 } from 'lucide-react';
-import type { NotificationFilter, NotificationType } from '../types/notification.types';
+import type {
+  NotificationFilter,
+  NotificationType,
+} from '../types/notification.types';
 import { useNotifications } from '../hooks/useNotifications';
 import { NotificationList } from '../components/NotificationList';
 import { getNotificationTypeConfig } from '../services/notificationService';
@@ -50,7 +50,8 @@ export function NotificationsPage({
     dismiss,
   } = useNotifications();
 
-  const [activeCategory, setActiveCategory] = useState<NotificationType | null>(null);
+  const [activeCategory, setActiveCategory] =
+    useState<NotificationType | null>(null);
 
   const visibleNotifications = activeCategory
     ? notifications.filter((n) => n.type === activeCategory)
@@ -58,89 +59,150 @@ export function NotificationsPage({
 
   const categoryCounts = sidebarCategories.reduce(
     (acc, cat) => {
-      acc[cat.type] = allNotifications.filter((n) => n.type === cat.type && !n.read).length;
+      acc[cat.type] = allNotifications.filter(
+        (n) => n.type === cat.type && !n.read,
+      ).length;
       return acc;
     },
-    {} as Record<NotificationType, number>
+    {} as Record<NotificationType, number>,
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-    
-      {/* Main layout */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex gap-6">
-          {/* Sidebar - desktop only */}
-          <aside className="hidden lg:block w-64 flex-shrink-0">
-            <div className="sticky top-24 space-y-1">
-              <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-3 mb-2">
-                Categories
-              </p>
-              <button
-                onClick={() => setActiveCategory(null)}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all
-                  ${activeCategory === null
-                    ? 'bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
-                  }`}
-              >
-                <span className="flex items-center gap-2.5">
-                  <Filter className="w-4 h-4" />
-                  All Categories
-                </span>
-              </button>
-              {sidebarCategories.map((cat) => {
-                const config = getNotificationTypeConfig(cat.type);
-                const Icon = config.icon;
-                const count = categoryCounts[cat.type];
-                return (
-                  <button
-                    key={cat.type}
-                    onClick={() => setActiveCategory(cat.type)}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all
-                      ${activeCategory === cat.type
-                        ? 'bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300'
-                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
-                      }`}
-                  >
-                    <span className="flex items-center gap-2.5">
-                      <Icon className={`w-4 h-4 ${activeCategory === cat.type ? config.iconColor : ''}`} />
-                      {cat.label}
-                    </span>
-                    {count > 0 && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-500 text-white">
-                        {count}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+    <div className="min-h-screen w-full">
+      <div className="w-full px-3 sm:px-4 md:px-6 py-4 sm:py-6">
+        {/* ═══════════ HERO HEADER ═══════════ */}
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden rounded-3xl border border-white/60 dark:border-white/10 bg-white/60 dark:bg-white/[0.04] backdrop-blur-2xl shadow-lg shadow-slate-200/30 dark:shadow-black/30 p-5 sm:p-6 mb-5"
+        >
+          {/* Ambient glow */}
+          <div className="pointer-events-none absolute -top-20 -right-20 w-64 h-64 rounded-full bg-blue-500/20 dark:bg-blue-500/10 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-20 -left-20 w-64 h-64 rounded-full bg-indigo-500/15 dark:bg-indigo-500/10 blur-3xl" />
 
-              {/* Mark all read in sidebar */}
-              {unreadCount > 0 && (
+          <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30">
+                <Bell className="w-6 h-6" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 flex items-center justify-center rounded-full bg-rose-500 text-white text-[10px] font-bold ring-2 ring-white dark:ring-slate-950 shadow-md">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+                  Notifications
+                </h1>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                  Stay updated on your professional network activity.
+                </p>
+              </div>
+            </div>
+
+            {/* Quick stat */}
+            {unreadCount > 0 && (
+              <div className="inline-flex items-center gap-2 rounded-2xl bg-white/60 dark:bg-white/5 backdrop-blur-md border border-white/60 dark:border-white/10 px-4 py-2.5">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75 animate-ping" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500" />
+                </span>
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                  {unreadCount} unread
+                </span>
+              </div>
+            )}
+          </div>
+        </motion.div>
+
+        {/* ═══════════ MAIN LAYOUT ═══════════ */}
+        <div className="flex gap-5">
+          {/* ───── Sidebar (desktop) ───── */}
+          <aside className="hidden lg:block w-64 flex-shrink-0">
+            <div className="sticky top-24 space-y-1.5">
+              <div className="relative overflow-hidden rounded-2xl border border-white/60 dark:border-white/10 bg-white/60 dark:bg-white/[0.04] backdrop-blur-2xl p-3 shadow-md shadow-slate-200/30 dark:shadow-black/20">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 px-2 mb-2">
+                  Categories
+                </p>
+
+                {/* All Categories */}
                 <button
-                  onClick={markAllAsRead}
-                  className="w-full flex items-center gap-2.5 px-3 py-2.5 mt-4 rounded-xl text-sm font-medium text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/30 transition-all border border-brand-200 dark:border-brand-800"
+                  onClick={() => setActiveCategory(null)}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                    activeCategory === null
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-white/5'
+                  }`}
                 >
-                  <CheckCheck className="w-4 h-4" />
-                  Mark all as read
+                  <span className="flex items-center gap-2.5">
+                    <Filter className="w-4 h-4" />
+                    All Categories
+                  </span>
                 </button>
-              )}
+
+                {/* Category list */}
+                {sidebarCategories.map((cat) => {
+                  const config = getNotificationTypeConfig(cat.type);
+                  const Icon = config.icon;
+                  const count = categoryCounts[cat.type];
+                  const isActive = activeCategory === cat.type;
+
+                  return (
+                    <button
+                      key={cat.type}
+                      onClick={() => setActiveCategory(cat.type)}
+                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                        isActive
+                          ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-white/5'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <Icon
+                          className={`w-4 h-4 ${
+                            isActive ? 'text-white' : config.iconColor
+                          }`}
+                        />
+                        {cat.label}
+                      </span>
+                      {count > 0 && (
+                        <span
+                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                            isActive
+                              ? 'bg-white/25 text-white'
+                              : 'bg-rose-500 text-white'
+                          }`}
+                        >
+                          {count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+
+                {/* Mark all read */}
+                {unreadCount > 0 && (
+                  <button
+                    onClick={markAllAsRead}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2.5 mt-3 rounded-xl text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-500/10 border border-blue-200/60 dark:border-blue-500/20 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-all"
+                  >
+                    <CheckCheck className="w-3.5 h-3.5" />
+                    Mark all as read
+                  </button>
+                )}
+              </div>
             </div>
           </aside>
 
-          {/* Main content */}
+          {/* ───── Main content ───── */}
           <main className="flex-1 min-w-0">
-            {/* Page title */}
-            <div className="mb-5">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Notifications</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Stay updated on your professional network activity.
-              </p>
-            </div>
-
             {/* Tabs */}
-            <div className="flex items-center gap-2 mb-5 overflow-x-auto pb-1">
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 }}
+              className="flex items-center gap-2 mb-4 overflow-x-auto pb-1 scrollbar-hide"
+            >
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = filter === tab.key;
@@ -148,16 +210,22 @@ export function NotificationsPage({
                   <button
                     key={tab.key}
                     onClick={() => setFilter(tab.key)}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all
-                      ${isActive
-                        ? 'bg-brand-600 text-white shadow-sm shadow-brand-600/20'
-                        : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
-                      }`}
+                    className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
+                      isActive
+                        ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
+                        : 'bg-white/60 dark:bg-white/[0.04] backdrop-blur-xl border border-white/60 dark:border-white/10 text-slate-600 dark:text-slate-400 hover:bg-white/80 dark:hover:bg-white/10'
+                    }`}
                   >
                     <Icon className="w-4 h-4" />
                     {tab.label}
                     {tab.key === 'unread' && unreadCount > 0 && (
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isActive ? 'bg-white/25' : 'bg-red-500 text-white'}`}>
+                      <span
+                        className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                          isActive
+                            ? 'bg-white/25 text-white'
+                            : 'bg-rose-500 text-white'
+                        }`}
+                      >
                         {unreadCount}
                       </span>
                     )}
@@ -169,38 +237,39 @@ export function NotificationsPage({
               {unreadCount > 0 && (
                 <button
                   onClick={markAllAsRead}
-                  className="lg:hidden ml-auto flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/30 transition-all whitespace-nowrap"
+                  className="lg:hidden ml-auto flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-500/10 border border-blue-200/60 dark:border-blue-500/20 whitespace-nowrap transition-all"
                 >
-                  <CheckCheck className="w-4 h-4" />
-                  Mark all read
+                  <CheckCheck className="w-3.5 h-3.5" />
+                  Mark all
                 </button>
               )}
-            </div>
+            </motion.div>
 
             {/* Category chips - mobile */}
-            <div className="lg:hidden mb-4 flex gap-2 overflow-x-auto pb-1">
+            <div className="lg:hidden mb-4 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
               <button
                 onClick={() => setActiveCategory(null)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all
-                  ${activeCategory === null
-                    ? 'bg-brand-600 text-white'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
-                  }`}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
+                  activeCategory === null
+                    ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/25'
+                    : 'bg-white/60 dark:bg-white/[0.04] backdrop-blur-xl border border-white/60 dark:border-white/10 text-slate-600 dark:text-slate-400'
+                }`}
               >
                 All
               </button>
               {sidebarCategories.map((cat) => {
                 const config = getNotificationTypeConfig(cat.type);
                 const Icon = config.icon;
+                const isActive = activeCategory === cat.type;
                 return (
                   <button
                     key={cat.type}
                     onClick={() => setActiveCategory(cat.type)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all
-                      ${activeCategory === cat.type
-                        ? 'bg-brand-600 text-white'
-                        : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
-                      }`}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
+                      isActive
+                        ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/25'
+                        : 'bg-white/60 dark:bg-white/[0.04] backdrop-blur-xl border border-white/60 dark:border-white/10 text-slate-600 dark:text-slate-400'
+                    }`}
                   >
                     <Icon className="w-3 h-3" />
                     {cat.label}
@@ -225,3 +294,5 @@ export function NotificationsPage({
     </div>
   );
 }
+
+export default NotificationsPage;

@@ -411,7 +411,7 @@ const Feed: React.FC = () => {
       {!hasMore && posts.length > 0 && (
         <motion.div
           initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
+          animate={{ opacity: 1 }} 
           transition={{ delay: 0.2 }}
           className="py-2 text-center"
         >
