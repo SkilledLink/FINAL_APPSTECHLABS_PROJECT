@@ -1,428 +1,354 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Sparkles, 
-  Star, 
-  ShieldCheck, 
-  ArrowRight, 
-  UserPlus, 
-  CheckCircle2, 
-  Users 
-} from 'lucide-react';
-import { motion } from 'framer-motion';
+import {
+  motion,
+  useMotionValue,
+  useReducedMotion,
+  useScroll,
+  useSpring,
+  useTransform,
+} from "framer-motion";
+import { ArrowDown, ArrowUpRight, ShieldCheck, Star } from "lucide-react";
+import type { MouseEvent } from "react";
+import MagneticButton from "./MagneticButton";
+import { heroImage, professionals, heroStats } from "../landingData";
 
-export default function Hero() {
-  const [isDarkMode, setIsDarkMode] = useState(true);
+type Props = { ready: boolean };
 
-  useEffect(() => {
-    const handleThemeChange = (e: CustomEvent) => {
-      setIsDarkMode(e.detail);
-    };
-    window.addEventListener('themeChange' as any, handleThemeChange);
-    return () => window.removeEventListener('themeChange' as any, handleThemeChange);
-  }, []);
+const ease = [0.22, 1, 0.36, 1] as const;
 
-  // Optimized lightweight starfield for smooth 60fps performance without GPU lag
-  const stars = useMemo(() => {
-    return Array.from({ length: 32 }).map((_, i) => ({
-      id: i,
-      top: `${Math.random() * 100}%`,
-      left: `${Math.random() * 100}%`,
-      size: Math.random() * 2 + 1,
-      duration: Math.random() * 3 + 3,
-      delay: Math.random() * 3,
-      opacity: Math.random() * 0.6 + 0.3,
-    }));
-  }, []);
+export default function Hero({ ready }: Props) {
+  const reduce = useReducedMotion();
+  const { scrollY } = useScroll();
 
-  const galleryImages = [
-    {
-      url: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80',
-      title: 'Plumbing & Pipe Repair',
-      rating: '4.9',
-      tag: 'Verified Pro',
-      reviews: '142'
-    },
-    {
-      url: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=600&q=80',
-      title: 'Electrical Work',
-      rating: '4.8',
-      tag: 'Safety Inspected',
-      reviews: '98'
-    },
-    {
-      url: 'https://images.unsplash.com/photo-1541888946425-d0fbb18fefbc?auto=format&fit=crop&w=600&q=80',
-      title: 'Custom Carpentry',
-      rating: '5.0',
-      tag: 'Master Craft',
-      reviews: '64'
-    },
-    {
-      url: 'https://images.unsplash.com/photo-1581092335397-9583fe92d232?auto=format&fit=crop&w=600&q=80',
-      title: 'HVAC & Maintenance',
-      rating: '4.9',
-      tag: 'Rapid Response',
-      reviews: '115'
-    },
-    {
-      url: 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&w=800&q=80',
-      title: 'Paint & Renovation',
-      rating: '4.9',
-      tag: 'Top Rated',
-      reviews: '210'
-    }
-  ];
+  const imgY = useTransform(scrollY, [0, 900], [0, 140]);
+  const imgScale = useTransform(scrollY, [0, 900], [1, 1.06]);
+  const contentY = useTransform(scrollY, [0, 900], [0, 70]);
+  const contentOpacity = useTransform(scrollY, [0, 500], [1, 0.4]);
 
-  // Hardware-accelerated smooth motion variants
-  const fadeInUp = {
-    hidden: { opacity: 0, y: 15 },
-    visible: (custom: number) => ({
-      opacity: 1,
-      y: 0,
-      transition: { 
-        duration: 0.5, 
-        ease: [0.25, 0.1, 0.25, 1],
-        delay: custom * 0.1 
-      }
-    })
+  // Floating chips drift independently
+  const chip1Y = useTransform(scrollY, [0, 900], [0, -80]);
+  const chip2Y = useTransform(scrollY, [0, 900], [0, -120]);
+  const chip3Y = useTransform(scrollY, [0, 900], [0, -50]);
+
+  const mx = useMotionValue(-500);
+  const my = useMotionValue(-500);
+  const lensX = useSpring(mx, { stiffness: 200, damping: 30 });
+  const lensY = useSpring(my, { stiffness: 200, damping: 30 });
+
+  const onMove = (e: MouseEvent<HTMLElement>) => {
+    if (reduce) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    mx.set(e.clientX - rect.left);
+    my.set(e.clientY - rect.top);
   };
 
+  const container = {
+    hidden: {},
+    show: { transition: { staggerChildren: 0.09, delayChildren: 0.3 } },
+  };
+  const fade = {
+    hidden: { opacity: 0, y: 22 },
+    show: { opacity: 1, y: 0, transition: { duration: 1, ease } },
+  };
+  const wordMask = {
+    hidden: { y: "115%" },
+    show: { y: "0%", transition: { duration: 1.15, ease } },
+  };
+  const chipFade = {
+    hidden: { opacity: 0, y: 18, scale: 0.96 },
+    show: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: { duration: 0.9, ease },
+    },
+  };
+
+  const [p1, p2, p3] = professionals;
+
   return (
-    <section className={`relative w-full min-h-[95vh] flex items-center justify-center overflow-hidden px-4 sm:px-6 lg:px-12 py-12 lg:py-20 transition-colors duration-500 ${
-      isDarkMode ? 'bg-[#030712] text-slate-100' : 'bg-slate-50 text-slate-900'
-    }`}>
+    <section
+      id="hero"
+      onMouseMove={onMove}
+      className="hero-section relative isolate flex min-h-screen w-full flex-col overflow-hidden"
+      style={{ background: "var(--bg-0)" }}
+    >
+      {/* Background image */}
+      <motion.div
+        className="absolute inset-0 -z-20"
+        initial={{ opacity: 0 }}
+        animate={ready ? { opacity: 1 } : {}}
+        transition={{ duration: 1.6, ease }}
+        style={{ y: reduce ? 0 : imgY, scale: reduce ? 1 : imgScale }}
+      >
+        <img
+          src={heroImage}
+          alt="A skilled tailor working at her atelier in Cameroon"
+          className="hero-img h-full w-full object-cover object-[58%_40%]"
+          fetchPriority="high"
+          style={{ filter: "var(--hero-img-filter)" }}
+        />
+      </motion.div>
 
-      {/* 🌌 DARK MODE BACKGROUND (Optimized Twinkling Stars + Nebulae) */}
-      {isDarkMode && (
-        <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-          {stars.map((star) => (
-            <motion.div
-              key={star.id}
-              className="absolute bg-blue-300 rounded-full shadow-[0_0_8px_#3b82f6]"
-              style={{
-                top: star.top,
-                left: star.left,
-                width: `${star.size}px`,
-                height: `${star.size}px`,
-                willChange: 'opacity, transform',
-              }}
-              animate={{
-                opacity: [0.2, star.opacity, 0.2],
-                scale: [0.9, 1.2, 0.9],
-              }}
-              transition={{
-                duration: star.duration,
-                repeat: Infinity,
-                delay: star.delay,
-                ease: 'easeInOut',
-              }}
-            />
-          ))}
+      {/* Theme scrims */}
+      <div
+        className="absolute inset-0 -z-10"
+        style={{
+          background:
+            "linear-gradient(to bottom, var(--hero-overlay-top) 0%, var(--hero-overlay-mid) 42%, var(--hero-overlay-bot) 100%)",
+        }}
+      />
+      <div
+        className="absolute inset-0 -z-10"
+        style={{
+          background:
+            "linear-gradient(to right, var(--hero-overlay-top) 0%, transparent 55%)",
+        }}
+      />
+      <div className="grain pointer-events-none absolute inset-0 -z-10" />
 
-          {/* Ambient Nebulae */}
-          <div className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-gradient-to-br from-blue-600/20 via-indigo-600/15 to-transparent blur-[120px] pointer-events-none" />
-          <div className="absolute bottom-[-15%] right-[-10%] w-[45vw] h-[45vw] rounded-full bg-gradient-to-tl from-sky-500/15 via-blue-900/20 to-transparent blur-[130px] pointer-events-none" />
-        </div>
+      {/* Atmosphere */}
+      <div className="pointer-events-none absolute -left-40 top-1/3 -z-10 h-[640px] w-[640px] rounded-full glow-blue blur-[120px] opacity-40" />
+      <div className="pointer-events-none absolute right-[-8%] bottom-[-10%] -z-10 h-[520px] w-[520px] rounded-full bg-[#2563EB]/[0.06] blur-[140px]" />
+
+      {!reduce && (
+        <motion.div
+          aria-hidden="true"
+          style={{ x: lensX, y: lensY }}
+          className="pointer-events-none absolute left-0 top-0 -z-10 hidden h-[460px] w-[460px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#7AB0FF]/[0.05] blur-2xl md:block"
+        />
       )}
 
-      {/* ☀️ LIGHT MODE BACKGROUND (Transparent Texture Image + Ambient Mesh Glow) */}
-      {!isDarkMode && (
-        <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-          {/* Transparent General Blueprint / Architecture Background Image */}
-          <div 
-            className="absolute inset-0 bg-cover bg-center opacity-[0.06] mix-blend-multiply"
-            style={{ 
-              backgroundImage: `url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2000&q=80')` 
-            }} 
-          />
-          {/* Soft Mesh Glows */}
-          <div className="absolute -top-28 -left-28 w-[550px] h-[550px] bg-gradient-to-br from-blue-300/35 via-sky-200/25 to-transparent rounded-full blur-[110px]" />
-          <div className="absolute -bottom-28 -right-28 w-[500px] h-[500px] bg-gradient-to-tl from-indigo-200/35 via-blue-100/25 to-transparent rounded-full blur-[120px]" />
-        </div>
-      )}
-
-      {/* ─── MAIN CONTAINER ─── */}
-      <div className="relative w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-10 items-center z-10">
-        
-        {/* ── LEFT COLUMN: Headline & Primary CTA ── */}
-        <div className="lg:col-span-6 flex flex-col items-start text-left gap-6 lg:pr-4">
-          
-          {/* Badge */}
-          <motion.div 
-            custom={0}
-            initial="hidden"
-            animate="visible"
-            variants={fadeInUp}
-            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide uppercase border backdrop-blur-md shadow-xs ${
-              isDarkMode 
-                ? 'bg-blue-950/70 border-blue-500/30 text-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.12)]' 
-                : 'bg-white/90 border-blue-200/90 text-blue-700 shadow-blue-500/5'
-            }`}
+      <motion.div
+        variants={container}
+        initial="hidden"
+        animate={ready ? "show" : "hidden"}
+        style={{
+          y: reduce ? 0 : contentY,
+          opacity: reduce ? 1 : contentOpacity,
+        }}
+        className="relative z-10 mx-auto flex w-full max-w-[1500px] flex-1 flex-col justify-end px-5 pb-12 pt-32 md:px-12 md:pb-16 md:pt-40"
+      >
+        {/* Copy block — now full width, no right-side column competition */}
+        <div className="max-w-[1180px]">
+          <motion.div
+            variants={fade}
+            className="mb-8 inline-flex items-center gap-2.5 rounded-full border px-3.5 py-1.5 text-[10px] tracking-[0.24em] backdrop-blur-md"
+            style={{
+              background: "var(--hero-chip-bg)",
+              borderColor: "var(--hero-chip-border)",
+              color: "var(--hero-fg-2)",
+            }}
           >
-            <Sparkles className="w-3.5 h-3.5 text-blue-500 animate-pulse" />
-            <span>SkilledLink Certified Artisan Network</span>
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#4F8EFF] opacity-60" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#4F8EFF]" />
+            </span>
+            CAMEROON · EVERY TRADE
           </motion.div>
 
-          {/* Main Headline */}
-          <motion.h1 
-            custom={1}
-            initial="hidden"
-            animate="visible"
-            variants={fadeInUp}
-            className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.08]"
+          <h1
+            className="max-w-[16ch] text-[14vw] font-medium leading-[0.88] tracking-[-0.05em] sm:text-[11.5vw] md:text-[8.5vw] lg:text-[7.2vw]"
+            style={{ color: "var(--hero-fg)" }}
           >
-            Connect with Trusted <br className="hidden sm:inline" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-indigo-400 to-sky-400">
-              Local Artisans
-            </span> in Minutes.
-          </motion.h1>
+            <span className="block overflow-hidden pb-[0.08em]">
+              <motion.span variants={wordMask} className="block">
+                Find the
+              </motion.span>
+            </span>
+            <span className="block overflow-hidden pb-[0.08em]">
+              <motion.span variants={wordMask} className="block">
+                <span className="serif pr-2">skill</span>
+                <span className="text-[#4F8EFF]">.</span>
+              </motion.span>
+            </span>
+          </h1>
 
-          {/* Subtitle */}
-          <motion.p 
-            custom={2}
-            initial="hidden"
-            animate="visible"
-            variants={fadeInUp}
-            className={`text-base sm:text-lg font-normal max-w-xl leading-relaxed ${
-              isDarkMode ? 'text-slate-300' : 'text-slate-600'
-            }`}
+          <motion.div
+            variants={fade}
+            className="mt-10 flex flex-col gap-8 md:flex-row md:items-end md:gap-12"
           >
-            SkilledLink bridges Cameroonian households with top-tier vetted specialists. Experience transparent pricing, background-checked pros, and guaranteed service excellence.
-          </motion.p>
-
-          {/* Trust Checkmarks */}
-          <motion.div 
-            custom={3}
-            initial="hidden"
-            animate="visible"
-            variants={fadeInUp}
-            className="grid grid-cols-2 gap-3 w-full max-w-md pt-1"
-          >
-            <div className={`flex items-center gap-2.5 text-xs font-semibold px-3.5 py-2.5 rounded-xl border backdrop-blur-sm ${
-              isDarkMode ? 'bg-slate-900/50 border-slate-800 text-slate-200' : 'bg-white/80 border-slate-200/90 text-slate-700 shadow-xs'
-            }`}>
-              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-              <span>100% Background Checked</span>
-            </div>
-            <div className={`flex items-center gap-2.5 text-xs font-semibold px-3.5 py-2.5 rounded-xl border backdrop-blur-sm ${
-              isDarkMode ? 'bg-slate-900/50 border-slate-800 text-slate-200' : 'bg-white/80 border-slate-200/90 text-slate-700 shadow-xs'
-            }`}>
-              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-              <span>Upfront Honest Pricing</span>
-            </div>
-          </motion.div>
-
-          {/* Single Primary Call To Action Button */}
-          <motion.div 
-            custom={4}
-            initial="hidden"
-            animate="visible"
-            variants={fadeInUp}
-            className="w-full sm:w-auto pt-2"
-          >
-            <a 
-              href="/login" 
-              className="relative group w-full sm:w-auto px-9 py-4 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm shadow-xl shadow-blue-600/30 hover:shadow-blue-600/50 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3 overflow-hidden"
+            <p
+              className="max-w-lg text-[15px] leading-7 md:text-base"
+              style={{ color: "var(--hero-fg-2)" }}
             >
-              <div className="absolute inset-0 w-1/2 h-full bg-white/20 skew-x-12 -translate-x-full group-hover:translate-x-[300%] transition-transform duration-1000 ease-out" />
-              <UserPlus className="w-4 h-4 group-hover:rotate-12 transition-transform duration-300" />
-              <span>Join Us Now</span>
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
-            </a>
-          </motion.div>
+              Discover the people who build, repair, create and make things
+              happen across Cameroon — barbers, tailors, electricians,
+              welders and every trade in between.
+            </p>
 
-          {/* Live Activity Metric Footer */}
-          <motion.div
-            custom={5}
-            initial="hidden"
-            animate="visible"
-            variants={fadeInUp}
-            className={`flex items-center gap-3 pt-2 text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}
-          >
-            <div className="flex -space-x-2 overflow-hidden">
-              <img className="inline-block h-7 w-7 rounded-full ring-2 ring-blue-500/40 object-cover" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop" alt="User" />
-              <img className="inline-block h-7 w-7 rounded-full ring-2 ring-blue-500/40 object-cover" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop" alt="User" />
-              <img className="inline-block h-7 w-7 rounded-full ring-2 ring-blue-500/40 object-cover" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop" alt="User" />
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-              <span>Over <strong className={`font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>1,200+</strong> services booked recently</span>
+            <div className="flex flex-wrap items-center gap-3">
+              <MagneticButton
+                href="#trades"
+                strength={0.32}
+                className="group inline-flex items-center justify-center gap-2.5 rounded-full px-5 py-3 text-[13px] font-semibold"
+                style={{
+                  background: "var(--hero-btn-primary-bg)",
+                  color: "var(--hero-btn-primary-fg)",
+                }}
+              >
+                Start exploring
+                <ArrowDown
+                  size={15}
+                  className="transition-transform duration-500 group-hover:translate-y-0.5"
+                />
+              </MagneticButton>
+
+              <a
+                href="#professionals"
+                className="inline-flex items-center gap-2 rounded-full border px-5 py-3 text-[13px] font-medium backdrop-blur-md transition-colors duration-500"
+                style={{
+                  color: "var(--hero-fg-2)",
+                  borderColor: "var(--hero-border)",
+                  background: "var(--hero-chip-bg)",
+                }}
+              >
+                Meet professionals
+                <ArrowUpRight size={14} />
+              </a>
             </div>
           </motion.div>
-
         </div>
 
-        {/* ── RIGHT COLUMN: Glassmorphic Bento Collage Layout ── */}
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.97 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="lg:col-span-6 relative w-full h-[540px] sm:h-[600px] flex items-center justify-center"
+        {/* Stats row */}
+        <motion.div
+          variants={fade}
+          className="stat-row mt-16 md:mt-20"
+          style={{ borderColor: "var(--hero-border)" }}
         >
-          {/* Bento Grid Layer */}
-          <div className="absolute inset-0 grid grid-cols-12 grid-rows-6 gap-3.5 p-1 sm:p-2">
-            
-            {/* 1. Main Featured Vertical Card (Plumbing) */}
-            <div className={`col-span-5 row-span-4 rounded-3xl overflow-hidden relative shadow-2xl border group backdrop-blur-md transition-all duration-300 hover:shadow-blue-500/10 ${
-              isDarkMode ? 'border-slate-800/80 bg-slate-900/40' : 'border-slate-200/90 bg-white'
-            }`}>
-              <img 
-                src={galleryImages[0].url} 
-                alt={galleryImages[0].title} 
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" 
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent flex flex-col justify-end p-4">
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-300 bg-blue-500/20 border border-blue-400/30 px-2 py-0.5 rounded-full w-fit backdrop-blur-md mb-1.5">
-                  <ShieldCheck className="w-3 h-3 text-blue-400" />
-                  {galleryImages[0].tag}
-                </span>
-                <h4 className="text-sm font-extrabold text-white leading-tight">{galleryImages[0].title}</h4>
-                <div className="flex items-center gap-1 text-amber-400 text-xs mt-1">
-                  <Star className="w-3.5 h-3.5 fill-amber-400" />
-                  <span className="font-bold text-white text-[11px]">{galleryImages[0].rating}</span>
-                  <span className="text-[10px] text-slate-300">({galleryImages[0].reviews})</span>
-                </div>
-              </div>
-            </div>
-
-            {/* 2. Top Right Horizontal Card (Electrical) */}
-            <div className={`col-span-4 row-span-2 rounded-2xl overflow-hidden relative shadow-xl border group backdrop-blur-md transition-all duration-300 ${
-              isDarkMode ? 'border-slate-800/80 bg-slate-900/40' : 'border-slate-200/90 bg-white'
-            }`}>
-              <img 
-                src={galleryImages[1].url} 
-                alt={galleryImages[1].title} 
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" 
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent flex flex-col justify-end p-3">
-                <span className="text-[11px] font-bold text-white truncate">{galleryImages[1].title}</span>
-                <div className="flex items-center gap-1 text-amber-400 text-[10px]">
-                  <Star className="w-3 h-3 fill-amber-400" />
-                  <span className="font-bold text-white">{galleryImages[1].rating}</span>
-                  <span className="text-[9px] text-slate-300">({galleryImages[1].reviews})</span>
-                </div>
-              </div>
-            </div>
-
-            {/* 3. Top Far Right Card (Carpentry) */}
-            <div className={`col-span-3 row-span-3 rounded-2xl overflow-hidden relative shadow-xl border group backdrop-blur-md transition-all duration-300 ${
-              isDarkMode ? 'border-slate-800/80 bg-slate-900/40' : 'border-slate-200/90 bg-white'
-            }`}>
-              <img 
-                src={galleryImages[2].url} 
-                alt={galleryImages[2].title} 
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" 
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent flex flex-col justify-end p-2.5">
-                <span className="text-[10px] font-bold text-white leading-tight truncate">{galleryImages[2].title}</span>
-                <div className="flex items-center gap-0.5 text-amber-400 text-[9px]">
-                  <Star className="w-2.5 h-2.5 fill-amber-400" />
-                  <span className="font-bold text-white">{galleryImages[2].rating}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* 4. Middle Right Card (HVAC) */}
-            <div className={`col-span-4 row-span-2 rounded-2xl overflow-hidden relative shadow-xl border group backdrop-blur-md transition-all duration-300 ${
-              isDarkMode ? 'border-slate-800/80 bg-slate-900/40' : 'border-slate-200/90 bg-white'
-            }`}>
-              <img 
-                src={galleryImages[3].url} 
-                alt={galleryImages[3].title} 
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" 
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-transparent flex flex-col justify-end p-3">
-                <span className="text-[11px] font-bold text-white truncate">{galleryImages[3].title}</span>
-                <div className="flex items-center gap-1 text-amber-400 text-[10px]">
-                  <Star className="w-3 h-3 fill-amber-400" />
-                  <span className="font-bold text-white">{galleryImages[3].rating}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* 5. Highlight Badge Card (SkilledLink Brand Focus) */}
-            <div className="col-span-3 row-span-3 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-800 p-3.5 flex flex-col justify-between shadow-xl shadow-blue-600/20 text-white border border-blue-400/30 relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300">
-              <div className="absolute -right-6 -bottom-6 w-20 h-20 bg-white/10 rounded-full blur-xl" />
-              <div className="flex items-center justify-between z-10">
-                <div className="w-7 h-7 rounded-lg bg-white/20 backdrop-blur-md flex items-center justify-center">
-                  <ShieldCheck className="w-4 h-4 text-blue-100" />
-                </div>
-                <span className="text-[9px] font-black uppercase tracking-wider bg-white/20 border border-white/20 px-2 py-0.5 rounded-full text-blue-100">PRO</span>
-              </div>
-              <div className="z-10">
-                <h4 className="font-black text-xs tracking-wide leading-tight mb-0.5">SKILLEDLINK</h4>
-                <p className="text-[10px] text-blue-100/90 font-medium">Guaranteed Service</p>
-              </div>
-            </div>
-
-            {/* 6. Bottom Wide Card (Paint & Renovation) */}
-            <div className={`col-span-5 row-span-2 rounded-2xl overflow-hidden relative shadow-xl border group backdrop-blur-md transition-all duration-300 ${
-              isDarkMode ? 'border-slate-800/80 bg-slate-900/40' : 'border-slate-200/90 bg-white'
-            }`}>
-              <img 
-                src={galleryImages[4].url} 
-                alt={galleryImages[4].title} 
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" 
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/50 to-transparent flex items-center px-4 justify-between">
-                <div>
-                  <span className="text-xs font-bold text-white block truncate">{galleryImages[4].title}</span>
-                  <div className="flex items-center gap-1.5 text-amber-400 text-[10px] mt-0.5">
-                    <Star className="w-3 h-3 fill-amber-400" />
-                    <span className="font-bold text-white">{galleryImages[4].rating}</span>
-                    <span className="text-blue-300 text-[10px]">({galleryImages[4].reviews} reviews)</span>
-                  </div>
-                </div>
-                <div className="w-7 h-7 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-300 backdrop-blur-md shrink-0">
-                  <Star className="w-3.5 h-3.5 fill-blue-300" />
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-          {/* 🌟 Floating Status Badge 1 (Top Left Overhang) */}
-          <motion.div
-            initial={{ opacity: 0, x: -15 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3, duration: 0.4 }}
-            className={`absolute -top-3 -left-3 sm:-left-6 px-3.5 py-2 rounded-2xl border backdrop-blur-xl shadow-xl flex items-center gap-3 z-20 ${
-              isDarkMode ? 'bg-slate-900/90 border-slate-700/80 text-white' : 'bg-white/95 border-slate-200 text-slate-800'
-            }`}
-          >
-            <div className="w-8 h-8 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-500">
-              <Users className="w-4 h-4" />
-            </div>
-            <div>
-              <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Active Artisans</p>
-              <p className="text-xs font-extrabold flex items-center gap-1">
-                240+ Pros Online <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          {heroStats.map((item, i) => (
+            <div
+              key={item.label}
+              className="stat-cell"
+              style={{
+                borderColor: "var(--hero-border)",
+                borderLeft: i === 0 ? "none" : undefined,
+              }}
+            >
+              <p className="stat-value" style={{ color: "var(--hero-fg)" }}>
+                {item.value}
+              </p>
+              <p className="stat-label" style={{ color: "var(--hero-fg-3)" }}>
+                {item.label}
               </p>
             </div>
-          </motion.div>
-
-          {/* 🌟 Floating Status Badge 2 (Bottom Right Rating Card) */}
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.4 }}
-            className={`absolute -bottom-3 -right-3 sm:-right-6 px-4 py-2.5 rounded-2xl border backdrop-blur-xl shadow-xl flex items-center gap-3 z-20 ${
-              isDarkMode ? 'bg-slate-900/90 border-slate-700/80 text-white' : 'bg-white/95 border-slate-200 text-slate-800'
-            }`}
-          >
-            <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-500">
-              <Star className="w-4 h-4 fill-amber-400" />
-            </div>
-            <div>
-              <p className="text-xs font-black flex items-center gap-1">
-                4.95 / 5.0 Rating
-              </p>
-              <p className="text-[10px] text-slate-400 font-medium">From 3,400+ reviews</p>
-            </div>
-          </motion.div>
-
+          ))}
         </motion.div>
+      </motion.div>
 
-      </div>
+      {/* Floating professional chips — over the image on the right */}
+      <motion.div
+        variants={chipFade}
+        initial="hidden"
+        animate={ready ? "show" : "hidden"}
+        style={{ y: reduce ? 0 : chip1Y }}
+        className="pointer-events-none absolute right-[8%] top-[26%] z-10 hidden lg:block"
+      >
+        <div
+          className="flex items-center gap-3 rounded-full border px-4 py-2.5 backdrop-blur-xl"
+          style={{
+            background: "var(--hero-chip-bg)",
+            borderColor: "var(--hero-border)",
+            boxShadow: "0 12px 32px -18px rgba(0,0,0,0.8)",
+          }}
+        >
+          <span
+            className="flex h-6 w-6 items-center justify-center rounded-full"
+            style={{ background: "rgba(79,142,255,0.16)" }}
+          >
+            <ShieldCheck size={12} className="text-[#7AB0FF]" />
+          </span>
+          <div className="flex flex-col leading-none">
+            <span
+              className="text-[11px] font-semibold tracking-tight"
+              style={{ color: "var(--hero-fg)" }}
+            >
+              {p1.name} · {p1.role}
+            </span>
+            <span
+              className="mt-1 text-[10px] tracking-[0.14em]"
+              style={{ color: "var(--hero-fg-3)" }}
+            >
+              {p1.location.toUpperCase()}
+            </span>
+          </div>
+        </div>
+      </motion.div>
+
+      <motion.div
+        variants={chipFade}
+        initial="hidden"
+        animate={ready ? "show" : "hidden"}
+        style={{ y: reduce ? 0 : chip2Y }}
+        className="pointer-events-none absolute right-[24%] top-[46%] z-10 hidden lg:block"
+      >
+        <div
+          className="flex items-center gap-3 rounded-full border px-4 py-2.5 backdrop-blur-xl"
+          style={{
+            background: "var(--hero-chip-bg)",
+            borderColor: "var(--hero-border)",
+            boxShadow: "0 12px 32px -18px rgba(0,0,0,0.8)",
+          }}
+        >
+          <span
+            className="flex h-6 w-6 items-center justify-center rounded-full"
+            style={{ background: "rgba(251,191,36,0.16)" }}
+          >
+            <Star size={11} className="fill-[#FBBF24] text-[#FBBF24]" />
+          </span>
+          <div className="flex flex-col leading-none">
+            <span
+              className="text-[11px] font-semibold tracking-tight"
+              style={{ color: "var(--hero-fg)" }}
+            >
+              {p2.name} · {p2.rating} rating
+            </span>
+            <span
+              className="mt-1 text-[10px] tracking-[0.14em]"
+              style={{ color: "var(--hero-fg-3)" }}
+            >
+              {p2.role.toUpperCase()}
+            </span>
+          </div>
+        </div>
+      </motion.div>
+
+      <motion.div
+        variants={chipFade}
+        initial="hidden"
+        animate={ready ? "show" : "hidden"}
+        style={{ y: reduce ? 0 : chip3Y }}
+        className="pointer-events-none absolute right-[12%] top-[64%] z-10 hidden lg:block"
+      >
+        <div
+          className="flex items-center gap-3 rounded-full border px-4 py-2.5 backdrop-blur-xl"
+          style={{
+            background: "var(--hero-chip-bg)",
+            borderColor: "var(--hero-border)",
+            boxShadow: "0 12px 32px -18px rgba(0,0,0,0.8)",
+          }}
+        >
+          <span
+            className="flex h-6 w-6 items-center justify-center rounded-full"
+            style={{ background: "rgba(122,176,255,0.16)" }}
+          >
+            <ShieldCheck size={12} className="text-[#7AB0FF]" />
+          </span>
+          <div className="flex flex-col leading-none">
+            <span
+              className="text-[11px] font-semibold tracking-tight"
+              style={{ color: "var(--hero-fg)" }}
+            >
+              {p3.name} · {p3.role}
+            </span>
+            <span
+              className="mt-1 text-[10px] tracking-[0.14em]"
+              style={{ color: "var(--hero-fg-3)" }}
+            >
+              {p3.location.toUpperCase()}
+            </span>
+          </div>
+        </div>
+      </motion.div>
     </section>
   );
 }

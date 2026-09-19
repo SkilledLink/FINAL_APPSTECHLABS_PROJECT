@@ -1,9 +1,12 @@
 from uuid import UUID
 from fastapi import HTTPException, status
 from sqlmodel import Session
+from app.models.conversation import Conversation
 from app.repositories.conversation_repository import ConversationRepository
 from app.schemas.conversation import ConversationCreate, ConversationResponse, ParticipantInfo
 from app.services.user_service import UserService
+from typing import List
+
 
 class ConversationService:
     def __init__(self, session: Session):
