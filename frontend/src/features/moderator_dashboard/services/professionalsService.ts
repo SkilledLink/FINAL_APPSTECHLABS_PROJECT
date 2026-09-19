@@ -41,12 +41,25 @@ const mapProDetail = (p: any): AdminProfessionalDetail => ({
   updatedAt: p.updated_at,
 });
 
+export interface ProfessionalsPage {
+  items: AdminProfessional[];
+  total: number;
+}
+
 export const professionalsService = {
-  async getAll(): Promise<AdminProfessional[]> {
+  async getPage(skip: number, limit: number): Promise<ProfessionalsPage> {
     const { data } = await api.get('/moderator/professionals', {
-      params: { skip: 0, limit: 100 },
+      params: { skip, limit },
     });
-    return (data.items ?? []).map(mapPro);
+    return {
+      items: (data.items ?? []).map(mapPro),
+      total: data.total ?? 0,
+    };
+  },
+
+  async getAll(limit = 100): Promise<AdminProfessional[]> {
+    const { items } = await this.getPage(0, limit);
+    return items;
   },
 
   async getOne(id: string): Promise<AdminProfessionalDetail> {

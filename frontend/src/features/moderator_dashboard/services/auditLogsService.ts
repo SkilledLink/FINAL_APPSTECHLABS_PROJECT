@@ -10,9 +10,22 @@ const logs: AuditLog[] = [
   { id: 'l5', moderator: { id: 'm1', name: 'Marie Moderator', avatar: 'https://i.pravatar.cc/80?img=20' }, action: 'ESCALATE_REPORT', targetType: 'report', targetId: 'r2', description: 'Escalated high-priority harassment report to admin', ipAddress: '102.244.12.88', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 36).toISOString(), severity: 'critical' },
 ];
 
+export interface AuditLogsPage {
+  items: AuditLog[];
+  total: number;
+}
+
 export const auditLogsService = {
-  async getAll(): Promise<AuditLog[]> {
+  async getPage(skip: number, limit: number): Promise<AuditLogsPage> {
     await delay();
-    return logs;
+    return {
+      items: logs.slice(skip, skip + limit),
+      total: logs.length,
+    };
+  },
+
+  async getAll(limit = 100): Promise<AuditLog[]> {
+    const { items } = await this.getPage(0, limit);
+    return items;
   },
 };

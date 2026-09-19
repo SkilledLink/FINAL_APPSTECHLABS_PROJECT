@@ -76,12 +76,25 @@ const mapFeedDetail = (f: any): AdminFeedDetail => {
   };
 };
 
+export interface FeedsPage {
+  items: AdminFeed[];
+  total: number;
+}
+
 export const feedsService = {
-  async getAll(): Promise<AdminFeed[]> {
+  async getPage(skip: number, limit: number): Promise<FeedsPage> {
     const { data } = await api.get('/moderator/feeds', {
-      params: { skip: 0, limit: 100, include_deleted: true },
+      params: { skip, limit, include_deleted: true },
     });
-    return (data.items ?? []).map(mapFeed);
+    return {
+      items: (data.items ?? []).map(mapFeed),
+      total: data.total ?? 0,
+    };
+  },
+
+  async getAll(limit = 100): Promise<AdminFeed[]> {
+    const { items } = await this.getPage(0, limit);
+    return items;
   },
 
   async getOne(id: string): Promise<AdminFeedDetail> {

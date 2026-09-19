@@ -26,12 +26,25 @@ const mapUserDetail = (u: any): AdminUserDetail => ({
   updatedAt: u.updated_at,
 });
 
+export interface UsersPage {
+  items: AdminUser[];
+  total: number;
+}
+
 export const usersService = {
-  async getAll(): Promise<AdminUser[]> {
+  async getPage(skip: number, limit: number): Promise<UsersPage> {
     const { data } = await api.get('/moderator/users', {
-      params: { skip: 0, limit: 100 },
+      params: { skip, limit },
     });
-    return (data.items ?? []).map(mapUser);
+    return {
+      items: (data.items ?? []).map(mapUser),
+      total: data.total ?? 0,
+    };
+  },
+
+  async getAll(limit = 100): Promise<AdminUser[]> {
+    const { items } = await this.getPage(0, limit);
+    return items;
   },
 
   async getOne(id: string): Promise<AdminUserDetail> {
