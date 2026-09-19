@@ -14,6 +14,8 @@ import {
   Moon,
   ImagePlus,
   X,
+  Shield,        // ← NEW
+  ShieldCheck,   // ← NEW
 } from "lucide-react";
 import { useAuth } from "../../../features/auth/hooks/useAuth";
 import { useUser } from "../../../features/profile/hooks/useUser";
@@ -44,6 +46,11 @@ export default function MobileNavigation({
   const { uploadProfileImage } = useProfileImage();
 
   const activeUser = user ?? currentUser;
+
+  // ← NEW: admin/mod flags
+  const isAdmin = !!activeUser?.isAdmin;
+  const isModerator = !!activeUser?.isModerator;
+
   const avatarUrl = activeUser?.profileImageUrl ?? null;
 
   const getInitials = (firstName?: string, lastName?: string) => {
@@ -308,6 +315,43 @@ export default function MobileNavigation({
                   <X size={20} className="text-slate-600 dark:text-slate-300" />
                 </button>
               </div>
+
+              {/* ← NEW: Admin / Moderator tools section */}
+              {(isAdmin || isModerator) && (
+                <div className="py-2 border-b border-slate-200 dark:border-slate-800">
+                  {isAdmin && (
+                    <button
+                      onClick={() => {
+                        navigate("/admin_dashboard");
+                        setIsProfileMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-6 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                    >
+                      <Shield
+                        size={18}
+                        className="text-blue-500 dark:text-blue-400"
+                      />
+                      Admin Dashboard
+                    </button>
+                  )}
+
+                  {isModerator && (
+                    <button
+                      onClick={() => {
+                        navigate("/moderator_dashboard");
+                        setIsProfileMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-6 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                    >
+                      <ShieldCheck
+                        size={18}
+                        className="text-blue-500 dark:text-blue-400"
+                      />
+                      Moderator Dashboard
+                    </button>
+                  )}
+                </div>
+              )}
 
               <div className="py-2">
                 <button

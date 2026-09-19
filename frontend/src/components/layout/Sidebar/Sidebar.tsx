@@ -16,6 +16,8 @@ import {
   Moon,
   ChevronDown,
   ImagePlus,
+  Shield,        // ← NEW
+  ShieldCheck,   // ← NEW
 } from 'lucide-react';
 import { useAuth } from '../../../features/auth/hooks/useAuth';
 import { useUser } from '../../../features/profile/hooks/useUser';
@@ -42,19 +44,18 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
-  // ── Auth for logout + fallback user ─────────────────────
   const { currentUser, logout, updateUser: updateAuthUser } = useAuth();
 
-  // ── useUser with autoFetch loads the current user on mount ─
   const { user, loading } = useUser({ autoFetch: true });
 
-  // ── useProfileImage handles the actual upload ────────────
   const { uploadProfileImage } = useProfileImage();
 
-  // Prefer the richer profile record; fall back to auth context
   const activeUser = user ?? currentUser;
 
-  // useUser maps backend `profile_image_url` → `profileImageUrl`
+  // ← NEW: admin/mod flags
+  const isAdmin = !!activeUser?.isAdmin;
+  const isModerator = !!activeUser?.isModerator;
+
   const avatarUrl = activeUser?.profileImageUrl ?? null;
 
   useEffect(() => {
@@ -100,7 +101,6 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
 
     const updated = await uploadProfileImage(file);
     if (updated) {
-      // Sync the new avatar into the auth context immediately
       updateAuthUser({
         ...(activeUser as any),
         ...updated,
@@ -329,6 +329,44 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
                     {activeUser?.email}
                   </p>
                 </div>
+
+                {/* ← NEW: Admin / Moderator tools section */}
+                {(isAdmin || isModerator) && (
+                  <div className="border-b border-slate-100 py-1 dark:border-white/10">
+                    {isAdmin && (
+                      <button
+                        onClick={() => {
+                          navigate('/admin_dashboard');
+                          setIsProfileDropdownOpen(false);
+                        }}
+                        className="flex w-full cursor-pointer items-center gap-3 px-4 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800/60"
+                      >
+                        <Shield
+                          size={15}
+                          className="text-blue-500 dark:text-blue-400"
+                        />
+                        Admin Dashboard
+                      </button>
+                    )}
+
+                    {isModerator && (
+                      <button
+                        onClick={() => {
+                          navigate('/moderator_dashboard');
+                          setIsProfileDropdownOpen(false);
+                        }}
+                        className="flex w-full cursor-pointer items-center gap-3 px-4 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800/60"
+                      >
+                        <ShieldCheck
+                          size={15}
+                          className="text-blue-500 dark:text-blue-400"
+                        />
+                        Moderator Dashboard
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 <div className="py-1">
                   <button
                     onClick={() => {

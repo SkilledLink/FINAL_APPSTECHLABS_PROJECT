@@ -249,10 +249,10 @@ function App() {
             <Route path="/portfolio" element={<PublicPortfolioRoute />} />
 
             {/* ADMIN */}
-            <Route path="/admin_dashbourd" element={<AdminDashboard />} />
+            <Route path="/admin_dashboard" element={<AdminDashboard />} />
 
             {/* MODERATOR DASHBOARD (PUBLIC ROUTE) */}
-            <Route path="/moderator_dashbourd" element={<ModeratorDashboard />} />
+            <Route path="/moderator_dashboard" element={<ModeratorDashboard />} />
 
             {/* CATCH-ALL */}
             <Route path="*" element={<Navigate to="/" replace />} />

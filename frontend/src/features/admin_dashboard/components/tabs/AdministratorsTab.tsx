@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ShieldCheck, Inbox, Search } from 'lucide-react';
+import { ShieldCheck, Shield, Inbox, Search } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useAdministrators } from '../../hooks/useAdministrators';
 import type { Administrator } from '../../types/admin.types';
@@ -14,7 +14,6 @@ const SkeletonBlock: React.FC<{ className?: string; style?: React.CSSProperties 
   <div className={`animate-pulse rounded bg-gray-200 ${className}`} style={style} />
 );
 
-// ----- Desktop table skeleton -----
 const SkeletonTableRow: React.FC = () => (
   <tr>
     <td className="px-5 py-4">
@@ -30,7 +29,8 @@ const SkeletonTableRow: React.FC = () => (
     <td className="px-5 py-4"><SkeletonBlock className="h-5 w-16 rounded-full" /></td>
     <td className="px-5 py-4"><SkeletonBlock className="h-3 w-24" /></td>
     <td className="px-5 py-4">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <SkeletonBlock className="h-7 w-20 rounded-lg" />
         <SkeletonBlock className="h-7 w-20 rounded-lg" />
       </div>
     </td>
@@ -58,7 +58,6 @@ const SkeletonTable: React.FC<{ rows?: number }> = ({ rows = 6 }) => (
   </div>
 );
 
-// ----- Mobile card skeleton -----
 const SkeletonCard: React.FC = () => (
   <div className="p-4 space-y-3">
     <div className="flex items-center gap-3">
@@ -113,18 +112,35 @@ const SearchInput: React.FC<{ value: string; onChange: (v: string) => void; plac
   </div>
 );
 
-const RoleBadge: React.FC<{ role: 'admin' | 'moderator' }> = ({ role }) => (
-  <span
-    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap ${
-      role === 'admin'
-        ? 'bg-blue-50 text-blue-700 border-blue-200'
-        : 'bg-purple-50 text-purple-700 border-purple-200'
-    }`}
-  >
-    <ShieldCheck size={11} />
-    {role}
-  </span>
-);
+/**
+ * Single-badge display. Admin takes priority over moderator:
+ *   - admin + moderator  → "admin"
+ *   - admin only         → "admin"
+ *   - moderator only     → "moderator"
+ *   - neither            → nothing (edge case)
+ */
+const RoleBadge: React.FC<{ isAdmin: boolean; isModerator: boolean }> = ({
+  isAdmin,
+  isModerator,
+}) => {
+  if (isAdmin) {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap bg-blue-50 text-blue-700 border-blue-200">
+        <ShieldCheck size={11} />
+        admin
+      </span>
+    );
+  }
+  if (isModerator) {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap bg-purple-50 text-purple-700 border-purple-200">
+        <Shield size={11} />
+        moderator
+      </span>
+    );
+  }
+  return null;
+};
 
 const StatusBadge: React.FC<{ status: 'active' | 'inactive' }> = ({ status }) => (
   <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap ${
@@ -135,14 +151,77 @@ const StatusBadge: React.FC<{ status: 'active' | 'inactive' }> = ({ status }) =>
   </span>
 );
 
+// ---------- Role toggle buttons ----------
+interface RoleToggleProps {
+  admin: Administrator;
+  onToggleAdmin: () => void;
+  onToggleModerator: () => void;
+  compact?: boolean;
+}
+
+const RoleToggles: React.FC<RoleToggleProps> = ({
+  admin,
+  onToggleAdmin,
+  onToggleModerator,
+  compact,
+}) => {
+  const btn =
+    'px-2.5 py-1 rounded-lg text-[11px] font-medium inline-flex items-center gap-1 whitespace-nowrap transition-colors';
+  const smallBtn = compact ? 'px-2 py-1 text-[10px]' : '';
+
+  return (
+    <div className={`flex items-center gap-1.5 ${compact ? '' : 'justify-end'}`}>
+      {admin.isAdmin ? (
+        <button
+          onClick={onToggleAdmin}
+          className={`${btn} ${smallBtn} bg-gray-100 text-gray-700 hover:bg-gray-200`}
+          title="Remove admin role"
+        >
+          <ShieldCheck size={11} /> Remove admin
+        </button>
+      ) : (
+        <button
+          onClick={onToggleAdmin}
+          className={`${btn} ${smallBtn} bg-blue-50 text-blue-700 hover:bg-blue-100`}
+          title="Grant admin role"
+        >
+          <ShieldCheck size={11} /> Make admin
+        </button>
+      )}
+
+      {admin.isModerator ? (
+        <button
+          onClick={onToggleModerator}
+          className={`${btn} ${smallBtn} bg-gray-100 text-gray-700 hover:bg-gray-200`}
+          title="Remove moderator role"
+        >
+          <Shield size={11} /> Remove mod
+        </button>
+      ) : (
+        <button
+          onClick={onToggleModerator}
+          className={`${btn} ${smallBtn} bg-purple-50 text-purple-700 hover:bg-purple-100`}
+          title="Grant moderator role"
+        >
+          <Shield size={11} /> Make mod
+        </button>
+      )}
+    </div>
+  );
+};
+
 // ---------- Mobile card ----------
 interface AdminCardProps {
   admin: Administrator;
-  onPromote: () => void;
-  onDemote: () => void;
+  onToggleAdmin: () => void;
+  onToggleModerator: () => void;
 }
 
-const AdminCard: React.FC<AdminCardProps> = ({ admin, onPromote, onDemote }) => (
+const AdminCard: React.FC<AdminCardProps> = ({
+  admin,
+  onToggleAdmin,
+  onToggleModerator,
+}) => (
   <div className="p-4">
     <div className="flex items-center gap-3">
       <img
@@ -157,7 +236,7 @@ const AdminCard: React.FC<AdminCardProps> = ({ admin, onPromote, onDemote }) => 
     </div>
 
     <div className="mt-3 flex items-center gap-2 flex-wrap">
-      <RoleBadge role={admin.role} />
+      <RoleBadge isAdmin={admin.isAdmin} isModerator={admin.isModerator} />
       <StatusBadge status={admin.status} />
     </div>
 
@@ -167,21 +246,14 @@ const AdminCard: React.FC<AdminCardProps> = ({ admin, onPromote, onDemote }) => 
           ? formatDistanceToNow(new Date(admin.lastActive), { addSuffix: true })
           : 'Never active'}
       </span>
-      {admin.role === 'moderator' ? (
-        <button
-          onClick={onPromote}
-          className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-medium"
-        >
-          Promote
-        </button>
-      ) : (
-        <button
-          onClick={onDemote}
-          className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 text-xs font-medium"
-        >
-          Demote
-        </button>
-      )}
+    </div>
+
+    <div className="mt-3">
+      <RoleToggles
+        admin={admin}
+        onToggleAdmin={onToggleAdmin}
+        onToggleModerator={onToggleModerator}
+      />
     </div>
   </div>
 );
@@ -193,43 +265,56 @@ type Prompt = {
   onConfirm: (reason: string) => Promise<void>;
 };
 
+type Filter = 'all' | 'admin' | 'moderator';
+
 const AdministratorsTab: React.FC = () => {
   const { administrators, loading, error, updateRole } = useAdministrators();
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState<'all' | 'admin' | 'moderator'>('all');
+  const [filter, setFilter] = useState<Filter>('all');
   const [prompt, setPrompt] = useState<Prompt | null>(null);
 
   const filtered = useMemo(
     () =>
-      administrators.filter(
-        (a) =>
-          (filter === 'all' || a.role === filter) &&
-          (a.name.toLowerCase().includes(query.toLowerCase()) ||
-            a.email.toLowerCase().includes(query.toLowerCase())),
-      ),
+      administrators.filter((a) => {
+        // Filter matches what the badge displays:
+        //   - "admin"      → anyone with the admin flag (incl. admin+mod)
+        //   - "moderator"  → only pure moderators (mod && !admin)
+        const matchesFilter =
+          filter === 'all' ||
+          (filter === 'admin' && a.isAdmin) ||
+          (filter === 'moderator' && a.isModerator && !a.isAdmin);
+
+        const q = query.toLowerCase();
+        const matchesQuery =
+          a.name.toLowerCase().includes(q) || a.email.toLowerCase().includes(q);
+
+        return matchesFilter && matchesQuery;
+      }),
     [administrators, filter, query],
   );
 
-  const openPromote = (a: Administrator) => {
+  const openToggleAdmin = (a: Administrator) => {
+    const next = !a.isAdmin;
     setPrompt({
-      title: 'Promote to Admin',
+      title: next ? 'Grant admin role' : 'Remove admin role',
       description: a.email,
-      submitLabel: 'Promote',
+      submitLabel: next ? 'Grant' : 'Remove',
       onConfirm: async (reason) => {
-        await updateRole(a.id, true, reason);
-        toast.success('Promoted to admin');
+        await updateRole(a.id, next, reason);
+        toast.success(next ? 'Admin role granted' : 'Admin role removed');
       },
     });
   };
 
-  const openDemote = (a: Administrator) => {
+  const openToggleModerator = (a: Administrator) => {
+    const next = !a.isModerator;
     setPrompt({
-      title: 'Demote to Moderator',
+      title: next ? 'Grant moderator role' : 'Remove moderator role',
       description: a.email,
-      submitLabel: 'Demote',
+      submitLabel: next ? 'Grant' : 'Remove',
       onConfirm: async (reason) => {
-        await updateRole(a.id, false, reason);
-        toast.success('Demoted to moderator');
+        await updateRole(a.id, next, reason);
+        toast.success(next ? 'Moderator role granted' : 'Moderator role removed');
       },
     });
   };
@@ -284,8 +369,8 @@ const AdministratorsTab: React.FC = () => {
                 <AdminCard
                   key={a.id}
                   admin={a}
-                  onPromote={() => openPromote(a)}
-                  onDemote={() => openDemote(a)}
+                  onToggleAdmin={() => openToggleAdmin(a)}
+                  onToggleModerator={() => openToggleModerator(a)}
                 />
               ))}
             </div>
@@ -318,7 +403,9 @@ const AdministratorsTab: React.FC = () => {
                           </div>
                         </div>
                       </td>
-                      <td className="px-5 py-4"><RoleBadge role={a.role} /></td>
+                      <td className="px-5 py-4">
+                        <RoleBadge isAdmin={a.isAdmin} isModerator={a.isModerator} />
+                      </td>
                       <td className="px-5 py-4"><StatusBadge status={a.status} /></td>
                       <td className="px-5 py-4 text-xs text-gray-500 whitespace-nowrap">
                         {a.lastActive
@@ -326,21 +413,11 @@ const AdministratorsTab: React.FC = () => {
                           : '—'}
                       </td>
                       <td className="px-5 py-4 text-right">
-                        {a.role === 'moderator' ? (
-                          <button
-                            onClick={() => openPromote(a)}
-                            className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-medium"
-                          >
-                            Promote
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => openDemote(a)}
-                            className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 text-xs font-medium"
-                          >
-                            Demote
-                          </button>
-                        )}
+                        <RoleToggles
+                          admin={a}
+                          onToggleAdmin={() => openToggleAdmin(a)}
+                          onToggleModerator={() => openToggleModerator(a)}
+                        />
                       </td>
                     </tr>
                   ))}
