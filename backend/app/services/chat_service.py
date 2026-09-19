@@ -1,5 +1,6 @@
 # app/services/chat_service.py
 import logging
+import time
 from typing import Dict, List
 from urllib.parse import urlencode
 from uuid import UUID
@@ -10,6 +11,13 @@ from app.core.config import settings
 from app.ai.gateway import AIGateway
 from app.ai.intent import AIIntent, IntentType, classify
 from app.ai.perf import timed
+from app.ai.scope_guard import (
+    BYE_RESPONSE,
+    GREETING_RESPONSE,
+    OFF_TOPIC_RESPONSE,
+    THANKS_RESPONSE,
+    check_scope,
+)
 from app.ai.schemas import (
     ImageAnalysis,
     ProfessionalSearchParams,
@@ -22,47 +30,33 @@ from app.repositories.chat_log_repository import ChatLogRepository
 
 logger = logging.getLogger(__name__)
 
-
-# Frontend discovery route — must match React router.
 DISCOVERY_PATH = "/discovery"
 
 
-# ── System prompt for standard responses (RAG / general) ────
-SYSTEM_PROMPT = """You are 'SkilledLink Assistant', an AI helper for SkilledLink, a platform connecting skilled workers (electricians, plumbers, carpenters, mechanics, etc.) with customers in Cameroon.
+# ── RAG system prompt — SkilledLink ONLY ───────────────────
+SYSTEM_PROMPT = """You are 'SkilledLink Assistant', the ONLY in-app AI helper for SkilledLink — a platform that connects customers with skilled professionals (electricians, plumbers, carpenters, mechanics, etc.) in Cameroon.
 
-Your role is to answer user questions based on the provided knowledge base context. Follow these guidelines:
-- Use the context to answer accurately and helpfully.
-- Write a fresh, concise, and friendly response in your own words – do NOT copy the context verbatim.
-- If the context doesn't fully answer the question, use your general knowledge but indicate that it's general guidance.
-- Keep responses to 2-4 sentences unless the user asks for more detail.
-- If the user asks for steps or a process, provide the full list without cutting it off.
-- If you don't know the answer, say so clearly and suggest contacting support.
-- Respond in the same language as the user's question (English or French).
+════════ STRICT SCOPE ════════
+You ONLY answer questions about:
+  • SkilledLink features, accounts, profiles, onboarding
+  • Finding, hiring, or messaging skilled professionals
+  • Professional services, portfolios, verification, reviews
+  • Service requests, quotes, bookings, communication
+  • Platform safety, privacy, and how-to guidance
 
-Never invent professionals, services, prices, ratings, reviews, availability, verification status, or platform features. If information is unavailable, say so clearly instead of guessing."""
+If the question is not about SkilledLink, reply with EXACTLY this one sentence and nothing else:
+  "I'm the SkilledLink Assistant and I can only help with SkilledLink-related questions."
 
+════════ GROUNDING ════════
+- Use the provided context as your source of truth.
+- Write a fresh, concise, friendly answer in your own words.
+- NEVER invent professionals, services, prices, ratings, reviews, availability, or features.
+- If the context doesn't answer the question, say so honestly.
 
-# ── Fast path prompt for greetings / thanks / chitchat ──────
-FAST_SYSTEM_PROMPT = (
-    "You are SkilledLink Assistant — a friendly helper for SkilledLink, "
-    "a platform that connects skilled workers with customers in Cameroon.\n"
-    "- Reply in 1-2 short sentences.\n"
-    "- Reply in the user's language (English or French).\n"
-    "- Be warm but concise."
-)
-
-
-SEARCH_FORMAT_SYSTEM_PROMPT = """You are 'SkilledLink Assistant'. You ran a
-real database search on behalf of the user.
-
-Rules:
-- Use ONLY the data in the TOOL RESULT section.
-- Never invent professionals, cities, ratings, reviews, availability.
-- If RESULTS is 0, say so honestly and suggest broadening the search.
-- Keep the response under 4 lines. The actual result cards are
-  rendered by the frontend from structured data — you are only
-  writing the lead-in sentence.
-- Respond in the same language as the user's question."""
+════════ STYLE ════════
+- 2–4 sentences unless asked for more detail.
+- If listing steps, provide the full list.
+- Respond in the user's language (English or French)."""
 
 
 IMAGE_FORMAT_SYSTEM_PROMPT = """You are 'SkilledLink Assistant'. You have
@@ -75,7 +69,7 @@ Rules:
 - Suggest the type of professional that would be appropriate.
 - Never claim the image proves a specific diagnosis.
 - Keep the response under 4 sentences.
-- Respond in the same language as the user's question."""
+- Respond in the user's language (English or French)."""
 
 
 class ChatService:
@@ -99,17 +93,34 @@ class ChatService:
         image_bytes: bytes | None = None,
         image_mime: str | None = None,
     ) -> Dict[str, any]:
+        t0 = time.perf_counter()
         try:
+            # ── STEP 0: scope guard — ZERO tokens ─────────
+            scope = check_scope(message)
+            logger.info(
+                "chat.scope allowed=%s reason=%s matched=%r user=%s",
+                scope.allowed, scope.reason, scope.matched, user_id,
+            )
+
+            if not scope.allowed:
+                if scope.reason == "empty":
+                    return self._finalize(
+                        user_id, message, "Please type a message.",
+                    )
+                # Off-topic → canned refusal, no LLM.
+                return self._finalize(
+                    user_id, message, OFF_TOPIC_RESPONSE,
+                )
+
+            # ── STEP 1: canned greeting — ZERO tokens ─────
+            canned = self._canned_reply(message, scope.reason)
+            if canned is not None:
+                return self._finalize(user_id, message, canned)
+
+            # ── STEP 2: classify intent ───────────────────
             ai_intent = self._classify(message, has_image=bool(image_bytes))
 
-            # ── Fast path — greetings, thanks, short general ──
-            if ai_intent.intent in (
-                IntentType.GENERAL_CONVERSATION,
-                IntentType.GENERAL_GUIDANCE,
-            ):
-                return self._handle_fast_llm(user_id, message)
-
-            # ── Image paths ────────────────────────────────
+            # ── Image paths ──────────────────────────────
             if ai_intent.intent in (
                 IntentType.IMAGE_ANALYSIS,
                 IntentType.IMAGE_ASSISTED_SEARCH,
@@ -120,7 +131,7 @@ class ChatService:
                     image_bytes=image_bytes, image_mime=image_mime,
                 )
 
-            # ── Search paths ───────────────────────────────
+            # ── Search paths ─────────────────────────────
             if ai_intent.intent in (
                 IntentType.PROFESSIONAL_SEARCH,
                 IntentType.NEARBY_SEARCH,
@@ -128,25 +139,71 @@ class ChatService:
             ):
                 return self._handle_search(user_id, message, ai_intent)
 
-            # ── Knowledge ──────────────────────────────────
+            # ── Knowledge / RAG ──────────────────────────
             if ai_intent.intent == IntentType.STATIC_KNOWLEDGE:
                 return self._handle_rag(user_id, message)
 
-            # ── Other database intents — honest template ──
+            # ── Other DB intents — honest template ───────
             if ai_intent.requires_database:
                 return self._handle_database_pending(user_id, message, ai_intent)
 
-            # ── Fallback: standard LLM, no RAG ────────────
-            return self._handle_llm_only(user_id, message)
+            # ── Everything else — CANNED, no LLM ─────────
+            # (Previously called _handle_llm_only, which caused
+            #  the "help me code" leaks and the latency.)
+            return self._finalize(user_id, message, OFF_TOPIC_RESPONSE)
 
         except Exception as e:
             self.session.rollback()
             logger.error("Chat processing failed for user %s: %s", user_id, e)
             raise
+        finally:
+            logger.info(
+                "chat.total user=%s elapsed_ms=%d",
+                user_id, int((time.perf_counter() - t0) * 1000),
+            )
 
     # ────────────────────────────────────────────────────────
-    #  CLASSIFY
+    #  HELPERS
     # ────────────────────────────────────────────────────────
+
+    def _finalize(
+        self,
+        user_id: UUID,
+        message: str,
+        response: str,
+        sources: List[str] | None = None,
+        results: list | None = None,
+        image_analysis: dict | None = None,
+        redirect_url: str | None = None,
+    ) -> Dict[str, any]:
+        self.chat_log_repo.create_log(
+            user_id=user_id,
+            message=message,
+            response=response,
+            sources=sources if sources else None,
+        )
+        self.session.commit()
+        payload: Dict[str, any] = {
+            "response": response,
+            "sources": sources or [],
+        }
+        if results is not None:
+            payload["results"] = results
+        if image_analysis is not None:
+            payload["image_analysis"] = image_analysis
+        if redirect_url is not None:
+            payload["redirect_url"] = redirect_url
+        return payload
+
+    def _canned_reply(self, message: str, reason: str) -> str | None:
+        if reason != "greeting":
+            return None
+        m = message.strip().lower().rstrip("!.,? ")
+        if m in {"bye", "goodbye", "au revoir", "bonsoir"}:
+            return BYE_RESPONSE
+        if m in {"thanks", "thank you", "thx", "merci"}:
+            return THANKS_RESPONSE
+        return GREETING_RESPONSE
 
     def _classify(self, message: str, has_image: bool) -> AIIntent:
         if not getattr(settings, "CHAT_INTENT_ENABLED", True):
@@ -170,54 +227,38 @@ class ChatService:
     #  HANDLERS
     # ────────────────────────────────────────────────────────
 
-    def _handle_fast_llm(self, user_id: UUID, message: str) -> Dict[str, any]:
-        prompt = f"User: {message}"
-        with timed("llm_fast"):
-            response = self.gateway.generate_text_sync(
-                prompt=prompt,
-                system_prompt=FAST_SYSTEM_PROMPT,
-                model=settings.GROQ_CHAT_MODEL_FAST,
-                max_tokens=150,
-            )
-        self.chat_log_repo.create_log(
-            user_id=user_id, message=message, response=response, sources=None,
-        )
-        self.session.commit()
-        return {"response": response, "sources": []}
-
-    def _handle_llm_only(self, user_id: UUID, message: str) -> Dict[str, any]:
-        prompt = self._build_prompt(message, [])
-        with timed("llm"):
-            response = self.gateway.generate_text_sync(
-                prompt=prompt,
-                system_prompt=SYSTEM_PROMPT,
-                max_tokens=300,
-            )
-        self.chat_log_repo.create_log(
-            user_id=user_id, message=message, response=response, sources=None,
-        )
-        self.session.commit()
-        return {"response": response, "sources": []}
-
     def _handle_rag(self, user_id: UUID, message: str) -> Dict[str, any]:
         with timed("rag"):
             context_docs = self.knowledge_service.retrieve_context(
                 message, limit=settings.RAG_TOP_K,
             )
+
+        # No context → canned reply. Don't burn tokens on an LLM
+        # call that would just say "I don't know".
+        if not context_docs:
+            return self._finalize(
+                user_id, message,
+                "I don't have information about that. Try asking about "
+                "finding professionals, your profile, services, "
+                "verification, or how SkilledLink works.",
+            )
+
         prompt = self._build_prompt(message, context_docs)
-        with timed("llm"):
+        with timed("llm_rag"):
             response = self.gateway.generate_text_sync(
                 prompt=prompt,
                 system_prompt=SYSTEM_PROMPT,
-                max_tokens=600,
+                model=getattr(
+                    settings, "GROQ_CHAT_MODEL_RAG",
+                    settings.GROQ_CHAT_MODEL_FAST,
+                ),
+                max_tokens=400,
             )
+
         sources = [d["title"] for d in context_docs if d.get("title")]
-        self.chat_log_repo.create_log(
-            user_id=user_id, message=message, response=response,
-            sources=sources if sources else None,
+        return self._finalize(
+            user_id, message, response, sources=sources or None,
         )
-        self.session.commit()
-        return {"response": response, "sources": sources}
 
     def _handle_search(
         self, user_id: UUID, message: str, ai_intent: AIIntent
@@ -237,36 +278,22 @@ class ChatService:
         with timed("search"):
             result: ProfessionalSearchResult = self.search_service.search(params)
 
-        # ── Empty: honest message, no redirect ─────────────
         if result.metadata.total == 0:
-            response = (
+            return self._finalize(
+                user_id, message,
                 "I couldn't find any matching professionals. "
-                "Try a different profession, city, or a broader search."
+                "Try a different profession, city, or a broader search.",
             )
-            self.chat_log_repo.create_log(
-                user_id=user_id, message=message, response=response, sources=None,
-            )
-            self.session.commit()
-            return {"response": response, "sources": []}
 
-        # ── Happy path: LLM writes lead-in, frontend shows cards ──
-        prompt = self._build_search_prompt(message, result)
-        with timed("llm"):
-            response = self.gateway.generate_text_sync(
-                prompt=prompt,
-                system_prompt=SEARCH_FORMAT_SYSTEM_PROMPT,
-                max_tokens=150,
-            )
-        self.chat_log_repo.create_log(
-            user_id=user_id, message=message, response=response, sources=None,
-        )
-        self.session.commit()
+        # ── TEMPLATED lead-in — no LLM call. ──────────────
+        response = self._search_lead_in(result, ai_intent)
 
-        return {
-            "response": response,
-            "sources": [],
-            "results": [c.model_dump(mode="json") for c in result.professionals],
-            "redirect_url": self._build_redirect_url(
+        return self._finalize(
+            user_id,
+            message,
+            response,
+            results=[c.model_dump(mode="json") for c in result.professionals],
+            redirect_url=self._build_redirect_url(
                 query=ai_intent.query or message,
                 profession=ai_intent.profession,
                 city=ai_intent.location,
@@ -275,7 +302,17 @@ class ChatService:
                 available_only=ai_intent.available_only,
                 min_rating=ai_intent.min_rating,
             ),
-        }
+        )
+
+    def _search_lead_in(
+        self, result: ProfessionalSearchResult, ai_intent: AIIntent
+    ) -> str:
+        n = result.metadata.total
+        where = f" in {ai_intent.location}" if ai_intent.location else ""
+        what = ai_intent.profession or ai_intent.query or "professionals"
+        if n == 1:
+            return f"I found 1 {what}{where} that matches your request."
+        return f"I found {n} {what}{where} that match your request."
 
     def _handle_image(
         self,
@@ -287,39 +324,35 @@ class ChatService:
         image_mime: str | None,
     ) -> Dict[str, any]:
         if not image_bytes or not image_mime:
-            return self._handle_llm_only(user_id, message)
+            return self._finalize(user_id, message, OFF_TOPIC_RESPONSE)
 
         with timed("image"):
             analysis: ImageAnalysis = self.image_service.analyze(
                 image_bytes, image_mime, user_text=message,
             )
 
-        # ── Image understanding only ───────────────────────
         if ai_intent.intent == IntentType.IMAGE_ANALYSIS:
             prompt = self._build_image_prompt(message, analysis)
-            with timed("llm"):
+            with timed("llm_image"):
                 response = self.gateway.generate_text_sync(
                     prompt=prompt,
                     system_prompt=IMAGE_FORMAT_SYSTEM_PROMPT,
-                    max_tokens=200,
+                    max_tokens=180,
                 )
-            self.chat_log_repo.create_log(
-                user_id=user_id, message=message, response=response, sources=None,
+            return self._finalize(
+                user_id, message, response,
+                image_analysis=analysis.model_dump(mode="json"),
             )
-            self.session.commit()
-            return {
-                "response": response,
-                "sources": [],
-                "image_analysis": analysis.model_dump(mode="json"),
-            }
 
-        # ── Image-assisted search ──────────────────────────
+        # Image-assisted search
         effective_query = (
             ai_intent.query
             or " ".join(analysis.search_terms)
             or analysis.description
         )
-        effective_profession = analysis.possible_profession or ai_intent.profession
+        effective_profession = (
+            analysis.possible_profession or ai_intent.profession
+        )
 
         params = ProfessionalSearchParams(
             query=effective_query,
@@ -331,49 +364,35 @@ class ChatService:
         with timed("search"):
             result = self.search_service.search(params)
 
-        # ── No matches: honest message, no redirect ────────
         if result.metadata.total == 0:
-            response = (
+            return self._finalize(
+                user_id, message,
                 "The image suggests this might involve "
-                f"{analysis.possible_profession or 'a specialist'}, but I "
-                "couldn't find a matching professional. Try broadening the "
-                "location or profession."
+                f"{analysis.possible_profession or 'a specialist'}, but "
+                "I couldn't find a matching professional. Try broadening "
+                "the location or profession.",
+                image_analysis=analysis.model_dump(mode="json"),
             )
-            self.chat_log_repo.create_log(
-                user_id=user_id, message=message, response=response, sources=None,
-            )
-            self.session.commit()
-            return {
-                "response": response,
-                "sources": [],
-                "image_analysis": analysis.model_dump(mode="json"),
-            }
 
-        # ── Matches: LLM lead-in + cards + redirect ────────
         prompt = self._build_image_search_prompt(message, analysis, result)
-        with timed("llm"):
+        with timed("llm_image_search"):
             response = self.gateway.generate_text_sync(
                 prompt=prompt,
                 system_prompt=IMAGE_FORMAT_SYSTEM_PROMPT,
-                max_tokens=200,
+                max_tokens=180,
             )
-        self.chat_log_repo.create_log(
-            user_id=user_id, message=message, response=response, sources=None,
-        )
-        self.session.commit()
 
-        return {
-            "response": response,
-            "sources": [],
-            "results": [c.model_dump(mode="json") for c in result.professionals],
-            "image_analysis": analysis.model_dump(mode="json"),
-            "redirect_url": self._build_redirect_url(
+        return self._finalize(
+            user_id, message, response,
+            results=[c.model_dump(mode="json") for c in result.professionals],
+            image_analysis=analysis.model_dump(mode="json"),
+            redirect_url=self._build_redirect_url(
                 query=effective_query,
                 profession=effective_profession,
                 city=ai_intent.location,
                 radius_km=ai_intent.radius_km,
             ),
-        }
+        )
 
     def _handle_database_pending(
         self, user_id: UUID, message: str, ai_intent: AIIntent
@@ -394,15 +413,13 @@ class ChatService:
             IntentType.PORTFOLIO_DETAILS:
                 "Open the professional's portfolio from their profile.",
         }
-        response = templates.get(
-            ai_intent.intent,
-            "That feature isn't connected to the chat yet.",
+        return self._finalize(
+            user_id, message,
+            templates.get(
+                ai_intent.intent,
+                "That feature isn't connected to the chat yet.",
+            ),
         )
-        self.chat_log_repo.create_log(
-            user_id=user_id, message=message, response=response, sources=None,
-        )
-        self.session.commit()
-        return {"response": response, "sources": []}
 
     # ────────────────────────────────────────────────────────
     #  REDIRECT URL BUILDER
@@ -419,11 +436,6 @@ class ChatService:
         available_only: bool | None = None,
         min_rating: float | None = None,
     ) -> str:
-        """
-        Build a /discovery URL pre-filled with search params so the
-        frontend can re-run the same query on the results page.
-        Only includes params that are actually set.
-        """
         params: Dict[str, str] = {}
         if query:
             params["query"] = query.strip()
@@ -460,37 +472,12 @@ class ChatService:
                 parts.append(doc.get("content", ""))
                 parts.append("")
             parts.append(
-                "Now, answer the user's question below using the above context. "
-                "Write a fresh answer in your own words – do not copy the context directly.\n"
+                "Answer the user's question below using ONLY the above context. "
+                "Write a fresh answer in your own words. "
+                "If the question is NOT about SkilledLink, refuse in one short sentence.\n"
             )
         parts.append(f"User's question: {message}")
         return "\n".join(parts)
-
-    def _build_search_prompt(
-        self, message: str, result: ProfessionalSearchResult
-    ) -> str:
-        lines = [
-            f"User's question: {message}",
-            "",
-            "--- TOOL RESULT ---",
-            f"RESULTS: {result.metadata.total}",
-            f"STRATEGY: {result.metadata.strategy}",
-        ]
-        for i, c in enumerate(result.professionals[:5], 1):
-            parts = [c.name]
-            if c.profession:
-                parts.append(c.profession)
-            if c.city:
-                parts.append(c.city)
-            if c.rating:
-                parts.append(f"{c.rating}★")
-            if c.is_verified:
-                parts.append("verified")
-            lines.append(f"{i}. " + " | ".join(parts))
-        lines.append("--- END TOOL RESULT ---")
-        lines.append("")
-        lines.append("Write the lead-in sentence only.")
-        return "\n".join(lines)
 
     def _build_image_prompt(self, message: str, analysis: ImageAnalysis) -> str:
         return (
