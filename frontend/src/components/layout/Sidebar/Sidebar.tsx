@@ -1,5 +1,5 @@
 // src/components/layout/Sidebar/Sidebar.tsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -16,8 +16,8 @@ import {
   Moon,
   ChevronDown,
   ImagePlus,
-  Shield,        // ← NEW
-  ShieldCheck,   // ← NEW
+  Shield,
+  ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../../../features/auth/hooks/useAuth';
 import { useUser } from '../../../features/profile/hooks/useUser';
@@ -28,11 +28,20 @@ interface SidebarProps {
   toggleTheme: () => void;
 }
 
-const navItems = [
+type NavItem = {
+  icon: typeof Home;
+  label: string;
+  path: string;
+  end?: boolean;
+  /** When true, the item is only shown to professional accounts. */
+  professionalOnly?: boolean;
+};
+
+const navItems: NavItem[] = [
   { icon: Home, label: 'Home', path: '/home', end: true },
   { icon: Compass, label: 'Discover', path: '/home/discover' },
   { icon: Briefcase, label: 'Jobs', path: '/home/jobs' },
-  { icon: LayoutDashboard, label: 'Portfolio', path: '/home/portfolio' },
+  { icon: LayoutDashboard, label: 'Portfolio', path: '/home/portfolio', professionalOnly: true },
   { icon: MessageSquareMore, label: 'Messages', path: '/home/messages' },
   { icon: Users, label: 'Network', path: '/home/professionals' },
 ];
@@ -52,11 +61,19 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
 
   const activeUser = user ?? currentUser;
 
-  // ← NEW: admin/mod flags
   const isAdmin = !!activeUser?.isAdmin;
   const isModerator = !!activeUser?.isModerator;
 
   const avatarUrl = activeUser?.profileImageUrl ?? null;
+
+  // Only professionals see portfolio-related nav.
+  const isProfessional =
+    (activeUser?.accountType ?? '').toString().toLowerCase() === 'professional';
+
+  const visibleNavItems = useMemo(
+    () => navItems.filter((item) => !item.professionalOnly || isProfessional),
+    [isProfessional],
+  );
 
   useEffect(() => {
     if (!isHovered) setIsProfileDropdownOpen(false);
@@ -198,7 +215,7 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="no-scrollbar relative z-10 flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
-        {navItems.map((item) => (
+        {visibleNavItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
@@ -330,7 +347,7 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
                   </p>
                 </div>
 
-                {/* ← NEW: Admin / Moderator tools section */}
+                {/* Admin / Moderator tools section */}
                 {(isAdmin || isModerator) && (
                   <div className="border-b border-slate-100 py-1 dark:border-white/10">
                     {isAdmin && (
