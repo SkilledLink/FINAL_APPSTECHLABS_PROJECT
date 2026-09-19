@@ -10,14 +10,12 @@ from app.core.config import settings
 # Detect which Supabase connection mode we're on.
 #
 #   • Transaction pooler (port 6543)
-#       → Handled by pgbouncer. Use NullPool so we don't double-
-#         pool. Also disable prepared statements (pgbouncer in
-#         transaction mode doesn't support them).
+#       → pgbouncer handles pooling. Use NullPool so we don't
+#         double-pool, and disable psycopg 3's client-side
+#         prepared-statement cache via prepare_threshold=None.
 #
 #   • Session pooler OR direct (port 5432)
-#       → We pool ourselves, but conservatively so we never
-#         exceed Supabase free-tier cap (15 total across all
-#         clients, shared with your whole team).
+#       → We pool ourselves, conservatively.
 # ──────────────────────────────────────────────────────────────
 
 DATABASE_URL = settings.DATABASE_URL
@@ -27,31 +25,27 @@ is_development = settings.environment.lower() == "development"
 
 if is_transaction_pooler:
     # ── Transaction pooler mode ────────────────────────────
-    # pgbouncer handles pooling. We open a fresh connection per
-    # request and close it immediately, freeing the slot for the
-    # next request (yours or your teammates').
     engine = create_engine(
         DATABASE_URL,
         echo=is_development,
         poolclass=NullPool,
         connect_args={
-            # Required for pgbouncer in transaction mode
-            "options": "-c statement_cache_size=0",
+            # ✅ Correct for psycopg 3 + pgbouncer (transaction mode).
+            # Disables the client-side prepared-statement cache so we
+            # never send named statements like "_pg3_0" to pgbouncer.
+            "prepare_threshold": None,
         },
     )
 else:
     # ── Session pooler / direct mode ───────────────────────
-    # We pool, but conservatively. Supabase free tier caps at
-    # 15 total across the whole project — leave headroom for
-    # your teammates and the SQL editor.
     engine = create_engine(
         DATABASE_URL,
         echo=is_development,
         pool_pre_ping=True,
-        pool_size=5,          # baseline: 5 connections
-        max_overflow=3,       # burst up to 8 total
-        pool_timeout=10,      # wait max 10s for a slot
-        pool_recycle=1800,    # recycle every 30 min
+        pool_size=5,
+        max_overflow=3,
+        pool_timeout=10,
+        pool_recycle=1800,
     )
 
 

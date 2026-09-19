@@ -1,4 +1,3 @@
-// components/AIMessage.tsx
 import React from 'react';
 import { Bot, User, ArrowRight } from 'lucide-react';
 import type { ChatMessage, ActionCard } from '../types/ai.types';
@@ -12,6 +11,7 @@ interface AIMessageProps {
 
 function renderContent(content: string) {
   const lines = content.split('\n');
+
   return lines.map((line, i) => {
     if (line.trim() === '') return <div key={i} className="h-2" />;
 
@@ -26,30 +26,27 @@ function renderContent(content: string) {
       if (boldMatch && (!linkMatch || (boldMatch.index ?? 0) < (linkMatch.index ?? 0))) {
         const matchIndex = boldMatch.index ?? 0;
         if (matchIndex > 0) parts.push(<span key={`t-${key}`}>{remaining.slice(0, matchIndex)}</span>);
-        parts.push(<strong key={`b-${key++}`} className="font-semibold text-slate-900">{boldMatch[1]}</strong>);
+        parts.push(
+          <strong key={`b-${key++}`} className="font-semibold text-slate-900 dark:text-slate-50">
+            {boldMatch[1]}
+          </strong>,
+        );
         remaining = remaining.slice(matchIndex + boldMatch[0].length);
       } else if (linkMatch) {
         const matchIndex = linkMatch.index ?? 0;
         if (matchIndex > 0) parts.push(<span key={`t-${key}`}>{remaining.slice(0, matchIndex)}</span>);
         const href = linkMatch[2];
         const isInternal = href.startsWith('/profile/') || href.startsWith('/');
-        if (isInternal) {
-          parts.push(
-            <a
-              key={`l-${key++}`}
-              href={`#${href}`}
-              className="text-teal-600 font-medium hover:text-teal-700 hover:underline"
-            >
-              {linkMatch[1]}
-            </a>,
-          );
-        } else {
-          parts.push(
-            <a key={`l-${key++}`} href={href} className="text-teal-600 font-medium hover:underline">
-              {linkMatch[1]}
-            </a>,
-          );
-        }
+
+        parts.push(
+          <a
+            key={`l-${key++}`}
+            href={isInternal ? `#${href}` : href}
+            className="text-blue-600 dark:text-blue-400 font-semibold hover:text-blue-700 dark:hover:text-blue-300 hover:underline underline-offset-2"
+          >
+            {linkMatch[1]}
+          </a>,
+        );
         remaining = remaining.slice(matchIndex + linkMatch[0].length);
       } else {
         parts.push(<span key={`t-${key}`}>{remaining}</span>);
@@ -63,30 +60,32 @@ function renderContent(content: string) {
 
 export function AIMessage({ message, onActionClick }: AIMessageProps) {
   const isUser = message.sender === 'user';
-  const hasCards =
-    !isUser &&
-    message.recommendations &&
-    message.recommendations.length > 0;
+  const hasCards = !isUser && message.recommendations && message.recommendations.length > 0;
   const hasRedirect = !isUser && !!message.redirectUrl;
 
   return (
-    <div className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'} w-full`}>
+    <div className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'} w-full animate-in fade-in slide-in-from-bottom-1 duration-300`}>
       <div
-        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-          isUser ? 'bg-teal-600' : 'bg-gradient-to-br from-teal-500 to-cyan-600'
+        className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg ${
+          isUser
+            ? 'bg-gradient-to-br from-slate-700 to-slate-900 dark:from-slate-600 dark:to-slate-800 shadow-slate-500/20'
+            : 'bg-gradient-to-br from-blue-600 to-cyan-500 shadow-blue-500/30'
         }`}
       >
-        {isUser ? <User className="w-4 h-4 text-white" /> : <Bot className="w-4 h-4 text-white" />}
+        {isUser
+          ? <User className="w-4 h-4 text-white" />
+          : <Bot className="w-4 h-4 text-white" />}
       </div>
+
       <div className={`flex-1 min-w-0 ${isUser ? 'flex flex-col items-end' : ''}`}>
         <div
-          className={`inline-block max-w-[85%] sm:max-w-[75%] ${
+          className={`inline-block max-w-[85%] sm:max-w-[78%] px-4 py-3 text-sm leading-relaxed ${
             isUser
-              ? 'bg-teal-600 text-white rounded-2xl rounded-tr-sm px-4 py-2.5'
-              : 'bg-white border border-slate-200 rounded-2xl rounded-tl-sm px-4 py-3 text-slate-700 shadow-sm'
+              ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-2xl rounded-tr-md shadow-lg shadow-blue-500/25'
+              : 'bg-white/80 dark:bg-slate-900/70 backdrop-blur-xl border border-white/60 dark:border-white/10 rounded-2xl rounded-tl-md text-slate-700 dark:text-slate-200 shadow-[0_4px_24px_-12px_rgba(15,23,42,0.15)]'
           }`}
         >
-          <div className={`text-sm ${isUser ? '' : 'space-y-1'}`}>
+          <div className={isUser ? '' : 'space-y-1'}>
             {renderContent(message.content)}
           </div>
         </div>
@@ -102,7 +101,7 @@ export function AIMessage({ message, onActionClick }: AIMessageProps) {
         {hasRedirect && (
           <a
             href={`#${message.redirectUrl}`}
-            className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold rounded-xl transition-colors"
+            className="mt-3 inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white text-sm font-semibold rounded-xl shadow-lg shadow-blue-500/30 transition-all active:scale-[0.98]"
           >
             See all results
             <ArrowRight className="w-4 h-4" />
