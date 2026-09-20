@@ -311,7 +311,7 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({
       };
     }
 
-    let loadingToastId: React.ReactText | null = null;
+    let loadingToastId: string | number | null = null;
     try {
       setSaving(true);
       loadingToastId = toast.loading('Saving your profile…');

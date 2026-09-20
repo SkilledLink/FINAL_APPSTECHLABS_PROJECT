@@ -43,8 +43,22 @@ export function useFeed(options?: UseFeedOptions) {
         setTotal(data.total);
         setPage(data.page);
         setSize(data.size);
-      } catch (err: any) {
-        setError(err.response?.data?.detail || 'Failed to load posts');
+      } catch (err: unknown) {
+        const detail =
+          typeof err === 'object' &&
+          err !== null &&
+          'response' in err &&
+          typeof err.response === 'object' &&
+          err.response !== null &&
+          'data' in err.response &&
+          typeof err.response.data === 'object' &&
+          err.response.data !== null &&
+          'detail' in err.response.data &&
+          typeof err.response.data.detail === 'string'
+            ? err.response.data.detail
+            : undefined;
+
+        setError(detail || 'Failed to load posts');
       } finally {
         setLoading(false);
       }
@@ -53,9 +67,13 @@ export function useFeed(options?: UseFeedOptions) {
   );
 
   useEffect(() => {
-    if (enabled) {
-      fetchPosts();
-    }
+    if (!enabled) return;
+
+    const timeoutId = window.setTimeout(() => {
+      void fetchPosts();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [fetchPosts, enabled]);
 
   const removePost = useCallback((postId: string) => {

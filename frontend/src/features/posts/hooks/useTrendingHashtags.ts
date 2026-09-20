@@ -14,9 +14,22 @@ export function useTrendingHashtags(limit = 10) {
         setLoading(true);
         const data = await postApi.getTrendingHashtags(limit);
         if (mounted) setHashtags(data);
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (mounted) {
-          setError(err.response?.data?.detail || 'Failed to load hashtags');
+          const detail =
+            typeof err === 'object' &&
+            err !== null &&
+            'response' in err &&
+            typeof err.response === 'object' &&
+            err.response !== null &&
+            'data' in err.response &&
+            typeof err.response.data === 'object' &&
+            err.response.data !== null &&
+            'detail' in err.response.data &&
+            typeof err.response.data.detail === 'string'
+              ? err.response.data.detail
+              : null;
+          setError(detail || 'Failed to load hashtags');
         }
       } finally {
         if (mounted) setLoading(false);

@@ -1,7 +1,6 @@
 // src/features/profile/components/ProfileHeader.tsx
 
 import React, { useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   BadgeCheck,
   UserPlus,
@@ -21,7 +20,7 @@ interface ProfileHeaderProps {
   canMessage?: boolean;
   canRequestService?: boolean;
   followersCount?: number;
-  followersPreview?: any[];
+  followersPreview?: UserProfile[];
   onFollow?: () => void;
   onMessage?: () => void;
   onRequestService?: () => void;
@@ -37,18 +36,15 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   isFollowing = false,
   followsYou = false,
   canMessage = true,
-  canRequestService = true,
   followersCount: propFollowersCount,
   followersPreview = [],
   onFollow,
   onMessage,
-  onRequestService,
   onUpgrade,
   onEditProfile,
   onImageUpload,
   onShare,
 }) => {
-  const navigate = useNavigate();
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const profileInputRef = useRef<HTMLInputElement>(null);
 
@@ -79,7 +75,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   const accountType = profile.accountType ?? profileData.account_type;
 
   const isStandardAccount =
-    accountType === 'standard' || accountType === 'user';
+    accountType === 'standard';
 
   const handleImageChange = (
     event: React.ChangeEvent<HTMLInputElement>,

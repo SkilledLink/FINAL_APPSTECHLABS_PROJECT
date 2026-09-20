@@ -1,7 +1,7 @@
 // src/features/profile/components/ProfileAbout.tsx
 
 import React from 'react';
-import { Mail, Calendar, ShieldCheck, MapPin } from 'lucide-react';
+import { Calendar, ShieldCheck, MapPin } from 'lucide-react';
 import type { UserProfile } from '../types/profile.types';
 
 const formatDate = (dateValue: unknown): string => {
