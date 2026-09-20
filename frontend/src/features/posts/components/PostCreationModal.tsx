@@ -4,7 +4,6 @@ import {
   X,
   Upload,
   Image as ImageIcon,
-  Video,
   Camera,
   MapPin,
   Hash,
@@ -54,7 +53,11 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
 
   // Reset state when modal opens
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) return;
+
+    // Defer the reset until after the effect completes to avoid a synchronous
+    // cascading render when the modal opens.
+    const resetId = window.setTimeout(() => {
       setMediaType(initialMediaType);
       setStep('details');
       setMediaUrl(undefined);
@@ -66,7 +69,9 @@ export const PostCreationModal: React.FC<PostCreationModalProps> = ({
       setVideoTime(0);
       setVideoDuration(0);
       setErrorMessage(null);
-    }
+    }, 0);
+
+    return () => window.clearTimeout(resetId);
   }, [isOpen, initialMediaType]);
 
   // Handle escape key to close modal

@@ -87,9 +87,9 @@ export const ProfilePostsTab: React.FC<ProfilePostsTabProps> = ({
           is_liked: result.liked,
           likes_count: post.likes_count + (result.liked ? 1 : -1),
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         updatePostInList(post);
-        toast.error(err.message || 'Failed to like post');
+        toast.error(err instanceof Error ? err.message : 'Failed to like post');
       }
     },
     [posts, toggleLike, updatePostInList]
@@ -109,10 +109,10 @@ export const ProfilePostsTab: React.FC<ProfilePostsTabProps> = ({
       try {
         await deletePost(postId);
         toast.success('Post deleted');
-      } catch (err: any) {
+      } catch (err: unknown) {
         // Rollback on failure
         snapshot.forEach((p) => updatePostInList(p));
-        toast.error(err.message || 'Failed to delete post');
+        toast.error(err instanceof Error ? err.message : 'Failed to delete post');
       }
     },
     [posts, deletePost, removePost, updatePostInList]
@@ -132,8 +132,8 @@ export const ProfilePostsTab: React.FC<ProfilePostsTabProps> = ({
           });
         }
         toast.success('Comment added');
-      } catch (err: any) {
-        toast.error(err.message || 'Failed to add comment');
+      } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : 'Failed to add comment');
       }
     },
     [posts, createComment, updatePostInList]
@@ -151,8 +151,8 @@ export const ProfilePostsTab: React.FC<ProfilePostsTabProps> = ({
             comments_count: Math.max(0, post.comments_count - 1),
           });
         }
-      } catch (err: any) {
-        toast.error(err.message || 'Failed to delete comment');
+      } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : 'Failed to delete comment');
       }
     },
     [posts, deleteComment, updatePostInList]

@@ -12,26 +12,14 @@ interface ShareModalProps {
 
 const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, post }) => {
   const [copied, setCopied] = useState(false);
-  const [canNativeShare, setCanNativeShare] = useState(false);
+  const [canNativeShare] = useState(
+    () => typeof navigator !== 'undefined' && !!navigator.share
+  );
 
   // Safe window access for SSR contexts
   const postUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/posts/${post.id}`
     : `/posts/${post.id}`;
-
-  // Detect native share capability after client mount
-  useEffect(() => {
-    if (typeof navigator !== 'undefined' && !!navigator.share) {
-      setCanNativeShare(true);
-    }
-  }, []);
-
-  // Reset copy state when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      setCopied(false);
-    }
-  }, [isOpen]);
 
   // Handle Escape key press
   useEffect(() => {
@@ -93,8 +81,8 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, post }) => {
           url: postUrl,
         });
         onClose();
-      } catch (err: any) {
-        if (err.name !== 'AbortError') {
+      } catch (err: unknown) {
+        if (!(err instanceof DOMException) || err.name !== 'AbortError') {
           console.error(err);
         }
       }

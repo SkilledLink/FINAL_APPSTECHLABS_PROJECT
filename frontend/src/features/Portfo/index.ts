@@ -1,12 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { PortfolioPage } from './pages/PortfolioPage';
-import { ProjectDetailsPage } from './pages/ProjectDetailsPage';
-import { CreateProjectPage } from './pages/CreateProjectPage';
 import { Project } from './types/portfolio.types';
-import { Sun, Moon, Wrench } from 'lucide-react';
 
 export default function App() {
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode] = useState(false);
   const [currentView, setCurrentView] = useState<'portfolio' | 'details' | 'create'>('portfolio');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
@@ -23,13 +19,15 @@ export default function App() {
       {/* Global Navbar */}
       <header className="sticky top-0 z-50 backdrop-blur-md bg-white/80 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div 
-            onClick={() => setCurrentView('portfolio')} 
+          <button
+            type="button"
+            onClick={() => setCurrentView('portfolio')}
             className="flex items-center gap-2 cursor-pointer font-bold text-xl tracking-tight text-amber-600 dark:text-amber-500"
+            aria-label="Go to portfolio"
           >
             <Wrench className="w-6 h-6" />
-            <span>MasterCraft & Co.</span>
-          </div>
+            <span>MasterCraft &amp; Co.</span>
+          </button>
 
           <div className="flex items-center gap-4">
             <button

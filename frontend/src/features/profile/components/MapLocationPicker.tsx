@@ -254,7 +254,6 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
           touchPitch: false,
           fadeDuration: 0,
           attributionControl: false,
-          antialias: false,
           maxTileCacheSize: 80,
           refreshExpiredTiles: false,
 
@@ -314,7 +313,7 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
         });
 
         map.on('error', (e) => {
-          const err: any = (e as any)?.error;
+          const err = e.error as (Error & { status?: number }) | undefined;
           if (err?.status && err.status >= 400) {
             console.warn('[MapLocationPicker] map error:', err.status, err.message);
             if (err.status === 403) {
@@ -387,15 +386,17 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
 
     const q = query.trim();
     if (q.length < 2) {
-      setResults([]);
-      setSearching(false);
+      abortRef.current?.abort();
+      debounceRef.current = setTimeout(() => {
+        setResults([]);
+        setSearching(false);
+      }, 0);
       return;
     }
 
-    setSearching(true);
-    setShowResults(true);
-
     debounceRef.current = setTimeout(async () => {
+      setSearching(true);
+      setShowResults(true);
       abortRef.current?.abort();
       const ctrl = new AbortController();
       abortRef.current = ctrl;
@@ -420,7 +421,7 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
 
         setResults(features);
       } catch (err) {
-        if ((err as any)?.name !== 'AbortError') setResults([]);
+        if (!(err instanceof Error && err.name === 'AbortError')) setResults([]);
       } finally {
         setSearching(false);
       }

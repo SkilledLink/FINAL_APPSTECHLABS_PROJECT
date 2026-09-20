@@ -40,6 +40,12 @@ interface PostCardProps {
 
 type VisualState = 'normal' | 'uploading' | 'failed' | 'rejected' | 'pending';
 
+type IdentityFields = {
+  id?: string | number;
+  user_id?: string | number;
+  userId?: string | number;
+};
+
 function getVisualState(post: Post): VisualState {
   if (post._clientStatus === 'uploading') return 'uploading';
   if (post._clientStatus === 'failed') return 'failed';
@@ -238,6 +244,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   const [commentText, setCommentText] = useState('');
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [showHeartAnimation, setShowHeartAnimation] = useState(false);
+  const [currentTime, setCurrentTime] = useState<number | null>(null);
 
   const descRef = useRef<HTMLParagraphElement>(null);
   const [isDescExpanded, setIsDescExpanded] = useState(false);
@@ -259,11 +266,13 @@ export const PostCard: React.FC<PostCardProps> = ({
 
   /* ── Ownership resolution ──────────────────────────── */
   const storedUserId = readStoredUserId();
+  const userIdentity = user as unknown as IdentityFields;
+  const postIdentity = post as unknown as IdentityFields;
   const postAuthorId =
-    (user as any)?.id ??
-    (user as any)?.user_id ??
-    (post as any)?.user_id ??
-    (post as any)?.userId ??
+    userIdentity.id ??
+    userIdentity.user_id ??
+    postIdentity.user_id ??
+    postIdentity.userId ??
     null;
 
   const isOwner =
@@ -274,8 +283,15 @@ export const PostCard: React.FC<PostCardProps> = ({
   const effectiveCanDelete = canDelete || isOwner;
   const showDelete = effectiveCanDelete && !isLocked && !!onDelete;
 
+  useEffect(() => {
+    const updateCurrentTime = () => setCurrentTime(Date.now());
+    updateCurrentTime();
+    const intervalId = window.setInterval(updateCurrentTime, 60000);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
   const formatTimeAgo = (dateStr: string) => {
-    const diff = Date.now() - new Date(dateStr).getTime();
+    const diff = (currentTime ?? new Date(dateStr).getTime()) - new Date(dateStr).getTime();
     const mins = Math.floor(diff / 60000);
     if (mins < 1) return 'Just now';
     if (mins < 60) return `${mins}m ago`;
@@ -597,8 +613,6 @@ export const PostCard: React.FC<PostCardProps> = ({
             onLike={() => onLike(post.id)}
             onCommentToggle={() => setShowComments(!showComments)}
             onShare={() => setIsShareModalOpen(true)}
-            onDelete={onDelete}
-            canDelete={effectiveCanDelete}
             disabled={isLocked}
           />
         </div>
