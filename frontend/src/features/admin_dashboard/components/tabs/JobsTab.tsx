@@ -1,12 +1,23 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Trash2, Loader2, Inbox, Search, Eye, X, Heart, MessageCircle, ExternalLink,
+  Download,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useJobs } from '../../hooks/useJobs';
 import type { AdminJob, AdminJobDetail, JobComment } from '../../types/admin.types';
 import { formatDistanceToNow } from 'date-fns';
 import ReasonPrompt from '../ReasonPrompt';
+import ExportMenu, { type ExportFormat } from '../ExportMenu';
+import {
+  exportToCSV,
+  exportToExcel,
+  exportToPDF,
+  exportToDetailedPDF,
+  type ExportColumn,
+  type ExportRow,
+  type ExportSection,
+} from '../../../../utils/exportUtils';
 
 // ---------- Skeleton primitives ----------
 const SkeletonBlock: React.FC<{ className?: string; style?: React.CSSProperties }> = ({
@@ -62,7 +73,6 @@ const SkeletonTable: React.FC<{ rows?: number }> = ({ rows = 6 }) => (
   </div>
 );
 
-// ---------- Mobile skeleton card ----------
 const SkeletonCard: React.FC = () => (
   <div className="p-4 space-y-3">
     <div className="flex items-start justify-between gap-3">
@@ -91,7 +101,7 @@ const SkeletonCardList: React.FC<{ rows?: number }> = ({ rows = 6 }) => (
   </div>
 );
 
-// ---------- Avatar with colored initials fallback ----------
+// ---------- Avatar ----------
 const AVATAR_COLORS = [
   '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4',
   '#ef4444', '#6366f1', '#14b8a6', '#f97316', '#a855f7', '#84cc16',
@@ -244,6 +254,28 @@ const CommentRow: React.FC<CommentRowProps> = ({ comment, onDelete, depth = 0 })
   </div>
 );
 
+// ---------- Comment thread → text (for the single-job export) ----------
+const flattenCommentsToText = (
+  comments: JobComment[],
+  depth = 0,
+): string => {
+  if (!comments || comments.length === 0) return '';
+  const indent = '  '.repeat(depth);
+  return comments
+    .map((c) => {
+      const header = `${indent}• [${c.userId.slice(0, 8)}] ${new Date(
+        c.createdAt,
+      ).toLocaleString()}`;
+      const body = c.content
+        .split('\n')
+        .map((line) => `${indent}  ${line}`)
+        .join('\n');
+      const replies = flattenCommentsToText(c.replies ?? [], depth + 1);
+      return `${header}\n${body}${replies ? `\n${replies}` : ''}`;
+    })
+    .join('\n\n');
+};
+
 // ---------- Drawer ----------
 interface DrawerProps {
   jobId: string | null;
@@ -259,6 +291,7 @@ const JobDrawer: React.FC<DrawerProps> = ({
   const [detail, setDetail] = useState<AdminJobDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     if (!jobId) {
@@ -283,7 +316,6 @@ const JobDrawer: React.FC<DrawerProps> = ({
     };
   }, [jobId, fetchOne]);
 
-  // Lock body scroll while drawer is open
   useEffect(() => {
     if (!jobId) return;
     const prev = document.body.style.overflow;
@@ -293,7 +325,6 @@ const JobDrawer: React.FC<DrawerProps> = ({
     };
   }, [jobId]);
 
-  // Close on Escape
   useEffect(() => {
     if (!jobId) return;
     const onKey = (e: KeyboardEvent) => {
@@ -302,6 +333,75 @@ const JobDrawer: React.FC<DrawerProps> = ({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [jobId, onClose]);
+
+  // ── Export this job as a standalone document ──
+  const handleExportDetail = async () => {
+    if (!detail || isExporting) return;
+    setIsExporting(true);
+    try {
+      const dateStamp = new Date().toISOString().slice(0, 10);
+      const shortId = detail.id.slice(0, 8);
+      const filename = `job-${shortId}-${dateStamp}`;
+
+      const commentsText = flattenCommentsToText(detail.commentsList);
+      const imagesText =
+        detail.images.length > 0
+          ? detail.images.map((u, i) => `${i + 1}. ${u}`).join('\n')
+          : '';
+
+      const section: ExportSection = {
+        heading: detail.title || 'Untitled job',
+        subheading: `Job ID ${detail.id} · Posted ${new Date(
+          detail.postedDate,
+        ).toLocaleString()}`,
+        fields: [
+          { label: 'Job ID', value: detail.id },
+          { label: 'Title', value: detail.title },
+          { label: 'Status', value: detail.status.replace(/_/g, ' ') },
+          { label: 'Posted by', value: detail.client.name },
+          { label: 'Client ID', value: detail.client.id },
+          {
+            label: 'Posted',
+            value: new Date(detail.postedDate).toLocaleString(),
+          },
+          {
+            label: 'Last updated',
+            value: detail.updatedAt
+              ? new Date(detail.updatedAt).toLocaleString()
+              : '—',
+          },
+          { label: 'Likes', value: detail.likes },
+          { label: 'Comments', value: detail.comments },
+          { label: 'Attachments', value: detail.images.length },
+        ],
+        paragraphs: [
+          {
+            label: 'Description',
+            text: detail.description || '(No description)',
+          },
+          ...(imagesText
+            ? [{ label: 'Image URLs', text: imagesText }]
+            : []),
+          {
+            label: `Comments (${detail.commentsList.length})`,
+            text: commentsText || '(No comments)',
+          },
+        ],
+      };
+
+      await exportToDetailedPDF(filename, [section], {
+        title: 'Job Posting — Full Record',
+        subtitle: `Generated ${new Date().toLocaleString()}`,
+      });
+
+      toast.success('Job record downloaded');
+    } catch (e) {
+      console.error('Export failed:', e);
+      toast.error('Failed to export job record');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   if (!jobId) return null;
 
@@ -324,13 +424,28 @@ const JobDrawer: React.FC<DrawerProps> = ({
               <p className="text-xs text-gray-500 truncate">{detail.title}</p>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 shrink-0"
-            aria-label="Close"
-          >
-            <X size={18} />
-          </button>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={handleExportDetail}
+              disabled={!detail || isExporting}
+              className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Download full record (PDF)"
+              aria-label="Download full record"
+            >
+              {isExporting ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : (
+                <Download size={18} />
+              )}
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
+              aria-label="Close"
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 sm:p-5">
@@ -360,7 +475,9 @@ const JobDrawer: React.FC<DrawerProps> = ({
                 <Avatar name={detail.client.name} src={detail.client.avatar} size={40} />
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">{detail.client.name}</p>
-                  <p className="text-xs text-gray-500">Client</p>
+                  <p className="text-xs text-gray-500">
+                    Client · <span className="font-mono">{detail.client.id.slice(0, 8)}</span>
+                  </p>
                 </div>
               </div>
 
@@ -433,10 +550,22 @@ const JobDrawer: React.FC<DrawerProps> = ({
         </div>
 
         {detail && !loading && !error && (
-          <div className="border-t border-gray-100 px-4 sm:px-5 py-3 flex items-center justify-end gap-2">
+          <div className="border-t border-gray-100 px-4 sm:px-5 py-3 flex flex-col-reverse sm:flex-row items-stretch sm:items-center sm:justify-between gap-2">
+            <button
+              onClick={handleExportDetail}
+              disabled={isExporting}
+              className="justify-center px-3 py-2 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 text-sm font-medium inline-flex items-center gap-1.5 disabled:opacity-60"
+            >
+              {isExporting ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Download size={14} />
+              )}
+              Download record
+            </button>
             <button
               onClick={() => onDeleteJob(detail)}
-              className="w-full sm:w-auto justify-center px-3 py-2 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 text-sm font-medium inline-flex items-center gap-1.5"
+              className="justify-center px-3 py-2 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 text-sm font-medium inline-flex items-center gap-1.5"
             >
               <Trash2 size={14} /> Remove job
             </button>
@@ -497,6 +626,49 @@ const JobCard: React.FC<JobCardProps> = ({ job, onOpen, onRemove }) => (
   </div>
 );
 
+// ---------- Export configuration ----------
+
+// Full columns — used for CSV and Excel (all data, no truncation).
+const EXPORT_COLUMNS: ExportColumn[] = [
+  { key: 'title', header: 'Title', width: 34 },
+  { key: 'client', header: 'Client', width: 24 },
+  { key: 'clientId', header: 'Client ID', width: 38 },
+  { key: 'status', header: 'Status', width: 16 },
+  { key: 'posted', header: 'Posted', width: 22 },
+  { key: 'updated', header: 'Updated', width: 22 },
+  { key: 'likes', header: 'Likes', width: 10, align: 'right' },
+  { key: 'comments', header: 'Comments', width: 12, align: 'right' },
+  { key: 'images', header: 'Images', width: 10, align: 'right' },
+  { key: 'description', header: 'Description', width: 60 },
+];
+
+// Compact columns — used only for the PDF table. Description is
+// excluded on purpose: it's already in the single-job detailed
+// record, and long text in a wide table wrecks the layout.
+const PDF_COLUMNS: ExportColumn[] = [
+  { key: 'title', header: 'Title', width: 40, maxChars: 45 },
+  { key: 'client', header: 'Client', width: 22, maxChars: 24 },
+  { key: 'status', header: 'Status', width: 14 },
+  { key: 'posted', header: 'Posted', width: 22 },
+  { key: 'likes', header: 'Likes', width: 8, align: 'right' },
+  { key: 'comments', header: 'Comments', width: 11, align: 'right' },
+  { key: 'images', header: 'Images', width: 9, align: 'right' },
+];
+
+const buildTableRows = (jobs: AdminJob[]): ExportRow[] =>
+  jobs.map((j) => ({
+    title: j.title,
+    client: j.client.name,
+    clientId: j.client.id,
+    status: j.status.replace(/_/g, ' '),
+    posted: j.postedDate ? new Date(j.postedDate).toLocaleString() : '',
+    updated: j.updatedAt ? new Date(j.updatedAt).toLocaleString() : '',
+    likes: j.likes,
+    comments: j.comments,
+    images: j.images.length,
+    description: j.description,
+  }));
+
 // ---------- Tab ----------
 type Prompt = {
   title: string;
@@ -510,6 +682,7 @@ const JobsTab: React.FC = () => {
   const [query, setQuery] = useState('');
   const [prompt, setPrompt] = useState<Prompt | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   const filtered = useMemo(
     () =>
@@ -520,6 +693,50 @@ const JobsTab: React.FC = () => {
       ),
     [jobs, query],
   );
+
+  const handleExport = async (format: ExportFormat) => {
+    if (isExporting) return;
+    if (filtered.length === 0) {
+      toast.info('Nothing to export for the current filters');
+      return;
+    }
+
+    const dateStamp = new Date().toISOString().slice(0, 10);
+    const baseName = `jobs-${dateStamp}`;
+    const subtitleParts = [
+      `Generated: ${new Date().toLocaleString()}`,
+      `${filtered.length} job${filtered.length === 1 ? '' : 's'}`,
+    ];
+    if (query.trim()) subtitleParts.push(`Search: "${query.trim()}"`);
+
+    setIsExporting(true);
+    try {
+      if (format === 'csv') {
+        await exportToCSV(baseName, EXPORT_COLUMNS, buildTableRows(filtered));
+      } else if (format === 'excel') {
+        await exportToExcel(
+          baseName,
+          EXPORT_COLUMNS,
+          buildTableRows(filtered),
+          'Jobs',
+        );
+      } else {
+        // PDF list: compact landscape table. Full description stays
+        // in the single-job record (drawer → Download record).
+        await exportToPDF(baseName, PDF_COLUMNS, buildTableRows(filtered), {
+          title: 'Jobs',
+          subtitle: subtitleParts.join('  ·  '),
+          orientation: 'landscape',
+        });
+      }
+      toast.success(`${format.toUpperCase()} downloaded`);
+    } catch (e) {
+      console.error('Export failed:', e);
+      toast.error(`Failed to export ${format.toUpperCase()}`);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const openRemoveJob = (job: AdminJob) => {
     setPrompt({
@@ -550,11 +767,14 @@ const JobsTab: React.FC = () => {
 
   return (
     <div className="w-full">
-      <div className="mb-6 sm:mb-8">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Jobs</h2>
-        <p className="text-sm sm:text-base text-gray-500 mt-1">
-          Monitor all jobs posted across the platform
-        </p>
+      <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Jobs</h2>
+          <p className="text-sm sm:text-base text-gray-500 mt-1">
+            Monitor all jobs posted across the platform
+          </p>
+        </div>
+        <ExportMenu onExport={handleExport} disabled={isExporting || loading} />
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-5">
@@ -577,7 +797,6 @@ const JobsTab: React.FC = () => {
           <EmptyState title="No jobs found" description="Try adjusting your filters." />
         ) : (
           <>
-            {/* Mobile / tablet card list */}
             <div className="md:hidden divide-y divide-gray-100">
               {filtered.map((j: AdminJob) => (
                 <JobCard
@@ -589,7 +808,6 @@ const JobsTab: React.FC = () => {
               ))}
             </div>
 
-            {/* Desktop table */}
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
                 <thead>
