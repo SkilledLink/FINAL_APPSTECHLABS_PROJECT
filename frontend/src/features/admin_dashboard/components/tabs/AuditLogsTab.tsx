@@ -2,9 +2,18 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Inbox, Search, X, Filter, Eye,
 } from 'lucide-react';
+import { toast } from 'react-toastify';
 import { useAuditLogs } from '../../hooks/useAuditLogs';
 import type { AuditLog, AuditLogDetail } from '../../types/admin.types';
 import { formatDistanceToNow } from 'date-fns';
+import ExportMenu, { type ExportFormat } from '../ExportMenu';
+import {
+  exportToCSV,
+  exportToExcel,
+  exportToDetailedPDF,
+  type ExportRow,
+  type ExportSection,
+} from '../../../../utils/exportUtils';
 
 // ---------- Skeleton primitives ----------
 const SkeletonBlock: React.FC<{ className?: string; style?: React.CSSProperties }> = ({
@@ -14,7 +23,6 @@ const SkeletonBlock: React.FC<{ className?: string; style?: React.CSSProperties 
   <div className={`animate-pulse rounded bg-gray-200 ${className}`} style={style} />
 );
 
-// ----- Desktop table skeleton -----
 const SkeletonTableRow: React.FC = () => (
   <tr>
     <td className="px-5 py-4">
@@ -59,7 +67,6 @@ const SkeletonTable: React.FC<{ rows?: number }> = ({ rows = 8 }) => (
   </div>
 );
 
-// ----- Mobile card skeleton -----
 const SkeletonCard: React.FC = () => (
   <div className="p-4 space-y-3">
     <div className="flex items-start justify-between gap-3">
@@ -85,7 +92,6 @@ const SkeletonCardList: React.FC<{ rows?: number }> = ({ rows = 6 }) => (
   </div>
 );
 
-// ----- Drawer skeleton -----
 const SkeletonDrawer: React.FC = () => (
   <div className="space-y-5">
     <div className="space-y-2">
@@ -248,10 +254,7 @@ const AuditLogDrawer: React.FC<DrawerProps> = ({ logId, onClose, fetchOne }) => 
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!logId) {
-      setDetail(null);
-      return;
-    }
+    if (!logId) return;
     let cancelled = false;
     setLoading(true);
     setError(null);
@@ -270,7 +273,6 @@ const AuditLogDrawer: React.FC<DrawerProps> = ({ logId, onClose, fetchOne }) => 
     };
   }, [logId, fetchOne]);
 
-  // Lock body scroll while drawer is open
   useEffect(() => {
     if (!logId) return;
     const prev = document.body.style.overflow;
@@ -280,7 +282,6 @@ const AuditLogDrawer: React.FC<DrawerProps> = ({ logId, onClose, fetchOne }) => 
     };
   }, [logId]);
 
-  // Close on Escape
   useEffect(() => {
     if (!logId) return;
     const onKey = (e: KeyboardEvent) => {
@@ -331,7 +332,6 @@ const AuditLogDrawer: React.FC<DrawerProps> = ({ logId, onClose, fetchOne }) => 
 
           {detail && !loading && !error && (
             <div className="space-y-6">
-              {/* Header meta */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                 <div>
                   <p className="text-xs text-gray-500">Action</p>
@@ -385,7 +385,6 @@ const AuditLogDrawer: React.FC<DrawerProps> = ({ logId, onClose, fetchOne }) => 
                 )}
               </div>
 
-              {/* Diff */}
               <div className="space-y-4">
                 <JsonBlock label="Old value" value={detail.oldValue} />
                 <JsonBlock label="New value" value={detail.newValue} />
@@ -434,10 +433,7 @@ const LogCard: React.FC<LogCardProps> = ({ log, onOpen }) => (
       </span>
     </div>
 
-    <div
-      className="mt-3 flex justify-end"
-      onClick={(e) => e.stopPropagation()}
-    >
+    <div className="mt-3 flex justify-end" onClick={(e) => e.stopPropagation()}>
       <button
         onClick={onOpen}
         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200"
@@ -447,6 +443,71 @@ const LogCard: React.FC<LogCardProps> = ({ log, onOpen }) => (
     </div>
   </div>
 );
+
+// ---------- Export configuration ----------
+const EXPORT_COLUMNS = [
+  { key: 'timestamp', header: 'Timestamp', width: 22 },
+  { key: 'actorRole', header: 'Actor role', width: 14 },
+  { key: 'actorUserId', header: 'Actor user ID', width: 38 },
+  { key: 'action', header: 'Action', width: 22 },
+  { key: 'entityType', header: 'Entity type', width: 16 },
+  { key: 'entityId', header: 'Entity ID', width: 38 },
+  { key: 'reason', header: 'Reason', width: 50 },
+  { key: 'ipAddress', header: 'IP address', width: 16 },
+];
+
+const buildTableRows = (logs: AuditLog[]): ExportRow[] =>
+  logs.map((l) => ({
+    timestamp: new Date(l.timestamp).toLocaleString(),
+    actorRole: l.actorRole ?? 'system',
+    actorUserId: l.actorUserId ?? '',
+    action: l.action,
+    entityType: l.entityType,
+    entityId: l.entityId ?? '',
+    reason: l.reason ?? '',
+    ipAddress: l.ipAddress ?? '',
+  }));
+
+/**
+ * Builds one detailed section per log.
+ *
+ * Note: the list shape (`AuditLog`) only carries the summary fields.
+ * If the backend ever includes `old_value` / `new_value` / `user_agent`
+ * on the list response (or you switch this to fetch details), the
+ * jsonBlocks below will pick them up automatically — otherwise they're
+ * simply omitted from the document.
+ */
+const buildDetailedSections = (logs: AuditLog[]): ExportSection[] =>
+  logs.map((l) => {
+    const anyLog = l as any;
+
+    const jsonBlocks: { label: string; value: unknown }[] = [];
+    if (anyLog.oldValue !== undefined && anyLog.oldValue !== null) {
+      jsonBlocks.push({ label: 'Old value', value: anyLog.oldValue });
+    }
+    if (anyLog.newValue !== undefined && anyLog.newValue !== null) {
+      jsonBlocks.push({ label: 'New value', value: anyLog.newValue });
+    }
+
+    return {
+      heading: l.action,
+      subheading: new Date(l.timestamp).toLocaleString(),
+      fields: [
+        { label: 'Entry ID', value: l.id },
+        { label: 'When', value: new Date(l.timestamp).toLocaleString() },
+        { label: 'Actor role', value: l.actorRole ?? 'system' },
+        { label: 'Actor user ID', value: l.actorUserId ?? '—' },
+        { label: 'Entity type', value: l.entityType },
+        { label: 'Entity ID', value: l.entityId ?? '—' },
+        { label: 'IP address', value: l.ipAddress ?? '—' },
+        ...(anyLog.userAgent
+          ? [{ label: 'User agent', value: anyLog.userAgent }]
+          : []),
+        { label: 'Reason', value: l.reason ?? '—' },
+      ],
+      jsonBlocks,
+    };
+  });
 
 // ---------- Tab ----------
 const AuditLogsTab: React.FC = () => {
@@ -462,8 +523,8 @@ const AuditLogsTab: React.FC = () => {
 
   const [query, setQuery] = useState('');
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
-  // Derive filter options from the currently loaded set.
   const entityTypeOptions = useMemo(() => {
     const s = new Set<string>();
     logs.forEach((l) => s.add(l.entityType));
@@ -493,15 +554,67 @@ const AuditLogsTab: React.FC = () => {
     setActorUserId('');
   };
 
+  const handleExport = async (format: ExportFormat) => {
+    if (isExporting) return;
+
+    if (filtered.length === 0) {
+      toast.info('Nothing to export for the current filters');
+      return;
+    }
+
+    const dateStamp = new Date().toISOString().slice(0, 10);
+    const baseName = `audit-logs-${dateStamp}`;
+
+    const activeFilters: string[] = [];
+    if (entityType) activeFilters.push(`Entity: ${entityType}`);
+    if (action) activeFilters.push(`Action: ${action}`);
+    if (actorUserId.trim())
+      activeFilters.push(`Actor: ${actorUserId.trim().slice(0, 8)}…`);
+    if (query.trim()) activeFilters.push(`Search: "${query.trim()}"`);
+
+    setIsExporting(true);
+    try {
+      if (format === 'csv') {
+        await exportToCSV(baseName, EXPORT_COLUMNS, buildTableRows(filtered));
+      } else if (format === 'excel') {
+        await exportToExcel(
+          baseName,
+          EXPORT_COLUMNS,
+          buildTableRows(filtered),
+          'Audit Logs',
+        );
+      } else {
+        // PDF → detailed document, one section per log
+        await exportToDetailedPDF(baseName, buildDetailedSections(filtered), {
+          title: 'Audit Log',
+          subtitle: [
+            `Generated: ${new Date().toLocaleString()}`,
+            `${filtered.length} entr${filtered.length === 1 ? 'y' : 'ies'}`,
+            activeFilters.length ? activeFilters.join(' · ') : 'No filters',
+          ].join('  ·  '),
+        });
+      }
+      toast.success(`${format.toUpperCase()} downloaded`);
+    } catch (e) {
+      console.error('Export failed:', e);
+      toast.error(`Failed to export ${format.toUpperCase()}`);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   if (error) return <EmptyState title="Failed to load audit logs" description={error} />;
 
   return (
     <div className="w-full">
-      <div className="mb-6 sm:mb-8">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Audit Logs</h2>
-        <p className="text-sm sm:text-base text-gray-500 mt-1">
-          Track all administrator actions on the platform
-        </p>
+      <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Audit Logs</h2>
+          <p className="text-sm sm:text-base text-gray-500 mt-1">
+            Track all administrator actions on the platform
+          </p>
+        </div>
+        <ExportMenu onExport={handleExport} disabled={isExporting || loading} />
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-3">
@@ -533,7 +646,6 @@ const AuditLogsTab: React.FC = () => {
           <EmptyState title="No audit logs found" description="Try adjusting your filters." />
         ) : (
           <>
-            {/* Mobile / tablet card list */}
             <div className="md:hidden divide-y divide-gray-100">
               {filtered.map((l: AuditLog) => (
                 <LogCard
@@ -544,7 +656,6 @@ const AuditLogsTab: React.FC = () => {
               ))}
             </div>
 
-            {/* Desktop table */}
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
                 <thead>
