@@ -40,18 +40,56 @@ interface AdminSidebarProps {
   isMobileOpen?: boolean;
   onMobileClose?: () => void;
   isMobile?: boolean;
+  unreadContactMessages?: number;
 }
 
 const navItems: NavItem[] = [
-  { id: 'overview', label: 'Overview', icon: <LayoutDashboard className="w-5 h-5" /> },
-  { id: 'feeds', label: 'Feeds', icon: <Rss className="w-5 h-5" /> },
-  { id: 'jobs', label: 'Jobs', icon: <Briefcase className="w-5 h-5" /> },
-  { id: 'users', label: 'Users', icon: <Users className="w-5 h-5" /> },
-  { id: 'professionals', label: 'Professionals', icon: <ShieldCheck className="w-5 h-5" /> },
-  { id: 'moderation', label: 'Moderation', icon: <AlertTriangle className="w-5 h-5" />, badge: 27 },
-  { id: 'audit_logs', label: 'Audit Logs', icon: <ScrollText className="w-5 h-5" /> },
-  { id: 'administrators', label: 'Administrators', icon: <UserCog className="w-5 h-5" /> },
-  { id: 'contact_messages', label: 'Contact Messages', icon: <Mail className="w-5 h-5" /> },
+  {
+    id: 'overview',
+    label: 'Overview',
+    icon: <LayoutDashboard className="w-5 h-5" />,
+  },
+  {
+    id: 'feeds',
+    label: 'Feeds',
+    icon: <Rss className="w-5 h-5" />,
+  },
+  {
+    id: 'jobs',
+    label: 'Jobs',
+    icon: <Briefcase className="w-5 h-5" />,
+  },
+  {
+    id: 'users',
+    label: 'Users',
+    icon: <Users className="w-5 h-5" />,
+  },
+  {
+    id: 'professionals',
+    label: 'Professionals',
+    icon: <ShieldCheck className="w-5 h-5" />,
+  },
+  {
+    id: 'moderation',
+    label: 'Moderation',
+    icon: <AlertTriangle className="w-5 h-5" />,
+    badge: 27,
+  },
+  {
+    id: 'audit_logs',
+    label: 'Audit Logs',
+    icon: <ScrollText className="w-5 h-5" />,
+  },
+  {
+    id: 'administrators',
+    label: 'Administrators',
+    icon: <UserCog className="w-5 h-5" />,
+  },
+  {
+    id: 'contact_messages',
+    label: 'Contact Messages',
+    icon: <Mail className="w-5 h-5" />,
+  },
 ];
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({
@@ -62,24 +100,39 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   isMobileOpen = false,
   onMobileClose,
   isMobile = false,
+  unreadContactMessages = 0,
 }) => {
   useEffect(() => {
     const onEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isMobileOpen && onMobileClose) onMobileClose();
+      if (e.key === 'Escape' && isMobileOpen && onMobileClose) {
+        onMobileClose();
+      }
     };
+
     window.addEventListener('keydown', onEsc);
+
     return () => window.removeEventListener('keydown', onEsc);
   }, [isMobileOpen, onMobileClose]);
 
   useEffect(() => {
-    if (isMobile && isMobileOpen) document.body.style.overflow = 'hidden';
-    else document.body.style.overflow = 'unset';
-    return () => { document.body.style.overflow = 'unset'; };
+    if (isMobile && isMobileOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
   }, [isMobile, isMobileOpen]);
 
   const content = (
     <>
-      <div className={`p-4 border-b border-gray-200 ${isCollapsed && !isMobile ? 'text-center' : ''}`}>
+      <div
+        className={`p-4 border-b border-gray-200 ${
+          isCollapsed && !isMobile ? 'text-center' : ''
+        }`}
+      >
         {isCollapsed && !isMobile ? (
           <div className="flex justify-center">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500 text-sm font-bold text-white">
@@ -91,9 +144,14 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500 text-sm font-bold text-white flex-shrink-0">
               S
             </div>
+
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-gray-900 truncate">Servio Admin</p>
-              <p className="text-xs text-gray-500 truncate">Control Center</p>
+              <p className="font-semibold text-gray-900 truncate">
+                Servio Admin
+              </p>
+              <p className="text-xs text-gray-500 truncate">
+                Control Center
+              </p>
             </div>
           </div>
         )}
@@ -103,41 +161,67 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         <ul className="space-y-1">
           {navItems.map((item) => {
             const active = activeTab === item.id;
+
+            const badge =
+              item.id === 'contact_messages'
+                ? unreadContactMessages
+                : item.badge;
+
             return (
               <li key={item.id}>
                 <button
                   onClick={() => {
                     onTabChange(item.id);
-                    if (isMobile && onMobileClose) onMobileClose();
+
+                    if (isMobile && onMobileClose) {
+                      onMobileClose();
+                    }
                   }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative ${
-                    active ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-100'
+                    active
+                      ? 'bg-blue-50 text-blue-600'
+                      : 'text-gray-700 hover:bg-gray-100'
                   }`}
                 >
-                  <span className={`flex-shrink-0 ${active ? 'text-blue-600' : 'text-gray-500 group-hover:text-gray-700'}`}>
+                  <span
+                    className={`flex-shrink-0 ${
+                      active
+                        ? 'text-blue-600'
+                        : 'text-gray-500 group-hover:text-gray-700'
+                    }`}
+                  >
                     {item.icon}
                   </span>
 
                   {(!isCollapsed || isMobile) && (
-                    <span className="flex-1 text-left text-sm font-medium">{item.label}</span>
-                  )}
-
-                  {(!isCollapsed || isMobile) && item.badge && (
-                    <span className="px-2 py-0.5 text-xs font-medium bg-red-500 text-white rounded-full">
-                      {item.badge}
+                    <span className="flex-1 text-left text-sm font-medium">
+                      {item.label}
                     </span>
                   )}
 
-                  {isCollapsed && !isMobile && item.badge && (
-                    <span className="absolute -top-1 -right-1 px-1.5 py-0.5 text-xs font-medium bg-red-500 text-white rounded-full">
-                      {item.badge}
-                    </span>
-                  )}
+                  {(!isCollapsed || isMobile) &&
+                    badge !== undefined &&
+                    badge > 0 && (
+                      <span className="px-2 py-0.5 text-xs font-semibold bg-red-500 text-white rounded-full min-w-[22px] text-center">
+                        {badge}
+                      </span>
+                    )}
+
+                  {isCollapsed &&
+                    !isMobile &&
+                    badge !== undefined &&
+                    badge > 0 && (
+                      <span className="absolute -top-1 -right-1 px-1.5 py-0.5 text-xs font-semibold bg-red-500 text-white rounded-full min-w-[20px] text-center">
+                        {badge}
+                      </span>
+                    )}
 
                   {isCollapsed && !isMobile && (
                     <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50">
                       {item.label}
-                      {item.badge ? ` (${item.badge})` : ''}
+                      {badge !== undefined && badge > 0
+                        ? ` (${badge})`
+                        : ''}
                     </div>
                   )}
                 </button>
@@ -154,9 +238,14 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               onClick={onToggleCollapse}
               className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-700"
             >
-              {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+              {isCollapsed ? (
+                <ChevronRight className="w-5 h-5" />
+              ) : (
+                <ChevronLeft className="w-5 h-5" />
+              )}
             </button>
           )}
+
           {(!isCollapsed || isMobile) && (
             <div className="ml-auto flex items-center gap-1">
               {isMobile && (
@@ -184,12 +273,15 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             aria-hidden="true"
           />
         )}
+
         <div
           className={`fixed top-0 left-0 bottom-0 z-50 w-72 bg-white shadow-2xl transition-transform duration-300 ease-in-out ${
             isMobileOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
-          <div className="h-full flex flex-col overflow-hidden">{content}</div>
+          <div className="h-full flex flex-col overflow-hidden">
+            {content}
+          </div>
         </div>
       </>
     );
@@ -207,5 +299,3 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 };
 
 export default AdminSidebar;
-
-

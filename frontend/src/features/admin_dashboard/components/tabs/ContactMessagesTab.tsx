@@ -1,4 +1,3 @@
- 
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Mail,
@@ -16,25 +15,41 @@ import {
 } from '../../../../api/Contact/ContactMessages';
 import type { ContactMessage } from '../../../../api/Contact/ContactMessages';
 
-const ContactMessagesTab: React.FC = () => {
+interface ContactMessagesTabProps {
+  onUnreadCountChange?: (count: number) => void;
+}
+
+const ContactMessagesTab: React.FC<ContactMessagesTabProps> = ({
+  onUnreadCountChange,
+}) => {
   const [messages, setMessages] = useState<ContactMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedMessage, setSelectedMessage] = useState<ContactMessage | null>(null);
+  const [selectedMessage, setSelectedMessage] =
+    useState<ContactMessage | null>(null);
   const [reply, setReply] = useState('');
   const [sendingReply, setSendingReply] = useState(false);
 
   const loadMessages = async (showRefresh = false) => {
     try {
-      if (showRefresh) setRefreshing(true);
-      else setLoading(true);
+      if (showRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
 
       const data = await getContactMessages();
+
       setMessages(data);
 
       if (selectedMessage) {
-        const updated = data.find((message) => message.id === selectedMessage.id);
-        if (updated) setSelectedMessage(updated);
+        const updated = data.find(
+          (message) => message.id === selectedMessage.id
+        );
+
+        if (updated) {
+          setSelectedMessage(updated);
+        }
       }
     } catch (error) {
       console.error(error);
@@ -53,6 +68,10 @@ const ContactMessagesTab: React.FC = () => {
     () => messages.filter((message) => !message.is_read).length,
     [messages]
   );
+
+  useEffect(() => {
+    onUnreadCountChange?.(unreadCount);
+  }, [unreadCount, onUnreadCountChange]);
 
   const handleOpenMessage = async (message: ContactMessage) => {
     setSelectedMessage(message);
@@ -375,4 +394,3 @@ const ContactMessagesTab: React.FC = () => {
 };
 
 export default ContactMessagesTab;
- 

@@ -7,6 +7,7 @@ interface AdminLayoutProps {
   onTabChange: (tab: AdminTab) => void;
   title: string;
   subtitle?: string;
+  unreadContactMessages?: number;
 }
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({
@@ -15,6 +16,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
   onTabChange,
   title,
   subtitle,
+  unreadContactMessages = 0,
 }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -27,6 +29,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
           onTabChange={onTabChange}
           isCollapsed={collapsed}
           onToggleCollapse={() => setCollapsed((v) => !v)}
+          unreadContactMessages={unreadContactMessages}
         />
       </div>
 
@@ -37,6 +40,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
           isMobile
           isMobileOpen={mobileOpen}
           onMobileClose={() => setMobileOpen(false)}
+          unreadContactMessages={unreadContactMessages}
         />
       </div>
 
