@@ -1,5 +1,3 @@
-# app/repositories/professional_tier.py
-
 from datetime import datetime, timezone
 from typing import Optional, Tuple
 from uuid import UUID
@@ -40,6 +38,16 @@ class ProfessionalTierRepository:
             ProfessionalTier.badge_code == badge_code
         )
         return self.session.exec(stmt).first()
+
+    def list_by_ids(self, tier_ids: list[UUID]) -> list[ProfessionalTier]:
+        """Batch fetch — one query for many tiers. Used when attaching
+        badges to a page of search results."""
+        if not tier_ids:
+            return []
+        stmt = select(ProfessionalTier).where(
+            ProfessionalTier.id.in_(tier_ids)
+        )
+        return self.session.exec(stmt).all()
 
     def list_all(
         self,

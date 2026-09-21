@@ -3,6 +3,8 @@ from uuid import UUID
 from datetime import datetime
 from pydantic import BaseModel, Field, ConfigDict
 
+from app.schemas.professional_tier import ProfessionalTierBadge
+
 
 class SearchResultResponse(BaseModel):
     # Professional fields
@@ -30,8 +32,10 @@ class SearchResultResponse(BaseModel):
     last_name: str
     profile_image_url: Optional[str] = None
 
-    # Score — clamped to [0, 1] in SQL; no upper bound here to avoid
-    # 500s from float rounding on the client-facing side.
+    # Active paid tier badge, if any. None for free-tier professionals.
+    tier_badge: Optional[ProfessionalTierBadge] = None
+
+    # Score — clamped to [0, 1] in SQL.
     relevance_score: float = Field(..., ge=0.0)
 
     model_config = ConfigDict(from_attributes=True)
