@@ -64,7 +64,7 @@ class UserFollowRepository:
         return self.session.exec(statement).first() is not None
 
     # ============================================================
-    # FOLLOWERS
+    # FOLLOWERS  →  returns (users, total)
     # ============================================================
 
     def get_followers(
@@ -72,7 +72,14 @@ class UserFollowRepository:
         user_id: UUID,
         skip: int = 0,
         limit: int = 50,
-    ) -> List[User]:
+    ) -> Tuple[List[User], int]:
+        # Total count
+        count_stmt = select(func.count()).select_from(UserFollow).where(
+            UserFollow.followed_id == user_id
+        )
+        total = self.session.exec(count_stmt).one()
+
+        # Paginated users
         statement = (
             select(User)
             .join(
@@ -84,10 +91,12 @@ class UserFollowRepository:
             .limit(limit)
         )
 
-        return list(self.session.exec(statement).all())
+        users = list(self.session.exec(statement).all())
+
+        return users, total
 
     # ============================================================
-    # FOLLOWING
+    # FOLLOWING  →  returns (users, total)
     # ============================================================
 
     def get_following(
@@ -95,7 +104,12 @@ class UserFollowRepository:
         user_id: UUID,
         skip: int = 0,
         limit: int = 50,
-    ) -> List[User]:
+    ) -> Tuple[List[User], int]:
+        count_stmt = select(func.count()).select_from(UserFollow).where(
+            UserFollow.follower_id == user_id
+        )
+        total = self.session.exec(count_stmt).one()
+
         statement = (
             select(User)
             .join(
@@ -107,7 +121,9 @@ class UserFollowRepository:
             .limit(limit)
         )
 
-        return list(self.session.exec(statement).all())
+        users = list(self.session.exec(statement).all())
+
+        return users, total
 
     # ============================================================
     # FOLLOW COUNTS
@@ -138,15 +154,6 @@ class UserFollowRepository:
         user_ids: List[UUID],
         follow_type: str = "followers",
     ) -> Dict[UUID, int]:
-        """
-        Get follower/following counts for multiple users.
-
-        Returns:
-            {
-                user_id: count
-            }
-        """
-
         if not user_ids:
             return {}
 
@@ -180,15 +187,6 @@ class UserFollowRepository:
         follower_id: UUID,
         target_user_ids: List[UUID],
     ) -> Dict[UUID, bool]:
-        """
-        Check whether follower_id follows each target user.
-
-        Returns:
-            {
-                target_user_id: True/False
-            }
-        """
-
         if not target_user_ids:
             return {}
 

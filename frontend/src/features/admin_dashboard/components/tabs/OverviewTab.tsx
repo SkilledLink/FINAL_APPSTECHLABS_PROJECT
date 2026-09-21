@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { toast } from 'react-toastify';
 import {
   Users, Briefcase, ShieldCheck, Rss, UserCog, UserX, Inbox,
+  Download, ChevronDown, FileText, FileSpreadsheet,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -9,6 +11,12 @@ import {
 } from 'recharts';
 import { useOverview } from '../../hooks/useOverview';
 import { formatDistanceToNow } from 'date-fns';
+import {
+  exportToCSV,
+  exportToExcel,
+  exportToPDF,
+  type ExportRow,
+} from '../../../../utils/exportUtils';
 
 // ---------- Skeleton primitives ----------
 const SkeletonBlock: React.FC<{ className?: string; style?: React.CSSProperties }> = ({
@@ -110,6 +118,77 @@ const MetricCard: React.FC<MetricCardProps> = ({ title, value, icon: Icon, color
   </div>
 );
 
+// ---------- Export dropdown ----------
+type ExportFormat = 'pdf' | 'csv' | 'excel';
+
+interface ExportMenuProps {
+  onExport: (format: ExportFormat) => void | Promise<void>;
+  disabled?: boolean;
+}
+
+const ExportMenu: React.FC<ExportMenuProps> = ({ onExport, disabled }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onClickOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onClickOutside);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onClickOutside);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, []);
+
+  const items: { key: ExportFormat; label: string; icon: React.ReactNode }[] = [
+    { key: 'pdf', label: 'Download as PDF', icon: <FileText size={15} /> },
+    { key: 'csv', label: 'Download as CSV', icon: <FileSpreadsheet size={15} /> },
+    { key: 'excel', label: 'Download as Excel', icon: <FileSpreadsheet size={15} /> },
+  ];
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        disabled={disabled}
+        className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <Download size={16} />
+        <span className="hidden sm:inline">Export</span>
+        <ChevronDown
+          size={14}
+          className={`transition-transform duration-150 ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full z-30 mt-2 min-w-[210px] overflow-hidden rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl">
+          {items.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                void onExport(item.key);
+              }}
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50"
+            >
+              <span className="text-gray-500">{item.icon}</span>
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ---------- Chart primitives ----------
 const ChartCard: React.FC<{
   title: string;
@@ -125,7 +204,6 @@ const ChartCard: React.FC<{
   </div>
 );
 
-// Shared tooltip styling so all charts look consistent.
 const tooltipStyle = {
   borderRadius: 12,
   border: '1px solid #e5e7eb',
@@ -212,9 +290,10 @@ const ProfessionalChart: React.FC<ProfessionalChartProps> = ({ data }) => {
           </PieChart>
         </ResponsiveContainer>
 
-        {/* Center total — makes the donut informative at a glance. */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
-             style={{ paddingBottom: 32 }}>
+        <div
+          className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
+          style={{ paddingBottom: 32 }}
+        >
           <p className="text-2xl font-bold text-gray-900">{total.toLocaleString()}</p>
           <p className="text-[11px] text-gray-500 uppercase tracking-wider">total</p>
         </div>
@@ -301,8 +380,10 @@ const TeamChart: React.FC<TeamChartProps> = ({ data }) => {
           </PieChart>
         </ResponsiveContainer>
 
-        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
-             style={{ paddingBottom: 32 }}>
+        <div
+          className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
+          style={{ paddingBottom: 32 }}
+        >
           <p className="text-2xl font-bold text-gray-900">{total.toLocaleString()}</p>
           <p className="text-[11px] text-gray-500 uppercase tracking-wider">total</p>
         </div>
@@ -311,9 +392,64 @@ const TeamChart: React.FC<TeamChartProps> = ({ data }) => {
   );
 };
 
+// ---------- Export row builder ----------
+const buildExportRows = (stats: {
+  totalUsers: number;
+  activeUsers: number;
+  suspendedUsers: number;
+  totalProfessionals: number;
+  verifiedProfessionals: number;
+  pendingProfessionals: number;
+  totalFeeds: number;
+  totalJobs: number;
+  totalAdmins: number;
+  totalModerators: number;
+}): ExportRow[] => [
+  { category: 'Users', metric: 'Total Users', value: stats.totalUsers },
+  { category: 'Users', metric: 'Active Users', value: stats.activeUsers },
+  { category: 'Users', metric: 'Suspended Users', value: stats.suspendedUsers },
+  { category: 'Professionals', metric: 'Total Professionals', value: stats.totalProfessionals },
+  { category: 'Professionals', metric: 'Verified Professionals', value: stats.verifiedProfessionals },
+  { category: 'Professionals', metric: 'Pending Professionals', value: stats.pendingProfessionals },
+  { category: 'Content', metric: 'Total Feeds', value: stats.totalFeeds },
+  { category: 'Content', metric: 'Total Jobs', value: stats.totalJobs },
+  { category: 'Team', metric: 'Administrators', value: stats.totalAdmins },
+  { category: 'Team', metric: 'Moderators', value: stats.totalModerators },
+];
+
 // ---------- Tab ----------
 const OverviewTab: React.FC = () => {
   const { stats, loading, error } = useOverview();
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExport = async (format: ExportFormat) => {
+    if (!stats || isExporting) return;
+
+    const rows = buildExportRows(stats);
+    const dateStamp = new Date().toISOString().slice(0, 10);
+    const baseName = `platform-overview-${dateStamp}`;
+    const generatedAt = new Date(stats.generatedAt).toLocaleString();
+
+    setIsExporting(true);
+    try {
+      if (format === 'csv') {
+        await exportToCSV(baseName, rows);
+      } else if (format === 'excel') {
+        await exportToExcel(baseName, rows, 'Overview');
+      } else {
+        await exportToPDF(baseName, rows, {
+          title: 'Platform Overview',
+          subtitle: `Generated: ${generatedAt}`,
+        });
+      }
+      toast.success(`${format.toUpperCase()} downloaded`);
+    } catch (e) {
+      console.error('Export failed:', e);
+      toast.error(`Failed to export ${format.toUpperCase()}`);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   if (loading) return <SkeletonOverview />;
   if (error || !stats) {
@@ -321,10 +457,6 @@ const OverviewTab: React.FC = () => {
   }
 
   // ---------- Derived chart data ----------
-  // These are built from the aggregate numbers the backend already
-  // returns. Swap them out for real time-series data once endpoints
-  // like /admin/overview/timeseries are available.
-
   const userStatusData = [
     { name: 'Total', value: stats.totalUsers, fill: '#3b82f6' },
     { name: 'Active', value: stats.activeUsers, fill: '#10b981' },
@@ -356,9 +488,12 @@ const OverviewTab: React.FC = () => {
 
   return (
     <div className="w-full">
-      <div className="mb-6 sm:mb-8">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Overview</h2>
-        <p className="text-sm sm:text-base text-gray-500 mt-1">Platform-wide metrics</p>
+      <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Overview</h2>
+          <p className="text-sm sm:text-base text-gray-500 mt-1">Platform-wide metrics</p>
+        </div>
+        <ExportMenu onExport={handleExport} disabled={isExporting} />
       </div>
 
       {/* KPI cards */}

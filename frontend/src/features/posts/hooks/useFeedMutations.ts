@@ -9,6 +9,22 @@ import type {
   PostMedia,
 } from '../types/post.types';
 
+type ApiError = {
+  response?: {
+    data?: {
+      detail?: string;
+    };
+  };
+};
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error === 'object' && error !== null && 'response' in error) {
+    const detail = (error as ApiError).response?.data?.detail;
+    if (detail) return detail;
+  }
+  return fallback;
+}
+
 export function useFeedMutations() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,10 +36,10 @@ export function useFeedMutations() {
       setError(null);
       try {
         return await postApi.create(payload);
-      } catch (err: any) {
-        const msg = err.response?.data?.detail || 'Failed to create post';
+      } catch (err: unknown) {
+        const msg = getErrorMessage(err, 'Failed to create post');
         setError(msg);
-        throw new Error(msg);
+        throw new Error(msg, { cause: err });
       } finally {
         setLoading(false);
       }
@@ -38,10 +54,10 @@ export function useFeedMutations() {
       setError(null);
       try {
         return await postApi.update(postId, payload);
-      } catch (err: any) {
-        const msg = err.response?.data?.detail || 'Failed to update post';
+      } catch (err: unknown) {
+        const msg = getErrorMessage(err, 'Failed to update post');
         setError(msg);
-        throw new Error(msg);
+        throw new Error(msg, { cause: err });
       } finally {
         setLoading(false);
       }
@@ -55,10 +71,10 @@ export function useFeedMutations() {
     setError(null);
     try {
       await postApi.delete(postId);
-    } catch (err: any) {
-      const msg = err.response?.data?.detail || 'Failed to delete post';
+    } catch (err: unknown) {
+      const msg = getErrorMessage(err, 'Failed to delete post');
       setError(msg);
-      throw new Error(msg);
+      throw new Error(msg, { cause: err });
     } finally {
       setLoading(false);
     }
@@ -68,10 +84,10 @@ export function useFeedMutations() {
   const toggleLike = useCallback(async (postId: string) => {
     try {
       return await postApi.toggleLike(postId);
-    } catch (err: any) {
-      const msg = err.response?.data?.detail || 'Failed to toggle like';
+    } catch (err: unknown) {
+      const msg = getErrorMessage(err, 'Failed to toggle like');
       setError(msg);
-      throw new Error(msg);
+      throw new Error(msg, { cause: err });
     }
   }, []);
 
@@ -80,10 +96,10 @@ export function useFeedMutations() {
     async (postId: string, file: File): Promise<PostMedia> => {
       try {
         return await postApi.uploadMedia(postId, file);
-      } catch (err: any) {
-        const msg = err.response?.data?.detail || 'Failed to upload media';
+      } catch (err: unknown) {
+        const msg = getErrorMessage(err, 'Failed to upload media');
         setError(msg);
-        throw new Error(msg);
+        throw new Error(msg, { cause: err });
       }
     },
     []
@@ -92,10 +108,10 @@ export function useFeedMutations() {
   const deleteMedia = useCallback(async (mediaId: string): Promise<void> => {
     try {
       await postApi.deleteMedia(mediaId);
-    } catch (err: any) {
-      const msg = err.response?.data?.detail || 'Failed to delete media';
+    } catch (err: unknown) {
+      const msg = getErrorMessage(err, 'Failed to delete media');
       setError(msg);
-      throw new Error(msg);
+      throw new Error(msg, { cause: err });
     }
   }, []);
 
@@ -107,10 +123,10 @@ export function useFeedMutations() {
     ): Promise<PostComment> => {
       try {
         return await postApi.createComment(postId, payload);
-      } catch (err: any) {
-        const msg = err.response?.data?.detail || 'Failed to create comment';
+      } catch (err: unknown) {
+        const msg = getErrorMessage(err, 'Failed to create comment');
         setError(msg);
-        throw new Error(msg);
+        throw new Error(msg, { cause: err });
       }
     },
     []
@@ -119,10 +135,10 @@ export function useFeedMutations() {
   const deleteComment = useCallback(async (commentId: string): Promise<void> => {
     try {
       await postApi.deleteComment(commentId);
-    } catch (err: any) {
-      const msg = err.response?.data?.detail || 'Failed to delete comment';
+    } catch (err: unknown) {
+      const msg = getErrorMessage(err, 'Failed to delete comment');
       setError(msg);
-      throw new Error(msg);
+      throw new Error(msg, { cause: err });
     }
   }, []);
 

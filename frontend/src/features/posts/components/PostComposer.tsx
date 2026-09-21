@@ -5,7 +5,6 @@ import {
   Video,
   X,
   Hash,
-  Loader2,
   Sparkles,
   Upload,
   Globe,
@@ -47,6 +46,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({
   const { user } = useAuth();
 
   const payloadMapRef = useRef<Map<string, PostCreatePayload>>(new Map());
+  const tempIdCounterRef = useRef(0);
 
   // ─── Media helpers ──────────────────────────────────────
   const validateAndSetFile = (file: File) => {
@@ -229,9 +229,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({
       is_public: true,
     };
 
-    const tempId = `temp-${Date.now()}-${Math.random()
-      .toString(36)
-      .slice(2, 8)}`;
+    const tempId = `temp-${++tempIdCounterRef.current}`;
 
     const tempPost = buildTempPost(tempId, payload);
     payloadMapRef.current.set(tempId, payload);

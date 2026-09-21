@@ -35,20 +35,20 @@ interface PostCardProps {
   onHashtagClick?: (hashtag: string) => void;
   onRetry?: (post: Post) => void;
   onDismiss?: (post: Post) => void;
-  /**
-   * Whether the currently authenticated user is an admin.
-   * Controls whether the "Delete post" action is available in the menu.
-   * Defaults to false so non-admin callers don't accidentally expose it.
-   */
-  isCurrentUserAdmin?: boolean;
+  canDelete?: boolean;
 }
 
 type VisualState = 'normal' | 'uploading' | 'failed' | 'rejected' | 'pending';
 
+type IdentityFields = {
+  id?: string | number;
+  user_id?: string | number;
+  userId?: string | number;
+};
+
 function getVisualState(post: Post): VisualState {
   if (post._clientStatus === 'uploading') return 'uploading';
   if (post._clientStatus === 'failed') return 'failed';
-
   const decision = post.moderation?.decision;
   if (decision === 'unsafe' || post.status === 'rejected') return 'rejected';
   if (
@@ -61,12 +61,54 @@ function getVisualState(post: Post): VisualState {
   return 'normal';
 }
 
-// ─── Initials avatar helpers ───
+/* ── Try to recover the current user id from storage ─────── */
+const readStoredUserId = (): string | null => {
+  try {
+    for (const key of [
+      'current_user',
+      'currentUser',
+      'user',
+      'auth_user',
+      'authUser',
+    ]) {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed?.id) return String(parsed.id);
+          if (parsed?.user?.id) return String(parsed.user.id);
+        } catch {
+          /* not JSON, skip */
+        }
+      }
+    }
+
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        try {
+          const payload = JSON.parse(atob(parts[1]));
+          if (payload?.sub) return String(payload.sub);
+          if (payload?.user_id) return String(payload.user_id);
+          if (payload?.id) return String(payload.id);
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+};
+
+/* ── Avatar helpers ─────────────────────────────────────── */
+
 const getInitials = (first?: string, last?: string): string => {
   const a = (first || '').trim().charAt(0);
   const b = (last || '').trim().charAt(0);
-  const initials = (a + b).toUpperCase();
-  return initials || '?';
+  return (a + b).toUpperCase() || '?';
 };
 
 const AVATAR_COLORS = [
@@ -88,7 +130,8 @@ const getAvatarColor = (seed: string): string => {
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 };
 
-// ─── Auto-Playing Video ───
+/* ── Auto-playing video ─────────────────────────────────── */
+
 const AutoPlayVideo: React.FC<{
   src: string;
   onClick: () => void;
@@ -182,7 +225,8 @@ const AutoPlayVideo: React.FC<{
   );
 };
 
-// ─── Main PostCard ───
+/* ── Main PostCard ──────────────────────────────────────── */
+
 export const PostCard: React.FC<PostCardProps> = ({
   post,
   onLike,
@@ -192,7 +236,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   onHashtagClick,
   onRetry,
   onDismiss,
-  isCurrentUserAdmin = false,
+  canDelete = false,
 }) => {
   const [isMediaOpen, setIsMediaOpen] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -200,8 +244,8 @@ export const PostCard: React.FC<PostCardProps> = ({
   const [commentText, setCommentText] = useState('');
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [showHeartAnimation, setShowHeartAnimation] = useState(false);
+  const [currentTime, setCurrentTime] = useState<number | null>(null);
 
-  // Description clamp state
   const descRef = useRef<HTMLParagraphElement>(null);
   const [isDescExpanded, setIsDescExpanded] = useState(false);
   const [isDescOverflowing, setIsDescOverflowing] = useState(false);
@@ -211,25 +255,43 @@ export const PostCard: React.FC<PostCardProps> = ({
     ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'User'
     : 'Unknown User';
   const username = user?.first_name
-    ? `@${user.first_name.toLowerCase()}${user.last_name ? user.last_name.toLowerCase() : ''}`
+    ? `@${user.first_name.toLowerCase()}${
+        user.last_name ? user.last_name.toLowerCase() : ''
+      }`
     : '@user';
 
   const primaryMedia = post.media?.[0];
-
   const visualState = getVisualState(post);
   const isLocked = visualState !== 'normal';
 
-  // Only admins can see the delete action.
-  // Requires: the caller passed `onDelete`, the user is an admin,
-  // and the post isn't locked (uploading / failed / pending / rejected).
-  const canDelete = isCurrentUserAdmin && !!onDelete && !isLocked;
+  /* ── Ownership resolution ──────────────────────────── */
+  const storedUserId = readStoredUserId();
+  const userIdentity = user as unknown as IdentityFields;
+  const postIdentity = post as unknown as IdentityFields;
+  const postAuthorId =
+    userIdentity.id ??
+    userIdentity.user_id ??
+    postIdentity.user_id ??
+    postIdentity.userId ??
+    null;
 
-  // Whether the dropdown has any items at all. If not, we still render
-  // the 3-dots button, but clicking it won't open an empty menu.
-  const hasMenuItems = canDelete;
+  const isOwner =
+    !!storedUserId &&
+    !!postAuthorId &&
+    String(storedUserId) === String(postAuthorId);
+
+  const effectiveCanDelete = canDelete || isOwner;
+  const showDelete = effectiveCanDelete && !isLocked && !!onDelete;
+
+  useEffect(() => {
+    const updateCurrentTime = () => setCurrentTime(Date.now());
+    updateCurrentTime();
+    const intervalId = window.setInterval(updateCurrentTime, 60000);
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   const formatTimeAgo = (dateStr: string) => {
-    const diff = Date.now() - new Date(dateStr).getTime();
+    const diff = (currentTime ?? new Date(dateStr).getTime()) - new Date(dateStr).getTime();
     const mins = Math.floor(diff / 60000);
     if (mins < 1) return 'Just now';
     if (mins < 60) return `${mins}m ago`;
@@ -269,15 +331,11 @@ export const PostCard: React.FC<PostCardProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isMediaOpen]);
 
-  // Detect whether the collapsed description is actually overflowing.
-  // Uses ResizeObserver so it re-checks on width changes.
   useEffect(() => {
     const el = descRef.current;
     if (!el) return;
 
     const check = () => {
-      // Only measure while collapsed. When expanded,
-      // scrollHeight === clientHeight and we'd get a false negative.
       if (isDescExpanded) return;
       setIsDescOverflowing(el.scrollHeight > el.clientHeight + 1);
     };
@@ -308,7 +366,7 @@ export const PostCard: React.FC<PostCardProps> = ({
       <article
         className={`group/card relative w-full overflow-hidden rounded-3xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-sm transition-all duration-300 hover:shadow-xl hover:shadow-slate-200/50 dark:hover:shadow-none hover:border-slate-300 dark:hover:border-slate-700 mb-5 ${containerCls}`}
       >
-        {/* Status banner */}
+        {/* Status banners */}
         {visualState === 'uploading' && (
           <div className="flex items-center gap-2 px-4 sm:px-5 pt-3 text-xs font-semibold text-blue-600 dark:text-blue-400">
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -351,7 +409,7 @@ export const PostCard: React.FC<PostCardProps> = ({
               ) : (
                 <div
                   className={`h-11 w-11 rounded-full bg-gradient-to-br ${getAvatarColor(
-                    user?.id || displayName,
+                    user?.id || displayName
                   )} flex items-center justify-center ring-2 ring-slate-100 dark:ring-slate-800 transition-transform duration-300 group-hover/avatar:scale-105`}
                 >
                   <span className="text-white font-bold text-sm tracking-tight select-none">
@@ -389,7 +447,9 @@ export const PostCard: React.FC<PostCardProps> = ({
                   {username}
                 </ProfileLink>
                 <span className="shrink-0">•</span>
-                <span className="shrink-0">{formatTimeAgo(post.created_at)}</span>
+                <span className="shrink-0">
+                  {formatTimeAgo(post.created_at)}
+                </span>
                 <span className="shrink-0">•</span>
                 <span className="inline-flex items-center gap-0.5 shrink-0">
                   <Globe className="w-3 h-3 text-slate-400" />
@@ -398,39 +458,35 @@ export const PostCard: React.FC<PostCardProps> = ({
             </div>
           </div>
 
-          {/* 3-dots menu — always rendered. Contents are gated by role. */}
-          <div className="relative shrink-0">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => {
-                // Only open if there's something to show — avoids an
-                // empty floating card for non-admins.
-                if (hasMenuItems) setShowMenu((v) => !v);
-              }}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-              aria-label="Post options"
-              aria-haspopup="menu"
-              aria-expanded={showMenu}
-            >
-              <MoreHorizontal className="w-5 h-5" />
-            </motion.button>
+          {/* 3-dots menu */}
+          {showDelete && (
+            <div className="relative shrink-0">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowMenu((v) => !v)}
+                className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                aria-label="Post options"
+                aria-haspopup="menu"
+                aria-expanded={showMenu}
+              >
+                <MoreHorizontal className="w-5 h-5" />
+              </motion.button>
 
-            <AnimatePresence>
-              {showMenu && hasMenuItems && (
-                <>
-                  <div
-                    className="fixed inset-0 z-20"
-                    onClick={() => setShowMenu(false)}
-                  />
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.92, y: 6 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.92, y: 6 }}
-                    transition={{ duration: 0.15, ease: 'easeOut' }}
-                    className="absolute right-0 top-10 z-30 min-w-[170px] overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 p-1.5 shadow-xl backdrop-blur-xl"
-                  >
-                    {canDelete && (
+              <AnimatePresence>
+                {showMenu && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-20"
+                      onClick={() => setShowMenu(false)}
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.92, y: 6 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.92, y: 6 }}
+                      transition={{ duration: 0.15, ease: 'easeOut' }}
+                      className="absolute right-0 top-10 z-30 min-w-[170px] overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 p-1.5 shadow-xl backdrop-blur-xl"
+                    >
                       <button
                         type="button"
                         onClick={() => {
@@ -442,12 +498,12 @@ export const PostCard: React.FC<PostCardProps> = ({
                         <Trash2 className="w-4 h-4 text-rose-500" />
                         <span>Delete post</span>
                       </button>
-                    )}
-                  </motion.div>
-                </>
-              )}
-            </AnimatePresence>
-          </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
         </div>
 
         {/* CONTENT */}
@@ -497,7 +553,7 @@ export const PostCard: React.FC<PostCardProps> = ({
           )}
         </div>
 
-        {/* Moderation reason (rejected) */}
+        {/* Moderation reason */}
         {visualState === 'rejected' && post.moderation?.reason && (
           <div className="mx-4 sm:mx-5 mb-3 text-xs text-rose-700 dark:text-rose-300 bg-rose-100/60 dark:bg-rose-950/30 rounded-lg px-3 py-2 break-words [overflow-wrap:anywhere]">
             {post.moderation.reason}
@@ -551,7 +607,7 @@ export const PostCard: React.FC<PostCardProps> = ({
         )}
 
         {/* ACTIONS */}
-        <div className="px-3 py-2 sm:px-4 mt-1 border-t border-slate-100 dark:border-slate-800/60">
+        <div className="px-3 py-2 sm:px-4 mt-1">
           <PostActions
             post={post}
             onLike={() => onLike(post.id)}
@@ -606,7 +662,9 @@ export const PostCard: React.FC<PostCardProps> = ({
                     <div className="flex items-start gap-2.5 min-w-0 flex-1">
                       <ProfileLink
                         userId={comment.user?.id}
-                        ariaLabel={`View ${comment.user?.first_name ?? ''} ${comment.user?.last_name ?? ''}'s profile`.trim()}
+                        ariaLabel={`View ${
+                          comment.user?.first_name ?? ''
+                        } ${comment.user?.last_name ?? ''}'s profile`.trim()}
                         className="mt-0.5 shrink-0 inline-block"
                       >
                         {comment.user?.profile_image_url ? (
@@ -618,13 +676,13 @@ export const PostCard: React.FC<PostCardProps> = ({
                         ) : (
                           <div
                             className={`h-7 w-7 rounded-full bg-gradient-to-br ${getAvatarColor(
-                              comment.user?.id || comment.id,
+                              comment.user?.id || comment.id
                             )} flex items-center justify-center ring-1 ring-slate-200 dark:ring-slate-700`}
                           >
                             <span className="text-white font-bold text-[10px] tracking-tight select-none">
                               {getInitials(
                                 comment.user?.first_name,
-                                comment.user?.last_name,
+                                comment.user?.last_name
                               )}
                             </span>
                           </div>

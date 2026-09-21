@@ -1,3 +1,5 @@
+# app/repositories/feed_repository.py
+
 from datetime import datetime, timezone
 from typing import Optional, Tuple, List, Dict, Set
 from uuid import UUID
@@ -5,7 +7,14 @@ from uuid import UUID
 from sqlmodel import Session, select, func
 from sqlalchemy.orm import selectinload
 
-from app.models.feed import Feed, FeedMedia, FeedLike, FeedComment, Hashtag, FeedHashtag
+from app.models.feed import (
+    Feed,
+    FeedMedia,
+    FeedLike,
+    FeedComment,
+    Hashtag,
+    FeedHashtag,
+)
 from app.models.user import User
 
 
@@ -20,7 +29,15 @@ class FeedRepository:
         self.session.flush()
         return feed
 
-    def get_by_id(self, feed_id: UUID, include_deleted: bool = False) -> Optional[Feed]:
+    def get_by_id(
+        self,
+        feed_id: UUID,
+        include_deleted: bool = False,
+    ) -> Optional[Feed]:
+        """
+        Fetch a single feed with everything needed for the DETAIL view:
+        user, media, and the full comment tree (with authors + replies).
+        """
         stmt = (
             select(Feed)
             .where(Feed.id == feed_id)
@@ -45,13 +62,24 @@ class FeedRepository:
         hashtag: Optional[str] = None,
         status: Optional[str] = None,
     ) -> Tuple[List[Feed], int]:
+        """
+        List feeds for the FEED LIST view.
+
+        Loads:  user  +  media
+        Omits:  comments and replies — the list card only needs a count,
+                and loading the whole comment tree per feed is the #1
+                source of slowness. Use bulk_comment_counts() instead.
+
+        Uses a constant number of SQL queries regardless of page size.
+        """
         stmt = (
             select(Feed)
             .options(
                 selectinload(Feed.user),
                 selectinload(Feed.media),
-                selectinload(Feed.comments).selectinload(FeedComment.user),
-                selectinload(Feed.comments).selectinload(FeedComment.replies),
+                # ⚠️ Deliberately NOT loading comments/replies here.
+                #    The card only needs the count, which comes from
+                #    bulk_comment_counts() — a single tiny GROUP BY.
             )
         )
         if not include_deleted:
@@ -64,6 +92,8 @@ class FeedRepository:
             stmt = stmt.where(
                 Feed.title.contains(search) | Feed.description.contains(search)
             )
+
+        subq = None
         if hashtag:
             hashtag_lower = hashtag.lower().lstrip("#")
             subq = (
@@ -74,7 +104,7 @@ class FeedRepository:
             )
             stmt = stmt.where(Feed.id.in_(subq))
 
-        # Count
+        # ── Count ──────────────────────────────────────────
         count_stmt = select(func.count()).select_from(Feed)
         if not include_deleted:
             count_stmt = count_stmt.where(Feed.deleted_at.is_(None))
@@ -86,11 +116,12 @@ class FeedRepository:
             count_stmt = count_stmt.where(
                 Feed.title.contains(search) | Feed.description.contains(search)
             )
-        if hashtag:
+        if subq is not None:
             count_stmt = count_stmt.where(Feed.id.in_(subq))
 
         total = self.session.exec(count_stmt).first() or 0
 
+        # ── Page ───────────────────────────────────────────
         stmt = stmt.offset(skip).limit(limit).order_by(Feed.created_at.desc())
         feeds = self.session.exec(stmt).all()
         return feeds, total
@@ -300,7 +331,9 @@ class FeedRepository:
         )
         return {fid: count for fid, count in self.session.exec(stmt).all()}
 
-    def bulk_liked_feed_ids(self, user: User, feed_ids: List[UUID]) -> Set[UUID]:
+    def bulk_liked_feed_ids(
+        self, user: User, feed_ids: List[UUID]
+    ) -> Set[UUID]:
         if not feed_ids:
             return set()
         stmt = select(FeedLike.feed_id).where(
@@ -309,7 +342,14 @@ class FeedRepository:
         )
         return set(self.session.exec(stmt).all())
 
-    def bulk_media_by_feed(self, feed_ids: List[UUID]) -> Dict[UUID, List[FeedMedia]]:
+    def bulk_media_by_feed(
+        self, feed_ids: List[UUID]
+    ) -> Dict[UUID, List[FeedMedia]]:
+        """
+        ⚠️ Usually redundant — list() already eager-loads Feed.media.
+        Only call this if you're working with feed IDs you did NOT fetch
+        through list(). Prefer feed.media directly to avoid a duplicate query.
+        """
         if not feed_ids:
             return {}
         stmt = select(FeedMedia).where(FeedMedia.feed_id.in_(feed_ids))
@@ -318,7 +358,9 @@ class FeedRepository:
             result.setdefault(m.feed_id, []).append(m)
         return result
 
-    def bulk_hashtags_by_feed(self, feed_ids: List[UUID]) -> Dict[UUID, List[Hashtag]]:
+    def bulk_hashtags_by_feed(
+        self, feed_ids: List[UUID]
+    ) -> Dict[UUID, List[Hashtag]]:
         if not feed_ids:
             return {}
         stmt = (
@@ -330,3 +372,84 @@ class FeedRepository:
         for fid, hashtag in self.session.exec(stmt).all():
             result.setdefault(fid, []).append(hashtag)
         return result
+
+    # ─── Thumbnails (media-only profile grid) ───────────────
+    def list_feeds_with_first_media(
+        self,
+        skip: int,
+        limit: int,
+        user_id: Optional[UUID],
+        status: str,
+    ) -> Tuple[List[Tuple[Feed, FeedMedia, int]], int]:
+        """
+        Return (feed, cover_media, media_count) tuples for feeds that:
+          - match the given status
+          - are not soft-deleted
+          - have at least one media row
+          - optionally belong to `user_id`
+
+        Ordered by Feed.created_at DESC. Feeds with zero media are excluded
+        by the inner join.
+
+        Uses a constant number of SQL queries regardless of page size.
+        """
+        base = (
+            select(Feed.id)
+            .join(FeedMedia, FeedMedia.feed_id == Feed.id)
+            .where(Feed.deleted_at.is_(None))
+            .where(Feed.status == status)
+            .distinct()
+        )
+        if user_id is not None:
+            base = base.where(Feed.user_id == user_id)
+
+        total = self.session.exec(
+            select(func.count()).select_from(base.subquery())
+        ).one()
+
+        if not total:
+            return [], 0
+
+        feed_ids_stmt = (
+            select(Feed.id)
+            .where(Feed.id.in_(base))
+            .order_by(Feed.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+        )
+
+        raw_ids = self.session.exec(feed_ids_stmt).all()
+        feed_ids: List[UUID] = [
+            (r if isinstance(r, UUID) else r[0]) for r in raw_ids
+        ]
+
+        if not feed_ids:
+            return [], total
+
+        feeds_stmt = select(Feed).where(Feed.id.in_(feed_ids))
+        feeds_by_id: Dict[UUID, Feed] = {
+            f.id: f for f in self.session.exec(feeds_stmt).all()
+        }
+        feeds = [feeds_by_id[fid] for fid in feed_ids if fid in feeds_by_id]
+
+        media_stmt = (
+            select(FeedMedia)
+            .where(FeedMedia.feed_id.in_(feed_ids))
+            .order_by(
+                FeedMedia.feed_id,
+                FeedMedia.created_at.asc(),
+            )
+        )
+
+        first_media: Dict[UUID, FeedMedia] = {}
+        media_counts: Dict[UUID, int] = {}
+        for m in self.session.exec(media_stmt).all():
+            media_counts[m.feed_id] = media_counts.get(m.feed_id, 0) + 1
+            first_media.setdefault(m.feed_id, m)
+
+        rows = [
+            (f, first_media[f.id], media_counts.get(f.id, 0))
+            for f in feeds
+            if f.id in first_media
+        ]
+        return rows, total

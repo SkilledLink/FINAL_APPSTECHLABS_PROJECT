@@ -8,6 +8,14 @@ import { useFeeds } from '../../hooks/useFeeds';
 import type { AdminFeed, AdminFeedDetail, FeedComment } from '../../types/admin.types';
 import { formatDistanceToNow } from 'date-fns';
 import ReasonPrompt from '../ReasonPrompt';
+import ExportMenu, { type ExportFormat } from '../ExportMenu';
+import {
+  exportToCSV,
+  exportToExcel,
+  exportToPDF,
+  type ExportColumn,
+  type ExportRow,
+} from '../../../../utils/exportUtils';
 
 // ---------- Skeleton primitives ----------
 const SkeletonBlock: React.FC<{ className?: string; style?: React.CSSProperties }> = ({
@@ -340,8 +348,6 @@ const FeedDrawer: React.FC<DrawerProps> = ({
 }) => {
   const [detail, setDetail] = useState<AdminFeedDetail | null>(null);
   const [loading, setLoading] = useState(false);
-  // true when the backend refused to return the single feed and we're
-  // rendering the summary from the list instead.
   const [isFallback, setIsFallback] = useState(false);
 
   useEffect(() => {
@@ -359,7 +365,6 @@ const FeedDrawer: React.FC<DrawerProps> = ({
         if (!cancelled) setDetail(d);
       })
       .catch(() => {
-        // Fall back to whatever we already have from the list.
         if (!cancelled) {
           setDetail(buildFallbackDetail(feed));
           setIsFallback(true);
@@ -418,17 +423,14 @@ const FeedDrawer: React.FC<DrawerProps> = ({
 
           {!loading && view && (
             <div className="space-y-5">
-              {/* Status banner */}
               <StatusBanner
                 state={state}
                 status={view.status}
                 isDeleted={view.isDeleted}
               />
 
-              {/* Fallback warning */}
               {isFallback && <PartialDataBanner />}
 
-              {/* Author + status */}
               <div className="flex items-center gap-3">
                 <Avatar name={view.author.name} src={view.author.avatar} size={48} />
                 <div className="min-w-0 flex-1">
@@ -454,7 +456,6 @@ const FeedDrawer: React.FC<DrawerProps> = ({
                 </Chip>
               </div>
 
-              {/* Visibility */}
               <div className="flex items-center gap-2">
                 <Chip variant={view.isPublic ? 'info' : 'neutral'}>
                   {view.isPublic ? 'Public' : 'Private'}
@@ -462,7 +463,6 @@ const FeedDrawer: React.FC<DrawerProps> = ({
                 {view.isDeleted && <Chip variant="danger">Deleted</Chip>}
               </div>
 
-              {/* Content */}
               {view.title && (
                 <div>
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
@@ -482,7 +482,6 @@ const FeedDrawer: React.FC<DrawerProps> = ({
                 </div>
               )}
 
-              {/* Hashtags */}
               {view.hashtags.length > 0 && (
                 <div>
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
@@ -498,7 +497,6 @@ const FeedDrawer: React.FC<DrawerProps> = ({
                 </div>
               )}
 
-              {/* Media */}
               {view.images.length > 0 && (
                 <div>
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
@@ -531,7 +529,6 @@ const FeedDrawer: React.FC<DrawerProps> = ({
                 </div>
               )}
 
-              {/* Engagement */}
               <div className="flex items-center gap-4 text-xs text-gray-500">
                 <span className="inline-flex items-center gap-1">
                   <Heart size={13} className={view.isLiked ? 'fill-red-500 text-red-500' : ''} />
@@ -542,7 +539,6 @@ const FeedDrawer: React.FC<DrawerProps> = ({
                 </span>
               </div>
 
-              {/* Moderation summary — only present when we got the full detail */}
               {view.moderation && (
                 <div className="pt-4 border-t border-gray-100">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
@@ -571,7 +567,6 @@ const FeedDrawer: React.FC<DrawerProps> = ({
                 </div>
               )}
 
-              {/* Comments — only present when we got the full detail */}
               {!isFallback && (
                 <div className="pt-4 border-t border-gray-100">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
@@ -611,6 +606,36 @@ const FeedDrawer: React.FC<DrawerProps> = ({
   );
 };
 
+// ---------- Export configuration ----------
+const EXPORT_COLUMNS: ExportColumn[] = [
+  { key: 'author', header: 'Author', width: 24 },
+  { key: 'authorRole', header: 'Author role', width: 14 },
+  { key: 'title', header: 'Title', width: 32 },
+  { key: 'description', header: 'Description', width: 50 },
+  { key: 'status', header: 'Status', width: 18 },
+  { key: 'visibility', header: 'Visibility', width: 12 },
+  { key: 'likes', header: 'Likes', width: 10, align: 'right' },
+  { key: 'comments', header: 'Comments', width: 12, align: 'right' },
+  { key: 'hashtags', header: 'Hashtags', width: 26 },
+  { key: 'createdAt', header: 'Created', width: 20 },
+  { key: 'updatedAt', header: 'Updated', width: 20 },
+];
+
+const buildExportRows = (feeds: AdminFeed[]): ExportRow[] =>
+  feeds.map((f) => ({
+    author: f.author.name,
+    authorRole: f.author.role,
+    title: f.title || '',
+    description: f.description || '',
+    status: f.status.replace(/_/g, ' '),
+    visibility: f.isPublic ? 'Public' : 'Private',
+    likes: f.likes,
+    comments: f.comments,
+    hashtags: f.hashtags.map((h) => `#${h}`).join(' '),
+    createdAt: f.createdAt ? new Date(f.createdAt).toLocaleString() : '',
+    updatedAt: f.updatedAt ? new Date(f.updatedAt).toLocaleString() : '',
+  }));
+
 // ---------- Tab ----------
 type Prompt = {
   title: string;
@@ -636,6 +661,7 @@ const FeedsTab: React.FC = () => {
   const [filter, setFilter] = useState<string>('all');
   const [prompt, setPrompt] = useState<Prompt | null>(null);
   const [selected, setSelected] = useState<AdminFeed | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   const statuses = useMemo(() => {
     const s = new Set<string>();
@@ -653,12 +679,46 @@ const FeedsTab: React.FC = () => {
     [feeds, filter, query],
   );
 
-  // Auto-submit for already-deleted feeds; prompt for normal ones.
+  const handleExport = async (format: ExportFormat) => {
+    if (isExporting) return;
+
+    // Export what the user currently sees (respects search + status filter).
+    const rows = buildExportRows(filtered);
+    if (rows.length === 0) {
+      toast.info('Nothing to export for the current filters');
+      return;
+    }
+
+    const dateStamp = new Date().toISOString().slice(0, 10);
+    const baseName = `feeds-${dateStamp}`;
+    const filterLabel =
+      filter === 'all' ? 'All statuses' : `Status: ${filter.replace(/_/g, ' ')}`;
+
+    setIsExporting(true);
+    try {
+      if (format === 'csv') {
+        await exportToCSV(baseName, EXPORT_COLUMNS, rows);
+      } else if (format === 'excel') {
+        await exportToExcel(baseName, EXPORT_COLUMNS, rows, 'Feeds');
+      } else {
+        await exportToPDF(baseName, EXPORT_COLUMNS, rows, {
+          title: 'Feeds',
+          subtitle: `${filterLabel} · ${rows.length} item${rows.length === 1 ? '' : 's'}`,
+        });
+      }
+      toast.success(`${format.toUpperCase()} downloaded`);
+    } catch (e) {
+      console.error('Export failed:', e);
+      toast.error(`Failed to export ${format.toUpperCase()}`);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const handleRemove = (feed: AdminFeed) => {
     const state = getFeedState(feed);
 
     if (state === 'deleted') {
-      // No prompt — this is a permanent cleanup of an already-removed feed.
       void (async () => {
         try {
           await remove(feed.id, DEFAULT_DELETE_REASON, true);
@@ -695,16 +755,18 @@ const FeedsTab: React.FC = () => {
     });
   };
 
-  // Hard failure before anything loaded → full-page error state.
   if (error && feeds.length === 0) {
     return <EmptyState title="Failed to load feeds" description={error} />;
   }
 
   return (
     <div>
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900">Feeds</h2>
-        <p className="text-gray-500 mt-1">Moderate content posted across the platform</p>
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Feeds</h2>
+          <p className="text-gray-500 mt-1">Moderate content posted across the platform</p>
+        </div>
+        <ExportMenu onExport={handleExport} disabled={isExporting || loading} />
       </div>
 
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
@@ -727,7 +789,6 @@ const FeedsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* Soft error banner — partial load failed but we still have content. */}
       {error && feeds.length > 0 && (
         <div className="mb-4 flex items-start gap-3 p-3 rounded-xl bg-red-50 border border-red-200">
           <AlertTriangle size={16} className="text-red-600 shrink-0 mt-0.5" />
@@ -847,7 +908,6 @@ const FeedsTab: React.FC = () => {
             })}
           </div>
 
-          {/* Bottom-of-list indicator while more batches stream in. */}
           {loadingMore && (
             <div className="mt-6 flex items-center justify-center gap-2 text-sm text-gray-500">
               <Loader2 size={16} className="animate-spin" />

@@ -17,6 +17,7 @@ from app.schemas.feed import (
     FeedCommentCreate,
     FeedCommentResponse,
     HashtagResponse,
+    FeedThumbnailListResponse,
 )
 from app.services.feed_service import FeedService
 
@@ -133,6 +134,46 @@ def get_trending_hashtags(
 ):
     service = FeedService(session)
     return service.get_trending_hashtags(limit)
+
+
+# ═══════════════════════════════════════════════════════════
+# Media-only grid (profile "Media" tab)
+#
+# IMPORTANT: this route MUST be declared before GET /{feed_id}.
+# FastAPI matches routes in declaration order — if this block is
+# moved below /{feed_id}, "/feeds/thumbnails" is captured by
+# /{feed_id} and fails UUID validation with a 422.
+# ═══════════════════════════════════════════════════════════
+
+@router.get("/thumbnails", response_model=FeedThumbnailListResponse)
+def list_feed_thumbnails(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    user_id: Optional[UUID] = Query(
+        None,
+        description="Whose grid to return. Defaults to the current user.",
+    ),
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """
+    Lightweight, media-only feed grid for a user's profile.
+
+    Returns **only** PUBLISHED, non-deleted feeds that currently have
+    at least one media item. Text-only posts are excluded by design —
+    they remain reachable through GET /feeds and GET /feeds/{feed_id}.
+
+    Thumbnails are derived on the fly from the stored Cloudinary URL
+    (a 400px square, video frames taken at 0.1s). No extra storage,
+    no DB writes, no moderation impact.
+    """
+    service = FeedService(session)
+    return service.list_feed_thumbnails(
+        current_user,
+        skip=skip,
+        limit=limit,
+        user_id=user_id,
+    )
 
 
 @router.get("/{feed_id}", response_model=FeedResponse)

@@ -26,14 +26,34 @@ export interface ActivityFilters {
   entityType?: string;
 }
 
+export interface ActivityPage {
+  items: ActivityLog[];
+  total: number;
+}
+
 export const myActivityService = {
-  async getAll(filters: ActivityFilters = {}): Promise<ActivityLog[]> {
-    const params: Record<string, unknown> = { skip: 0, limit: 200 };
+  async getPage(
+    skip: number,
+    limit: number,
+    filters: ActivityFilters = {},
+  ): Promise<ActivityPage> {
+    const params: Record<string, unknown> = { skip, limit };
     if (filters.action) params.action = filters.action;
     if (filters.entityType) params.entity_type = filters.entityType;
 
     const { data } = await api.get('/moderator/audit-logs/me', { params });
-    return (data.items ?? []).map(mapLog);
+    return {
+      items: (data.items ?? []).map(mapLog),
+      total: data.total ?? 0,
+    };
+  },
+
+  async getAll(
+    filters: ActivityFilters = {},
+    limit = 200,
+  ): Promise<ActivityLog[]> {
+    const { items } = await this.getPage(0, limit, filters);
+    return items;
   },
 
   async getOne(id: string): Promise<ActivityLogDetail> {

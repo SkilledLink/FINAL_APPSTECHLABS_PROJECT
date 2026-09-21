@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { AxiosError } from 'axios';
 import { postApi } from '../api/feedApi';
 import type { Post, PostListParams } from '../types/post.types';
 
@@ -58,8 +59,9 @@ export function useInfiniteFeed(options?: UseInfiniteFeedOptions) {
 
       setHasMore(data.items.length >= limit);
       skipRef.current = data.items.length;
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to load posts');
+    } catch (err: unknown) {
+      const error = err as AxiosError<{ detail?: string }>;
+      setError(error.response?.data?.detail || 'Failed to load posts');
     } finally {
       setLoading(false);
       loadingRef.current = false;
@@ -91,8 +93,9 @@ export function useInfiniteFeed(options?: UseInfiniteFeedOptions) {
         skipRef.current += data.items.length;
         setHasMore(data.items.length >= limit);
       }
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to load more posts');
+    } catch (err: unknown) {
+      const error = err as AxiosError<{ detail?: string }>;
+      setError(error.response?.data?.detail || 'Failed to load more posts');
     } finally {
       setLoadingMore(false);
       loadingRef.current = false;
@@ -151,9 +154,13 @@ export function useInfiniteFeed(options?: UseInfiniteFeedOptions) {
   }, []);
 
   useEffect(() => {
-    if (enabled) {
-      loadInitial();
-    }
+    if (!enabled) return;
+
+    const timeoutId = setTimeout(() => {
+      void loadInitial();
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
   }, [enabled, loadInitial]);
 
   return {

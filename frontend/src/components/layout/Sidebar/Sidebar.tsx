@@ -1,5 +1,5 @@
 // src/components/layout/Sidebar/Sidebar.tsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -16,20 +16,32 @@ import {
   Moon,
   ChevronDown,
   ImagePlus,
+  Shield,
+  ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../../../features/auth/hooks/useAuth';
 import { useUser } from '../../../features/profile/hooks/useUser';
+import { useProfileImage } from '../../../features/profile/hooks/useProfileImage';
 
 interface SidebarProps {
   isDark: boolean;
   toggleTheme: () => void;
 }
 
-const navItems = [
+type NavItem = {
+  icon: typeof Home;
+  label: string;
+  path: string;
+  end?: boolean;
+  /** When true, the item is only shown to professional accounts. */
+  professionalOnly?: boolean;
+};
+
+const navItems: NavItem[] = [
   { icon: Home, label: 'Home', path: '/home', end: true },
   { icon: Compass, label: 'Discover', path: '/home/discover' },
   { icon: Briefcase, label: 'Jobs', path: '/home/jobs' },
-  { icon: LayoutDashboard, label: 'Portfolio', path: '/home/portfolio' },
+  { icon: LayoutDashboard, label: 'Portfolio', path: '/home/portfolio', professionalOnly: true },
   { icon: MessageSquareMore, label: 'Messages', path: '/home/messages' },
   { icon: Users, label: 'Network', path: '/home/professionals' },
 ];
@@ -40,8 +52,28 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
-  const { logout } = useAuth();
-  const { user, loading, uploadAvatar } = useUser();
+
+  const { currentUser, logout, updateUser: updateAuthUser } = useAuth();
+
+  const { user, loading } = useUser({ autoFetch: true });
+
+  const { uploadProfileImage } = useProfileImage();
+
+  const activeUser = user ?? currentUser;
+
+  const isAdmin = !!activeUser?.isAdmin;
+  const isModerator = !!activeUser?.isModerator;
+
+  const avatarUrl = activeUser?.profileImageUrl ?? null;
+
+  // Only professionals see portfolio-related nav.
+  const isProfessional =
+    (activeUser?.accountType ?? '').toString().toLowerCase() === 'professional';
+
+  const visibleNavItems = useMemo(
+    () => navItems.filter((item) => !item.professionalOnly || isProfessional),
+    [isProfessional],
+  );
 
   useEffect(() => {
     if (!isHovered) setIsProfileDropdownOpen(false);
@@ -81,10 +113,22 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
   };
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      await uploadAvatar(e.target.files[0]);
-      setIsProfileDropdownOpen(false);
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const updated = await uploadProfileImage(file);
+    if (updated) {
+      updateAuthUser({
+        ...(activeUser as any),
+        ...updated,
+      });
     }
+    setIsProfileDropdownOpen(false);
+    e.target.value = '';
+  };
+
+  const openAvatarPicker = () => {
+    fileInputRef.current?.click();
   };
 
   return (
@@ -94,7 +138,7 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       transition={{ type: 'tween', ease: [0.4, 0, 0.2, 1], duration: 0.22 }}
-      className="hidden h-full shrink-0 flex-col overflow-hidden border-r border-slate-200/70 bg-white/85 backdrop-blur-xl will-change-[width] md:flex dark:border-white/10 dark:bg-slate-950/70"
+      className="relative hidden h-full shrink-0 flex-col overflow-hidden border-r border-slate-200/70 bg-white/85 backdrop-blur-xl will-change-[width] md:flex dark:border-white/10 dark:bg-slate-950/70"
     >
       {/* Background lightning */}
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
@@ -171,7 +215,7 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="no-scrollbar relative z-10 flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
-        {navItems.map((item) => (
+        {visibleNavItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
@@ -234,19 +278,26 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
             className="group flex w-full cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 transition-colors hover:bg-blue-500/8 dark:hover:bg-blue-400/10"
           >
             <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/40 bg-blue-600 shadow-sm shadow-blue-600/20 dark:border-slate-700/60">
-              {loading ? (
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={
+                    `${activeUser?.firstName ?? ''} ${
+                      activeUser?.lastName ?? ''
+                    }`.trim() || 'Profile'
+                  }
+                  className="h-full w-full object-cover"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              ) : loading ? (
                 <span className="animate-pulse text-sm font-bold text-white">
                   …
                 </span>
-              ) : user?.avatar_url ? (
-                <img
-                  src={user.avatar_url}
-                  alt="Profile"
-                  className="h-full w-full object-cover"
-                />
               ) : (
                 <span className="text-sm font-bold text-white">
-                  {getInitials(user?.first_name, user?.last_name)}
+                  {getInitials(activeUser?.firstName, activeUser?.lastName)}
                 </span>
               )}
             </div>
@@ -261,10 +312,10 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
                   className="flex-1 truncate text-left"
                 >
                   <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
-                    {user?.first_name} {user?.last_name}
+                    {activeUser?.firstName} {activeUser?.lastName}
                   </p>
-                  <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
-                    Professional
+                  <p className="truncate text-[11px] text-slate-500 capitalize dark:text-slate-400">
+                    {activeUser?.accountType ?? 'Member'}
                   </p>
                 </motion.div>
               )}
@@ -278,7 +329,6 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
             />
           </button>
 
-          {/* Dropdown */}
           <AnimatePresence>
             {isProfileDropdownOpen && (
               <motion.div
@@ -290,12 +340,50 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
               >
                 <div className="border-b border-slate-100 px-4 py-3 dark:border-white/10">
                   <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
-                    {user?.first_name} {user?.last_name}
+                    {activeUser?.firstName} {activeUser?.lastName}
                   </p>
                   <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-                    {user?.email}
+                    {activeUser?.email}
                   </p>
                 </div>
+
+                {/* Admin / Moderator tools section */}
+                {(isAdmin || isModerator) && (
+                  <div className="border-b border-slate-100 py-1 dark:border-white/10">
+                    {isAdmin && (
+                      <button
+                        onClick={() => {
+                          navigate('/admin_dashboard');
+                          setIsProfileDropdownOpen(false);
+                        }}
+                        className="flex w-full cursor-pointer items-center gap-3 px-4 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800/60"
+                      >
+                        <Shield
+                          size={15}
+                          className="text-blue-500 dark:text-blue-400"
+                        />
+                        Admin Dashboard
+                      </button>
+                    )}
+
+                    {isModerator && (
+                      <button
+                        onClick={() => {
+                          navigate('/moderator_dashboard');
+                          setIsProfileDropdownOpen(false);
+                        }}
+                        className="flex w-full cursor-pointer items-center gap-3 px-4 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800/60"
+                      >
+                        <ShieldCheck
+                          size={15}
+                          className="text-blue-500 dark:text-blue-400"
+                        />
+                        Moderator Dashboard
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 <div className="py-1">
                   <button
                     onClick={() => {
@@ -311,7 +399,7 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
                     My Profile
                   </button>
                   <button
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={openAvatarPicker}
                     className="flex w-full cursor-pointer items-center gap-3 px-4 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800/60"
                   >
                     <ImagePlus

@@ -1,3 +1,5 @@
+# app/services/feed_service.py
+
 from logging import getLogger
 from typing import Optional, List, Dict, Set
 from uuid import UUID, uuid4
@@ -19,6 +21,8 @@ from app.schemas.feed import (
     FeedCommentCreate,
     FeedCommentResponse,
     HashtagResponse,
+    FeedThumbnailResponse,
+    FeedThumbnailListResponse,
 )
 from app.schemas.user import UserResponse
 from app.schemas.moderation import ModerationSummary
@@ -28,6 +32,14 @@ from app.services.audit_service import AuditService
 from app.enums.moderation import FeedStatus, ModerationDecision
 
 logger = getLogger(__name__)
+
+
+# ─── Cloudinary thumbnail transforms ───────────────────────
+# Inserted between /upload/ and the version segment of the URL.
+# 400px square, auto format (WebP/AVIF where supported), auto quality.
+# Video adds so_0.1 — capture the frame at 0.1s.
+_CLOUDINARY_IMAGE_TRANSFORM = "c_fill,f_auto,h_400,q_auto,w_400"
+_CLOUDINARY_VIDEO_TRANSFORM = "c_fill,f_auto,h_400,q_auto,so_0.1,w_400"
 
 
 class FeedService:
@@ -42,9 +54,6 @@ class FeedService:
         return bool(user.is_admin or user.is_moderator)
 
     def _can_view_feed(self, feed: Feed, user: User) -> bool:
-        # Public feed visibility is based only on publication status.
-        # Admins, moderators, and owners must not see unpublished content
-        # through the public feed endpoints.
         return feed.status == FeedStatus.PUBLISHED.value
 
     def _ensure_feed_viewable(self, feed: Feed, user: User) -> None:
@@ -55,9 +64,6 @@ class FeedService:
             )
 
     def _ensure_feed_interactable(self, feed: Feed, user: User) -> None:
-        # Likes/comments are only allowed on published feeds.
-        # Admins and moderators use separate moderation endpoints and
-        # do not bypass public feed visibility rules.
         if feed.status != FeedStatus.PUBLISHED.value:
             raise HTTPException(
                 status_code=404,
@@ -72,7 +78,6 @@ class FeedService:
         media_file: Optional[UploadFile] = None,
     ) -> FeedResponse:
         try:
-            # Always start new feeds in moderation.
             feed = self.repo.create(
                 user,
                 {
@@ -234,12 +239,6 @@ class FeedService:
         feed: Feed,
         user: User,
     ):
-        """
-        Re-moderate a feed after content or media changes.
-
-        The feed is first hidden from normal users so there is
-        never a period where newly changed content remains public.
-        """
         feed.status = FeedStatus.PENDING_MODERATION.value
         self.session.add(feed)
         self.session.commit()
@@ -373,9 +372,6 @@ class FeedService:
         search: Optional[str] = None,
         hashtag: Optional[str] = None,
     ) -> FeedListResponse:
-        # This is the public feed endpoint. It must only ever return
-        # published feeds, regardless of whether the requester is a
-        # normal user, the post owner, a moderator, or an admin.
         status_filter = FeedStatus.PUBLISHED.value
 
         feeds, total = self.repo.list(
@@ -461,7 +457,7 @@ class FeedService:
             )
 
             if re_moderate:
-                outcome = self._moderate_feed_after_change(
+                self._moderate_feed_after_change(
                     feed,
                     current_user,
                 )
@@ -548,9 +544,7 @@ class FeedService:
         status_filter: Optional[str] = None,
         include_deleted: bool = True,
     ) -> FeedListResponse:
-        if not self._is_moderation_staff(
-            current_user
-        ):
+        if not self._is_moderation_staff(current_user):
             raise HTTPException(
                 status_code=403,
                 detail="Admin access required",
@@ -619,8 +613,6 @@ class FeedService:
                 current_user.id,
             )
 
-            # The newly uploaded media is part of the feed's
-            # content and must be moderated before publication.
             self.session.commit()
             self.session.refresh(feed)
 
@@ -835,6 +827,78 @@ class FeedService:
             for h in hashtags
         ]
 
+    # ─── Thumbnails (media-only profile grid) ───────────────
+    def _derive_thumbnail_url(self, media: FeedMedia) -> Optional[str]:
+        if not media.media_url:
+            return None
+
+        if media.thumbnail_url:
+            return media.thumbnail_url
+
+        url = media.media_url
+
+        if media.media_type == "image" and "/image/upload/" in url:
+            return url.replace(
+                "/image/upload/",
+                f"/image/upload/{_CLOUDINARY_IMAGE_TRANSFORM}/",
+                1,
+            )
+
+        if media.media_type == "video" and "/video/upload/" in url:
+            transformed = url.replace(
+                "/video/upload/",
+                f"/video/upload/{_CLOUDINARY_VIDEO_TRANSFORM}/",
+                1,
+            )
+            filename = transformed.rsplit("/", 1)[-1]
+            if "." in filename:
+                head, _ = transformed.rsplit(".", 1)
+                transformed = f"{head}.jpg"
+            return transformed
+
+        return url
+
+    def list_feed_thumbnails(
+        self,
+        current_user: User,
+        skip: int = 0,
+        limit: int = 20,
+        user_id: Optional[UUID] = None,
+    ) -> FeedThumbnailListResponse:
+        target_user_id = user_id or current_user.id
+
+        rows, total = self.repo.list_feeds_with_first_media(
+            skip=skip,
+            limit=limit,
+            user_id=target_user_id,
+            status=FeedStatus.PUBLISHED.value,
+        )
+
+        items: List[FeedThumbnailResponse] = []
+        for feed, media, media_count in rows:
+            thumbnail_url = self._derive_thumbnail_url(media)
+            if not thumbnail_url:
+                continue
+
+            items.append(
+                FeedThumbnailResponse(
+                    feed_id=feed.id,
+                    title=feed.title,
+                    thumbnail_url=thumbnail_url,
+                    media_type=media.media_type,
+                    media_url=media.media_url,
+                    media_count=media_count,
+                    created_at=feed.created_at,
+                )
+            )
+
+        return FeedThumbnailListResponse(
+            items=items,
+            total=total,
+            page=skip // limit + 1 if limit else 1,
+            size=limit,
+        )
+
     # ─── Bulk pre-fetch (used by list endpoints) ────────────
     def _prefetch_feed_maps(
         self,
@@ -846,8 +910,10 @@ class FeedService:
         Fetch, in a constant number of queries, everything the response
         builder needs for the given page of feeds.
 
-        Returns a dict of maps to be splatted into
-        _build_feed_response_from_maps(...).
+        NOTE: `media` is intentionally NOT fetched here. It is eager-loaded
+        by FeedRepository.list() via selectinload, so the response builder
+        reads `feed.media` directly. Fetching it again would double the
+        query count for the same data.
         """
         feed_ids = [f.id for f in feeds]
 
@@ -856,21 +922,19 @@ class FeedService:
                 "like_counts": {},
                 "comment_counts": {},
                 "liked_feed_ids": set(),
-                "media_map": {},
                 "hashtag_map": {},
                 "moderation_map": {},
             }
 
         moderation_map: Dict[UUID, object] = {}
         if include_moderation:
-            # Bulk variant of ModerationRepository.get_active_for_feed().
             moderation_map = self.moderation_repo.get_active_for_feeds(feed_ids)
 
         return {
             "like_counts": self.repo.bulk_like_counts(feed_ids),
             "comment_counts": self.repo.bulk_comment_counts(feed_ids),
             "liked_feed_ids": self.repo.bulk_liked_feed_ids(current_user, feed_ids),
-            "media_map": self.repo.bulk_media_by_feed(feed_ids),
+            # media is NOT fetched — feed.media was already loaded by list()
             "hashtag_map": self.repo.bulk_hashtags_by_feed(feed_ids),
             "moderation_map": moderation_map,
         }
@@ -884,22 +948,31 @@ class FeedService:
         like_counts: Dict[UUID, int],
         comment_counts: Dict[UUID, int],
         liked_feed_ids: Set[UUID],
-        media_map: Dict[UUID, List[FeedMedia]],
         hashtag_map: Dict[UUID, List],
         moderation_map: Dict[UUID, object],
         include_moderation: bool = False,
     ) -> FeedResponse:
         """
         Same output as _build_feed_response(), but takes pre-fetched maps
-        instead of firing queries. Zero DB calls happen in here.
+        instead of firing queries.
+
+        `feed.media` is expected to already be loaded by
+        FeedRepository.list() via selectinload — no extra query is made
+        for media here.
         """
         likes_count = like_counts.get(feed.id, 0)
         comments_count = comment_counts.get(feed.id, 0)
         is_liked = feed.id in liked_feed_ids
 
+        # `feed.media` is already loaded. Sort by created_at so cover
+        # selection is deterministic regardless of relationship order.
+        media_items = sorted(
+            (feed.media or []),
+            key=lambda m: m.created_at,
+        )
         media = [
             FeedMediaResponse.model_validate(m)
-            for m in media_map.get(feed.id, [])
+            for m in media_items
         ]
 
         hashtags = [
@@ -907,18 +980,10 @@ class FeedService:
             for h in hashtag_map.get(feed.id, [])
         ]
 
-        # Use the comment tree already eager-loaded onto `feed` instead of
-        # re-querying. `feed.comments` contains every comment (top-level and
-        # replies); the API response shape wants top-level comments with
-        # nested replies, so filter top-level and sort by created_at to
-        # match repository.get_comments().
-        comments = [
-            FeedCommentResponse.model_validate(c)
-            for c in sorted(
-                (c for c in (feed.comments or []) if c.parent_id is None),
-                key=lambda c: c.created_at,
-            )
-        ]
+        # Comments are NOT eager-loaded by list(), so we don't render them
+        # on the list view — the API consumer only needs comments_count.
+        # The detail endpoint (get_feed) loads the full comment tree.
+        comments = []
 
         response = FeedResponse(
             id=feed.id,
@@ -972,18 +1037,9 @@ class FeedService:
         with_details: bool = True,
         include_moderation: bool = False,
     ) -> FeedResponse:
-        likes_count = self.repo.get_like_count(
-            feed
-        )
-
-        comments_count = self.repo.get_comment_count(
-            feed
-        )
-
-        is_liked = self.repo.is_liked_by_user(
-            current_user,
-            feed,
-        )
+        likes_count = self.repo.get_like_count(feed)
+        comments_count = self.repo.get_comment_count(feed)
+        is_liked = self.repo.is_liked_by_user(current_user, feed)
 
         media = [
             FeedMediaResponse.model_validate(m)
@@ -1024,9 +1080,7 @@ class FeedService:
         )
 
         if include_moderation:
-            active = self.moderation_repo.get_active_for_feed(
-                feed.id
-            )
+            active = self.moderation_repo.get_active_for_feed(feed.id)
 
             if active is not None:
                 text = active.text_result or {}
@@ -1036,15 +1090,9 @@ class FeedService:
                     decision=active.decision,
                     severity=active.combined_severity,
                     confidence=active.combined_confidence,
-                    description=text.get(
-                        "description"
-                    ) or "",
-                    reason=text.get(
-                        "reason"
-                    ) or active.error or "",
-                    categories=text.get(
-                        "categories"
-                    ) or [],
+                    description=text.get("description") or "",
+                    reason=text.get("reason") or active.error or "",
+                    categories=text.get("categories") or [],
                     provider=active.provider,
                     model=active.model,
                     error=active.error,

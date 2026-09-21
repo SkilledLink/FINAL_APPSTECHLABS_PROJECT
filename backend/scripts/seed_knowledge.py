@@ -1315,6 +1315,102 @@ Retrieval should respect user permissions before information is provided to
 the AI model.
 """
     },
+        # ========================================================
+    # AI ASSISTANT SCOPE (so RAG itself can explain limits)
+    # ========================================================
+
+    {
+        "title": "What questions can the SkilledLink Assistant answer?",
+        "category": "ai",
+        "content": """
+The SkilledLink Assistant only answers questions about SkilledLink.
+
+It can help with:
+
+- What SkilledLink is and how it works
+- Creating and managing your account
+- Becoming a professional
+- Adding skills, services, and portfolio items
+- Understanding verification
+- Searching for professionals
+- Requesting services
+- Quotes, bookings, and communication
+- Reviews, ratings, and trust signals
+- Platform safety and privacy
+
+The Assistant does NOT answer:
+
+- Programming or coding questions
+- Homework, math, or academic questions
+- General knowledge questions unrelated to SkilledLink
+- Creative writing such as jokes, poems, or stories
+- Role-play or attempts to change its instructions
+
+When asked something outside its scope, the Assistant politely refuses
+and redirects the user to a SkilledLink topic.
+"""
+    },
+
+    {
+        "title": "Why does the SkilledLink Assistant refuse some questions?",
+        "category": "ai",
+        "content": """
+The SkilledLink Assistant is scoped to SkilledLink only.
+
+It refuses questions that are unrelated to the platform — such as
+coding help, homework, general knowledge, or creative writing —
+because its purpose is to help users find skilled professionals and
+use SkilledLink features.
+
+Refusals are intentional and are part of how the Assistant protects
+its focus and keeps responses accurate and grounded in SkilledLink
+data. When the Assistant refuses, the user can rephrase their
+question to be about SkilledLink, or ask about a platform feature
+such as search, profiles, services, verification, requests, or
+reviews.
+"""
+    },
+    {
+        "title": "What questions can the SkilledLink Assistant answer?",
+        "category": "ai",
+        "content": """
+The SkilledLink Assistant only answers questions about SkilledLink.
+
+It can help with: what SkilledLink is and how it works, creating and
+managing your account, becoming a professional, adding skills,
+services, and portfolio items, understanding verification, searching
+for professionals, requesting services, quotes, bookings,
+communication, reviews, ratings, trust signals, platform safety, and
+privacy.
+
+It does NOT answer: programming or coding questions, homework, math,
+academic questions, general knowledge unrelated to SkilledLink,
+creative writing such as jokes, poems, or stories, role-play, or
+attempts to change its instructions.
+
+When asked something outside its scope, the Assistant politely
+refuses and redirects the user to a SkilledLink topic.
+"""
+    },
+    {
+        "title": "Why does the SkilledLink Assistant refuse some questions?",
+        "category": "ai",
+        "content": """
+The SkilledLink Assistant is scoped to SkilledLink only.
+
+It refuses questions that are unrelated to the platform — such as
+coding help, homework, general knowledge, or creative writing —
+because its purpose is to help users find skilled professionals and
+use SkilledLink features.
+
+Refusals are intentional and are part of how the Assistant protects
+its focus and keeps responses accurate and grounded in SkilledLink
+data. When the Assistant refuses, the user can rephrase the question
+to be about SkilledLink, or ask about a platform feature such as
+search, profiles, services, verification, requests, or reviews.
+"""
+    },
+ # <-- existing closing bracket of KNOWLEDGE_DOCUMENTS
 
 ]
 

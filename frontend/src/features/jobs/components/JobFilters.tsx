@@ -67,13 +67,13 @@ export default function JobFilters({
           <button
             type="button"
             onClick={() => onChange({ mineOnly: !filters.mineOnly })}
-            className={`w-full flex items-center justify-between gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200 select-none ${
+            className={`w-full flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 select-none ${
               filters.mineOnly
                 ? 'bg-slate-900 text-white shadow-md shadow-slate-900/10 dark:bg-indigo-600 dark:text-white dark:shadow-indigo-600/20'
                 : 'bg-slate-100/80 text-slate-700 hover:bg-slate-200/70 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700/60'
             }`}
           >
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-3">
               <UserIcon className="w-4 h-4" />
               <span>{filters.mineOnly ? 'My jobs only' : 'Show my jobs only'}</span>
             </div>
@@ -82,7 +82,7 @@ export default function JobFilters({
             )}
           </button>
         ) : (
-          <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-800 p-3 text-center">
+          <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-800 p-4 text-center">
             <p className="text-xs text-slate-500 dark:text-slate-400 italic">
               Sign in to filter by your posts.
             </p>
@@ -94,7 +94,7 @@ export default function JobFilters({
         <button
           type="button"
           onClick={handleResetFilters}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 transition-colors"
+          className="inline-flex items-center gap-2 text-xs font-semibold text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 transition-colors"
         >
           <RotateCcw className="w-3.5 h-3.5" />
           <span>Reset filter</span>
@@ -109,7 +109,7 @@ export default function JobFilters({
       <button
         type="button"
         onClick={() => setMobileOpen(true)}
-        className="lg:hidden inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-700 transition-all active:scale-95"
+        className="lg:hidden w-full inline-flex items-center justify-center gap-2.5 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-700 transition-all active:scale-95"
         aria-expanded={mobileOpen}
         aria-controls="mobile-filter-drawer"
       >
@@ -122,20 +122,20 @@ export default function JobFilters({
         )}
       </button>
 
-      {/* Desktop Sidebar Filters */}
-      <aside className="hidden lg:block w-64 shrink-0">
-        <div className="sticky top-24 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex items-center justify-between mb-5 pb-3 border-b border-slate-100 dark:border-slate-800">
-            <h3 className="font-display font-bold text-slate-900 dark:text-slate-100 text-base">
-              Refine Search
-            </h3>
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 tabular-nums rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-1">
-              {resultCount} {resultCount === 1 ? 'job' : 'jobs'}
-            </span>
-          </div>
+      {/* Desktop Filters — fills parent sidebar column, sticky handled by parent */}
+      <div className="hidden lg:flex w-full flex-col bg-white dark:bg-slate-900">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800">
+          <h3 className="font-display font-bold text-slate-900 dark:text-slate-100 text-base">
+            Refine Search
+          </h3>
+          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 tabular-nums rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-1">
+            {resultCount} {resultCount === 1 ? 'job' : 'jobs'}
+          </span>
+        </div>
+        <div className="p-6">
           {renderFilterContent()}
         </div>
-      </aside>
+      </div>
 
       {/* Mobile Drawer Portal */}
       {mobileOpen &&

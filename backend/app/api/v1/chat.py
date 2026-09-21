@@ -42,20 +42,23 @@ def chat(
     session: Session = Depends(get_session),
 ):
     """
-    Send a message to the AI chatbot.
+    Send a message to the SkilledLink Assistant.
 
-    The bot responds with text; when the message is a professional
-    search, the response also includes:
+    The service layer applies a strict, LLM-free scope guard first:
+    off-topic questions (coding, homework, general knowledge, …) are
+    refused before any LLM call, so no tokens are spent on them.
+
+    On successful professional searches the response also includes:
       - `results`: structured professional cards
       - `redirect_url`: deep link to /discovery pre-filled with the
-         same search parameters (frontend may use to hand off)
+        same search parameters
     """
     if not check_rate_limit(str(current_user.id)):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=(
-                "Rate limit exceeded. Please wait a moment before "
-                "sending another message."
+                "You're sending messages too quickly. Please wait a "
+                "moment before trying again."
             ),
         )
 

@@ -11,6 +11,8 @@ const mapAdmin = (u: any): Administrator => ({
   avatar: u.profile_image_url ?? `https://i.pravatar.cc/80?u=${u.id}`,
   isAdmin: !!u.is_admin,
   isModerator: !!u.is_moderator,
+  // Kept for backwards compatibility with anything that still reads `role`.
+  // Prefer `isAdmin` / `isModerator` going forward.
   role: u.is_admin ? 'admin' : 'moderator',
   status: u.status === 'active' ? 'active' : 'inactive',
   lastActive: u.last_login_at,
@@ -38,9 +40,22 @@ export const administratorsService = {
     return items;
   },
 
+  /** Toggle the admin flag. */
   async updateRole(id: string, isAdmin: boolean, reason: string): Promise<void> {
     await api.patch(`/admin/administrators/${id}`, {
       is_admin: isAdmin,
+      reason,
+    });
+  },
+
+  /** Toggle the moderator flag. */
+  async updateModeratorRole(
+    id: string,
+    isModerator: boolean,
+    reason: string,
+  ): Promise<void> {
+    await api.patch(`/admin/administrators/${id}`, {
+      is_moderator: isModerator,
       reason,
     });
   },

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import ModeratorLayout from '../components/ModeratorLayout';
 import type { ModeratorTab } from '../components/ModeratorSidebar';
 import {
-  OverviewTab,
   ModerationTab,
   FeedsTab,
   UsersTab,
@@ -12,7 +11,6 @@ import {
 } from '../components/tabs';
 
 const tabMeta: Record<ModeratorTab, { title: string; subtitle: string }> = {
-  overview: { title: 'Overview', subtitle: 'Platform-wide metrics' },
   moderation: { title: 'Moderation', subtitle: 'Review AI-flagged content' },
   feeds: { title: 'Feeds', subtitle: 'Moderate community content' },
   users: { title: 'Users', subtitle: 'Review user accounts' },
@@ -22,18 +20,17 @@ const tabMeta: Record<ModeratorTab, { title: string; subtitle: string }> = {
 };
 
 const ModeratorDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<ModeratorTab>('overview');
+  const [activeTab, setActiveTab] = useState<ModeratorTab>('moderation');
 
   const renderTab = () => {
     switch (activeTab) {
-      case 'overview': return <OverviewTab />;
       case 'moderation': return <ModerationTab />;
       case 'feeds': return <FeedsTab />;
       case 'users': return <UsersTab />;
       case 'professionals': return <ProfessionalsTab />;
       case 'jobs': return <JobsTab />;
       case 'audit_logs': return <MyActivityTab />;
-      default: return <OverviewTab />;
+      default: return <ModerationTab />;
     }
   };
 

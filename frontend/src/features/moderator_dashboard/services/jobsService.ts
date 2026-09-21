@@ -40,12 +40,25 @@ const mapJobDetail = (j: any): AdminJobDetail => ({
   commentsList: (j.comments ?? []).map(mapComment),
 });
 
+export interface JobsPage {
+  items: AdminJob[];
+  total: number;
+}
+
 export const jobsService = {
-  async getAll(): Promise<AdminJob[]> {
+  async getPage(skip: number, limit: number): Promise<JobsPage> {
     const { data } = await api.get('/moderator/jobs', {
-      params: { skip: 0, limit: 100 },
+      params: { skip, limit },
     });
-    return (data.items ?? []).map(mapJob);
+    return {
+      items: (data.items ?? []).map(mapJob),
+      total: data.total ?? 0,
+    };
+  },
+
+  async getAll(limit = 100): Promise<AdminJob[]> {
+    const { items } = await this.getPage(0, limit);
+    return items;
   },
 
   async getOne(id: string): Promise<AdminJobDetail> {

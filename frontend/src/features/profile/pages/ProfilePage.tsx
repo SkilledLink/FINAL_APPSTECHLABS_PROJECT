@@ -1,24 +1,39 @@
 // src/features/profile/pages/ProfilePage.tsx
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Flag } from 'lucide-react';
+import { Flag, MessageSquarePlus } from 'lucide-react';
+import { toast } from 'react-toastify';
 import { useAuth } from '../../../providers/AuthProvider';
 import { useProfile } from '../hooks/useProfile';
 import { useUser } from '../hooks/useUser';
 import { useFollow } from '../hooks/useFollow';
+import { useProfessional } from '../hooks/useProfessional';
 import { useProfileImage } from '../hooks/useProfileImage';
 import { ProfileHeader } from '../components/ProfileHeader';
 import { ProfileTabs } from '../components/ProfileTabs';
-import { ProfileAbout } from '../components/ProfileAbout';
+import { ProfileBio, ProfileDetails } from '../components/ProfileAbout';
 import { ProfileSkills } from '../components/ProfileSkills';
 import { ProfileExperience } from '../components/ProfileExperience';
 import { ProfileWorkTab } from '../components/ProfileWorkTab';
+import { ProfileMediaTab } from '../components/ProfileMediaTab';
+import { ProfilePostsTab } from '../components/ProfilePostsTab';
 import { EditProfileForm } from '../components/EditProfileForm';
 import { ProfileStateView } from '../components/ProfileStateView';
 import { ProfessionalOnboardingModal } from './ProfessionalOnboardingModal';
+import { ReviewsTab } from '../../reviews/components/ReviewsTab';
+import { ReviewForm } from '../../reviews/components/ReviewForm';
+import { createReview, checkHasReviewed } from '../../reviews/services/reviewService';
 import ReportModal from '../../reports/components/ReportModal';
-import type { ProfileTab, UserProfile } from '../types/profile.types';
+import type {
+  ProfileTab,
+  UserProfile,
+  EditProfilePayload,
+} from '../types/profile.types';
+
+const API_BASE =
+  (import.meta.env.VITE_API_URL as string | undefined) ||
+  'http://localhost:8000';
 
 export const ProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -26,7 +41,8 @@ export const ProfilePage: React.FC = () => {
 
   const { currentUser, updateUser: updateAuthUser } = useAuth();
   const { updateUser: updateUserAPI, fetchUser } = useUser();
-  const { follow, unfollow } = useFollow();
+  const { follow, unfollow, getFollowers } = useFollow();
+  const { updateProfessional } = useProfessional();
   const { uploadProfileImage, uploadBannerImage } = useProfileImage();
 
   const {
@@ -40,32 +56,147 @@ export const ProfilePage: React.FC = () => {
     setViewerRelation,
   } = useProfile(id);
 
-  // ── ALL hooks first, unconditionally ─────────────────────────
   const [activeTab, setActiveTab] = useState<ProfileTab>('overview');
   const [isEditing, setIsEditing] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [followersPreview, setFollowersPreview] = useState<any[]>([]);
 
+  // ── Review feature state ──────────────────────────────
+  const [professionalId, setProfessionalId] = useState<string | null>(null);
+  const [hasReviewed, setHasReviewed] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+
+  /* ── Fetch follower previews ───────────────────────────── */
+  useEffect(() => {
+    const fetchPreview = async () => {
+      if (!profile?.id) return;
+      const followers = await getFollowers(profile.id, 0, 5);
+      setFollowersPreview(Array.isArray(followers) ? followers : []);
+    };
+    fetchPreview();
+  }, [profile?.id, getFollowers]);
+
+  /* ── Fetch professional record + review status ─────────── */
+  useEffect(() => {
+    if (!profile?.id) return;
+    if (isOwnProfile) return;
+
+    let cancelled = false;
+
+    const run = async () => {
+      const token = localStorage.getItem('access_token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      };
+
+      try {
+        const res = await fetch(
+          `${API_BASE}/users/${profile.id}/professional`,
+          { headers }
+        );
+        if (cancelled) return;
+
+        if (!res.ok) {
+          // Not a professional (or endpoint failed) — no button.
+          setProfessionalId(null);
+          setHasReviewed(false);
+          return;
+        }
+
+        const data = await res.json();
+        if (cancelled) return;
+
+        const pid: string | undefined = data?.id;
+        if (!pid) {
+          setProfessionalId(null);
+          return;
+        }
+        setProfessionalId(pid);
+
+        const already = await checkHasReviewed(pid).catch(() => false);
+        if (cancelled) return;
+        setHasReviewed(already);
+      } catch {
+        if (cancelled) return;
+        setProfessionalId(null);
+      }
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [profile?.id, isOwnProfile]);
+
+  /* ── Save profile ─────────────────────────────────────── */
   const handleSaveProfile = useCallback(
-    async (data: Partial<UserProfile>) => {
+    async (payload: EditProfilePayload) => {
       if (!profile || !isOwnProfile) return;
-      const updated = await updateUserAPI(data);
-      if (updated) {
+
+      if (payload.user && Object.keys(payload.user).length > 0) {
+        const updated = await updateUserAPI(payload.user);
+        if (!updated) {
+          throw new Error('Could not save your basic info. Please try again.');
+        }
         mutate(updated);
         updateAuthUser(updated);
       }
+
+      if (payload.professional && profile.professional) {
+        const updatedProf = await updateProfessional(payload.professional);
+        if (!updatedProf) {
+          throw new Error(
+            'Could not save your professional details. Please try again.'
+          );
+        }
+        mutate({ professional: updatedProf });
+      }
+
       setIsEditing(false);
     },
-    [profile, isOwnProfile, updateUserAPI, mutate, updateAuthUser]
+    [
+      profile,
+      isOwnProfile,
+      updateUserAPI,
+      updateProfessional,
+      mutate,
+      updateAuthUser,
+    ]
   );
 
+  /* ── Submit review ────────────────────────────────────── */
+  const handleSubmitReview = useCallback(
+    async (payload: { rating: number; title: string; comment: string }) => {
+      if (!professionalId) return false;
+      try {
+        await createReview({
+          professionalId,
+          rating: payload.rating,
+          title: payload.title,
+          comment: payload.comment,
+        });
+        toast.success('Review submitted successfully');
+        setHasReviewed(true);
+        return true;
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : 'Failed to submit review'
+        );
+        return false;
+      }
+    },
+    [professionalId]
+  );
+
+  /* ── Follow toggle ────────────────────────────────────── */
   const handleFollowToggle = useCallback(async () => {
     if (!profile || !viewerRelation || isOwnProfile) return;
 
     const wasFollowing = viewerRelation.isFollowing;
     const originalFollowers = profile.followersCount ?? 0;
 
-    // Optimistic update
     setViewerRelation((prev) => ({ ...prev, isFollowing: !wasFollowing }));
     mutate({
       followersCount: wasFollowing
@@ -78,7 +209,6 @@ export const ProfilePage: React.FC = () => {
       : await follow(profile.id);
 
     if (!success) {
-      // Rollback
       setViewerRelation((prev) => ({ ...prev, isFollowing: wasFollowing }));
       mutate({ followersCount: originalFollowers });
     }
@@ -92,6 +222,7 @@ export const ProfilePage: React.FC = () => {
     setViewerRelation,
   ]);
 
+  /* ── Upgrade success ──────────────────────────────────── */
   const handleUpgradeSuccess = useCallback(async () => {
     setShowUpgradeModal(false);
     if (!profile || !isOwnProfile) return;
@@ -104,6 +235,7 @@ export const ProfilePage: React.FC = () => {
     await refetch();
   }, [profile, isOwnProfile, fetchUser, mutate, updateAuthUser, refetch]);
 
+  /* ── Image upload ─────────────────────────────────────── */
   const handleImageUpload = useCallback(
     async (file: File, type: 'profile' | 'banner') => {
       if (!profile || !isOwnProfile) return;
@@ -116,10 +248,8 @@ export const ProfilePage: React.FC = () => {
       if (!result) return;
 
       const patch: Partial<UserProfile> = {};
-      if (result.profileImageUrl)
-        patch.profileImageUrl = result.profileImageUrl;
-      if (result.bannerImageUrl)
-        patch.bannerImageUrl = result.bannerImageUrl;
+      if (result.profileImageUrl) patch.profileImageUrl = result.profileImageUrl;
+      if (result.bannerImageUrl) patch.bannerImageUrl = result.bannerImageUrl;
 
       mutate(patch);
       updateAuthUser({ ...profile, ...patch });
@@ -134,6 +264,7 @@ export const ProfilePage: React.FC = () => {
     ]
   );
 
+  /* ── Nav handlers ─────────────────────────────────────── */
   const handleMessage = useCallback(() => {
     if (!profile || !viewerRelation?.canMessage) return;
     navigate(`/messages?user=${profile.id}`);
@@ -154,138 +285,157 @@ export const ProfilePage: React.FC = () => {
           url,
         });
       } catch {
-        /* user cancelled */
+        /* cancelled */
       }
     } else {
       await navigator.clipboard.writeText(url);
     }
   }, [profile]);
 
-  // ── Now it's safe to conditionally return ────────────────────
+  /* ── Loading / error state ───────────────────────────── */
   if (status !== 'ready' || !profile) {
     return <ProfileStateView status={status} error={error} onRetry={refetch} />;
   }
 
-  // Trust the data, not the accountType flag — some rows say
-  // 'professional' but have no professionals record yet.
   const isProfessional = !!profile.professional;
+  const canWriteReview =
+    !isOwnProfile && !!professionalId && !hasReviewed;
 
   return (
-    <div className="relative w-full max-w-6xl mx-auto px-8 sm:px-4 md:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4 pt-16 sm:pt-20 md:pt-24">
+    <div className="w-full min-h-screen bg-slate-50 dark:bg-slate-950">
+      <div className="w-full px-3 sm:px-4 md:px-5 pt-4 pb-24 lg:pb-6 space-y-4">
 
-      {/* ─── Report button — only on other users' profiles ─── */}
-      {!isOwnProfile && (
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={() => setShowReportModal(true)}
-            aria-label={`Report ${profile.firstName} ${profile.lastName}`}
-            title="Report this user"
-            className="inline-flex items-center gap-2 rounded-full
-                       border border-rose-200 dark:border-rose-900/60
-                       bg-rose-50 hover:bg-rose-100
-                       dark:bg-rose-950/40 dark:hover:bg-rose-950/70
-                       px-4 py-2 text-xs font-semibold
-                       text-rose-700 dark:text-rose-300
-                       shadow-sm hover:shadow
-                       transition-all active:scale-[0.97]"
-          >
-            <Flag className="h-3.5 w-3.5" />
-            Report
-          </button>
-        </div>
-      )}
-
-      <ProfileHeader
-        profile={profile}
-        isOwnProfile={isOwnProfile}
-        isFollowing={viewerRelation?.isFollowing ?? false}
-        followsYou={viewerRelation?.followsYou ?? false}
-        canMessage={viewerRelation?.canMessage ?? false}
-        canRequestService={viewerRelation?.canRequestService ?? false}
-        followersCount={profile.followersCount}
-        onFollow={handleFollowToggle}
-        onMessage={handleMessage}
-        onRequestService={handleRequestService}
-        onUpgrade={() => setShowUpgradeModal(true)}
-        onEditProfile={() => setIsEditing(true)}
-        onImageUpload={handleImageUpload}
-        onShare={handleShare}
-      />
-
-      <ProfileTabs
-        activeTab={activeTab}
-        onChangeTab={setActiveTab}
-        isProfessional={isProfessional}
-      />
-
-      {activeTab === 'overview' && (
-        <div className="space-y-4">
-          <ProfileAbout profile={profile} />
-          {isProfessional && (
-            <>
-              <ProfileSkills profile={profile} isOwnProfile={isOwnProfile} />
-              <ProfileExperience profile={profile} />
-            </>
-          )}
-        </div>
-      )}
-
-      {activeTab === 'work' && isProfessional && (
-        <ProfileWorkTab
-          profile={profile}
-          onRequestService={handleRequestService}
-          onViewAllServices={() => setActiveTab('services')}
-        />
-      )}
-
-      {activeTab === 'services' && isProfessional && (
-        <div className="p-6 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs">
-          <h3 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">
-            All Services
-          </h3>
-          <ul className="mt-4 space-y-2">
-            {(profile.professional?.services ?? []).map((service, idx) => (
-              <li
-                key={idx}
-                className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl"
+        {/* ── Top bar: Report + Write review ─────────────── */}
+        {!isOwnProfile && (
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {canWriteReview && (
+              <button
+                type="button"
+                onClick={() => setShowReviewForm(true)}
+                className="inline-flex items-center gap-2 rounded-full bg-indigo-600 hover:bg-indigo-700 px-4 py-2 text-xs font-bold text-white shadow-md shadow-indigo-600/25 transition active:scale-[0.98]"
               >
-                {service}
-              </li>
-            ))}
-            {(profile.professional?.services ?? []).length === 0 && (
-              <li className="text-sm text-slate-400">No services listed.</li>
+                <MessageSquarePlus className="h-3.5 w-3.5" />
+                Write a review
+              </button>
             )}
-          </ul>
-        </div>
-      )}
 
-      {activeTab === 'reviews' && isProfessional && (
-        <div className="p-6 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs">
-          <h3 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">
-            Reviews
-          </h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-            {profile.professional?.totalReviews ?? 0} reviews • Rating{' '}
-            {typeof profile.professional?.rating === 'number'
-              ? profile.professional.rating.toFixed(1)
-              : '—'}
-          </p>
-        </div>
-      )}
+            {!isOwnProfile && hasReviewed && (
+              <span className="text-[11px] text-slate-400 italic">
+                You've already reviewed this professional
+              </span>
+            )}
 
-      {activeTab === 'posts' && (
-        <div className="p-6 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs">
-          <h3 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">
-            Posts
-          </h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-            No posts yet.
-          </p>
-        </div>
-      )}
+            <button
+              type="button"
+              onClick={() => setShowReportModal(true)}
+              aria-label={`Report ${profile.firstName} ${profile.lastName}`}
+              title="Report this user"
+              className="inline-flex items-center gap-2 rounded-full border border-rose-200 dark:border-rose-900/60 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-950/70 px-3 py-1.5 text-xs font-semibold text-rose-700 dark:text-rose-300 shadow-sm transition"
+            >
+              <Flag className="h-3.5 w-3.5" />
+              Report
+            </button>
+          </div>
+        )}
 
-      {/* Modals (self-guarded) */}
+        {/* ── Header ──────────────────────────────────────── */}
+        <ProfileHeader
+          profile={profile}
+          isOwnProfile={isOwnProfile}
+          isFollowing={viewerRelation?.isFollowing ?? false}
+          followsYou={viewerRelation?.followsYou ?? false}
+          canMessage={viewerRelation?.canMessage ?? false}
+          canRequestService={viewerRelation?.canRequestService ?? false}
+          followersCount={profile.followersCount}
+          followersPreview={followersPreview}
+          onFollow={handleFollowToggle}
+          onMessage={handleMessage}
+          onRequestService={handleRequestService}
+          onUpgrade={() => setShowUpgradeModal(true)}
+          onEditProfile={() => setIsEditing(true)}
+          onImageUpload={handleImageUpload}
+          onShare={handleShare}
+        />
+
+        {/* ── Dashboard ───────────────────────────────────── */}
+        <div className="flex flex-col lg:flex-row gap-4 items-start">
+          <ProfileTabs
+            activeTab={activeTab}
+            onChangeTab={setActiveTab}
+            isProfessional={isProfessional}
+            layout="vertical"
+          />
+
+          <div className="flex-1 min-w-0 w-full">
+            {activeTab === 'overview' && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+                <div className="md:col-span-2 space-y-4">
+                  <ProfileBio profile={profile} />
+                  {isProfessional && (
+                    <>
+                      <ProfileSkills
+                        profile={profile}
+                        isOwnProfile={isOwnProfile}
+                      />
+                      <ProfileExperience profile={profile} />
+                    </>
+                  )}
+                </div>
+                <div className="md:col-span-1 space-y-4">
+                  <ProfileDetails profile={profile} />
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'work' && isProfessional && profile.professional && (
+              <ProfileWorkTab
+                profile={profile}
+                onRequestService={handleRequestService}
+                onViewAllServices={() => setActiveTab('services')}
+              />
+            )}
+
+            {activeTab === 'services' && isProfessional && (
+              <div className="p-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs">
+                <h3 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">
+                  All Services
+                </h3>
+                <ul className="mt-4 space-y-2">
+                  {(profile.professional?.services ?? []).map((service, idx) => (
+                    <li
+                      key={idx}
+                      className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm text-slate-700 dark:text-slate-300"
+                    >
+                      {service}
+                    </li>
+                  ))}
+                  {(profile.professional?.services ?? []).length === 0 && (
+                    <li className="text-sm text-slate-400">
+                      No services listed.
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )}
+
+            {activeTab === 'reviews' && isProfessional && profile.professional && (
+              <ReviewsTab
+                professionalId={profile.professional.id}
+                isOwnProfile={isOwnProfile}
+                currentUserId={currentUser?.id}
+              />
+            )}
+
+            {activeTab === 'media' && (
+              <ProfileMediaTab userId={profile.id} isOwnProfile={isOwnProfile} />
+            )}
+
+            {activeTab === 'posts' && <ProfilePostsTab userId={profile.id} />}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Modals ──────────────────────────────────────── */}
       {isEditing && isOwnProfile && (
         <EditProfileForm
           profile={profile}
@@ -302,7 +452,14 @@ export const ProfilePage: React.FC = () => {
         />
       )}
 
-      {/* Report modal — portal-rendered, self-guarded via `open` */}
+      {showReviewForm && (
+        <ReviewForm
+          mode="create"
+          onCancel={() => setShowReviewForm(false)}
+          onSubmit={handleSubmitReview}
+        />
+      )}
+
       <ReportModal
         open={showReportModal}
         onClose={() => setShowReportModal(false)}
@@ -313,3 +470,5 @@ export const ProfilePage: React.FC = () => {
     </div>
   );
 };
+
+export default ProfilePage;

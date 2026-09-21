@@ -26,29 +26,57 @@ export interface User {
   followingCount: number;
   isFollowing: boolean;
 
-  // ── New fields ────────────────────────────────────────────────
-  /** 'public' | 'private' – controls who can see tabs. */
   visibility?: 'public' | 'private';
-  /** Set when the account is soft‑deleted. */
   deactivatedAt?: string | null;
-  /** Set when the account is suspended by moderation. */
   suspendedAt?: string | null;
 }
+
+export type ExperienceLevel =
+  | 'BEGINNER'
+  | 'INTERMEDIATE'
+  | 'ADVANCED'
+  | 'EXPERT';
 
 export interface Professional {
   id: string;
   userId: string;
+
   profession: string;
-  bio?: string;
-  skills: string[];
+  headline?: string | null;
+  bio?: string | null;
+  experienceLevel?: ExperienceLevel;
   yearsOfExperience?: number;
+
+  companyName?: string | null;
+  jobTitle?: string | null;
+  employmentType?: string | null;
+
+  websiteUrl?: string | null;
+  linkedinUrl?: string | null;
+  portfolioUrl?: string | null;
+  facebookUrl?: string | null;
+  instagramUrl?: string | null;
+  twitterUrl?: string | null;
+
+  skills: string[];
   services: string[];
-  hourlyRate?: number;
-  country?: string;
-  region?: string;
-  city?: string;
+  certifications?: any[] | null;
+  education?: any[] | null;
+  languages?: string[] | null;
+
+  hourlyRate?: number | null;
+  currency?: string;
+
+  country?: string | null;
+  region?: string | null;
+  city?: string | null;
+
   available: boolean;
+  availabilityNotes?: string | null;
+  responseTimeHours?: number | null;
+
   isVerified: boolean;
+  verificationStatus?: string;
   rating: number;
   totalReviews: number;
   completedJobs: number;
@@ -58,7 +86,6 @@ export interface Professional {
 
 export interface UserProfile extends User {
   professional?: Professional;
-  /** Viewer‑specific relationship, populated by useProfile. */
   viewerRelation?: ViewerRelation;
 }
 
@@ -66,10 +93,10 @@ export type ProfileTab =
   | 'overview'
   | 'work'
   | 'services'
+  | 'media'
   | 'posts'
   | 'reviews';
 
-// ── New: profile page state machine ─────────────────────────────
 export type ProfileStatus =
   | 'idle'
   | 'loading'
@@ -83,7 +110,6 @@ export type ProfileStatus =
   | 'unauthenticated'
   | 'error';
 
-// ── New: viewer‑centric relationship flags ──────────────────────
 export interface ViewerRelation {
   isFollowing: boolean;
   followsYou: boolean;
@@ -96,4 +122,25 @@ export interface ViewerRelation {
   canMessage: boolean;
   canRequestService: boolean;
   canViewWork: boolean;
+}
+
+export interface FeedThumbnail {
+  feedId: string;
+  title: string;
+  thumbnailUrl: string;
+  mediaUrl: string;
+  mediaType: 'image' | 'video';
+  mediaCount: number;
+  createdAt: string;
+}
+
+export interface FeedThumbnailPage {
+  items: FeedThumbnail[];
+  total: number;
+}
+
+/* Payload returned by EditProfileForm when the user saves. */
+export interface EditProfilePayload {
+  user?: Partial<UserProfile>;
+  professional?: Partial<Professional>;
 }
