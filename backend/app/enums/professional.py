@@ -3,11 +3,7 @@
 from enum import Enum
 
 
-# ═══════════════════════════════════════════════════════════════
-#  PRE-EXISTING — used by professional_portfolio.py
-#  ⚠️ VERIFY these values against your original file & DB.
-# ═══════════════════════════════════════════════════════════════
-
+# ── Pre-existing ────────────────────────────────────────────────
 class DurationUnit(str, Enum):
     HOURS = "hours"
     DAYS = "days"
@@ -21,6 +17,7 @@ class ClientType(str, Enum):
     HOUSEHOLD = "household"
     GOVERNMENT = "government"
     NGO = "ngo"
+
 
 class PricingType(str, Enum):
     FIXED = "fixed"
@@ -41,10 +38,7 @@ class AvailabilityDay(str, Enum):
     SUNDAY = "sunday"
 
 
-# ═══════════════════════════════════════════════════════════════
-#  NEW — professional v2 (Step 2)
-# ═══════════════════════════════════════════════════════════════
-
+# ── Professional v2 ─────────────────────────────────────────────
 class ProfessionalAccountStatus(str, Enum):
     PENDING = "pending"
     ACTIVE = "active"
@@ -81,14 +75,19 @@ class DeletionType(str, Enum):
 
 
 class AuditAction(str, Enum):
+    # Profile
     PROFILE_CREATED = "profile.created"
     PROFILE_UPDATED = "profile.updated"
     PROFILE_SOFT_DELETED_SELF = "profile.soft_deleted.self"
     PROFILE_SOFT_DELETED_ADMIN = "profile.soft_deleted.admin"
+
+    # Status
     STATUS_SUSPENDED = "status.suspended"
     STATUS_REACTIVATED = "status.reactivated"
     STATUS_UNDER_REVIEW = "status.under_review"
     STATUS_DEACTIVATED = "status.deactivated"
+
+    # Verification
     VERIFICATION_SUBMITTED = "verification.submitted"
     VERIFICATION_APPROVED = "verification.approved"
     VERIFICATION_REJECTED = "verification.rejected"
@@ -97,6 +96,25 @@ class AuditAction(str, Enum):
     VERIFICATION_MANUAL_APPROVED = "verification.manual_approved"
     VERIFICATION_MANUAL_REJECTED = "verification.manual_rejected"
     VERIFICATION_ATTEMPTS_EXHAUSTED = "verification.attempts_exhausted"
+
+    # Fraud / trust
     FLAG_ADDED = "flag.added"
     FLAG_REMOVED = "flag.removed"
     TRUST_SCORE_CHANGED = "trust_score.changed"
+
+    # Tier / subscription lifecycle
+    TIER_PURCHASED = "tier.purchased"
+    TIER_UPGRADED = "tier.upgraded"
+    TIER_RENEWED = "tier.renewed"
+    TIER_EXPIRED = "tier.expired"
+    TIER_CANCELLED = "tier.cancelled"
+    TIER_SUSPENDED = "tier.suspended"
+
+    # Payment lifecycle
+    PAYMENT_CREATED = "payment.created"
+    PAYMENT_PROCESSING = "payment.processing"
+    PAYMENT_SUCCESS = "payment.success"
+    PAYMENT_FAILED = "payment.failed"
+    PAYMENT_CANCELLED = "payment.cancelled"
+    PAYMENT_REFUNDED = "payment.refunded"
+    PAYMENT_EXPIRED = "payment.expired"

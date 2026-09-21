@@ -1,8 +1,10 @@
+# app/schemas/professional.py
+
 from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.enums.professional import (
     AuditAction,
@@ -11,6 +13,7 @@ from app.enums.professional import (
     ProfessionalAccountStatus,
     VerificationStatus,
 )
+from app.schemas.professional_tier import ProfessionalTierBadge
 
 
 # ─────────────────────────────────────────────────────────────
@@ -164,12 +167,15 @@ class ProfessionalResponse(BaseModel):
 
     user: ProfessionalUserPublic
 
+    # Populated by service layer from the active subscription.
+    # None when the professional has no active paid tier.
+    tier_badge: Optional[ProfessionalTierBadge] = None
+
     model_config = ConfigDict(from_attributes=True)
 
 
 class ProfessionalPublicResponse(BaseModel):
-    """Stripped-down view for discovery lists — no company/rate/links
-    unless you want them. Extend later if needed."""
+    """Stripped-down view for discovery lists."""
 
     id: UUID
     profession: str
@@ -190,6 +196,8 @@ class ProfessionalPublicResponse(BaseModel):
     skills: Optional[List[str]] = None
     services: Optional[List[str]] = None
     user: ProfessionalUserPublic
+
+    tier_badge: Optional[ProfessionalTierBadge] = None
 
     model_config = ConfigDict(from_attributes=True)
 

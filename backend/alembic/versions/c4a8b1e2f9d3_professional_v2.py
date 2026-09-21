@@ -10,7 +10,7 @@ from sqlalchemy.dialects import postgresql
 
 
 revision = "c4a8b1e2f9d3"
-down_revision = "8f3c2a91d7e4"
+down_revision = None
 branch_labels = None
 depends_on = None
 
@@ -241,3 +241,4 @@ def downgrade() -> None:
         "verificationstatus", "professionalaccountstatus",
     ]:
         op.execute(f"DROP TYPE IF EXISTS {name}")
+
