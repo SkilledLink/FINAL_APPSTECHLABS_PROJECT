@@ -1,4 +1,5 @@
 from typing import Optional, List
+
 from fastapi import APIRouter, Depends, Query, HTTPException, status
 from sqlmodel import Session
 
@@ -15,13 +16,36 @@ def search_professionals(
     city: Optional[str] = Query(None, description="Filter by city (case-insensitive)"),
     region: Optional[str] = Query(None, description="Filter by region (case-insensitive)"),
     limit: int = Query(20, ge=1, le=100, description="Max results"),
+    verified: Optional[bool] = Query(
+        None,
+        description="If true, only KYC-verified professionals are returned.",
+    ),
+    min_tier_level: Optional[int] = Query(
+        None,
+        ge=1,
+        le=100,
+        description="If set, only professionals with an active tier at this level or above.",
+    ),
     session: Session = Depends(get_session),
 ):
     service = SearchService(session)
     try:
-        return service.search_professionals(q, city, region, limit)
-    except Exception as e:
+        return service.search_professionals(
+            query=q,
+            city=city,
+            region=region,
+            limit=limit,
+            verified=verified,
+            min_tier_level=min_tier_level,
+        )
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception(
+            "Search endpoint failed for q=%r city=%r region=%r "
+            "verified=%r min_tier_level=%r",
+            q, city, region, verified, min_tier_level,
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Search failed: {str(e)}"
+            detail="Search is temporarily unavailable.",
         )

@@ -84,6 +84,49 @@ class ProfessionalTierSubscriptionRepository:
     def has_active(self, professional_id: UUID) -> bool:
         return self.get_active_for_professional(professional_id) is not None
 
+    # ─── READ (batch) ────────────────────────────────────────
+    def list_active_for_professionals(
+        self,
+        professional_ids: list[UUID],
+        now: Optional[datetime] = None,
+    ) -> dict[UUID, UUID]:
+        """
+        Batched version of `get_active_for_professional` — one query for
+        many professionals. Returns {professional_id: tier_id}.
+
+        Uses DISTINCT ON so a professional with more than one ACTIVE row
+        (should not happen, but the model permits it) yields the most
+        recently started subscription, matching the single-row lookup.
+        """
+        if not professional_ids:
+            return {}
+
+        now = now or datetime.now(timezone.utc)
+        stmt = (
+            select(
+                ProfessionalTierSubscription.professional_id,
+                ProfessionalTierSubscription.tier_id,
+            )
+            .where(
+                ProfessionalTierSubscription.professional_id.in_(
+                    professional_ids
+                ),
+                ProfessionalTierSubscription.status
+                == ProfessionalSubscriptionStatus.ACTIVE.value,
+            )
+            .where(
+                (ProfessionalTierSubscription.expires_at.is_(None))
+                | (ProfessionalTierSubscription.expires_at > now)
+            )
+            .distinct(ProfessionalTierSubscription.professional_id)
+            .order_by(
+                ProfessionalTierSubscription.professional_id,
+                ProfessionalTierSubscription.starts_at.desc(),
+            )
+        )
+        rows = self.session.exec(stmt).all()
+        return {prof_id: tier_id for prof_id, tier_id in rows}
+
     # ─── READ (list) ─────────────────────────────────────────
     def list_for_professional(
         self,
