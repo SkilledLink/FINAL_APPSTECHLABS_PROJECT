@@ -70,6 +70,7 @@ import { VerificationPage } from "./verification/pages/VerificationPage";
 import AdminDashboard from "./features/admin_dashboard/pages/AdminDashboard";
 import AdminCheck from "./features/admin_dashboard/components/AdminCheck";
 import ModeratorDashboard from "./features/moderator_dashboard/pages/ModeratorDashboard";
+import NotFound from "./features/not_found_page/Not_Found_Page";
 
 // ============================================================
 const ProfessionalsPage = UsersPage;
@@ -255,7 +256,7 @@ function App() {
             <Route path="/moderator_dashboard" element={<ModeratorDashboard />} />
 
             {/* CATCH-ALL */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
       </AuthedSocketProvider>
