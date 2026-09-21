@@ -31,8 +31,28 @@ from app.ai.ai_search import router as ai_search_router
 # ─── Contact Messages ──────────────────────────────────────
 from app.api.v1.contact_messages import router as contact_messages_router
 
-# ─── Webhooks ──────────────────────────────────────────────
+# ─── Webhooks (existing — KYC, Didit, etc.) ────────────────
 from app.webhooks import router as webhooks_router
+
+# ─── Tier / subscription / payment / AI-usage ──────────────
+from app.api.v1.professional_tiers import (
+    router as professional_tiers_router,
+)
+from app.api.v1.professional_subscriptions import (
+    router as professional_subscriptions_router,
+)
+from app.api.v1.professional_payments import (
+    router as professional_payments_router,
+)
+from app.api.v1.professional_ai_usage import (
+    router as professional_ai_usage_router,
+)
+from app.api.v1.payment_webhooks import (
+    router as payment_webhooks_router,
+)
+
+# ─── AI features (tier-gated content generation) ───────────
+from app.api.v1.ai_features import router as ai_features_router
 
 # ─── Database ──────────────────────────────────────────────
 from app.database.session import engine
@@ -79,6 +99,17 @@ from app.models.notification import Notification  # noqa: F401
 from app.api.v1.notifications import router as notifications_router
 from app.api.v1.reports import router as report_router
 
+# ─── Tier / subscription / payment / AI-usage models ──────
+from app.models.professional_tier import (  # noqa: F401
+    ProfessionalTier,
+    ProfessionalTierFeature,
+)
+from app.models.professional_tier_subscription import (  # noqa: F401
+    ProfessionalTierSubscription,
+)
+from app.models.professional_payment import ProfessionalPayment  # noqa: F401
+from app.models.professional_ai_usage import ProfessionalAIUsage  # noqa: F401
+
 
 # ─── Lifespan ──────────────────────────────────────────────
 @asynccontextmanager
@@ -91,7 +122,12 @@ async def lifespan(app: FastAPI):
 
         print("✅ Database connection successful!")
 
-        SQLModel.metadata.create_all(engine)
+        # NOTE: Alembic now owns schema. If you want create_all to stop
+        # creating tables, uncomment the next line's effect by removing
+        # the create_all call. Leaving it on is safe but means new tables
+        # bypass Alembic — which is exactly what we spent this session
+        # avoiding. Comment it out when you're ready.
+        # SQLModel.metadata.create_all(engine)
 
         print("✅ Database tables are ready.")
 
@@ -141,6 +177,16 @@ app.include_router(professional_portfolio_router)
 app.include_router(professional_kyc_router)
 app.include_router(professionals_router)
 
+# ─── Tier / subscription / payment / AI-usage ──────────────
+app.include_router(professional_tiers_router)
+app.include_router(professional_subscriptions_router)
+app.include_router(professional_payments_router)
+app.include_router(professional_ai_usage_router)
+app.include_router(payment_webhooks_router)
+
+# ─── AI features (tier-gated content generation) ───────────
+app.include_router(ai_features_router)
+
 # ─── Reviews ───────────────────────────────────────────────
 app.include_router(reviews_router)
 
@@ -158,7 +204,7 @@ app.include_router(moderator_router)
 app.include_router(notifications_router)
 app.include_router(report_router)
 
-# ─── Webhooks ──────────────────────────────────────────────
+# ─── Webhooks (existing — KYC / Didit) ─────────────────────
 app.include_router(webhooks_router)
 
 

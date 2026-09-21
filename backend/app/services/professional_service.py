@@ -1,3 +1,5 @@
+# app/services/professional_service.py
+
 import logging
 from datetime import datetime, timezone
 from typing import Optional
@@ -20,7 +22,15 @@ from app.repositories.professional_audit_repository import (
     ProfessionalAuditRepository,
 )
 from app.repositories.professional_repository import ProfessionalRepository
+from app.schemas.professional import (
+    ProfessionalAdminResponse,
+    ProfessionalPublicResponse,
+    ProfessionalResponse,
+)
 from app.services.indexing_service import IndexingService
+from app.services.professional_subscription_service import (
+    ProfessionalSubscriptionService,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +61,45 @@ class ProfessionalService:
         self.session = session
         self.repo = ProfessionalRepository(session)
         self.audit_repo = ProfessionalAuditRepository(session)
+        self.subscription_service = ProfessionalSubscriptionService(session)
+
+    # ────────────────────────────────────────────────────────
+    #  Response builders (attach active tier badge)
+    # ────────────────────────────────────────────────────────
+
+    def to_response(self, professional: Professional) -> ProfessionalResponse:
+        """ORM Professional → ProfessionalResponse with the professional's
+        active tier badge (if any) populated."""
+        response = ProfessionalResponse.model_validate(professional)
+        response.tier_badge = self.subscription_service.build_badge(
+            professional.id
+        )
+        return response
+
+    def to_public_response(
+        self, professional: Professional
+    ) -> ProfessionalPublicResponse:
+        response = ProfessionalPublicResponse.model_validate(professional)
+        response.tier_badge = self.subscription_service.build_badge(
+            professional.id
+        )
+        return response
+
+    def to_admin_response(
+        self, professional: Professional
+    ) -> ProfessionalAdminResponse:
+        response = ProfessionalAdminResponse.model_validate(professional)
+        response.tier_badge = self.subscription_service.build_badge(
+            professional.id
+        )
+        return response
+
+    def list_to_public_responses(
+        self, professionals: list[Professional]
+    ) -> list[ProfessionalPublicResponse]:
+        """Batch conversion for discovery lists. One badge lookup per
+        professional — swap for a batched query if list size grows."""
+        return [self.to_public_response(p) for p in professionals]
 
     # ────────────────────────────────────────────────────────
     #  Create / read / update

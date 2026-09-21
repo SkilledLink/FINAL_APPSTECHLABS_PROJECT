@@ -24,6 +24,17 @@ from app.models.professional_location import ProfessionalLocation
 from app.models.professional_service_area import ProfessionalServiceArea
 from app.models.professional_audit_log import ProfessionalAuditLog
 
+# ── Professional tier / subscription / payments ──────────
+# Order matters: parent tables must be imported before children.
+from app.models.professional_tier import (
+    ProfessionalTier,
+    ProfessionalTierFeature,
+)
+from app.models.professional_tier_subscription import (
+    ProfessionalTierSubscription,
+)
+from app.models.professional_payment import ProfessionalPayment
+from app.models.professional_ai_usage import ProfessionalAIUsage
 
 # ── Auth / tokens / audit ────────────────────────────────
 from app.models.refresh_token import RefreshToken
@@ -50,7 +61,40 @@ from app.models.knowledge_document import KnowledgeDocument
 from app.models.chat_log import ChatLog
 
 # ── Misc ─────────────────────────────────────────────────
-
 from app.models.report import Report
 from app.models.moderation_record import ModerationRecord
 from app.models.notification import Notification
+
+
+__all__ = [
+    # Core
+    "User",
+    "UserFollow",
+    # Professional
+    "Professional",
+    "ProfessionalPortfolio",
+    "ProfessionalLocation",
+    "ProfessionalServiceArea",
+    "ProfessionalAuditLog",
+    # Tier / subscription / payments
+    "ProfessionalTier",
+    "ProfessionalTierFeature",
+    "ProfessionalTierSubscription",
+    "ProfessionalPayment",
+    "ProfessionalAIUsage",
+    # Auth / tokens / audit
+    "RefreshToken",
+    "VerificationToken",
+    "AuditLog",
+    # Feed
+    "Feed",
+    # Jobs
+    "Job",
+    # AI / knowledge / chat
+    "KnowledgeDocument",
+    "ChatLog",
+    # Misc
+    "Report",
+    "ModerationRecord",
+    "Notification",
+]

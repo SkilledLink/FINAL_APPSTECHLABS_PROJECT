@@ -1,3 +1,5 @@
+# app/api/v1/professionals.py
+
 from typing import Optional
 from uuid import UUID
 
@@ -11,7 +13,6 @@ from app.models.user import User
 from app.schemas.professional import (
     ProfessionalCreate,
     ProfessionalListResponse,
-    ProfessionalPublicResponse,
     ProfessionalResponse,
     ProfessionalUpdate,
 )
@@ -28,7 +29,8 @@ def create_professional(
     data: ProfessionalCreate,
 ):
     service = ProfessionalService(session)
-    return service.create_professional(current_user, data.model_dump())
+    professional = service.create_professional(current_user, data.model_dump())
+    return service.to_response(professional)
 
 
 @router.get("/me", response_model=ProfessionalResponse)
@@ -44,7 +46,7 @@ def get_my_professional(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Professional profile not found",
         )
-    return professional
+    return service.to_response(professional)
 
 
 @router.patch("/me", response_model=ProfessionalResponse)
@@ -61,7 +63,8 @@ def update_my_professional(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No fields provided for update",
         )
-    return service.update_professional(current_user, update_data)
+    professional = service.update_professional(current_user, update_data)
+    return service.to_response(professional)
 
 
 @router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
@@ -116,7 +119,7 @@ def list_professionals(
         sort=sort,
     )
     return ProfessionalListResponse(
-        items=[ProfessionalPublicResponse.model_validate(p) for p in items],
+        items=service.list_to_public_responses(items),
         total=total,
         page=skip // limit + 1 if limit else 1,
         size=limit,
@@ -135,4 +138,4 @@ def get_professional_by_id(
         raise HTTPException(status_code=404, detail="Professional not found")
     if professional.status == ProfessionalAccountStatus.DELETED:
         raise HTTPException(status_code=404, detail="Professional not found")
-    return professional
+    return service.to_response(professional)

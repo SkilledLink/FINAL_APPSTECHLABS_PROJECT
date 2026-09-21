@@ -1,8 +1,10 @@
+# app/models/professional_audit_log.py
+
 from datetime import datetime, timezone
 from typing import Optional, TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from sqlalchemy import JSON
+from sqlalchemy import JSON, String
 from sqlmodel import Column, Field, Relationship, SQLModel
 
 from app.enums.professional import AuditAction
@@ -22,7 +24,10 @@ class ProfessionalAuditLog(SQLModel, table=True):
     actor_user_id: Optional[UUID] = Field(default=None, foreign_key="users.id")
     actor_role: Optional[str] = Field(default=None, max_length=20)
 
-    action: AuditAction = Field(nullable=False, index=True)
+    # Stored as VARCHAR(100) holding AuditAction.value — no native PG enum.
+    action: AuditAction = Field(
+        sa_column=Column(String(100), nullable=False, index=True),
+    )
     old_value: Optional[dict] = Field(default=None, sa_column=Column(JSON))
     new_value: Optional[dict] = Field(default=None, sa_column=Column(JSON))
     reason: Optional[str] = Field(default=None, max_length=500)
