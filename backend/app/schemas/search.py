@@ -30,7 +30,8 @@ class SearchResultResponse(BaseModel):
     last_name: str
     profile_image_url: Optional[str] = None
 
-    # Score
-    relevance_score: float = Field(..., ge=0.0, le=1.0)
+    # Score — clamped to [0, 1] in SQL; no upper bound here to avoid
+    # 500s from float rounding on the client-facing side.
+    relevance_score: float = Field(..., ge=0.0)
 
     model_config = ConfigDict(from_attributes=True)

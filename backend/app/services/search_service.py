@@ -25,54 +25,31 @@ class SearchService:
     ) -> List[SearchResultResponse]:
 
         query = query.strip()
-
         if not query:
             return []
 
+        # Only the embedding call is protected here. If it fails, we pass
+        # query_vector=None and the repo runs keyword-only. All DB-level
+        # failures are handled by the repo, so we don't duplicate that here.
         try:
-            # Generate semantic embedding.
             query_vector = self.embedding_service.generate_embedding(query)
-
-            # Hybrid search:
-            # keyword relevance + semantic similarity.
-            results = self.repo.hybrid_search(
-                query=query,
-                query_vector=query_vector,
-                city=city,
-                region=region,
-                limit=limit,
-                min_relevance=0.45,
-            )
-
-            logger.info(
-                "Hybrid search for '%s' returned %d results",
-                query,
-                len(results),
-            )
-
         except Exception as e:
-            logger.error(
-                "Hybrid/vector search failed for '%s': %s",
+            logger.warning(
+                "Embedding failed for %r, falling back to keyword-only: %s",
                 query,
                 e,
-                exc_info=True,
             )
+            query_vector = None
 
-            # If embeddings fail, fall back to normal keyword search.
-            results = self.repo.keyword_search(
-                query=query,
-                city=city,
-                region=region,
-                limit=limit,
-            )
+        results = self.repo.hybrid_search(
+            query=query,
+            query_vector=query_vector,
+            city=city,
+            region=region,
+            limit=limit,
+            min_relevance=0.45,
+        )
 
-            logger.info(
-                "Keyword fallback for '%s' returned %d results",
-                query,
-                len(results),
-            )
+        logger.info("Search for %r returned %d results", query, len(results))
 
-        return [
-            SearchResultResponse.model_validate(result)
-            for result in results
-        ]
+        return [SearchResultResponse.model_validate(r) for r in results]
