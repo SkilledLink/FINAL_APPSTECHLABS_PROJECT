@@ -1,4 +1,7 @@
+// src/features/messages/pages/MessagesPage.tsx
+
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { ConversationList } from '../components/ConversationList';
 import { ChatWindow } from '../components/ChatWindow';
 import { useConversations } from '../../../hooks/useConversations';
@@ -17,40 +20,62 @@ import { normalizeId } from '../utils/idUtils';
 export const MessagesPage: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
   const { socket } = useSocketContext();
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+
+  /* ── URL param: /messages/:conversationId (optional) ── */
+  const { conversationId: urlConversationId } = useParams<{
+    conversationId?: string;
+  }>();
+
+  const [activeConversationId, setActiveConversationId] = useState<
+    string | null
+  >(urlConversationId ?? null);
   const [displayConversations, setDisplayConversations] = useState<any[]>([]);
 
-  const { conversations, loading: convLoading, error: convError } = useConversations();
+  const { conversations, loading: convLoading, error: convError } =
+    useConversations();
 
   useEffect(() => {
     setDisplayConversations(conversations);
   }, [conversations]);
 
+  /*
+   * If the URL param changes while the page is mounted (back/forward between
+   * deep links), sync the active conversation. We intentionally don't clear
+   * `activeConversationId` when the param disappears — an internal "back to
+   * list" on mobile shouldn't be reversed by the effect.
+   */
+  useEffect(() => {
+    if (urlConversationId && urlConversationId !== activeConversationId) {
+      setActiveConversationId(urlConversationId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlConversationId]);
+
   const { messages, setMessages, confirmMessage, addOptimistic } =
     useMessages(activeConversationId);
   const { send } = useSendMessage(activeConversationId);
   const { uploadVoice, uploading: voiceUploading } = useVoiceUpload();
-  const { uploadFile, uploading: fileUploading, progress: uploadProgress } = useFileUpload();
+  const { uploadFile, uploading: fileUploading, progress: uploadProgress } =
+    useFileUpload();
 
   const isUploading = voiceUploading || fileUploading;
   const currentUserId = normalizeId(user?.id);
 
-  // ✅ GLOBAL presence — not tied to active conversation.
   const { onlineUsers } = usePresence(currentUserId);
 
-  // ✅ GLOBAL typing (still per-conversation on the server side, but hook always
-  // listens so switching conversations works instantly).
-  const { typingUsers, sendTyping } = useTyping(activeConversationId, currentUserId);
+  const { typingUsers, sendTyping } = useTyping(
+    activeConversationId,
+    currentUserId
+  );
 
-  // ✅ GLOBAL new_message listener — updates conversation list even when
-  // the user is on a different conversation or on the list view.
   const handleGlobalNewMessage = useCallback(
     (newMsg: any) => {
       const isActive = newMsg.conversation_id === activeConversationId;
 
-      // Update the sidebar: lastMessage, unread badge, move to top.
-      setDisplayConversations(prev => {
-        const index = prev.findIndex(conversation => conversation.id === newMsg.conversation_id);
+      setDisplayConversations((prev) => {
+        const index = prev.findIndex(
+          (conversation) => conversation.id === newMsg.conversation_id
+        );
         if (index < 0) return prev;
 
         const updated = {
@@ -67,43 +92,41 @@ export const MessagesPage: React.FC = () => {
         return [updated, ...prev.filter((_, itemIndex) => itemIndex !== index)];
       });
 
-      // If this is the active conversation, add to the messages list too.
       if (isActive) {
-        setMessages(prev => {
-          if (prev.some(m => m.id === newMsg.id)) return prev;
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === newMsg.id)) return prev;
           const withoutTemp = prev.filter(
-            m =>
+            (m) =>
               m.id !== newMsg.id &&
               !(
                 typeof m.id === 'string' &&
                 m.id.startsWith('temp-') &&
                 m.client_message_id === newMsg.client_message_id
-              ),
+              )
           );
           return [...withoutTemp, newMsg];
         });
 
-        // User is looking at this conversation → tell server it's read.
         if (socket) {
-          socket.emit('message_read', { conversation_id: newMsg.conversation_id });
+          socket.emit('message_read', {
+            conversation_id: newMsg.conversation_id,
+          });
         }
       }
     },
-    [activeConversationId, setMessages, currentUserId, socket],
+    [activeConversationId, setMessages, currentUserId, socket]
   );
 
   useRealtimeMessages(handleGlobalNewMessage);
 
-  // When user opens a conversation, clear its unread badge locally and mark
-  // it read on the server.
   useEffect(() => {
     if (!activeConversationId || !socket) return;
-    setDisplayConversations(prev =>
-      prev.map(conversation =>
+    setDisplayConversations((prev) =>
+      prev.map((conversation) =>
         conversation.id === activeConversationId
           ? { ...conversation, unreadCount: 0, unread_count: 0 }
-          : conversation,
-      ),
+          : conversation
+      )
     );
     socket.emit('message_read', { conversation_id: activeConversationId });
   }, [activeConversationId, socket]);
@@ -112,7 +135,6 @@ export const MessagesPage: React.FC = () => {
     setActiveConversationId(id);
   }, []);
 
-  // ── Send Text ──────────────────────────────────────────────
   const handleSendMessage = useCallback(
     async (text: string) => {
       if (!activeConversationId) return;
@@ -137,19 +159,30 @@ export const MessagesPage: React.FC = () => {
       if (realMessage) {
         confirmMessage(realMessage);
       } else if (error) {
-        setMessages(prev =>
-          prev.map(m =>
+        setMessages((prev) =>
+          prev.map((m) =>
             m.id === tempId
-              ? { ...m, content: '❌ Failed to send', text: '❌ Failed to send', status: 'failed' }
-              : m,
-          ),
+              ? {
+                  ...m,
+                  content: '❌ Failed to send',
+                  text: '❌ Failed to send',
+                  status: 'failed',
+                }
+              : m
+          )
         );
       }
     },
-    [activeConversationId, send, confirmMessage, setMessages, addOptimistic, currentUserId],
+    [
+      activeConversationId,
+      send,
+      confirmMessage,
+      setMessages,
+      addOptimistic,
+      currentUserId,
+    ]
   );
 
-  // ── Send File / Image ──────────────────────────────────────
   const handleSendFile = useCallback(
     async (file: File) => {
       if (!activeConversationId) return;
@@ -190,16 +223,18 @@ export const MessagesPage: React.FC = () => {
           undefined,
           name,
           type,
-          size,
+          size
         );
 
         if (realMessage) {
           confirmMessage(realMessage);
         } else if (error) {
-          setMessages(prev =>
-            prev.map(m =>
-              m.id === tempId ? { ...m, attachment_path: undefined, status: 'failed' } : m,
-            ),
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === tempId
+                ? { ...m, attachment_path: undefined, status: 'failed' }
+                : m
+            )
           );
         }
       } catch (err) {
@@ -214,17 +249,16 @@ export const MessagesPage: React.FC = () => {
       setMessages,
       addOptimistic,
       currentUserId,
-    ],
+    ]
   );
 
   const handleSendImage = useCallback(
     async (file: File) => {
       await handleSendFile(file);
     },
-    [handleSendFile],
+    [handleSendFile]
   );
 
-  // ── Send Voice Note ────────────────────────────────────────
   const handleSendVoiceNote = useCallback(
     async (duration: string) => {
       if (!activeConversationId) return;
@@ -251,7 +285,9 @@ export const MessagesPage: React.FC = () => {
           audioDetails: {
             url: publicUrl,
             duration: `${durationNum}s`,
-            waveform: Array.from({ length: 15 }, () => Math.floor(Math.random() * 75 + 25)),
+            waveform: Array.from({ length: 15 }, () =>
+              Math.floor(Math.random() * 75 + 25)
+            ),
           },
         };
         addOptimistic(tempMessage);
@@ -261,16 +297,18 @@ export const MessagesPage: React.FC = () => {
           null,
           'voice',
           publicUrl,
-          durationNum,
+          durationNum
         );
 
         if (realMessage) {
           confirmMessage(realMessage);
         } else if (error) {
-          setMessages(prev =>
-            prev.map(m =>
-              m.id === tempId ? { ...m, attachment_path: undefined, status: 'failed' } : m,
-            ),
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === tempId
+                ? { ...m, attachment_path: undefined, status: 'failed' }
+                : m
+            )
           );
         }
       } catch (err) {
@@ -285,12 +323,11 @@ export const MessagesPage: React.FC = () => {
       setMessages,
       addOptimistic,
       currentUserId,
-    ],
+    ]
   );
 
-  // ✅ Enrich EVERY conversation with online status from the presence hook.
   const conversationsWithPresence = useMemo(() => {
-    return displayConversations.map(c => {
+    return displayConversations.map((c) => {
       if (!c.participant) return c;
       const isOnline = onlineUsers.includes(c.participant.id);
       return { ...c, participant: { ...c.participant, isOnline } };
@@ -298,13 +335,17 @@ export const MessagesPage: React.FC = () => {
   }, [displayConversations, onlineUsers]);
 
   const activeConversation = useMemo(
-    () => conversationsWithPresence.find(c => c.id === activeConversationId) || null,
-    [conversationsWithPresence, activeConversationId],
+    () =>
+      conversationsWithPresence.find((c) => c.id === activeConversationId) ||
+      null,
+    [conversationsWithPresence, activeConversationId]
   );
 
   if (authLoading || convLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">Loading conversations...</div>
+      <div className="flex items-center justify-center h-screen">
+        Loading conversations...
+      </div>
     );
   }
   if (convError) {
@@ -314,7 +355,9 @@ export const MessagesPage: React.FC = () => {
   return (
     <div className="h-screen w-full flex overflow-hidden border-x border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-2xl">
       <div
-        className={`${activeConversationId ? 'hidden lg:block' : 'w-full'} lg:w-auto h-full shrink-0 transition-all duration-300 ease-in-out`}
+        className={`${
+          activeConversationId ? 'hidden lg:block' : 'w-full'
+        } lg:w-auto h-full shrink-0 transition-all duration-300 ease-in-out`}
       >
         <ConversationList
           conversations={conversationsWithPresence as any}
@@ -323,7 +366,9 @@ export const MessagesPage: React.FC = () => {
         />
       </div>
       <div
-        className={`${!activeConversationId ? 'hidden lg:flex' : 'flex'} flex-1 h-full transition-all duration-300 ease-in-out`}
+        className={`${
+          !activeConversationId ? 'hidden lg:flex' : 'flex'
+        } flex-1 h-full transition-all duration-300 ease-in-out`}
       >
         <ChatWindow
           conversation={activeConversation as any}

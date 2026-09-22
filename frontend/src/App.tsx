@@ -219,7 +219,7 @@ function App() {
 
                 <Route path="notifications" element={<NotificationsPage />} />
 
-                {/* Messages */}
+                {/* Messages — both routes already exist; no change needed */}
                 <Route path="messages" element={<MessagesPage />} />
                 <Route
                   path="messages/:conversationId"
