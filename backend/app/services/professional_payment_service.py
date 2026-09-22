@@ -35,6 +35,7 @@ from app.repositories.professional_tier_repository import (
 from app.repositories.professional_tier_subscription_repository import (
     ProfessionalTierSubscriptionRepository,
 )
+from app.services.payments import get_payment_provider
 from app.services.payments.base import PaymentProviderClient
 from app.services.professional_subscription_service import (
     ProfessionalSubscriptionService,
@@ -62,12 +63,7 @@ class ProfessionalPaymentService:
         self.sub_repo = ProfessionalTierSubscriptionRepository(session)
         self.subscription_service = ProfessionalSubscriptionService(session)
         self.audit_repo = ProfessionalAuditRepository(session)
-
-        if provider is None:
-            from app.services.payments.kora_client import KoraClient
-
-            provider = KoraClient()
-        self.provider = provider
+        self.provider = provider or get_payment_provider()
 
     # ─── INITIATE ────────────────────────────────────────────
     def initiate_payment(
@@ -179,18 +175,24 @@ class ProfessionalPaymentService:
                 actor_role="system",
             )
             self.session.commit()
-            return payment, {
-                "instructions": None,
-                "message": result.message,
-            }
+            raise HTTPException(
+                http_status.HTTP_400_BAD_REQUEST,
+                result.message or "Payment provider rejected the request",
+            )
+
+        extra = {
+            "provider_init": result.raw,
+            "checkout_url": result.checkout_url,
+        }
+        if result.provider_reference:
+            extra["provider_reference"] = result.provider_reference
 
         self.repo.update(
             payment,
             status=PaymentStatus.PROCESSING.value,
-            extra_metadata={
-                "provider_init": result.raw,
-                "checkout_url": result.checkout_url,
-            },
+            provider_transaction_id=result.provider_reference
+            or payment.provider_transaction_id,
+            extra_metadata=extra,
         )
         self.session.commit()
         self.session.refresh(payment)
@@ -210,6 +212,111 @@ class ProfessionalPaymentService:
 
     def get_by_reference(self, reference: str) -> Optional[ProfessionalPayment]:
         return self.repo.get_by_reference(reference)
+
+    # ─── LIVE STATUS POLLING ─────────────────────────────────
+    def fetch_provider_status(self, reference: str) -> dict:
+        """
+        Ask the active payment provider for a charge's current status.
+
+        Persists terminal states back to the DB so the row reflects
+        reality (and the subscription activates on success).
+        """
+        payment = self.repo.get_by_reference(reference)
+        if not payment:
+            raise HTTPException(404, "Payment not found")
+
+        # Already terminal — trust the DB
+        if payment.status in (
+            PaymentStatus.SUCCESS,
+            PaymentStatus.FAILED,
+            PaymentStatus.CANCELLED,
+            PaymentStatus.REFUNDED,
+            PaymentStatus.EXPIRED,
+        ):
+            return {
+                "status": payment.status.value.upper()
+                if hasattr(payment.status, "value")
+                else str(payment.status).upper(),
+                "reason": None,
+                "financial_transaction_id": payment.provider_transaction_id,
+                "amount": str(payment.amount),
+                "currency": payment.currency,
+            }
+
+        provider_ref = payment.provider_transaction_id or reference
+
+        get_status = getattr(self.provider, "get_status", None)
+        if get_status is None:
+            raise HTTPException(
+                http_status.HTTP_400_BAD_REQUEST,
+                "Active payment provider does not support status polling",
+            )
+
+        try:
+            raw = get_status(provider_ref)
+        except Exception as exc:
+            logger.warning(
+                "Status lookup failed for %s: %s", reference, exc
+            )
+            raise HTTPException(
+                http_status.HTTP_502_BAD_GATEWAY,
+                f"Could not fetch status: {exc}",
+            )
+
+        status_upper = (raw.get("status") or "PENDING").upper()
+
+        # Persist terminal states
+        if status_upper in ("SUCCESSFUL", "SUCCESS"):
+            self.repo.mark_success(
+                payment,
+                provider_transaction_id=raw.get("financialTransactionId")
+                or payment.provider_transaction_id
+                or reference,
+                provider_response=raw,
+            )
+            if payment.subscription_id:
+                sub = self.sub_repo.get_by_id(payment.subscription_id)
+                tier = self.tier_repo.get_by_id(payment.tier_id)
+                if sub and tier:
+                    self.subscription_service.activate(sub)
+            self.session.commit()
+            self.session.refresh(payment)
+            self._log_audit(
+                payment.professional_id,
+                AuditAction.PAYMENT_SUCCESS,
+                actor_role="system",
+                new_value={
+                    "payment_id": str(payment.id),
+                    "provider_transaction_id": raw.get(
+                        "financialTransactionId"
+                    ),
+                    "source": "poll",
+                },
+            )
+            self.session.commit()
+        elif status_upper in ("FAILED", "CANCELLED", "EXPIRED"):
+            self.repo.mark_failed(
+                payment,
+                provider_response=raw,
+                reason=raw.get("reason") or "Payment failed",
+            )
+            if payment.subscription_id:
+                sub = self.sub_repo.get_by_id(payment.subscription_id)
+                if (
+                    sub
+                    and sub.status == ProfessionalSubscriptionStatus.PENDING
+                ):
+                    self.sub_repo.mark_cancelled(sub)
+            self.session.commit()
+            self.session.refresh(payment)
+
+        return {
+            "status": status_upper,
+            "reason": raw.get("reason"),
+            "financial_transaction_id": raw.get("financialTransactionId"),
+            "amount": raw.get("amount"),
+            "currency": raw.get("currency"),
+        }
 
     # ─── CANCEL / REFUND ─────────────────────────────────────
     def cancel_payment(
@@ -329,7 +436,10 @@ class ProfessionalPaymentService:
             self.repo.mark_expired(payment)
             if payment.subscription_id:
                 sub = self.sub_repo.get_by_id(payment.subscription_id)
-                if sub and sub.status == ProfessionalSubscriptionStatus.PENDING:
+                if (
+                    sub
+                    and sub.status == ProfessionalSubscriptionStatus.PENDING
+                ):
                     self.sub_repo.mark_cancelled(sub)
             self._log_audit(
                 payment.professional_id,

@@ -1,7 +1,15 @@
 // src/features/subscription/components/UpgradeModal.tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Loader2, Check, Crown, Sparkles, ArrowRight } from 'lucide-react';
+import {
+  X,
+  Loader2,
+  Check,
+  Crown,
+  Sparkles,
+  ArrowRight,
+  AlertCircle,
+} from 'lucide-react';
 import { subscriptionService } from '../services/subscriptionService';
 import type {
   PaymentProvider,
@@ -17,19 +25,26 @@ interface UpgradeModalProps {
   onSuccess?: () => void;
 }
 
+type Phase = 'select' | 'waiting' | 'success' | 'failed';
+
 function detectProvider(phone: string): PaymentProvider {
   const digits = phone.replace(/\D/g, '');
   const local = digits.startsWith('237') ? digits.slice(3) : digits;
-  // Orange: 69x, 655-659, 690-699
+  // Orange: 69x, 655-659, 685-689
   if (
     local.startsWith('69') ||
     (parseInt(local.slice(0, 3), 10) >= 655 &&
-      parseInt(local.slice(0, 3), 10) <= 659)
+      parseInt(local.slice(0, 3), 10) <= 659) ||
+    (parseInt(local.slice(0, 3), 10) >= 685 &&
+      parseInt(local.slice(0, 3), 10) <= 689)
   ) {
     return 'orange_money';
   }
   return 'mtn_momo';
 }
+
+const POLL_INTERVAL_MS = 3000;
+const POLL_TIMEOUT_MS = 90_000;
 
 export default function UpgradeModal({
   open,
@@ -42,15 +57,36 @@ export default function UpgradeModal({
   const [phone, setPhone] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{
-    reference: string;
-    instructions: string | null;
-  } | null>(null);
 
+  const [phase, setPhase] = useState<Phase>('select');
+  const [reference, setReference] = useState<string | null>(null);
+  const [instructions, setInstructions] = useState<string | null>(null);
+  const [failureReason, setFailureReason] = useState<string | null>(null);
+
+  const pollTimerRef = useRef<number | null>(null);
+
+  /* Reset every time the modal opens */
+  useEffect(() => {
+    if (!open) return;
+    setSelectedTierId(null);
+    setPhone('');
+    setError(null);
+    setSubmitting(false);
+    setPhase('select');
+    setReference(null);
+    setInstructions(null);
+    setFailureReason(null);
+    if (pollTimerRef.current) {
+      window.clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  }, [open]);
+
+  /* ESC to close + body scroll lock */
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !submitting) onClose();
+      if (e.key === 'Escape' && !submitting && phase !== 'waiting') onClose();
     };
     window.addEventListener('keydown', onKey);
     const prev = document.body.style.overflow;
@@ -59,23 +95,71 @@ export default function UpgradeModal({
       window.removeEventListener('keydown', onKey);
       document.body.style.overflow = prev;
     };
-  }, [open, submitting, onClose]);
+  }, [open, submitting, phase, onClose]);
 
+  /* Clear polling on unmount */
   useEffect(() => {
-    if (open) {
-      setSelectedTierId(null);
-      setPhone('');
-      setError(null);
-      setResult(null);
-    }
-  }, [open]);
+    return () => {
+      if (pollTimerRef.current) {
+        window.clearInterval(pollTimerRef.current);
+      }
+    };
+  }, []);
 
   if (!open) return null;
 
   const selectedTier = tiers.find((t) => t.id === selectedTierId) ?? null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  /* ── Polling ─────────────────────────────────────────── */
+
+  const startPolling = (ref: string) => {
+    const startedAt = Date.now();
+
+    const tick = async () => {
+      try {
+        const s = await subscriptionService.getPaymentStatus(ref);
+        const status = (s.status || '').toUpperCase();
+
+        if (status === 'SUCCESSFUL' || status === 'SUCCESS') {
+          stopPolling();
+          setPhase('success');
+          onSuccess?.();
+          return;
+        }
+        if (status === 'FAILED' || status === 'CANCELLED' || status === 'EXPIRED') {
+          stopPolling();
+          setFailureReason(s.reason ?? 'Payment was not completed.');
+          setPhase('failed');
+          return;
+        }
+        if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
+          stopPolling();
+          setFailureReason(
+            'We did not receive a confirmation in time. If you approved on your phone, refresh in a moment.'
+          );
+          setPhase('failed');
+        }
+      } catch {
+        // network hiccup — keep polling until timeout
+      }
+    };
+
+    // Fire immediately, then at intervals
+    tick();
+    pollTimerRef.current = window.setInterval(tick, POLL_INTERVAL_MS);
+  };
+
+  const stopPolling = () => {
+    if (pollTimerRef.current) {
+      window.clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  };
+
+  /* ── Submit ─────────────────────────────────────────── */
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     setError(null);
 
     if (!selectedTier) {
@@ -97,11 +181,11 @@ export default function UpgradeModal({
         phone_number: cleanPhone,
         description: `Upgrade to ${selectedTier.name}`,
       });
-      setResult({
-        reference: res.reference,
-        instructions: res.instructions,
-      });
-      onSuccess?.();
+
+      setReference(res.reference);
+      setInstructions(res.instructions);
+      setPhase('waiting');
+      startPolling(res.reference);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Payment failed');
     } finally {
@@ -109,9 +193,15 @@ export default function UpgradeModal({
     }
   };
 
+  /* ── Modal ──────────────────────────────────────────── */
+
   const modal = (
     <div className="fixed inset-0 z-[99999] flex items-start justify-center overflow-y-auto bg-blue-950/75 p-3 pt-4 pb-4 backdrop-blur-2xl sm:items-center sm:p-6">
-      <div className="fixed inset-0" onClick={!submitting ? onClose : undefined} aria-hidden="true" />
+      <div
+        className="fixed inset-0"
+        onClick={!submitting && phase !== 'waiting' ? onClose : undefined}
+        aria-hidden="true"
+      />
 
       <div className="relative my-auto flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-white/60 bg-white/90 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.5)] backdrop-blur-3xl dark:border-white/10 dark:bg-slate-900/90">
         <div className="pointer-events-none absolute -top-24 left-1/2 h-56 w-56 -translate-x-1/2 rounded-full bg-blue-500/20 blur-3xl" />
@@ -124,19 +214,26 @@ export default function UpgradeModal({
             </div>
             <div>
               <h3 className="text-base font-semibold text-slate-900 dark:text-white">
-                {result ? 'Complete payment' : 'Choose your plan'}
+                {phase === 'success'
+                  ? 'Subscription activated'
+                  : phase === 'failed'
+                  ? 'Payment not completed'
+                  : phase === 'waiting'
+                  ? 'Awaiting confirmation'
+                  : 'Choose your plan'}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                {result
-                  ? 'Enter the PIN prompt on your phone to confirm'
-                  : 'Unlock AI features and priority placement'}
+                {phase === 'select' && 'Unlock AI features and priority placement'}
+                {phase === 'waiting' && 'Check your phone for the PIN prompt'}
+                {phase === 'success' && 'You are all set'}
+                {phase === 'failed' && 'You can try again'}
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            disabled={submitting}
+            disabled={submitting || phase === 'waiting'}
             className="flex h-7 w-7 items-center justify-center rounded-md bg-slate-200/60 text-slate-500 hover:bg-slate-200 disabled:opacity-50 dark:bg-slate-800/60 dark:text-slate-400 dark:hover:bg-slate-800"
           >
             <X className="h-4 w-4" />
@@ -154,37 +251,89 @@ export default function UpgradeModal({
             </div>
           )}
 
-          {result ? (
+          {/* ── Phase: SUCCESS ── */}
+          {phase === 'success' && (
             <div className="space-y-4">
-              <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-4">
-                <div className="mb-1 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-                  <Check className="h-3.5 w-3.5" />
-                  Payment initiated
+              <div className="flex flex-col items-center gap-3 py-6 text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                  <Check className="h-7 w-7" />
                 </div>
-                <p className="text-xs text-slate-600 dark:text-slate-300">
-                  Reference: <span className="font-mono font-semibold">{result.reference}</span>
+                <h4 className="text-lg font-bold text-slate-900 dark:text-white">
+                  Payment confirmed
+                </h4>
+                <p className="max-w-sm text-sm text-slate-600 dark:text-slate-400">
+                  Your subscription is active. All AI features and
+                  priority placement are now unlocked.
+                </p>
+                {reference && (
+                  <p className="font-mono text-[11px] text-slate-400 dark:text-slate-500">
+                    {reference}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Phase: FAILED ── */}
+          {phase === 'failed' && (
+            <div className="space-y-4">
+              <div className="flex flex-col items-center gap-3 py-6 text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-400">
+                  <AlertCircle className="h-7 w-7" />
+                </div>
+                <h4 className="text-lg font-bold text-slate-900 dark:text-white">
+                  Payment not completed
+                </h4>
+                <p className="max-w-sm text-sm text-slate-600 dark:text-slate-400">
+                  {failureReason ?? 'Please try again.'}
+                </p>
+                {reference && (
+                  <p className="font-mono text-[11px] text-slate-400 dark:text-slate-500">
+                    Ref: {reference}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Phase: WAITING ── */}
+          {phase === 'waiting' && (
+            <div className="space-y-4">
+              <div className="flex flex-col items-center gap-3 py-4 text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400">
+                  <Loader2 className="h-7 w-7 animate-spin" />
+                </div>
+                <h4 className="text-base font-bold text-slate-900 dark:text-white">
+                  Check your phone
+                </h4>
+                <p className="max-w-sm text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                  {instructions ??
+                    'Approve the mobile money prompt on your phone to complete payment.'}
                 </p>
               </div>
 
-              {result.instructions && (
-                <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
-                  <div className="mb-1 text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300">
-                    Next step
-                  </div>
-                  <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
-                    {result.instructions}
-                  </p>
+              <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
+                <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300">
+                  What to do
                 </div>
-              )}
+                <ol className="ml-4 list-decimal space-y-1 text-xs text-slate-700 dark:text-slate-300">
+                  <li>Open the mobile money prompt on your phone</li>
+                  <li>Enter your PIN to approve</li>
+                  <li>Wait a few seconds — this modal updates automatically</li>
+                </ol>
+              </div>
 
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Once you confirm on your phone, your subscription will
-                activate automatically within a few seconds.
-              </p>
+              {reference && (
+                <p className="text-center font-mono text-[11px] text-slate-400 dark:text-slate-500">
+                  Ref: {reference}
+                </p>
+              )}
             </div>
-          ) : (
+          )}
+
+          {/* ── Phase: SELECT ── */}
+          {phase === 'select' && (
             <>
-              {/* Tier selection */}
               <div>
                 <div className="mb-2.5 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   Select a plan
@@ -244,7 +393,6 @@ export default function UpgradeModal({
                 </div>
               </div>
 
-              {/* Phone */}
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">
                   Mobile money number
@@ -261,7 +409,6 @@ export default function UpgradeModal({
                 </p>
               </div>
 
-              {/* Summary */}
               {selectedTier && (
                 <div className="rounded-lg border border-slate-200/70 bg-slate-50/60 p-3.5 dark:border-white/10 dark:bg-slate-950/40">
                   <div className="flex items-center justify-between text-xs">
@@ -269,7 +416,8 @@ export default function UpgradeModal({
                       You'll be charged
                     </span>
                     <span className="font-semibold tabular-nums text-slate-900 dark:text-white">
-                      {Number(selectedTier.price).toLocaleString()} {selectedTier.currency}
+                      {Number(selectedTier.price).toLocaleString()}{' '}
+                      {selectedTier.currency}
                     </span>
                   </div>
                   <div className="mt-2 flex items-center justify-between text-xs">
@@ -287,32 +435,80 @@ export default function UpgradeModal({
         </form>
 
         {/* Footer */}
-        {!result && (
-          <div className="relative z-10 flex shrink-0 items-center justify-end gap-3 border-t border-slate-200/60 px-6 py-3.5 dark:border-slate-800/60">
+        <div className="relative z-10 flex shrink-0 items-center justify-end gap-3 border-t border-slate-200/60 px-6 py-3.5 dark:border-slate-800/60">
+          {phase === 'select' && (
+            <>
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={submitting}
+                className="rounded-lg bg-slate-200/60 px-4 py-2 text-xs font-semibold text-slate-700 transition-all hover:bg-slate-200 disabled:opacity-50 dark:bg-slate-800/60 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={submitting || !selectedTier}
+                className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-xs font-semibold text-white shadow-md shadow-blue-500/25 transition-all hover:bg-blue-500 active:scale-[0.98] disabled:opacity-50"
+              >
+                {submitting ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="h-3.5 w-3.5" />
+                )}
+                {submitting ? 'Initiating…' : 'Pay now'}
+                {!submitting && <ArrowRight className="h-3.5 w-3.5" />}
+              </button>
+            </>
+          )}
+
+          {phase === 'waiting' && (
+            <button
+              type="button"
+              onClick={() => {
+                stopPolling();
+                onClose();
+              }}
+              className="rounded-lg bg-slate-200/60 px-4 py-2 text-xs font-semibold text-slate-700 transition-all hover:bg-slate-200 dark:bg-slate-800/60 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              Close (check later)
+            </button>
+          )}
+
+          {phase === 'success' && (
             <button
               type="button"
               onClick={onClose}
-              disabled={submitting}
-              className="rounded-lg bg-slate-200/60 px-4 py-2 text-xs font-semibold text-slate-700 transition-all hover:bg-slate-200 disabled:opacity-50 dark:bg-slate-800/60 dark:text-slate-300 dark:hover:bg-slate-800"
+              className="rounded-lg bg-blue-600 px-5 py-2 text-xs font-semibold text-white shadow-md shadow-blue-500/25 transition-all hover:bg-blue-500 active:scale-[0.98]"
             >
-              Cancel
+              Done
             </button>
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={submitting || !selectedTier}
-              className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-xs font-semibold text-white shadow-md shadow-blue-500/25 transition-all hover:bg-blue-500 active:scale-[0.98] disabled:opacity-50"
-            >
-              {submitting ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Sparkles className="h-3.5 w-3.5" />
-              )}
-              {submitting ? 'Initiating…' : 'Pay now'}
-              {!submitting && <ArrowRight className="h-3.5 w-3.5" />}
-            </button>
-          </div>
-        )}
+          )}
+
+          {phase === 'failed' && (
+            <>
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-lg bg-slate-200/60 px-4 py-2 text-xs font-semibold text-slate-700 transition-all hover:bg-slate-200 dark:bg-slate-800/60 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPhase('select');
+                  setFailureReason(null);
+                  setError(null);
+                }}
+                className="rounded-lg bg-blue-600 px-5 py-2 text-xs font-semibold text-white shadow-md shadow-blue-500/25 transition-all hover:bg-blue-500 active:scale-[0.98]"
+              >
+                Try again
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

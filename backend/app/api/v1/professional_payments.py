@@ -15,6 +15,7 @@ from app.schemas.professional_payment import (
     PaymentInitiateRequest,
     PaymentInitiateResponse,
     PaymentRefundRequest,
+    PaymentStatusResponse,
     ProfessionalPaymentAdminListResponse,
     ProfessionalPaymentAdminResponse,
     ProfessionalPaymentListResponse,
@@ -61,6 +62,42 @@ def initiate_payment(
         status=payment.status,
         instructions=provider_info.get("instructions"),
         message=provider_info.get("message"),
+    )
+
+
+# ─── STATUS (polling) ───────────────────────────────────────────
+@router.get(
+    "/status/{reference}",
+    response_model=PaymentStatusResponse,
+)
+def payment_status(
+    reference: str,
+    current_user: ActiveUser,
+    service: PaymentServiceDep,
+) -> PaymentStatusResponse:
+    """
+    Poll the payment provider for the current status of a charge.
+
+    `reference` is the value returned as `payment.reference` from
+    /initiate. Authorization: the caller must own the payment
+    (or be an admin).
+    """
+    payment = service.get_by_reference(reference)
+    if not payment:
+        raise HTTPException(http_status.HTTP_404_NOT_FOUND, "Payment not found")
+    if payment.user_id != current_user.id and not getattr(
+        current_user, "is_admin", False
+    ):
+        raise HTTPException(http_status.HTTP_403_FORBIDDEN, "Not your payment")
+
+    raw = service.fetch_provider_status(reference)
+
+    return PaymentStatusResponse(
+        status=raw.get("status", "PENDING"),
+        reason=raw.get("reason"),
+        financial_transaction_id=raw.get("financial_transaction_id"),
+        amount=raw.get("amount"),
+        currency=raw.get("currency"),
     )
 
 
