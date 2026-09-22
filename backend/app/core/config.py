@@ -93,23 +93,30 @@ class Settings(BaseSettings):
     AI_TIER_2_API_KEY: str = ""
     AI_TIER_2_MODEL: str = "openai/gpt-oss-120b"
     AI_TIER_2_BASE_URL: str = "https://api.groq.com/openai/v1"
-    AI_TIER_2_MAX_TOKENS: int = 350
+    AI_TIER_2_MAX_TOKENS: int = 2000
     AI_TIER_2_TEMPERATURE: float = 0.4
     AI_TIER_2_TIMEOUT_SECONDS: float = 15.0
 
     # Level 3 (AI Professional Plus) → Gemini
+    # Primary model is a Lite Flash (better availability than full Flash).
+    # Fallbacks are tried in order if the primary returns 503/5xx.
     AI_TIER_3_PROVIDER: str = "gemini"
     AI_TIER_3_API_KEY: str = ""
-    AI_TIER_3_MODEL: str = "models/gemini-3.6-flash"
+    AI_TIER_3_MODEL: str = "models/gemini-3.5-flash-lite"
+    AI_TIER_3_MODEL_FALLBACKS: str = (
+        "models/gemini-3.1-flash-lite,"
+        "models/gemini-3.5-flash,"
+        "models/gemini-3.7-flash"
+    )
     AI_TIER_3_BASE_URL: str = (
         "https://generativelanguage.googleapis.com/v1beta"
     )
-    AI_TIER_3_MAX_TOKENS: int = 500
+    AI_TIER_3_MAX_TOKENS: int = 3000
     AI_TIER_3_TEMPERATURE: float = 0.4
-    AI_TIER_3_TIMEOUT_SECONDS: float = 20.0
+    AI_TIER_3_TIMEOUT_SECONDS: float = 30.0
 
     # Vision model for Level 3 image analysis
-    AI_TIER_3_VISION_MODEL: str = "models/gemini-3.6-flash"
+    AI_TIER_3_VISION_MODEL: str = "models/gemini-3.5-flash-lite"
 
     # ── Chat flags ──────────────────────────────────────────
     CHAT_INTENT_ENABLED: bool = True

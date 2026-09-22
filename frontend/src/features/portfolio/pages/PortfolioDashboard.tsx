@@ -13,6 +13,14 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { usePortfolio } from '../hooks/usePortfolio';
+import {
+  useSubscription,
+  useProposals,
+  SubscriptionCard,
+  ProposalReview,
+  DeepAnalysisPanel,
+  UpgradeModal,
+} from '../../subscription';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import ProfessionalRequired from '../components/ProfessionalRequired';
@@ -50,7 +58,7 @@ function Ambience() {
   );
 }
 
-/* ───────────────────────── Section header (with number chip) ───────────────────────── */
+/* ───────────────────────── Section header ───────────────────────── */
 
 function SectionHeader({
   index,
@@ -66,7 +74,6 @@ function SectionHeader({
   return (
     <div className="mb-4 flex items-end justify-between gap-4 sm:mb-3">
       <div className="flex min-w-0 items-start gap-3">
-        {/* Numbered chip — anchors the section */}
         <span className="mt-0.5 inline-flex h-6 items-center rounded-md border border-blue-500/20 bg-blue-500/8 px-1.5 text-[10px] font-bold tabular-nums tracking-wider text-blue-700 dark:border-blue-400/20 dark:text-blue-400">
           {index}
         </span>
@@ -140,11 +147,35 @@ export default function PortfolioDashboard() {
     createWork,
     updateWork,
     deleteWork,
+    uploadWorkImages,
     setAvailability,
   } = usePortfolio(isProfessional);
 
+  const {
+    active,
+    entitlements,
+    tiers,
+    loading: subLoading,
+    refresh: refreshSub,
+  } = useSubscription(isProfessional);
+
+  const {
+    proposals,
+    loading: proposalsLoading,
+    generating,
+    analyzing,
+    analysis,
+    generate,
+    accept,
+    reject,
+    acceptBatch,
+    rejectBatch,
+    runDeepAnalysis,
+  } = useProposals(isProfessional);
+
   const [tab, setTab] = useState<PortfolioTab>('services');
   const [editOpen, setEditOpen] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   if (!isProfessional) return <ProfessionalRequired />;
   if (loading && !portfolio)
@@ -282,6 +313,48 @@ export default function PortfolioDashboard() {
           />
         </motion.section>
 
+        {/* ── Subscription & AI ── */}
+        <motion.section
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, delay: 0.08, ease: EASE }}
+          className="mt-8 space-y-5 sm:mt-6"
+        >
+          <SectionHeader
+            index="03"
+            title="Subscription & AI"
+            subtitle="Your plan, benefits, and AI-powered suggestions"
+          />
+
+          <SubscriptionCard
+            active={active}
+            entitlements={entitlements}
+            loading={subLoading}
+            onUpgrade={() => setUpgradeOpen(true)}
+          />
+
+          <DeepAnalysisPanel
+            analysis={analysis}
+            analyzing={analyzing}
+            onRun={runDeepAnalysis}
+          />
+
+          <ProposalReview
+            proposals={proposals}
+            loading={proposalsLoading}
+            generating={generating}
+            onGenerate={generate}
+            onAccept={accept}
+            onReject={reject}
+            onAcceptBatch={async (ids) => {
+              await acceptBatch(ids);
+            }}
+            onRejectBatch={async (ids) => {
+              await rejectBatch(ids);
+            }}
+          />
+        </motion.section>
+
         {/* ── Manage panel ── */}
         <motion.section
           initial={{ opacity: 0, y: 6 }}
@@ -290,14 +363,13 @@ export default function PortfolioDashboard() {
           className="mt-8 sm:mt-6"
         >
           <SectionHeader
-            index="03"
+            index="04"
             title="Manage your portfolio"
             subtitle="Services, past work, availability, and about"
           />
 
-          {/* Full-bleed on mobile, glass card on sm+ */}
           <div className={GLASS_CARD}>
-            {/* Tabs — horizontal scroll on mobile */}
+            {/* Tabs */}
             <div className="border-b border-slate-200/70 dark:border-white/10">
               <PortfolioTabs
                 active={tab}
@@ -352,6 +424,9 @@ export default function PortfolioDashboard() {
                       onDelete={async (id) => {
                         await deleteWork(id);
                       }}
+                      onUploadImages={async (id, files) => {
+                        return await uploadWorkImages(id, files);
+                      }}
                     />
                   )}
 
@@ -373,7 +448,7 @@ export default function PortfolioDashboard() {
               </AnimatePresence>
             </div>
 
-            {/* Footer meta — stacks on mobile */}
+            {/* Footer meta */}
             <div className="flex flex-col gap-2 border-t border-slate-200/70 bg-slate-50/60 px-4 py-3 dark:border-white/10 dark:bg-slate-950/40 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3 sm:px-6 lg:px-8">
               <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500 dark:text-slate-400">
                 <Info className="h-3.5 w-3.5 shrink-0 text-blue-500" />
@@ -404,6 +479,24 @@ export default function PortfolioDashboard() {
         onSubmit={async (input) => {
           const updated = await updatePortfolio(input);
           if (updated) setEditOpen(false);
+        }}
+      />
+
+      {/* ═══════════════ Upgrade modal ═══════════════ */}
+      <UpgradeModal
+        open={upgradeOpen}
+        tiers={tiers?.items ?? []}
+        currentLevel={active?.subscription?.tier?.level ?? 0}
+        onClose={() => setUpgradeOpen(false)}
+        onSuccess={() => {
+          // User will receive an STK prompt on their phone.
+          // Poll subscription every few seconds for up to 90s to catch activation.
+          let attempts = 0;
+          const id = setInterval(() => {
+            attempts++;
+            refreshSub();
+            if (attempts > 30) clearInterval(id);
+          }, 3000);
         }}
       />
     </div>

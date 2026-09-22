@@ -30,20 +30,30 @@ interface EditProfileFormProps {
 type SectionId = 'basic' | 'professional' | 'skills' | 'location' | 'social';
 
 /* ─────────────────────────────────────────────────────────── */
-/*  Glass style tokens                                        */
+/*  Glass style tokens — shared blue theme (matches portfolio) */
 /* ─────────────────────────────────────────────────────────── */
 
 const GLASS_PANEL =
-  'bg-white/70 dark:bg-slate-900/60 backdrop-blur-2xl border border-white/50 dark:border-white/10 shadow-2xl';
+  'bg-white/90 dark:bg-slate-900/90 backdrop-blur-3xl border border-white/60 dark:border-white/10 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.5)]';
 
 const GLASS_INPUT =
-  'w-full px-3.5 py-2 rounded-xl bg-white/60 dark:bg-slate-800/40 backdrop-blur-md border border-white/60 dark:border-white/10 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:bg-white/80 dark:focus:bg-slate-800/70 transition disabled:opacity-60 disabled:cursor-not-allowed';
+  'w-full px-3.5 py-2.5 rounded-xl bg-white/60 dark:bg-slate-800/40 backdrop-blur-md ' +
+  'border border-white/60 dark:border-white/10 text-sm text-slate-900 dark:text-slate-100 ' +
+  'placeholder:text-slate-400 dark:placeholder:text-slate-500 ' +
+  'focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-600 ' +
+  'focus:bg-white/90 dark:focus:bg-slate-800/70 transition ' +
+  'disabled:opacity-60 disabled:cursor-not-allowed';
 
 const GLASS_BTN_PRIMARY =
-  'flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-600/20 transition disabled:opacity-50 disabled:cursor-not-allowed';
+  'flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 ' +
+  'text-white text-xs font-bold shadow-md shadow-blue-500/25 transition ' +
+  'disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]';
 
 const GLASS_BTN_GHOST =
-  'flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-white/50 dark:bg-slate-800/40 backdrop-blur-md border border-white/60 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-white/70 dark:hover:bg-slate-800/60 text-xs font-bold transition disabled:opacity-50 disabled:cursor-not-allowed';
+  'flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-white/50 dark:bg-slate-800/40 ' +
+  'backdrop-blur-md border border-white/60 dark:border-white/10 text-slate-700 dark:text-slate-300 ' +
+  'hover:bg-white/70 dark:hover:bg-slate-800/60 text-xs font-bold transition ' +
+  'disabled:opacity-50 disabled:cursor-not-allowed';
 
 const labelClass =
   'block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1';
@@ -70,7 +80,7 @@ interface TagInputProps {
   value: string[];
   onChange: (next: string[]) => void;
   placeholder?: string;
-  accent?: 'indigo' | 'emerald' | 'amber';
+  accent?: 'blue' | 'emerald' | 'amber';
   disabled?: boolean;
 }
 
@@ -78,14 +88,14 @@ const TagInput: React.FC<TagInputProps> = ({
   value,
   onChange,
   placeholder = 'Type and press Add',
-  accent = 'indigo',
+  accent = 'blue',
   disabled = false,
 }) => {
   const [draft, setDraft] = useState('');
 
   const accentClasses = {
-    indigo:
-      'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
+    blue:
+      'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-300 border-blue-200 dark:border-blue-800',
     emerald:
       'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
     amber:
@@ -232,7 +242,7 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({
 
   const [activeSection, setActiveSection] = useState<SectionId>('basic');
 
-  /* ── Map pick handler ────────────────────────────── */
+  /* ── Map pick handler ── */
   const handleLocationPick = (loc: PickedLocation) => {
     setBasic((prev) => ({
       ...prev,
@@ -248,12 +258,11 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({
     toast.info('Location updated from map', { autoClose: 1500 });
   };
 
-  /* ── Submit with toasts ──────────────────────────── */
+  /* ── Submit with toasts ── */
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (saving) return;
 
-    // ── Basic sanity validation ──
     if (!basic.firstName.trim() || !basic.lastName.trim()) {
       toast.error('First name and last name are required.');
       setActiveSection('basic');
@@ -353,7 +362,7 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({
     }
   };
 
-  /* ── Section renderer ────────────────────────────── */
+  /* ── Section renderer ── */
   const renderSection = () => {
     switch (activeSection) {
       case 'basic':
@@ -545,7 +554,7 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({
                 value={pro.skills ?? []}
                 onChange={(next) => setPro({ ...pro, skills: next })}
                 placeholder="e.g. Engine Diagnostics"
-                accent="indigo"
+                accent="blue"
                 disabled={saving}
               />
             </div>
@@ -579,7 +588,7 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-white/40 dark:bg-slate-800/30 backdrop-blur-md border border-white/50 dark:border-white/10">
               <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                <MapPin className="w-4 h-4 text-indigo-500" />
+                <MapPin className="w-4 h-4 text-blue-500" />
                 Pick your base location on the map
               </div>
               <button
@@ -670,14 +679,14 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({
                 type="checkbox"
                 checked={pro.available ?? true}
                 onChange={(e) => setPro({ ...pro, available: e.target.checked })}
-                className="h-4 w-4 accent-indigo-600"
+                className="h-4 w-4 accent-blue-600"
                 disabled={saving}
               />
               <label
                 htmlFor="available"
                 className="text-sm font-semibold text-slate-800 dark:text-slate-100 cursor-pointer"
               >
-                I'm currently available for work
+                I&apos;m currently available for work
               </label>
             </div>
 
@@ -778,11 +787,11 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({
     }
   };
 
-  /* ── Layout ──────────────────────────────────────── */
+  /* ── Layout ── */
   return (
     <>
       {/* Main modal */}
-      <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-950/50 backdrop-blur-xl p-0 sm:p-4">
+      <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-blue-950/75 backdrop-blur-2xl p-0 sm:p-4">
         <div
           className={`${GLASS_PANEL} rounded-t-3xl sm:rounded-3xl w-full max-w-3xl max-h-[94vh] sm:max-h-[90vh] flex flex-col overflow-hidden`}
         >
@@ -826,7 +835,7 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({
                       disabled={saving}
                       className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition disabled:opacity-60 ${
                         isActive
-                          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                          ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
                           : 'text-slate-600 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-800/50'
                       }`}
                     >
@@ -869,13 +878,13 @@ export const EditProfileForm: React.FC<EditProfileFormProps> = ({
 
       {/* Map picker modal */}
       {showMapPicker && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/60 backdrop-blur-2xl p-3 sm:p-6">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-blue-950/75 backdrop-blur-2xl p-3 sm:p-6">
           <div
             className={`${GLASS_PANEL} rounded-2xl w-full max-w-4xl h-[85vh] sm:h-[80vh] flex flex-col overflow-hidden`}
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/40 dark:border-white/10">
               <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-indigo-500" />
+                <MapPin className="w-4 h-4 text-blue-500" />
                 <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
                   Pick your location
                 </h3>

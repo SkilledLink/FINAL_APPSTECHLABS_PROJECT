@@ -118,3 +118,9 @@ class AuditAction(str, Enum):
     PAYMENT_CANCELLED = "payment.cancelled"
     PAYMENT_REFUNDED = "payment.refunded"
     PAYMENT_EXPIRED = "payment.expired"
+
+    # AI proposal lifecycle
+    AI_PROPOSAL_CREATED = "ai.proposal.created"
+    AI_PROPOSAL_ACCEPTED = "ai.proposal.accepted"
+    AI_PROPOSAL_REJECTED = "ai.proposal.rejected"
+    AI_PROPOSAL_SUPERSEDED = "ai.proposal.superseded"

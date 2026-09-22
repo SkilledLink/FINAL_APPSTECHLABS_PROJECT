@@ -4,8 +4,12 @@
 The AI must never invent prices, availability, reviews, ratings,
 qualifications, or experience. Everything it references must come from
 this snapshot — nothing else.
+
+Also normalises non-JSON-native types (Decimal → float, Enum → str)
+so the snapshot can be serialised with plain `json.dumps`.
 """
 
+from decimal import Decimal
 from typing import Optional
 from uuid import UUID
 
@@ -57,7 +61,7 @@ def _professional_block(p: Professional) -> dict:
         "certifications": p.certifications,
         "education": p.education,
         "languages": p.languages,
-        "hourly_rate": float(p.hourly_rate) if p.hourly_rate is not None else None,
+        "hourly_rate": p.hourly_rate,
         "currency": p.currency,
         "country": p.country,
         "region": p.region,
@@ -66,7 +70,7 @@ def _professional_block(p: Professional) -> dict:
         "availability_notes": p.availability_notes,
         "response_time_hours": p.response_time_hours,
         "is_verified": p.is_verified,
-        "rating": float(p.rating) if p.rating is not None else None,
+        "rating": p.rating,
         "total_reviews": p.total_reviews,
         "completed_jobs": p.completed_jobs,
         "trust_score": p.trust_score,
@@ -88,11 +92,7 @@ def _portfolio_block(pf: ProfessionalPortfolio) -> dict:
         "region": pf.region,
         "city": pf.city,
         "service_area": pf.service_area,
-        "service_radius_km": (
-            float(pf.service_radius_km)
-            if pf.service_radius_km is not None
-            else None
-        ),
+        "service_radius_km": pf.service_radius_km,
         "travels_to_client": pf.travels_to_client,
         "works_remotely": pf.works_remotely,
         "license_number": pf.license_number,
@@ -103,9 +103,7 @@ def _portfolio_block(pf: ProfessionalPortfolio) -> dict:
         "accepts_negotiation": pf.accepts_negotiation,
         "tags": pf.tags,
         "languages": pf.languages,
-        "average_rating": (
-            float(pf.average_rating) if pf.average_rating is not None else None
-        ),
+        "average_rating": pf.average_rating,
         "total_reviews": pf.total_reviews,
         "is_verified": pf.is_verified,
         "is_featured": pf.is_featured,
@@ -135,6 +133,7 @@ def _services_block(
             "whats_excluded": s.whats_excluded,
             "warranty_days": s.warranty_days,
             "lead_time_days": s.lead_time_days,
+            "promo_price": s.promo_price,
         })
         for s in session.exec(stmt).all()
     ]
@@ -190,12 +189,52 @@ def _availability_block(session: Session, portfolio_id: UUID) -> dict:
 # ─── HELPERS ─────────────────────────────────────────────────────
 
 def _compact(d: dict) -> dict:
-    """Drop keys with None/empty values so the prompt stays tight and
-    the model has no empty slots to fill in."""
-    return {
-        k: v for k, v in d.items()
-        if v not in (None, "", [], {}, 0) or isinstance(v, bool)
-    }
+    """Drop keys with empty values, and normalise non-JSON-native
+    types so the result can be passed straight to json.dumps.
+
+    Rules:
+      - Keep booleans even when False.
+      - Drop None.
+      - Drop empty strings, lists, dicts, tuples.
+      - Drop numeric zeros (int, float, Decimal).
+      - Convert Decimal → float.
+      - Convert UUID → str.
+      - Convert Enum → its .value (already handled by _enum_value).
+    """
+    out: dict = {}
+    for k, v in d.items():
+        # Keep booleans regardless of truthiness
+        if isinstance(v, bool):
+            out[k] = v
+            continue
+
+        # Drop None
+        if v is None:
+            continue
+
+        # Drop empty containers
+        if isinstance(v, (list, dict, tuple, set)) and len(v) == 0:
+            continue
+
+        # Drop empty strings
+        if isinstance(v, str) and v == "":
+            continue
+
+        # Drop numeric zeros
+        if isinstance(v, (int, float, Decimal)) and v == 0:
+            continue
+
+        # Convert Decimal → float (JSON-safe)
+        if isinstance(v, Decimal):
+            v = float(v)
+
+        # Convert UUID → str (JSON-safe)
+        if isinstance(v, UUID):
+            v = str(v)
+
+        out[k] = v
+
+    return out
 
 
 def _enum_value(v) -> Optional[str]:

@@ -37,3 +37,4 @@ class TierFeatureKey(str, Enum):
     PROFILE_VISIBILITY = "profile_visibility"
     FEATURED_PLACEMENT = "featured_placement"
     ANALYTICS = "analytics"
+    AI_PORTFOLIO_DEEP_ANALYSIS = "ai_portfolio_deep_analysis"
