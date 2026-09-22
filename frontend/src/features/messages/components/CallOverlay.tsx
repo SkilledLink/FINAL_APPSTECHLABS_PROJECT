@@ -1,43 +1,58 @@
 // src/features/messages/components/CallOverlay.tsx
-import { useEffect, useRef } from 'react';
+import { useCallback } from 'react';
 import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff } from 'lucide-react';
 import type { WebRTCCallApi } from '../hooks/useWebRTCCall';
 
 interface Props {
   api: WebRTCCallApi;
-  /** Display name of the other participant. */
   otherUserName?: string;
-  /** Avatar URL of the other participant. */
   otherUserAvatar?: string;
 }
 
 export function CallOverlay({ api, otherUserName, otherUserAvatar }: Props) {
   const { call, localStream, remoteStream } = api;
 
-  const localVideoRef = useRef<HTMLVideoElement>(null);
-  const remoteVideoRef = useRef<HTMLVideoElement>(null);
-  const remoteAudioRef = useRef<HTMLAudioElement>(null);
+  /* ── Callback refs ───────────────────────────────────────
+   * These fire the moment the element mounts, so srcObject is
+   * always assigned — even if the stream state hasn't changed
+   * since the last render. This was the root cause of the
+   * "camera opens but nothing shows" bug. */
+  const setLocalVideoRef = useCallback(
+    (el: HTMLVideoElement | null) => {
+      if (!el || !localStream) return;
+      el.srcObject = localStream;
+      el.play().catch(() => {
+        /* autoplay may be blocked until user gesture — fine */
+      });
+    },
+    [localStream]
+  );
 
-  useEffect(() => {
-    if (localVideoRef.current && localStream) {
-      localVideoRef.current.srcObject = localStream;
-    }
-  }, [localStream]);
+  const setRemoteVideoRef = useCallback(
+    (el: HTMLVideoElement | null) => {
+      if (!el || !remoteStream) return;
+      el.srcObject = remoteStream;
+      el.play().catch(() => {});
+    },
+    [remoteStream]
+  );
 
-  useEffect(() => {
-    if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream;
-    }
-    if (remoteAudioRef.current && remoteStream) {
-      remoteAudioRef.current.srcObject = remoteStream;
-    }
-  }, [remoteStream, call?.media]);
+  const setRemoteAudioRef = useCallback(
+    (el: HTMLAudioElement | null) => {
+      if (!el || !remoteStream) return;
+      el.srcObject = remoteStream;
+      el.play().catch((err) => {
+        console.warn('[CALL] audio autoplay blocked:', err);
+      });
+    },
+    [remoteStream]
+  );
 
   if (!call) return null;
 
   const isVideo = call.media === 'video';
-  const showRemoteVideo = isVideo && !!remoteStream;
-  const showLocalVideo = isVideo && !!localStream;
+  const hasRemote = !!remoteStream;
+  const hasLocal = !!localStream;
 
   const statusLabel = {
     incoming: 'Incoming call',
@@ -51,51 +66,67 @@ export function CallOverlay({ api, otherUserName, otherUserAvatar }: Props) {
   return (
     <div className="fixed inset-0 z-[99999] flex flex-col bg-slate-950/95 text-white backdrop-blur-xl">
       <div className="relative flex-1 overflow-hidden">
-        {showRemoteVideo ? (
+        {/*
+         * Remote video — always rendered in video calls so the element
+         * exists before remoteStream arrives.
+         */}
+        {isVideo && (
           <video
-            ref={remoteVideoRef}
+            ref={setRemoteVideoRef}
             autoPlay
             playsInline
-            className="absolute inset-0 h-full w-full object-cover"
+            className={`absolute inset-0 h-full w-full object-cover ${
+              hasRemote ? '' : 'opacity-0'
+            }`}
           />
-        ) : (
-          <>
-            <audio ref={remoteAudioRef} autoPlay />
-            <div className="flex h-full flex-col items-center justify-center gap-3">
-              {otherUserAvatar ? (
-                <img
-                  src={otherUserAvatar}
-                  alt={otherUserName ?? ''}
-                  className="h-28 w-28 rounded-full border-2 border-white/20 object-cover shadow-2xl"
-                />
-              ) : (
-                <div className="flex h-28 w-28 items-center justify-center rounded-full bg-white/10 text-4xl font-bold">
-                  {(otherUserName ?? 'U').charAt(0).toUpperCase()}
-                </div>
-              )}
-              {otherUserName && (
-                <p className="text-2xl font-semibold">{otherUserName}</p>
-              )}
-              <p className="text-sm uppercase tracking-[0.2em] text-white/60">
-                {statusLabel}
-              </p>
-            </div>
-          </>
         )}
 
-        {/* Local preview (video only) */}
-        {showLocalVideo && (
+        {/*
+         * Remote audio — ALWAYS mounted, regardless of call type.
+         * Video calls need it too (video element handles video, but
+         * some browsers drop audio if the video element is remounted).
+         */}
+        <audio ref={setRemoteAudioRef} autoPlay playsInline className="hidden" />
+
+        {/* Placeholder / status when there's no remote video to show */}
+        {(!isVideo || !hasRemote) && (
+          <div className="flex h-full flex-col items-center justify-center gap-3">
+            {otherUserAvatar ? (
+              <img
+                src={otherUserAvatar}
+                alt={otherUserName ?? ''}
+                className="h-28 w-28 rounded-full border-2 border-white/20 object-cover shadow-2xl"
+              />
+            ) : (
+              <div className="flex h-28 w-28 items-center justify-center rounded-full bg-white/10 text-4xl font-bold">
+                {(otherUserName ?? 'U').charAt(0).toUpperCase()}
+              </div>
+            )}
+            {otherUserName && (
+              <p className="text-2xl font-semibold">{otherUserName}</p>
+            )}
+            <p className="text-sm uppercase tracking-[0.2em] text-white/60">
+              {statusLabel}
+            </p>
+          </div>
+        )}
+
+        {/* Local preview — video calls only. Callback ref sets srcObject
+            the instant this element mounts. */}
+        {isVideo && (
           <video
-            ref={localVideoRef}
+            ref={setLocalVideoRef}
             autoPlay
             playsInline
             muted
-            className="absolute bottom-4 right-4 h-40 w-32 rounded-xl border border-white/20 object-cover shadow-2xl"
+            className={`absolute bottom-4 right-4 h-40 w-32 rounded-xl border border-white/20 object-cover shadow-2xl transition-opacity ${
+              hasLocal ? 'opacity-100' : 'opacity-0'
+            }`}
           />
         )}
 
-        {/* Status banner on top of remote video */}
-        {showRemoteVideo && (
+        {/* Status label over remote video */}
+        {isVideo && hasRemote && (
           <div className="absolute top-6 left-1/2 -translate-x-1/2 text-center">
             <p className="text-sm font-semibold uppercase tracking-widest text-white/70 drop-shadow-lg">
               {statusLabel}
@@ -104,6 +135,7 @@ export function CallOverlay({ api, otherUserName, otherUserAvatar }: Props) {
         )}
       </div>
 
+      {/* Controls */}
       <div className="flex items-center justify-center gap-4 py-8">
         {call.state === 'incoming' ? (
           <>
