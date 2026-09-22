@@ -21,27 +21,29 @@ import { useFeedMutations } from '../hooks/useFeedMutations';
 import { useFeedFilters } from '../hooks/useFeedFilters';
 import type { Post } from '../types/post.types';
 
+/* ─────────────── animation variants ─────────────── */
+
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { staggerChildren: 0.06, delayChildren: 0.02 },
+    transition: { staggerChildren: 0.05, delayChildren: 0.02 },
   },
 };
 
 const postVariants = {
-  hidden: { opacity: 0, y: 16, scale: 0.98 },
+  hidden: { opacity: 0, y: 12, scale: 0.99 },
   visible: {
     opacity: 1,
     y: 0,
     scale: 1,
-    transition: { type: 'spring', stiffness: 300, damping: 26 },
+    transition: { type: 'spring', stiffness: 320, damping: 28 },
   },
   exit: {
     opacity: 0,
-    scale: 0.95,
-    y: -8,
-    transition: { duration: 0.2, ease: [0.4, 0, 0.2, 1] },
+    scale: 0.97,
+    y: -6,
+    transition: { duration: 0.18, ease: [0.4, 0, 0.2, 1] },
   },
 };
 
@@ -69,6 +71,8 @@ const Feed: React.FC = () => {
 
   const retryRef = useRef<Map<string, () => void>>(new Map());
 
+  /* ── create pipeline ── */
+
   const handleOptimisticCreate = useCallback(
     (tempPost: Post, retry: () => void) => {
       prependPost(tempPost);
@@ -76,7 +80,7 @@ const Feed: React.FC = () => {
         retryRef.current.set(tempPost._tempId, retry);
       }
     },
-    [prependPost],
+    [prependPost]
   );
 
   const handleCreateSuccess = useCallback(
@@ -105,7 +109,7 @@ const Feed: React.FC = () => {
         URL.revokeObjectURL(tempUrl);
       }
     },
-    [replacePost],
+    [replacePost]
   );
 
   const handleCreateError = useCallback(
@@ -113,7 +117,7 @@ const Feed: React.FC = () => {
       markPostFailed(tempId);
       toast.error(err.message || 'Failed to create post');
     },
-    [markPostFailed],
+    [markPostFailed]
   );
 
   const handleRetryPost = useCallback(
@@ -128,7 +132,7 @@ const Feed: React.FC = () => {
       markPostUploading(tempId);
       retry();
     },
-    [markPostUploading],
+    [markPostUploading]
   );
 
   const handleDismissPost = useCallback(
@@ -142,8 +146,10 @@ const Feed: React.FC = () => {
       }
       removePost(post.id);
     },
-    [removePost],
+    [removePost]
   );
+
+  /* ── interactions ── */
 
   const handleLike = useCallback(
     async (postId: string) => {
@@ -153,7 +159,7 @@ const Feed: React.FC = () => {
       updatePostInList({
         ...post,
         is_liked: !post.is_liked,
-        likes_count: post.likes_count + (post.is_liked ? -1 : 1),
+        likes_count: (post.likes_count ?? 0) + (post.is_liked ? -1 : 1),
       });
 
       try {
@@ -161,14 +167,14 @@ const Feed: React.FC = () => {
         updatePostInList({
           ...post,
           is_liked: result.liked,
-          likes_count: post.likes_count + (result.liked ? 1 : -1),
+          likes_count: (post.likes_count ?? 0) + (result.liked ? 1 : -1),
         });
       } catch (err: any) {
         updatePostInList(post);
         toast.error(err.message || 'Failed to like post');
       }
     },
-    [posts, toggleLike, updatePostInList],
+    [posts, toggleLike, updatePostInList]
   );
 
   const handleDelete = useCallback(
@@ -182,7 +188,7 @@ const Feed: React.FC = () => {
         toast.error(err.message || 'Failed to delete post');
       }
     },
-    [deletePost, removePost],
+    [deletePost, removePost]
   );
 
   const handleComment = useCallback(
@@ -193,8 +199,8 @@ const Feed: React.FC = () => {
         if (post) {
           updatePostInList({
             ...post,
-            comments: [...post.comments, comment],
-            comments_count: post.comments_count + 1,
+            comments: [...(post.comments ?? []), comment],
+            comments_count: (post.comments_count ?? 0) + 1,
           });
         }
         toast.success('Comment added');
@@ -202,7 +208,7 @@ const Feed: React.FC = () => {
         toast.error(err.message || 'Failed to add comment');
       }
     },
-    [posts, createComment, updatePostInList],
+    [posts, createComment, updatePostInList]
   );
 
   const handleDeleteComment = useCallback(
@@ -213,16 +219,18 @@ const Feed: React.FC = () => {
         if (post) {
           updatePostInList({
             ...post,
-            comments: post.comments.filter((c) => c.id !== commentId),
-            comments_count: Math.max(0, post.comments_count - 1),
+            comments: (post.comments ?? []).filter((c) => c.id !== commentId),
+            comments_count: Math.max(0, (post.comments_count ?? 0) - 1),
           });
         }
       } catch (err: any) {
         toast.error(err.message || 'Failed to delete comment');
       }
     },
-    [posts, deleteComment, updatePostInList],
+    [posts, deleteComment, updatePostInList]
   );
+
+  /* ── infinite scroll ── */
 
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useCallback(
@@ -230,136 +238,156 @@ const Feed: React.FC = () => {
       if (loading || loadingMore || !hasMore) return;
       if (observerRef.current) observerRef.current.disconnect();
 
-      observerRef.current = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && hasMore) {
-          loadMore();
-        }
-      });
+      observerRef.current = new IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting && hasMore) {
+            loadMore();
+          }
+        },
+        { rootMargin: '200px' }
+      );
 
       if (node) observerRef.current.observe(node);
     },
-    [loading, loadingMore, hasMore, loadMore],
+    [loading, loadingMore, hasMore, loadMore]
   );
 
-  return (
-    /* ═══ CHANGES: space-y-4 → space-y-2, pb-6 → pb-3, mx-auto removed ═══ */
-    <div className="w-full overflow-x-hidden space-y-2 pb-3">
+  const isEmpty = !loading && posts.length === 0 && !error;
+  const showLoadMore = hasMore && posts.length > 0;
 
-      {/* ═══ CHANGES: py-2 → py-1, tighter padding ═══ */}
+  return (
+    <div className="w-full overflow-x-hidden pb-6">
+      {/* ── Sticky composer + filter ── */}
       <motion.div
-        initial={{ opacity: 0, y: -12 }}
+        initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25, ease: 'easeOut' }}
-        className="sticky top-0 z-30 py-1 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-2xl border-b border-slate-200/60 dark:border-white/10 transition-all duration-300 shadow-xs"
+        className="sticky top-0 z-30 -mx-3 sm:mx-0 px-3 sm:px-0 bg-slate-50/85 dark:bg-slate-950/85 backdrop-blur-2xl border-b border-slate-200/60 dark:border-slate-800/60"
       >
-        <PostComposer
-          onOptimisticCreate={handleOptimisticCreate}
-          onCreateSuccess={handleCreateSuccess}
-          onCreateError={handleCreateError}
-        />
+        <div className="py-2">
+          <PostComposer
+            onOptimisticCreate={handleOptimisticCreate}
+            onCreateSuccess={handleCreateSuccess}
+            onCreateError={handleCreateError}
+          />
+        </div>
 
-        <AnimatePresence>
+        <AnimatePresence initial={false}>
           {filters?.hashtag && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="mt-1.5 flex items-center justify-between gap-2 rounded-xl bg-blue-500/10 px-3 py-1 border border-blue-500/20 text-xs font-medium text-blue-600 dark:text-blue-400 overflow-hidden"
+              transition={{ duration: 0.18, ease: 'easeInOut' }}
+              className="overflow-hidden"
             >
-              <div className="flex items-center gap-1.5 truncate">
-                <Filter className="w-3.5 h-3.5 shrink-0" />
-                <span>Filtering by:</span>
-                <span className="font-bold underline underline-offset-2">
-                  #{filters.hashtag}
-                </span>
+              <div className="mb-2 flex items-center justify-between gap-2 rounded-lg bg-blue-500/[0.08] px-3 py-1.5 border border-blue-500/15 text-[12px] font-medium text-blue-700 dark:text-blue-300">
+                <div className="flex items-center gap-1.5 truncate">
+                  <Filter className="w-3.5 h-3.5 shrink-0" />
+                  <span className="text-blue-600/80 dark:text-blue-400/80">
+                    Filtering:
+                  </span>
+                  <span className="font-bold truncate">
+                    #{filters.hashtag}
+                  </span>
+                </div>
+                <button
+                  onClick={clearFilters}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-md p-0.5 hover:bg-blue-500/15 transition-colors"
+                  title="Clear filter"
+                  aria-label="Clear filter"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
               </div>
-              <button
-                onClick={clearFilters}
-                className="inline-flex items-center gap-1 rounded-md p-0.5 hover:bg-blue-500/20 transition-colors"
-                title="Clear filter"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
             </motion.div>
           )}
         </AnimatePresence>
       </motion.div>
 
-      {/* Skeletons */}
+      {/* ── Spacer below sticky ── */}
+      <div className="h-3" />
+
+      {/* ── Loading skeletons ── */}
       {loading && posts.length === 0 && (
-        <div className="space-y-2">
-          <FeedSkeleton />
-          <FeedSkeleton />
-          <FeedSkeleton />
+        <div>
+          {Array.from({ length: 3 }).map((_, i) => (
+            <FeedSkeleton key={i} />
+          ))}
         </div>
       )}
 
-      {/* Error */}
-      {error && !loading && (
+      {/* ── Error state ── */}
+      {error && !loading && posts.length === 0 && (
         <motion.div
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="relative overflow-hidden my-2 rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-gradient-to-br from-rose-50/80 via-white to-rose-50/30 dark:from-rose-950/30 dark:via-slate-900 dark:to-rose-950/10 p-5 text-center backdrop-blur-xl shadow-xs"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mx-auto max-w-md rounded-2xl border border-rose-200/70 dark:border-rose-900/50 bg-rose-50/50 dark:bg-rose-950/20 p-6 text-center backdrop-blur-sm"
         >
-          <div className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-xl bg-rose-100 text-rose-600 dark:bg-rose-900/40 dark:text-rose-400 ring-4 ring-rose-50 dark:ring-rose-950/20">
+          <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-rose-100 text-rose-600 dark:bg-rose-900/40 dark:text-rose-400">
             <AlertCircle className="h-5 w-5" />
           </div>
-          <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-            Unable to fetch feed updates
+          <h4 className="text-[14px] font-bold text-slate-900 dark:text-slate-100">
+            Couldn&apos;t load your feed
           </h4>
-          <p className="mt-1 text-xs text-slate-600 dark:text-slate-400 max-w-xs mx-auto leading-relaxed">
+          <p className="mt-1 text-[12.5px] text-slate-600 dark:text-slate-400 leading-relaxed">
             {error}
           </p>
           <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={refresh}
-            className="mt-3.5 inline-flex items-center gap-2 rounded-xl bg-rose-600 hover:bg-rose-700 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all"
+            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-blue-600 hover:bg-blue-500 px-4 py-2 text-[12.5px] font-semibold text-white shadow-sm shadow-blue-500/20 transition-colors"
           >
             <RefreshCw className="h-3.5 w-3.5" />
-            Try Refreshing Feed
+            Try again
           </motion.button>
         </motion.div>
       )}
 
-      {/* Empty state */}
-      {!loading && posts.length === 0 && !error && (
+      {/* ── Empty state ── */}
+      {isEmpty && (
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden my-2 rounded-2xl border border-dashed border-slate-300/80 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60 p-8 text-center backdrop-blur-xl shadow-xs"
+          className="relative mx-auto max-w-md overflow-hidden rounded-2xl border border-dashed border-slate-300/70 dark:border-slate-800 bg-white/60 dark:bg-slate-900/50 p-8 text-center backdrop-blur-sm"
         >
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 bg-blue-500/10 dark:bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
-          <div className="relative mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20">
-            <MessageSquarePlus className="h-6 w-6" />
-            <Sparkles className="absolute -top-1 -right-1 h-4 w-4 text-amber-400 animate-pulse" />
+          <div className="pointer-events-none absolute left-1/2 top-1/2 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/10 dark:bg-blue-500/[0.06] blur-3xl" />
+
+          <div className="relative mx-auto mb-3.5 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20">
+            <MessageSquarePlus className="h-5.5 w-5.5" />
+            <Sparkles className="absolute -right-1 -top-1 h-4 w-4 text-amber-400 animate-pulse" />
           </div>
-          <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-            Your feed is currently quiet
-          </h3>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto leading-relaxed">
+
+          <h3 className="relative text-[14.5px] font-bold text-slate-900 dark:text-slate-100">
             {filters?.hashtag
-              ? `No posts found with hashtag #${filters.hashtag}. Try clearing your search.`
-              : 'Be the first professional to share an update, showcase work, or ask a question!'}
+              ? `No posts with #${filters.hashtag}`
+              : 'Your feed is quiet'}
+          </h3>
+          <p className="relative mt-1 text-[12.5px] text-slate-500 dark:text-slate-400 leading-relaxed">
+            {filters?.hashtag
+              ? 'Try clearing the filter to see everything again.'
+              : 'Be the first to share an update, showcase work, or ask a question.'}
           </p>
+
           {filters?.hashtag && (
             <button
               onClick={clearFilters}
-              className="mt-3 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+              className="relative mt-3.5 inline-flex items-center gap-1.5 rounded-lg border border-blue-500/20 bg-blue-500/[0.08] px-3 py-1.5 text-[12px] font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-500/15 transition-colors"
             >
-              Clear Filter
+              <X className="w-3 h-3" />
+              Clear filter
             </button>
           )}
         </motion.div>
       )}
 
-      {/* List */}
+      {/* ── Feed list ── */}
       {posts.length > 0 && (
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="space-y-2"
         >
           <AnimatePresence mode="popLayout" initial={false}>
             {posts.map((post) => (
@@ -370,7 +398,6 @@ const Feed: React.FC = () => {
                 initial="hidden"
                 animate="visible"
                 exit="exit"
-                className="rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition-colors duration-200 overflow-hidden"
               >
                 <PostCard
                   post={post}
@@ -388,36 +415,36 @@ const Feed: React.FC = () => {
         </motion.div>
       )}
 
-      {/* Infinite scroll */}
-      {hasMore && (
+      {/* ── Load more trigger (only when there are posts) ── */}
+      {showLoadMore && (
         <div
           ref={loadMoreRef}
-          className="flex min-h-[40px] items-center justify-center py-2"
+          className="flex min-h-[44px] items-center justify-center py-3"
         >
           {loadingMore && (
             <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/80 px-4 py-1.5 text-xs font-medium text-slate-600 shadow-sm backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-900/80 dark:text-slate-300"
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200/70 dark:border-slate-800/70 bg-white/80 dark:bg-slate-900/70 px-3.5 py-1.5 text-[12px] font-medium text-slate-600 dark:text-slate-400 shadow-sm backdrop-blur-xl"
             >
               <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600 dark:text-blue-400" />
-              <span>Loading more updates...</span>
+              <span>Loading more…</span>
             </motion.div>
           )}
         </div>
       )}
 
-      {/* End of feed */}
+      {/* ── End of feed (only when there are posts) ── */}
       {!hasMore && posts.length > 0 && (
         <motion.div
           initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }} 
-          transition={{ delay: 0.2 }}
-          className="py-2 text-center"
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.15 }}
+          className="flex justify-center pt-4 pb-2"
         >
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-slate-100/80 px-3.5 py-1 text-xs font-medium text-slate-600 backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-800/60 dark:text-slate-400">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/70 dark:border-slate-800/70 bg-slate-100/70 dark:bg-slate-800/50 px-3.5 py-1.5 text-[12px] font-medium text-slate-500 dark:text-slate-400 backdrop-blur-sm">
             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-            <span>You're all caught up for now</span>
+            <span>You&apos;re all caught up</span>
           </div>
         </motion.div>
       )}

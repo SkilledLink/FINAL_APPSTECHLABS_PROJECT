@@ -1,6 +1,7 @@
 // src/features/profile/components/ProfileHeader.tsx
 
-import React, { useRef } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   BadgeCheck,
   UserPlus,
@@ -8,9 +9,13 @@ import {
   Wrench,
   Share2,
   MoreHorizontal,
+  FolderOpen,
+  Eye,
+  ArrowRight,
 } from 'lucide-react';
 import type { UserProfile } from '../types/profile.types';
 import { StackedAvatars } from './StackedAvatars';
+import { portfolioService } from '../../portfolio/services/portfolioService';
 
 interface ProfileHeaderProps {
   profile: UserProfile;
@@ -30,6 +35,13 @@ interface ProfileHeaderProps {
   onShare?: () => void;
 }
 
+/* ────────────────────────────────────────────────────────────
+ * Portfolio route
+ * Verified working path from your router:
+ *   /home/portfolio/:userId
+ * ──────────────────────────────────────────────────────────── */
+const portfolioRoute = (userId: string) => `/home/portfolio/${userId}`;
+
 export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   profile,
   isOwnProfile,
@@ -45,9 +57,50 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   onImageUpload,
   onShare,
 }) => {
+  const navigate = useNavigate();
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const profileInputRef = useRef<HTMLInputElement>(null);
 
+  /* ── Portfolio existence check (self-contained) ────────── */
+  const [hasPortfolio, setHasPortfolio] = useState(false);
+  const [checkingPortfolio, setCheckingPortfolio] = useState(true);
+
+  useEffect(() => {
+    if (!profile?.id) return;
+
+    let cancelled = false;
+    setCheckingPortfolio(true);
+
+    const check = async () => {
+      try {
+        if (isOwnProfile) {
+          // /professionals/portfolio → returns null on 404 (no portfolio yet)
+          const mine = await portfolioService.getMine();
+          if (!cancelled) setHasPortfolio(!!mine);
+        } else {
+          // /professionals/:userId/portfolio → throws on 404
+          await portfolioService.getPublic(profile.id);
+          if (!cancelled) setHasPortfolio(true);
+        }
+      } catch {
+        if (!cancelled) setHasPortfolio(false);
+      } finally {
+        if (!cancelled) setCheckingPortfolio(false);
+      }
+    };
+
+    check();
+    return () => {
+      cancelled = true;
+    };
+  }, [profile?.id, isOwnProfile]);
+
+  const handleViewPortfolio = useCallback(() => {
+    if (!profile?.id) return;
+    navigate(portfolioRoute(profile.id));
+  }, [profile?.id, navigate]);
+
+  /* ── Existing profile normalisation ────────────────────── */
   const profileData = profile as UserProfile & {
     first_name?: string;
     last_name?: string;
@@ -74,8 +127,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     profile.bannerImageUrl ?? profileData.banner_image_url ?? '';
   const accountType = profile.accountType ?? profileData.account_type;
 
-  const isStandardAccount =
-    accountType === 'standard';
+  const isStandardAccount = accountType === 'standard';
 
   const handleImageChange = (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -91,6 +143,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     event.target.value = '';
   };
 
+  /* ── Render ────────────────────────────────────────────── */
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl overflow-hidden shadow-xs">
       {/* ── Banner ────────────────────────────────────── */}
@@ -131,7 +184,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
           {/* Left group: avatar + name */}
           <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4 flex-1 min-w-0">
-            {/* Avatar — ONLY this pulls up into the banner */}
+            {/* Avatar — pulls up into the banner */}
             <div className="relative shrink-0 group -mt-14 sm:-mt-16 md:-mt-20">
               <img
                 src={
@@ -168,7 +221,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               />
             </div>
 
-            {/* Name + meta — always below banner */}
+            {/* Name + meta */}
             <div className="flex-1 min-w-0 pt-2 sm:pt-3 md:pt-0 space-y-1.5">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <h1 className="text-lg sm:text-2xl font-black text-slate-900 dark:text-slate-100 leading-tight">
@@ -220,8 +273,35 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             </div>
           </div>
 
-          {/* Actions */}
+          {/* ── Actions ───────────────────────────────── */}
           <div className="flex flex-wrap items-center gap-2 shrink-0 pt-2 md:pt-3">
+            {/* ── Portfolio — primary CTA for visitors ── */}
+            {!isOwnProfile && hasPortfolio && !checkingPortfolio && (
+              <button
+                onClick={handleViewPortfolio}
+                aria-label={`View ${fullName}'s portfolio`}
+                className="group relative flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-md shadow-blue-600/25 transition-all active:scale-[0.98] overflow-hidden"
+              >
+                {/* Soft glow on hover */}
+                <span className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.25),transparent_70%)]" />
+                <FolderOpen className="w-3.5 h-3.5 relative transition-transform group-hover:scale-110" />
+                <span className="relative">View Portfolio</span>
+                <ArrowRight className="w-3 h-3 relative -mr-0.5 transition-transform group-hover:translate-x-0.5" />
+              </button>
+            )}
+
+            {/* ── Portfolio — subtle ghost for own profile ── */}
+            {isOwnProfile && hasPortfolio && !checkingPortfolio && (
+              <button
+                onClick={handleViewPortfolio}
+                aria-label="Preview your portfolio"
+                className="group flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-800 hover:text-blue-600 dark:hover:text-blue-400 transition-all active:scale-[0.98]"
+              >
+                <Eye className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors" />
+                <span>Preview Portfolio</span>
+              </button>
+            )}
+
             {isOwnProfile && isStandardAccount && (
               <button
                 onClick={onUpgrade}
