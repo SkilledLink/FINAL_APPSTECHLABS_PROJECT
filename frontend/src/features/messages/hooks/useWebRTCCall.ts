@@ -93,14 +93,15 @@ export function useWebRTCCall(socket: Socket | null) {
         }
       };
 
+      // Use the browser-provided stream directly. Creating an empty
+      // MediaStream and adding tracks to it produces a reference that
+      // never changes, so React never sees the remote video arrive.
       pc.ontrack = (e) => {
-        if (!remoteStreamRef.current) {
-          remoteStreamRef.current = new MediaStream();
-          setRemoteStream(remoteStreamRef.current);
+        const stream = e.streams[0];
+        if (stream) {
+          remoteStreamRef.current = stream;
+          setRemoteStream(stream);
         }
-        e.streams[0]?.getTracks().forEach((t) => {
-          remoteStreamRef.current!.addTrack(t);
-        });
       };
 
       pc.onconnectionstatechange = () => {
@@ -168,6 +169,7 @@ export function useWebRTCCall(socket: Socket | null) {
         const callId: string = ack.data.call_id;
 
         const pc = buildPeer(callId, calleeId);
+        // Attach local audio + video tracks so the callee can see/hear us.
         stream.getTracks().forEach((t) => pc.addTrack(t, stream));
 
         setCall({
@@ -214,7 +216,13 @@ export function useWebRTCCall(socket: Socket | null) {
         return;
       }
 
-      buildPeer(current.callId, current.otherUserId);
+      const pc = buildPeer(current.callId, current.otherUserId);
+      // ── THE FIX ─────────────────────────────────────────
+      // Attach local audio + video tracks so the caller can see/hear us.
+      // Without this, the callee was sending no media, so the caller
+      // only ever saw their own local preview.
+      stream.getTracks().forEach((t) => pc.addTrack(t, stream));
+
       setCall((c) => (c ? { ...c, state: 'connecting' } : c));
     } catch (e: any) {
       setError(

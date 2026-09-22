@@ -41,10 +41,9 @@ export const MessagesPage: React.FC = () => {
   }, [conversations]);
 
   /*
-   * If the URL param changes while the page is mounted (back/forward between
-   * deep links), sync the active conversation. We intentionally don't clear
-   * `activeConversationId` when the param disappears — an internal "back to
-   * list" on mobile shouldn't be reversed by the effect.
+   * Sync active conversation when the URL param changes (deep links and
+   * back/forward). We don't clear on param removal so an internal "back to
+   * list" on mobile isn't reversed by the effect.
    */
   useEffect(() => {
     if (urlConversationId && urlConversationId !== activeConversationId) {
@@ -63,18 +62,18 @@ export const MessagesPage: React.FC = () => {
   const isUploading = voiceUploading || fileUploading;
   const currentUserId = normalizeId(user?.id);
 
+  // ── Presence + typing (single declaration each) ─────────
   const { onlineUsers } = usePresence(currentUserId);
-
   const { typingUsers, sendTyping } = useTyping(
     activeConversationId,
     currentUserId
   );
+
   // ── Calling ──────────────────────────────────────────────
   const callApi = useWebRTCCall(socket);
 
-  const { onlineUsers } = usePresence(currentUserId);
-  const { typingUsers, sendTyping } = useTyping(activeConversationId, currentUserId);
-
+  /* ── Realtime: new messages land here for both the sidebar and the
+   *    active conversation. ──────────────────────────────────── */
   const handleGlobalNewMessage = useCallback(
     (newMsg: any) => {
       const isActive = newMsg.conversation_id === activeConversationId;
@@ -83,8 +82,6 @@ export const MessagesPage: React.FC = () => {
         const index = prev.findIndex(
           (conversation) => conversation.id === newMsg.conversation_id
         );
-      setDisplayConversations(prev => {
-        const index = prev.findIndex(conversation => conversation.id === newMsg.conversation_id);
         if (index < 0) return prev;
 
         const updated = {
@@ -98,7 +95,10 @@ export const MessagesPage: React.FC = () => {
             ? 0
             : (prev[index].unread_count ?? prev[index].unreadCount ?? 0) + 1,
         };
-        return [updated, ...prev.filter((_, itemIndex) => itemIndex !== index)];
+        return [
+          updated,
+          ...prev.filter((_, itemIndex) => itemIndex !== index),
+        ];
       });
 
       if (isActive) {
@@ -123,11 +123,12 @@ export const MessagesPage: React.FC = () => {
         }
       }
     },
-    [activeConversationId, setMessages, currentUserId, socket]
+    [activeConversationId, setMessages, socket]
   );
 
   useRealtimeMessages(handleGlobalNewMessage);
 
+  /* ── Mark as read when active conversation changes ──────── */
   useEffect(() => {
     if (!activeConversationId || !socket) return;
     setDisplayConversations((prev) =>
@@ -144,7 +145,7 @@ export const MessagesPage: React.FC = () => {
     setActiveConversationId(id);
   }, []);
 
-  // ── Send Text ──
+  // ── Send Text ────────────────────────────────────────────
   const handleSendMessage = useCallback(
     async (text: string) => {
       if (!activeConversationId) return;
@@ -165,7 +166,11 @@ export const MessagesPage: React.FC = () => {
       };
       addOptimistic(tempMessage);
 
-      const { realMessage, error } = await send(clientMessageId, text, 'text');
+      const { realMessage, error } = await send(
+        clientMessageId,
+        text,
+        'text'
+      );
       if (realMessage) {
         confirmMessage(realMessage);
       } else if (error) {
@@ -193,7 +198,7 @@ export const MessagesPage: React.FC = () => {
     ]
   );
 
-  // ── Send File / Image ──
+  // ── Send File / Image ────────────────────────────────────
   const handleSendFile = useCallback(
     async (file: File) => {
       if (!activeConversationId) return;
@@ -270,12 +275,14 @@ export const MessagesPage: React.FC = () => {
     [handleSendFile]
   );
 
-  // ── Send Voice Note ──
+  // ── Send Voice Note ──────────────────────────────────────
   const handleSendVoiceNote = useCallback(
     async (duration: string) => {
       if (!activeConversationId) return;
       const blob = new Blob(['dummy audio'], { type: 'audio/webm' });
-      const file = new File([blob], 'recording.webm', { type: 'audio/webm' });
+      const file = new File([blob], 'recording.webm', {
+        type: 'audio/webm',
+      });
       const durationNum = parseInt(duration.split(':')[1]) || 5;
 
       try {
@@ -338,6 +345,7 @@ export const MessagesPage: React.FC = () => {
     ]
   );
 
+  /* ── Enrich conversations with live presence ───────────── */
   const conversationsWithPresence = useMemo(() => {
     return displayConversations.map((c) => {
       if (!c.participant) return c;
@@ -353,13 +361,13 @@ export const MessagesPage: React.FC = () => {
     [conversationsWithPresence, activeConversationId]
   );
 
-  // ── Call handlers ────────────────────────────────────────
+  /* ── Call handlers ──────────────────────────────────────── */
   const handleStartCall = useCallback(() => {
     if (!activeConversationId || !activeConversation?.participant?.id) return;
     callApi.startCall(
       activeConversationId,
       activeConversation.participant.id,
-      'audio',
+      'audio'
     );
   }, [activeConversationId, activeConversation, callApi]);
 
@@ -368,7 +376,7 @@ export const MessagesPage: React.FC = () => {
     callApi.startCall(
       activeConversationId,
       activeConversation.participant.id,
-      'video',
+      'video'
     );
   }, [activeConversationId, activeConversation, callApi]);
 
@@ -384,43 +392,12 @@ export const MessagesPage: React.FC = () => {
   }
 
   return (
-    <div className="h-screen w-full flex overflow-hidden border-x border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-2xl">
-      <div
-        className={`${
-          activeConversationId ? 'hidden lg:block' : 'w-full'
-        } lg:w-auto h-full shrink-0 transition-all duration-300 ease-in-out`}
-      >
-        <ConversationList
-          conversations={conversationsWithPresence as any}
-          activeId={activeConversationId}
-          onSelectConversation={handleSelectConversation}
-        />
-      </div>
-      <div
-        className={`${
-          !activeConversationId ? 'hidden lg:flex' : 'flex'
-        } flex-1 h-full transition-all duration-300 ease-in-out`}
-      >
-        <ChatWindow
-          conversation={activeConversation as any}
-          messages={messages}
-          currentUserId={currentUserId}
-          onSendMessage={handleSendMessage}
-          onSendVoiceNote={handleSendVoiceNote}
-          onSendFile={handleSendFile}
-          onSendImage={handleSendImage}
-          uploading={isUploading}
-          uploadProgress={uploadProgress}
-          onBack={() => setActiveConversationId(null)}
-          onTypingChange={sendTyping}
-          typingUsers={typingUsers}
-        />
-      </div>
-    </div>
     <>
       <div className="h-screen w-full flex overflow-hidden border-x border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-2xl">
         <div
-          className={`${activeConversationId ? 'hidden lg:block' : 'w-full'} lg:w-auto h-full shrink-0 transition-all duration-300 ease-in-out`}
+          className={`${
+            activeConversationId ? 'hidden lg:block' : 'w-full'
+          } lg:w-auto h-full shrink-0 transition-all duration-300 ease-in-out`}
         >
           <ConversationList
             conversations={conversationsWithPresence as any}
@@ -429,7 +406,9 @@ export const MessagesPage: React.FC = () => {
           />
         </div>
         <div
-          className={`${!activeConversationId ? 'hidden lg:flex' : 'flex'} flex-1 h-full transition-all duration-300 ease-in-out`}
+          className={`${
+            !activeConversationId ? 'hidden lg:flex' : 'flex'
+          } flex-1 h-full transition-all duration-300 ease-in-out`}
         >
           <ChatWindow
             conversation={activeConversation as any}
@@ -456,14 +435,16 @@ export const MessagesPage: React.FC = () => {
         api={callApi}
         otherUserName={
           callApi.call
-            ? conversationsWithPresence.find(c => c.id === callApi.call?.conversationId)
-                ?.participant?.name
+            ? conversationsWithPresence.find(
+                (c) => c.id === callApi.call?.conversationId
+              )?.participant?.name
             : undefined
         }
         otherUserAvatar={
           callApi.call
-            ? conversationsWithPresence.find(c => c.id === callApi.call?.conversationId)
-                ?.participant?.avatar
+            ? conversationsWithPresence.find(
+                (c) => c.id === callApi.call?.conversationId
+              )?.participant?.avatar
             : undefined
         }
       />
