@@ -1,8 +1,8 @@
 // src/features/home/pages/HomePage.tsx
 
 import React, { useEffect, useState } from "react";
-import { TrendingUp, Search, Sparkles, RefreshCw, Flame } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { TrendingUp, Sparkles, Flame } from "lucide-react";
+import { motion } from "framer-motion";
 
 import { mockData } from "../../../data/mockData";
 import type { HomeData } from "../../../types/home";
@@ -18,13 +18,12 @@ import TrendingTrades from "../../../components/components/TrendingTrades";
 export default function HomePage() {
   const [data, setData] = useState<HomeData>(mockData);
   const [loading, setLoading] = useState(false);
-  const [feedSearch, setFeedSearch] = useState("");
 
   // ============================================================
   // LOAD HOME DATA
   // ============================================================
 
- const loadHomeData = async () => {
+  const loadHomeData = async () => {
     try {
       setLoading(true);
       // TODO: Replace with real API request in production
@@ -71,22 +70,6 @@ export default function HomePage() {
 
   return (
     <div className="w-full h-full min-h-full">
-      {/* ========================================================
-          MOBILE SEARCH & QUICK FILTERS
-          ======================================================== */}
-      <div className="sm:hidden w-full px-4 pt-3 pb-2 sticky top-0 z-30 bg-slate-50/80 dark:bg-[#0b1329]/80 backdrop-blur-xl border-b border-slate-200/40 dark:border-slate-800/40">
-        <div className="relative w-full">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-          <input
-            type="text"
-            value={feedSearch}
-            onChange={(event) => setFeedSearch(event.target.value)}
-            placeholder="Search feed, trades, or questions..."
-            className="w-full h-10 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 rounded-xl pl-10 pr-4 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all shadow-sm"
-          />
-        </div>
-      </div>
-
       {/* ========================================================
           MAIN CONTENT GRID
           ======================================================== */}

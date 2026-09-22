@@ -1,3 +1,5 @@
+// src/App.tsx
+
 import { useState, useEffect } from "react";
 import {
   BrowserRouter,
@@ -14,7 +16,7 @@ import "react-toastify/dist/ReactToastify.css";
 
 // Providers
 import { AuthProvider } from "./providers/AuthProvider";
-import { SocketProvider } from "./contexts/SocketContext";   // ← NEW
+import { SocketProvider } from "./contexts/SocketContext";
 
 // Layouts
 import { AuthLayout } from "./features/auth/components/AuthLayout";
@@ -46,7 +48,7 @@ import Feed from "./features/posts/components/Feed";
 import { ProfilePage } from "./features/profile";
 import { MessagesPage } from "./features/messages";
 
-//notification
+// notification
 import { NotificationsPage } from "./features/notifications";
 
 // Location-powered Discover
@@ -56,8 +58,9 @@ import NearbyProfessionalsPage from "./features/location/pages/NearbyProfessiona
 import JobsPage from "./features/jobs/pages/JobsPage";
 import JobDetailsPage from "./features/jobs/pages/JobDetailsPage";
 import CreateJobPage from "./features/jobs/pages/CreateJobPage";
+
+// Portfolio — single component, auto-switches owner vs public
 import PortfolioDashboard from "./features/portfolio/pages/PortfolioDashboard";
-import { PortfolioPage } from "./features/Portfo/pages/PortfolioPage";
 
 // Users
 import UsersPage from "./features/users/pages/UsersPage";
@@ -77,10 +80,6 @@ const ProfessionalsPage = UsersPage;
 
 // ============================================================
 // SOCKET AUTH BRIDGE
-// Reads the JWT from localStorage (same source the messages
-// useAuth hook reads from) and forwards it to SocketProvider.
-// Replace the key names below if your login stores the token
-// under a different localStorage key.
 // ============================================================
 function AuthedSocketProvider({ children }: { children: React.ReactNode }) {
   const readToken = () =>
@@ -92,8 +91,6 @@ function AuthedSocketProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(() => readToken());
 
   useEffect(() => {
-    // Re-read token when login/logout happens in this tab (focus)
-    // or another tab (storage event).
     const sync = () => setToken(readToken());
     window.addEventListener("storage", sync);
     window.addEventListener("focus", sync);
@@ -151,17 +148,6 @@ function JobDetailsRoute() {
   );
 }
 
-function PublicPortfolioRoute() {
-  const handleSelectProject = () => { };
-  const handleNavigateCreate = () => { };
-  return (
-    <PortfolioPage
-      onSelectProject={handleSelectProject}
-      onNavigateCreate={handleNavigateCreate}
-    />
-  );
-}
-
 function JobDetailsRedirect() {
   const { id } = useParams<{ id: string }>();
   return <Navigate to={`/home/jobs/${id}`} replace />;
@@ -207,7 +193,7 @@ function App() {
 
             {/* AUTHENTICATED (PROTECTED) */}
             <Route element={<ProtectedRoute />}>
-              {/* Onboarding — full-screen, siblings of /home */}
+              {/* Onboarding */}
               <Route path="/onboarding" element={<ChooseAccountTypePage />} />
               <Route
                 path="/onboarding/professional"
@@ -222,12 +208,23 @@ function App() {
                 <Route path="jobs/create" element={<CreateJobPage />} />
                 <Route path="jobs/:id" element={<JobDetailsRoute />} />
                 <Route path="discover" element={<NearbyProfessionalsPage />} />
+
+                {/* Portfolio — owner studio when no id / own id,
+                    public read-only view when someone else's id */}
                 <Route path="portfolio" element={<PortfolioDashboard />} />
+                <Route
+                  path="portfolio/:userId"
+                  element={<PortfolioDashboard />}
+                />
+
                 <Route path="notifications" element={<NotificationsPage />} />
 
-                {/* ✅ Messages — list-only and with an open conversation */}
+                {/* Messages */}
                 <Route path="messages" element={<MessagesPage />} />
-                <Route path="messages/:conversationId" element={<MessagesPage />} />
+                <Route
+                  path="messages/:conversationId"
+                  element={<MessagesPage />}
+                />
 
                 <Route path="professionals" element={<ProfessionalsPage />} />
                 <Route path="users" element={<UsersPage />} />
@@ -246,13 +243,16 @@ function App() {
               <Route path="/jobs/:id" element={<JobDetailsRedirect />} />
             </Route>
 
-            {/* PUBLIC PORTFOLIO */}
-            <Route path="/portfolio" element={<PublicPortfolioRoute />} />
+            {/* PUBLIC PORTFOLIO (standalone, no auth required) */}
+            <Route
+              path="/portfolio/:userId"
+              element={<PortfolioDashboard />}
+            />
 
             {/* ADMIN */}
             <Route path="/admin_dashboard" element={<AdminDashboard />} />
 
-            {/* MODERATOR DASHBOARD (PUBLIC ROUTE) */}
+            {/* MODERATOR DASHBOARD */}
             <Route path="/moderator_dashboard" element={<ModeratorDashboard />} />
 
             {/* CATCH-ALL */}
