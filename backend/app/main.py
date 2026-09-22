@@ -110,6 +110,9 @@ from app.models.professional_tier_subscription import (  # noqa: F401
 from app.models.professional_payment import ProfessionalPayment  # noqa: F401
 from app.models.professional_ai_usage import ProfessionalAIUsage  # noqa: F401
 
+# ─── Webhook idempotency ledger ────────────────────────────
+from app.models.webhook_event import WebhookEvent  # noqa: F401
+
 
 # ─── Lifespan ──────────────────────────────────────────────
 @asynccontextmanager
@@ -121,14 +124,6 @@ async def lifespan(app: FastAPI):
             connection.execute(text("SELECT 1"))
 
         print("✅ Database connection successful!")
-
-        # NOTE: Alembic now owns schema. If you want create_all to stop
-        # creating tables, uncomment the next line's effect by removing
-        # the create_all call. Leaving it on is safe but means new tables
-        # bypass Alembic — which is exactly what we spent this session
-        # avoiding. Comment it out when you're ready.
-        # SQLModel.metadata.create_all(engine)
-
         print("✅ Database tables are ready.")
 
     except OperationalError as e:
@@ -204,7 +199,7 @@ app.include_router(moderator_router)
 app.include_router(notifications_router)
 app.include_router(report_router)
 
-# ─── Webhooks (existing — KYC / Didit) ─────────────────────
+# ─── Webhooks (KYC / Didit) ────────────────────────────────
 app.include_router(webhooks_router)
 
 
