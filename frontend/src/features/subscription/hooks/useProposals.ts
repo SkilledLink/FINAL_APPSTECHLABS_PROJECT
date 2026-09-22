@@ -1,5 +1,5 @@
 // src/features/subscription/hooks/useProposals.ts
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { subscriptionService } from '../services/subscriptionService';
 import type { AIProposal, DeepAnalysisResponse } from '../types/subscription.types';
 
@@ -10,6 +10,9 @@ export function useProposals(enabled = true) {
   const [analyzing, setAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<DeepAnalysisResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Guards the initial fetch so it only runs once per mount.
+  const fetchedRef = useRef(false);
 
   const refresh = useCallback(async () => {
     if (!enabled) return;
@@ -27,6 +30,8 @@ export function useProposals(enabled = true) {
 
   useEffect(() => {
     if (!enabled) return;
+    if (fetchedRef.current) return;
+    fetchedRef.current = true;
     refresh();
   }, [enabled, refresh]);
 
@@ -43,23 +48,20 @@ export function useProposals(enabled = true) {
     }
   }, [refresh]);
 
-  const accept = useCallback(
-    async (id: string, finalValue?: string) => {
-      try {
-        await subscriptionService.acceptProposal(id, finalValue);
-        setProposals((prev) => prev.filter((p) => p.id !== id));
-      } catch (err: any) {
-        setError(err?.message ?? 'Failed to accept');
-        throw err;
-      }
-    },
-    []
-  );
+  const accept = useCallback(async (id: string, finalValue?: string) => {
+    try {
+      await subscriptionService.acceptProposal(id, finalValue);
+      setProposals(prev => prev.filter(p => p.id !== id));
+    } catch (err: any) {
+      setError(err?.message ?? 'Failed to accept');
+      throw err;
+    }
+  }, []);
 
   const reject = useCallback(async (id: string, reason?: string) => {
     try {
       await subscriptionService.rejectProposal(id, reason);
-      setProposals((prev) => prev.filter((p) => p.id !== id));
+      setProposals(prev => prev.filter(p => p.id !== id));
     } catch (err: any) {
       setError(err?.message ?? 'Failed to reject');
       throw err;
@@ -72,7 +74,7 @@ export function useProposals(enabled = true) {
       await refresh();
       return res;
     },
-    [refresh]
+    [refresh],
   );
 
   const rejectBatch = useCallback(
@@ -81,7 +83,7 @@ export function useProposals(enabled = true) {
       await refresh();
       return res;
     },
-    [refresh]
+    [refresh],
   );
 
   const runDeepAnalysis = useCallback(async () => {

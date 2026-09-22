@@ -1,5 +1,7 @@
 // src/features/subscription/types/subscription.types.ts
 
+/* ── Tiers ─────────────────────────────────────────────────── */
+
 export interface TierBadgeConfig {
   tier_id: string;
   level: number;
@@ -53,7 +55,6 @@ export interface ActiveSubscriptionResponse {
   subscription: Subscription | null;
 }
 
-/** Entitlements map: feature_key -> feature_value object from the DB */
 export type Entitlements = Record<string, Record<string, any>>;
 
 export interface TierFeature {
@@ -78,14 +79,10 @@ export interface TierListResponse {
   total: number;
 }
 
-/* ── Proposals ─────────────────────────────────────────────── */
+/* ── AI proposals ─────────────────────────────────────────── */
 
 export type ProposalStatus =
-  | 'pending'
-  | 'accepted'
-  | 'rejected'
-  | 'expired'
-  | 'superseded';
+  | 'pending' | 'accepted' | 'rejected' | 'expired' | 'superseded';
 
 export interface AIProposal {
   id: string;
@@ -131,7 +128,7 @@ export interface BatchRejectResponse {
   total_failed: number;
 }
 
-/* ── Deep analysis ─────────────────────────────────────────── */
+/* ── Deep analysis ────────────────────────────────────────── */
 
 export interface DeepAnalysisSectionScore {
   score: number;
@@ -167,6 +164,7 @@ export interface DeepAnalysisResponse {
 /* ── Payment ──────────────────────────────────────────────── */
 
 export type PaymentProvider = 'mtn_momo' | 'orange_money';
+
 export type PaymentStatus =
   | 'pending' | 'processing' | 'success' | 'failed'
   | 'cancelled' | 'refunded' | 'expired';
@@ -188,4 +186,13 @@ export interface PaymentInitiateResponse {
   status: PaymentStatus;
   instructions: string | null;
   message: string | null;
+}
+
+/** Server-side payment status polling response */
+export interface PaymentStatusResponse {
+  status: 'PENDING' | 'SUCCESSFUL' | 'FAILED' | string;
+  reason?: string | null;
+  financial_transaction_id?: string | null;
+  amount?: string;
+  currency?: string;
 }

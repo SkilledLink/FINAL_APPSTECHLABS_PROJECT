@@ -488,13 +488,12 @@ function OwnerDashboard() {
         tiers={tiers?.items ?? []}
         currentLevel={active?.subscription?.tier?.level ?? 0}
         onClose={() => setUpgradeOpen(false)}
-        onSuccess={() => {
-          let attempts = 0;
-          const id = setInterval(() => {
-            attempts++;
-            refreshSub();
-            if (attempts > 30) clearInterval(id);
-          }, 3000);
+        onSuccess={async () => {
+          // The mock provider resolves and persists the subscription
+          // synchronously during fetch_provider_status, so a single
+          // refresh after a short delay is enough.
+          await new Promise((r) => setTimeout(r, 800));
+          await refreshSub();
         }}
       />
     </div>
@@ -503,9 +502,6 @@ function OwnerDashboard() {
 
 /* ═══════════════════════════════════════════════════════════════
  * PUBLIC VIEW
- * Same exact layout & components as the owner view — but every
- * child is rendered with isOwner={false}, the Subscription & AI
- * section is skipped, and the top bar swaps Edit → Back/Share/Message.
  * ═══════════════════════════════════════════════════════════════ */
 
 function PublicView({ userId }: { userId: string }) {
@@ -540,12 +536,10 @@ function PublicView({ userId }: { userId: string }) {
     }
   };
 
-  /* ── Loading: use the same shared LoadingState component ── */
   if (loading && !data) {
     return <LoadingState label="Loading portfolio…" />;
   }
 
-  /* ── Error: same ErrorState component ── */
   if (error || !data || !portfolio) {
     return (
       <ErrorState
@@ -564,10 +558,8 @@ function PublicView({ userId }: { userId: string }) {
     <div className="relative flex min-h-screen w-full flex-col bg-slate-50 text-slate-900 transition-colors dark:bg-slate-950 dark:text-slate-100">
       <Ambience />
 
-      {/* ═══════ Top bar ═══════ */}
       <header className="sticky top-0 z-30 w-full border-b border-slate-200/70 bg-white/85 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/75">
         <div className="flex h-14 w-full items-center justify-between gap-2 px-4 sm:gap-3 sm:px-6 lg:px-8">
-          {/* Left cluster */}
           <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
             <button
               type="button"
@@ -604,7 +596,6 @@ function PublicView({ userId }: { userId: string }) {
             </nav>
           </div>
 
-          {/* Right cluster */}
           <div className="flex items-center gap-1.5 sm:gap-2">
             <StatusPill isPublic={!!portfolio.is_public} />
 
@@ -629,7 +620,6 @@ function PublicView({ userId }: { userId: string }) {
         </div>
       </header>
 
-      {/* ═══════ Main content — same layout as owner ═══════ */}
       <main className="relative z-10 w-full flex-1 px-4 pt-5 pb-8 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
         {/* 01 Profile */}
         <motion.section
@@ -664,7 +654,7 @@ function PublicView({ userId }: { userId: string }) {
           />
         </motion.section>
 
-        {/* 03 Portfolio details (read-only mirror of owner's "Manage" panel) */}
+        {/* 03 Portfolio details */}
         <motion.section
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
@@ -678,7 +668,6 @@ function PublicView({ userId }: { userId: string }) {
           />
 
           <div className={GLASS_CARD}>
-            {/* Tabs — same component, same styling */}
             <div className="border-b border-slate-200/70 dark:border-white/10">
               <PortfolioTabs
                 active={tab}
@@ -691,7 +680,6 @@ function PublicView({ userId }: { userId: string }) {
               />
             </div>
 
-            {/* Body — same components with isOwner={false} */}
             <div className="p-4 sm:p-6 lg:p-8">
               <AnimatePresence mode="wait">
                 <motion.div
@@ -741,7 +729,6 @@ function PublicView({ userId }: { userId: string }) {
               </AnimatePresence>
             </div>
 
-            {/* Footer meta — same as owner */}
             <div className="flex flex-col gap-2 border-t border-slate-200/70 bg-slate-50/60 px-4 py-3 dark:border-white/10 dark:bg-slate-950/40 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3 sm:px-6 lg:px-8">
               <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500 dark:text-slate-400">
                 <Info className="h-3.5 w-3.5 shrink-0 text-blue-500" />
@@ -767,7 +754,7 @@ function PublicView({ userId }: { userId: string }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
- * DEFAULT EXPORT — auto-switches owner ↔ public based on userId
+ * DEFAULT EXPORT
  * ═══════════════════════════════════════════════════════════════ */
 
 interface PortfolioDashboardProps {

@@ -9,6 +9,7 @@ import type {
   ListProposalsResponse,
   PaymentInitiateRequest,
   PaymentInitiateResponse,
+  PaymentStatusResponse,
   TierDetail,
   TierListResponse,
 } from '../types/subscription.types';
@@ -17,6 +18,9 @@ function toMessage(err: any, fallback: string): string {
   const detail = err?.response?.data?.detail ?? err?.response?.data?.message;
   if (!detail) return err?.message || fallback;
   if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    return detail.map((d: any) => d?.msg ?? JSON.stringify(d)).join(', ');
+  }
   return JSON.stringify(detail);
 }
 
@@ -96,7 +100,29 @@ export const subscriptionService = {
     }
   },
 
-  /* ── AI Proposals ─────────────────────────────────── */
+  /**
+   * Poll MTN MoMo (via our backend) for the current status of a payment.
+   *
+   * `reference` is the value returned as `payment.reference` from
+   * initiatePayment — for MTN this is the UUID sent as X-Reference-Id.
+   *
+   * Backend maps it to the provider's UUID via
+   * `payment.provider_transaction_id` before querying MTN.
+   */
+  async getPaymentStatus(
+    reference: string
+  ): Promise<PaymentStatusResponse> {
+    try {
+      const { data } = await apiClient.get<PaymentStatusResponse>(
+        `/api/v1/professional-payments/status/${reference}`
+      );
+      return data;
+    } catch (err) {
+      throw new Error(toMessage(err, 'Failed to check payment status'));
+    }
+  },
+
+  /* ── AI Proposals ──────────────────────────────────── */
 
   async generateProposals(): Promise<{ proposals: unknown[] }> {
     try {

@@ -93,3 +93,21 @@ class PaymentInitiateResponse(BaseModel):
 class PaymentRefundRequest(BaseModel):
     reason: str = Field(..., min_length=5, max_length=500)
     amount: Optional[Decimal] = Field(None, ge=0)
+
+
+# ─────────────────────────────────────────────────────────────
+#  Payment — live status polling (new)
+# ─────────────────────────────────────────────────────────────
+
+class PaymentStatusResponse(BaseModel):
+    """
+    Response for GET /api/v1/professional-payments/status/{reference}.
+
+    Polled by the frontend right after /initiate to know when MTN
+    has confirmed (SUCCESSFUL) or rejected (FAILED) the charge.
+    """
+    status: str
+    reason: Optional[str] = None
+    financial_transaction_id: Optional[str] = None
+    amount: Optional[str] = None
+    currency: Optional[str] = None

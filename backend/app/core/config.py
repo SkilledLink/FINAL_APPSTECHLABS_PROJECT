@@ -156,19 +156,20 @@ class Settings(BaseSettings):
     SOCKET_CORS_ORIGINS: str = "http://localhost:5173"
     SOCKET_PATH: str = "socket.io"
 
-    # ── Kora Payments ───────────────────────────────────────
-    KORA_PUBLIC_KEY: str = ""
-    KORA_SECRET_KEY: str = ""
-    KORA_ENVIRONMENT: str = "test"
-    KORA_COUNTRY: str = "CM"
-    KORA_CURRENCY: str = "XAF"
-    KORA_MOBILE_MONEY_PROVIDERS: str = "mtn,orange"
-    KORA_BASE_URL: str = "https://api.korapay.com/merchant/api/v1"
-    KORA_CHARGE_INIT_PATH: str = "/charges/mobile-money"
-    KORA_CHARGE_VERIFY_PATH: str = "/charges/{reference}"
-    KORA_TIMEOUT_SECONDS: float = 30.0
-    KORA_WEBHOOK_URL: str = "https://example.com/api/v1/payments/webhooks/kora"
-    KORA_ALLOW_UNSIGNED_WEBHOOKS: bool = False
+    MOMO_BASE_URL: str = "https://sandbox.momodeveloper.mtn.com"
+    MOMO_TARGET_ENV: str = "sandbox"
+    MOMO_CURRENCY: str = "EUR"
+    MOMO_SUBSCRIPTION_KEY: str = ""
+    MOMO_API_USER: str = ""
+    MOMO_API_KEY: str = ""
+    MOMO_CALLBACK_URL: str = "https://example.com/api/v1/payments/webhooks/mtn"
+    MOMO_TIMEOUT_SECONDS: float = 30.0
+    MOMO_ALLOW_UNSIGNED_WEBHOOKS: bool = True
+    MOMO_WEBHOOK_SECRET: str = ""
+    MOMO_COUNTRY: str = "CM"
+
+    # Which provider the service layer instantiates
+    PAYMENT_PROVIDER: str = "mock"
 
 
 settings = Settings()
