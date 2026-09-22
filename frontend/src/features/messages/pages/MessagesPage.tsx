@@ -4,6 +4,8 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { ConversationList } from '../components/ConversationList';
 import { ChatWindow } from '../components/ChatWindow';
+import { CallOverlay } from '../components/CallOverlay';
+import { useWebRTCCall } from '../hooks/useWebRTCCall';
 import { useConversations } from '../../../hooks/useConversations';
 import { useMessages } from '../../../hooks/useMessages';
 import { useRealtimeMessages } from '../hooks/useRealtimeMessages';
@@ -67,6 +69,11 @@ export const MessagesPage: React.FC = () => {
     activeConversationId,
     currentUserId
   );
+  // ── Calling ──────────────────────────────────────────────
+  const callApi = useWebRTCCall(socket);
+
+  const { onlineUsers } = usePresence(currentUserId);
+  const { typingUsers, sendTyping } = useTyping(activeConversationId, currentUserId);
 
   const handleGlobalNewMessage = useCallback(
     (newMsg: any) => {
@@ -76,6 +83,8 @@ export const MessagesPage: React.FC = () => {
         const index = prev.findIndex(
           (conversation) => conversation.id === newMsg.conversation_id
         );
+      setDisplayConversations(prev => {
+        const index = prev.findIndex(conversation => conversation.id === newMsg.conversation_id);
         if (index < 0) return prev;
 
         const updated = {
@@ -135,6 +144,7 @@ export const MessagesPage: React.FC = () => {
     setActiveConversationId(id);
   }, []);
 
+  // ── Send Text ──
   const handleSendMessage = useCallback(
     async (text: string) => {
       if (!activeConversationId) return;
@@ -183,6 +193,7 @@ export const MessagesPage: React.FC = () => {
     ]
   );
 
+  // ── Send File / Image ──
   const handleSendFile = useCallback(
     async (file: File) => {
       if (!activeConversationId) return;
@@ -259,6 +270,7 @@ export const MessagesPage: React.FC = () => {
     [handleSendFile]
   );
 
+  // ── Send Voice Note ──
   const handleSendVoiceNote = useCallback(
     async (duration: string) => {
       if (!activeConversationId) return;
@@ -341,6 +353,25 @@ export const MessagesPage: React.FC = () => {
     [conversationsWithPresence, activeConversationId]
   );
 
+  // ── Call handlers ────────────────────────────────────────
+  const handleStartCall = useCallback(() => {
+    if (!activeConversationId || !activeConversation?.participant?.id) return;
+    callApi.startCall(
+      activeConversationId,
+      activeConversation.participant.id,
+      'audio',
+    );
+  }, [activeConversationId, activeConversation, callApi]);
+
+  const handleStartVideoCall = useCallback(() => {
+    if (!activeConversationId || !activeConversation?.participant?.id) return;
+    callApi.startCall(
+      activeConversationId,
+      activeConversation.participant.id,
+      'video',
+    );
+  }, [activeConversationId, activeConversation, callApi]);
+
   if (authLoading || convLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -386,6 +417,57 @@ export const MessagesPage: React.FC = () => {
         />
       </div>
     </div>
+    <>
+      <div className="h-screen w-full flex overflow-hidden border-x border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-2xl">
+        <div
+          className={`${activeConversationId ? 'hidden lg:block' : 'w-full'} lg:w-auto h-full shrink-0 transition-all duration-300 ease-in-out`}
+        >
+          <ConversationList
+            conversations={conversationsWithPresence as any}
+            activeId={activeConversationId}
+            onSelectConversation={handleSelectConversation}
+          />
+        </div>
+        <div
+          className={`${!activeConversationId ? 'hidden lg:flex' : 'flex'} flex-1 h-full transition-all duration-300 ease-in-out`}
+        >
+          <ChatWindow
+            conversation={activeConversation as any}
+            messages={messages}
+            currentUserId={currentUserId}
+            onSendMessage={handleSendMessage}
+            onSendVoiceNote={handleSendVoiceNote}
+            onSendFile={handleSendFile}
+            onSendImage={handleSendImage}
+            uploading={isUploading}
+            uploadProgress={uploadProgress}
+            onBack={() => setActiveConversationId(null)}
+            onTypingChange={sendTyping}
+            typingUsers={typingUsers}
+            onCall={handleStartCall}
+            onVideoCall={handleStartVideoCall}
+            callDisabled={!!callApi.call}
+          />
+        </div>
+      </div>
+
+      {/* Global call overlay — sits above everything */}
+      <CallOverlay
+        api={callApi}
+        otherUserName={
+          callApi.call
+            ? conversationsWithPresence.find(c => c.id === callApi.call?.conversationId)
+                ?.participant?.name
+            : undefined
+        }
+        otherUserAvatar={
+          callApi.call
+            ? conversationsWithPresence.find(c => c.id === callApi.call?.conversationId)
+                ?.participant?.avatar
+            : undefined
+        }
+      />
+    </>
   );
 };
 

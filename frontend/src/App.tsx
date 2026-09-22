@@ -67,7 +67,7 @@ import UsersPage from "./features/users/pages/UsersPage";
 import MarketplacePage from "./features/Market/pages/Marketplace/Marketplace";
 
 // Verification
-import { VerificationPage } from "./verification/pages/VerificationPage";
+import VerificationPage from "./features/verification/pages/VerificationPage";
 
 // Admin
 import AdminDashboard from "./features/admin_dashboard/pages/AdminDashboard";
@@ -153,6 +153,35 @@ function JobDetailsRedirect() {
   return <Navigate to={`/home/jobs/${id}`} replace />;
 }
 
+/**
+ * Didit redirects the browser here after the user finishes the KYC flow.
+ * We just bounce to the verification page, which is already polling
+ * /professionals/kyc/status and will update as soon as the webhook lands.
+ */
+function VerifyCompleteRedirect() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Give Didit's webhook a moment to reach our backend before the
+    // verification page starts polling — 1.5s covers most cases.
+    const t = window.setTimeout(() => {
+      navigate("/home/verification", { replace: true });
+    }, 1500);
+    return () => window.clearTimeout(t);
+  }, [navigate]);
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+      <div className="flex flex-col items-center gap-3 text-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
+          Finishing verification…
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ============================================================
 // MAIN APP
 // ============================================================
@@ -199,6 +228,9 @@ function App() {
                 path="/onboarding/professional"
                 element={<ProfessionalWizardPage />}
               />
+
+              {/* Didit post-verification redirect target */}
+              <Route path="/verify/complete" element={<VerifyCompleteRedirect />} />
 
               {/* Home */}
               <Route path="/home" element={<AppLayout />}>

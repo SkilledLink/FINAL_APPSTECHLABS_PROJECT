@@ -36,9 +36,26 @@ class Settings(BaseSettings):
     CLOUDINARY_API_KEY: str
     CLOUDINARY_API_SECRET: str
 
+        # ── Didit KYC ────────────────────────────────────────────
     DIDIT_API_KEY: str
     DIDIT_WEBHOOK_SECRET: str
     DIDIT_WORKFLOW_ID: str = "9245dbac-f2de-4f75-8b19-5a35fa43e416"
+
+    DIDIT_API_BASE: str = "https://verification.didit.me"
+    DIDIT_SESSION_URL: str = "https://verification.didit.me/v3/session/"
+    DIDIT_DECISION_URL: str = (
+        "https://verification.didit.me/v3/session/{session_id}/decision/"
+    )
+    DIDIT_TIMEOUT_SECONDS: float = 30.0
+
+    # Browser redirect target after Didit finishes (frontend route).
+    DIDIT_REDIRECT_URL: str = "http://localhost:5173/verify/complete"
+
+    # Public webhook URL (used only for logging / doc).
+    DIDIT_WEBHOOK_URL: str = ""
+
+    DIDIT_SESSION_MAX_ATTEMPTS: int = 3
+    DIDIT_MIN_SECONDS_BETWEEN_SESSIONS: int = 60
 
     # ── AI / Embeddings ─────────────────────────────────────
     OPENAI_API_KEY: str

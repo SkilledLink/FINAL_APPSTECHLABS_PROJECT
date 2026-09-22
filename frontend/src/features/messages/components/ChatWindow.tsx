@@ -26,11 +26,15 @@ interface ChatWindowProps {
   onBack?: () => void;
   onReplyMessage?: (message: Message) => void;
   onReactMessage?: (messageId: string, emoji: string) => void;
-  onTypingChange?: (isTyping: boolean) => void;                // ← NEW
-  typingUsers?: Record<string, boolean>;                       // ← NEW
+  onTypingChange?: (isTyping: boolean) => void;
+  typingUsers?: Record<string, boolean>;
+  // ── Calling ──────────────────────────────────────────
+  onCall?: () => void;
+  onVideoCall?: () => void;
+  callDisabled?: boolean;
 }
 
-// ─── 🌌 Canvas Universe Animated Background (Active in Dark Mode) ───
+// ─── 🌌 Canvas Universe Animated Background (Dark Mode) ───
 const UniverseBackground: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -135,7 +139,7 @@ const UniverseBackground: React.FC = () => {
   );
 };
 
-// ─── ☀️ Light Mode Ambient Blue Glow Background ─────────────────────
+// ─── ☀️ Light Mode Ambient Glow ─────────────────────────────
 const LightAmbientGlow: React.FC = () => (
   <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 dark:hidden">
     <div className="absolute -top-24 -left-24 w-96 h-96 bg-gradient-to-br from-blue-400/20 via-indigo-300/15 to-transparent rounded-full blur-3xl" />
@@ -144,7 +148,7 @@ const LightAmbientGlow: React.FC = () => (
   </div>
 );
 
-// ─── 💬 Main ChatWindow Component ──────────────────────────────────
+// ─── 💬 Main ChatWindow ─────────────────────────────────────
 export const ChatWindow: React.FC<ChatWindowProps> = ({
   conversation,
   messages,
@@ -158,8 +162,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   onBack,
   onReplyMessage,
   onReactMessage,
-  onTypingChange,          // ← NEW
-  typingUsers,             // ← NEW
+  onTypingChange,
+  typingUsers,
+  onCall,
+  onVideoCall,
+  callDisabled = false,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -207,7 +214,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     return acc;
   }, [] as Message[][]);
 
-  // ← NEW: is anyone currently typing?
   const someoneIsTyping = !!typingUsers && Object.values(typingUsers).some(Boolean);
 
   // ── EMPTY WORKSPACE STATE ──
@@ -264,15 +270,19 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     );
   }
 
-  // ── ACTIVE CONVERSATION WINDOW ──
+  // ── ACTIVE CONVERSATION ──
   return (
     <div className="flex flex-col h-[100dvh] lg:h-full max-h-[100dvh] lg:max-h-full w-full min-h-0 overflow-hidden bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 relative">
       <LightAmbientGlow />
       <UniverseBackground />
 
-      {/* ── PERMANENTLY FIXED TOP HEADER ── */}
       <header className="flex-none shrink-0 w-full relative z-30 bg-white/95 dark:bg-slate-950/90 backdrop-blur-xl border-b border-blue-100/80 dark:border-slate-800/80 shadow-xs shadow-blue-500/5 pt-safe">
-        <ChatHeader user={conversation.participant} onBack={onBack} />
+        <ChatHeader
+          user={conversation.participant}
+          onBack={onBack}
+          onCall={onCall}
+          onVideoCall={onVideoCall}
+        />
 
         <div className="flex items-center justify-center gap-2 py-1 px-4 bg-blue-50/50 dark:bg-indigo-950/40 border-t border-blue-100/60 dark:border-slate-800/40 text-[11px] font-semibold text-slate-500 dark:text-slate-400 backdrop-blur-sm">
           <motion.div
@@ -288,7 +298,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         </div>
       </header>
 
-      {/* ── ISOLATED SCROLLABLE MESSAGES CONTAINER ── */}
       <main
         ref={scrollContainerRef}
         onScroll={handleScroll}
@@ -324,7 +333,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           })}
         </AnimatePresence>
 
-        {/* ← NEW: typing indicator anchored to the bottom of the message list */}
         <AnimatePresence>
           {someoneIsTyping && (
             <motion.div
@@ -348,7 +356,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         <div ref={messagesEndRef} />
       </main>
 
-      {/* ── PERMANENTLY FIXED BOTTOM INPUT ── */}
       <footer className="flex-none shrink-0 w-full relative z-30 bg-white/95 dark:bg-slate-950/90 backdrop-blur-xl border-t border-blue-100/80 dark:border-slate-800/80 pb-safe shadow-lg shadow-blue-500/5">
         <MessageInput
           onSendMessage={onSendMessage}
@@ -357,7 +364,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           onSendImage={onSendImage}
           uploading={uploading}
           uploadProgress={uploadProgress}
-          onTypingChange={onTypingChange}       // ← NEW
+          onTypingChange={onTypingChange}
         />
       </footer>
     </div>

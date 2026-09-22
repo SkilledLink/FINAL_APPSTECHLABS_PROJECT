@@ -317,9 +317,9 @@ class ProfessionalService:
     ) -> Professional:
         """Called by the Didit webhook handler.
 
-        - APPROVED → is_verified=True, status=ACTIVE
-        - REJECTED / FAILED → verification_status=MANUAL_REVIEW (per policy)
-        - attempts capped at MAX_VERIFICATION_ATTEMPTS
+        IMPORTANT: attempts are NOT incremented here. `/start` already
+        counted this attempt when it created the session. Incrementing
+        again would double-count if Didit retries the webhook.
         """
         if didit_status == VerificationStatus.APPROVED:
             professional.verification_status = VerificationStatus.APPROVED
@@ -328,18 +328,32 @@ class ProfessionalService:
             if professional.status == ProfessionalAccountStatus.PENDING:
                 professional.status = ProfessionalAccountStatus.ACTIVE
             audit_action = AuditAction.VERIFICATION_APPROVED
-        else:
-            professional.verification_status = VerificationStatus.MANUAL_REVIEW
-            audit_action = (
-                AuditAction.VERIFICATION_REJECTED
-                if didit_status == VerificationStatus.REJECTED
-                else AuditAction.VERIFICATION_FAILED
-            )
 
-        professional.verification_attempts = (
-            professional.verification_attempts or 0
-        ) + 1
-        professional.verification_last_attempt_at = datetime.now(timezone.utc)
+        elif didit_status == VerificationStatus.REJECTED:
+            professional.verification_status = VerificationStatus.REJECTED
+            professional.is_verified = False
+            professional.verified_at = None
+            audit_action = AuditAction.VERIFICATION_REJECTED
+
+        elif didit_status == VerificationStatus.EXPIRED:
+            professional.verification_status = VerificationStatus.EXPIRED
+            professional.is_verified = False
+            professional.verified_at = None
+            audit_action = AuditAction.VERIFICATION_FAILED
+
+        elif didit_status == VerificationStatus.MANUAL_REVIEW:
+            professional.verification_status = VerificationStatus.MANUAL_REVIEW
+            professional.is_verified = False
+            audit_action = AuditAction.VERIFICATION_MANUAL_REVIEW
+
+        else:
+            logger.warning(
+                "record_verification_result: unknown status %s for %s",
+                didit_status,
+                professional.id,
+            )
+            return professional
+
         if raw_data is not None:
             professional.verification_data = raw_data
 
@@ -357,18 +371,6 @@ class ProfessionalService:
                 "attempts": professional.verification_attempts,
             },
         )
-
-        if (
-            didit_status != VerificationStatus.APPROVED
-            and professional.verification_attempts >= MAX_VERIFICATION_ATTEMPTS
-        ):
-            self._log_audit(
-                professional.id,
-                AuditAction.VERIFICATION_ATTEMPTS_EXHAUSTED,
-                actor_role="system",
-                new_value={"attempts": professional.verification_attempts},
-            )
-
         self.session.commit()
         return professional
 
