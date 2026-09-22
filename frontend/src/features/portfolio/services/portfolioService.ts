@@ -151,6 +151,16 @@ export const portfolioService = {
     }
   },
 
+  /**
+   * Upload before/after images for a work.
+   *
+   * IMPORTANT: We do NOT set Content-Type manually here. Axios detects
+   * the FormData body and automatically sets
+   * `Content-Type: multipart/form-data; boundary=...` with the correct
+   * boundary parameter. Setting the header manually (as the previous
+   * version did) strips the boundary and FastAPI's multipart parser
+   * silently drops the file fields.
+   */
   async uploadWorkImages(
     workId: string,
     files: { before?: File; after?: File }
@@ -159,10 +169,10 @@ export const portfolioService = {
       const form = new FormData();
       if (files.before) form.append('before', files.before);
       if (files.after) form.append('after', files.after);
+
       const { data } = await apiClient.post<Work>(
         `${BASE}/works/${workId}/images`,
-        form,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
+        form
       );
       return data;
     } catch (err) {

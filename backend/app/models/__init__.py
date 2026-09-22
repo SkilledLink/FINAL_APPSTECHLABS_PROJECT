@@ -2,20 +2,11 @@
 """
 Import every SQLModel class here so SQLAlchemy can resolve
 string-based relationship("X") references at mapper-configure time.
-
-If a model is imported anywhere in the app but *not* here, the first
-session that touches an entity referencing it will raise:
-
-    InvalidRequestError: ... failed to locate a name ('X')
-
-Rule of thumb: any time you add a new file under app/models/, add its
-import below.
 """
 
 # ── Core user & identity ─────────────────────────────────
 from app.models.user import User
 from app.models.user_follow import UserFollow
-# from app.models.user_profile import UserProfile
 
 # ── Professional ─────────────────────────────────────────
 from app.models.professional import Professional
@@ -24,8 +15,7 @@ from app.models.professional_location import ProfessionalLocation
 from app.models.professional_service_area import ProfessionalServiceArea
 from app.models.professional_audit_log import ProfessionalAuditLog
 
-# ── Professional tier / subscription / payments ──────────
-# Order matters: parent tables must be imported before children.
+# ── Professional tier / subscription / payments / AI ─────
 from app.models.professional_tier import (
     ProfessionalTier,
     ProfessionalTierFeature,
@@ -35,6 +25,7 @@ from app.models.professional_tier_subscription import (
 )
 from app.models.professional_payment import ProfessionalPayment
 from app.models.professional_ai_usage import ProfessionalAIUsage
+from app.models.professional_ai_proposal import ProfessionalAIProposal
 
 # ── Auth / tokens / audit ────────────────────────────────
 from app.models.refresh_token import RefreshToken
@@ -46,15 +37,6 @@ from app.models.feed import Feed
 
 # ── Jobs ─────────────────────────────────────────────────
 from app.models.job import Job
-# from app.models.application import Application
-
-# ── Messaging (disabled until wired up) ──────────────────
-# from app.models.conversation import Conversation
-# from app.models.conversation_participant import ConversationParticipant
-# from app.models.message import Message
-
-# ── Reviews (disabled until wired up) ────────────────────
-# from app.models.review import Review
 
 # ── AI / knowledge / chat ────────────────────────────────
 from app.models.knowledge_document import KnowledgeDocument
@@ -67,33 +49,26 @@ from app.models.notification import Notification
 
 
 __all__ = [
-    # Core
     "User",
     "UserFollow",
-    # Professional
     "Professional",
     "ProfessionalPortfolio",
     "ProfessionalLocation",
     "ProfessionalServiceArea",
     "ProfessionalAuditLog",
-    # Tier / subscription / payments
     "ProfessionalTier",
     "ProfessionalTierFeature",
     "ProfessionalTierSubscription",
     "ProfessionalPayment",
     "ProfessionalAIUsage",
-    # Auth / tokens / audit
+    "ProfessionalAIProposal",
     "RefreshToken",
     "VerificationToken",
     "AuditLog",
-    # Feed
     "Feed",
-    # Jobs
     "Job",
-    # AI / knowledge / chat
     "KnowledgeDocument",
     "ChatLog",
-    # Misc
     "Report",
     "ModerationRecord",
     "Notification",

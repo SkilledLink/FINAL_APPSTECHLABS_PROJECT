@@ -9,11 +9,6 @@ const API_BASE_URL =
 /* ───────────────────────── Public endpoints ─────────────────────────
  * Any request whose URL contains one of these substrings will NEVER
  * trigger a logout, even if the backend responds with 401.
- *
- * Rationale: public data endpoints (location search, auth flows, public
- * discovery) may legitimately return 401 in edge cases (token expired,
- * backend auth not yet wired). We don't want that to nuke the session
- * of a user who is just browsing.
  * ─────────────────────────────────────────────────────────────────── */
 const PUBLIC_PATHS = [
   // Location services
@@ -38,18 +33,29 @@ function isPublicPath(url?: string): boolean {
   return PUBLIC_PATHS.some((p) => url.includes(p));
 }
 
-/* ───────────────────────── Client ───────────────────────── */
+/* ───────────────────────── Client ─────────────────────────
+ * NOTE: We deliberately do NOT set a default `Content-Type` here.
+ * Axios auto-detects the correct Content-Type per request:
+ *   - plain object / JSON body → `application/json`
+ *   - FormData body            → `multipart/form-data; boundary=...`
+ *   - URLSearchParams body     → `application/x-www-form-urlencoded`
+ *
+ * Setting a global default (as the previous version did) forces every
+ * request — including file uploads — to advertise `application/json`,
+ * which strips the multipart boundary and makes FastAPI's parser
+ * silently drop the file fields.
+ * ─────────────────────────────────────────────────────────────────── */
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  timeout: 20_000,
+  timeout: 60_000,
 });
 
 /* ───────────────────────── Request interceptor ─────────────────────────
  * Attaches the bearer token if present.
+ * Also ensures we never let a JSON default header leak into a
+ * FormData/multipart request (defence in depth — the default is now
+ * unset at the client level, but this guards against future changes).
  * ─────────────────────────────────────────────────────────────────── */
 apiClient.interceptors.request.use(
   (config) => {
@@ -57,8 +63,22 @@ apiClient.interceptors.request.use(
       const token = localStorage.getItem('access_token');
       if (token) {
         config.headers = config.headers ?? {};
-        // @ts-expect-error axios header typing
+     
         config.headers.Authorization = `Bearer ${token}`;
+      }
+
+      // If the caller is sending FormData, drop any Content-Type so
+      // the browser / axios sets multipart with the correct boundary.
+      const isFormData =
+        typeof FormData !== 'undefined' && config.data instanceof FormData;
+      if (isFormData) {
+        // axios v1 uses AxiosHeaders; the delete method exists on both
+        // plain objects and AxiosHeaders instances.
+        if (typeof (config.headers as any)?.delete === 'function') {
+          (config.headers as any).delete('Content-Type');
+        } else if (config.headers) {
+          delete (config.headers as any)['Content-Type'];
+        }
       }
     } catch {
       /* localStorage disabled — just skip auth */
@@ -89,7 +109,6 @@ apiClient.interceptors.response.use(
         /* ignore storage errors */
       }
 
-      /* Avoid an infinite redirect loop if we're already on the login page */
       if (
         typeof window !== 'undefined' &&
         !window.location.pathname.startsWith('/login')
@@ -118,9 +137,10 @@ export const userApi = {
   uploadAvatar: async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await apiClient.post('/users/me/avatar', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+
+    // NOTE: no Content-Type header here. Axios sets
+    // `multipart/form-data; boundary=...` automatically.
+    const response = await apiClient.post('/users/me/avatar', formData);
     return response.data;
   },
 
@@ -129,7 +149,6 @@ export const userApi = {
     return response.data;
   },
 };
-
 
 /* ───────────────────────── Report API ───────────────────────── */
 

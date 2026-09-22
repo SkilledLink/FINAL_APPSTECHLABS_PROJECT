@@ -1,12 +1,17 @@
+# app/services/storage_service.py
+
+import logging
+import uuid
+from typing import Optional
+
 import cloudinary
 import cloudinary.uploader
-from fastapi import UploadFile, HTTPException
-from typing import Optional
-import uuid
+from fastapi import HTTPException, UploadFile
 
 from app.core.config import settings
 
-# Configure Cloudinary once
+logger = logging.getLogger(__name__)
+
 cloudinary.config(
     cloud_name=settings.CLOUDINARY_CLOUD_NAME,
     api_key=settings.CLOUDINARY_API_KEY,
@@ -15,21 +20,20 @@ cloudinary.config(
 
 
 class StorageService:
-    # ─── Client‑side signed URL (legacy) ──────────────────────
-    def generate_upload_url(self, user_id: str, file_name: str, content_type: str, folder: str = "files"):
-        """
-        Generates a signed upload URL for client‑side uploads (legacy).
-        For server‑side upload, use upload_image().
-        """
+    # ─── Client-side signed URL (legacy) ─────────────────────
+    def generate_upload_url(
+        self,
+        user_id: str,
+        file_name: str,
+        content_type: str,
+        folder: str = "files",
+    ):
         return "upload_url", f"{folder}/{user_id}/{file_name}"
 
     def get_public_url(self, path: str) -> str:
-        """
-        Returns the public URL for a given stored file path.
-        """
         return f"https://yourcloudinary.cloud.com/{path}"
 
-    # ─── Server‑side upload (works for all file types) ────────
+    # ─── Server-side upload ──────────────────────────────────
     def upload_image(
         self,
         file: UploadFile,
@@ -37,59 +41,103 @@ class StorageService:
         public_id: Optional[str] = None,
         max_size_mb: int = 20,
         allowed_mime_types: Optional[list[str]] = None,
-        resource_type: str = "auto",  # "image", "video", "raw", or "auto"
+        resource_type: str = "auto",
     ) -> str:
+        """Upload a file to Cloudinary. Raises HTTPException on any failure.
+
+        Never returns None — callers can rely on a non-empty URL.
         """
-        Upload a file to Cloudinary. Supports images, audio, video, and raw files.
-        Returns the secure URL.
-        """
-        # Default allowed MIME types (if needed for validation)
         if allowed_mime_types is None:
             allowed_mime_types = [
-                "image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif",
-                "application/pdf", "audio/webm", "audio/mpeg", "video/mp4",
+                "image/jpeg", "image/jpg", "image/png",
+                "image/webp", "image/gif",
+                "application/pdf",
+                "audio/webm", "audio/mpeg",
+                "video/mp4",
                 "application/octet-stream",
             ]
 
-        # Read file contents
-        contents = file.file.read()
+        # 1. Read the file
+        try:
+            contents = file.file.read()
+        except Exception as exc:
+            logger.error("Failed to read uploaded file: %s", exc)
+            raise HTTPException(
+                status_code=400, detail=f"Could not read uploaded file: {exc}"
+            )
+
+        if not contents:
+            raise HTTPException(
+                status_code=400,
+                detail="Uploaded file is empty (0 bytes).",
+            )
+
         if len(contents) > max_size_mb * 1024 * 1024:
             raise HTTPException(
                 status_code=400,
-                detail=f"File too large. Max size: {max_size_mb}MB"
+                detail=f"File too large. Max size: {max_size_mb}MB",
             )
 
-        # Optional: content‑type validation – skip if resource_type is "auto"
+        # 2. MIME check (only when resource_type is explicit)
         actual_content_type = file.content_type
-        if resource_type == "auto" and actual_content_type:
-            # For "auto", we don't need strict validation – Cloudinary will handle it.
-            pass
-        elif resource_type != "auto":
-            if actual_content_type is None or actual_content_type.lower() not in [m.lower() for m in allowed_mime_types]:
+        if resource_type != "auto":
+            if (
+                actual_content_type is None
+                or actual_content_type.lower()
+                not in [m.lower() for m in allowed_mime_types]
+            ):
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Invalid file type. Allowed: {', '.join(allowed_mime_types)}"
+                    detail=f"Invalid file type. Allowed: {', '.join(allowed_mime_types)}",
                 )
 
-        # Generate a public_id if not provided
+        # 3. Public ID
         if public_id is None:
             public_id = str(uuid.uuid4())
-
-        # Build the full Cloudinary public_id
         full_public_id = f"{folder}/{public_id}" if folder else public_id
 
+        # 4. Upload
         try:
-            # Upload to Cloudinary with the appropriate resource_type
             upload_result = cloudinary.uploader.upload(
                 contents,
                 public_id=full_public_id,
                 overwrite=False,
                 resource_type=resource_type,
             )
-        except Exception as e:
+        except Exception as exc:
+            logger.exception("Cloudinary upload raised for %s", full_public_id)
             raise HTTPException(
                 status_code=500,
-                detail=f"Cloudinary upload failed: {str(e)}"
+                detail=f"Cloudinary upload failed: {exc}",
             )
 
-        return upload_result.get("secure_url")
+        # 5. Verify the response actually contains a URL.
+        #    Cloudinary sometimes returns {"error": {...}} instead of raising.
+        if not isinstance(upload_result, dict):
+            logger.error(
+                "Cloudinary returned non-dict result for %s: %r",
+                full_public_id,
+                upload_result,
+            )
+            raise HTTPException(
+                status_code=500,
+                detail="Cloudinary upload returned an unexpected response.",
+            )
+
+        secure_url = upload_result.get("secure_url")
+        if not secure_url:
+            error_detail = upload_result.get("error") or upload_result
+            logger.error(
+                "Cloudinary returned no secure_url for %s: %r",
+                full_public_id,
+                error_detail,
+            )
+            raise HTTPException(
+                status_code=500,
+                detail=(
+                    f"Cloudinary upload returned no URL. "
+                    f"Response: {str(error_detail)[:400]}"
+                ),
+            )
+
+        return secure_url
