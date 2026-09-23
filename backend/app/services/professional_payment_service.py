@@ -35,6 +35,7 @@ from app.repositories.professional_tier_repository import (
 from app.repositories.professional_tier_subscription_repository import (
     ProfessionalTierSubscriptionRepository,
 )
+from app.services.notification_service import NotificationService
 from app.services.payments import get_payment_provider
 from app.services.payments.base import PaymentProviderClient
 from app.services.professional_subscription_service import (
@@ -215,17 +216,10 @@ class ProfessionalPaymentService:
 
     # ─── LIVE STATUS POLLING ─────────────────────────────────
     def fetch_provider_status(self, reference: str) -> dict:
-        """
-        Ask the active payment provider for a charge's current status.
-
-        Persists terminal states back to the DB so the row reflects
-        reality (and the subscription activates on success).
-        """
         payment = self.repo.get_by_reference(reference)
         if not payment:
             raise HTTPException(404, "Payment not found")
 
-        # Already terminal — trust the DB
         if payment.status in (
             PaymentStatus.SUCCESS,
             PaymentStatus.FAILED,
@@ -265,7 +259,6 @@ class ProfessionalPaymentService:
 
         status_upper = (raw.get("status") or "PENDING").upper()
 
-        # Persist terminal states
         if status_upper in ("SUCCESSFUL", "SUCCESS"):
             self.repo.mark_success(
                 payment,
@@ -294,6 +287,22 @@ class ProfessionalPaymentService:
                 },
             )
             self.session.commit()
+
+            try:
+                NotificationService(self.session).notify_payment(
+                    recipient_id=payment.user_id,
+                    status="succeeded",
+                    reference=payment.reference,
+                    amount=(
+                        float(payment.amount)
+                        if payment.amount is not None
+                        else None
+                    ),
+                    currency=payment.currency,
+                )
+            except Exception:
+                logger.exception("Payment success notification failed")
+
         elif status_upper in ("FAILED", "CANCELLED", "EXPIRED"):
             self.repo.mark_failed(
                 payment,
@@ -309,6 +318,21 @@ class ProfessionalPaymentService:
                     self.sub_repo.mark_cancelled(sub)
             self.session.commit()
             self.session.refresh(payment)
+
+            try:
+                NotificationService(self.session).notify_payment(
+                    recipient_id=payment.user_id,
+                    status="failed",
+                    reference=payment.reference,
+                    amount=(
+                        float(payment.amount)
+                        if payment.amount is not None
+                        else None
+                    ),
+                    currency=payment.currency,
+                )
+            except Exception:
+                logger.exception("Payment failure notification failed")
 
         return {
             "status": status_upper,
@@ -395,6 +419,22 @@ class ProfessionalPaymentService:
             reason=reason,
         )
         self.session.commit()
+
+        try:
+            NotificationService(self.session).notify_payment(
+                recipient_id=payment.user_id,
+                status="refunded",
+                reference=payment.reference,
+                amount=(
+                    float(payment.amount)
+                    if payment.amount is not None
+                    else None
+                ),
+                currency=payment.currency,
+            )
+        except Exception:
+            logger.exception("Payment refund notification failed")
+
         return payment
 
     # ─── WEBHOOK / PROVIDER CALLBACK ─────────────────────────
@@ -484,6 +524,22 @@ class ProfessionalPaymentService:
             },
         )
         self.session.commit()
+
+        try:
+            NotificationService(self.session).notify_payment(
+                recipient_id=payment.user_id,
+                status="succeeded",
+                reference=payment.reference,
+                amount=(
+                    float(payment.amount)
+                    if payment.amount is not None
+                    else None
+                ),
+                currency=payment.currency,
+            )
+        except Exception:
+            logger.exception("Payment success notification failed")
+
         return payment
 
     def _finalize_failure(
@@ -513,6 +569,22 @@ class ProfessionalPaymentService:
             reason=event.reason,
         )
         self.session.commit()
+
+        try:
+            NotificationService(self.session).notify_payment(
+                recipient_id=payment.user_id,
+                status="failed",
+                reference=payment.reference,
+                amount=(
+                    float(payment.amount)
+                    if payment.amount is not None
+                    else None
+                ),
+                currency=payment.currency,
+            )
+        except Exception:
+            logger.exception("Payment failure notification failed")
+
         return payment
 
     def _generate_reference(self) -> str:

@@ -14,6 +14,7 @@ from app.schemas.job import (
     JobCommentCreate, JobCommentResponse
 )
 from app.schemas.user import UserResponse
+from app.services.notification_service import NotificationService
 from app.services.storage_service import StorageService
 
 logger = logging.getLogger(__name__)
@@ -27,17 +28,14 @@ class JobService:
 
     # ---------- Job CRUD ----------
     def create_job(self, user: User, data: JobCreate, files: List[UploadFile]) -> JobResponse:
-        # 1. Validate file count before any DB operation
         if len(files) > 5:
             raise HTTPException(400, "Maximum 5 images per job")
 
         try:
-            # 2. Create Job (no commit yet)
             job = self.repo.create(user, data.model_dump(exclude_unset=True))
 
-            # 3. Upload images and add records
             if files:
-                existing_count = self.repo.count_images(job)  # 0 at this point
+                existing_count = self.repo.count_images(job)
                 for i, file in enumerate(files):
                     public_id = f"img_{uuid4()}"
                     url = self.storage.upload_image(
@@ -47,10 +45,8 @@ class JobService:
                     )
                     self.repo.add_image(job, url, order=existing_count + i)
 
-            # 4. Build response (still inside transaction)
             response = self._build_job_response(job, user)
 
-            # 5. Commit once
             self.session.commit()
 
             return response
@@ -173,6 +169,31 @@ class JobService:
         try:
             liked = self.repo.toggle_like(current_user, job)
             self.session.commit()
+
+            if job.user_id != current_user.id:
+                try:
+                    display = NotificationService.display_name(current_user)
+                    service = NotificationService(self.session)
+                    if liked:
+                        service.notify_like(
+                            recipient_id=job.user_id,
+                            actor_id=current_user.id,
+                            actor_display=display,
+                            target_type="job",
+                            target_id=job.id,
+                            target_label="job",
+                        )
+                    else:
+                        service.notify_unlike(
+                            recipient_id=job.user_id,
+                            actor_id=current_user.id,
+                            target_type="job",
+                            target_id=job.id,
+                            target_label="job",
+                        )
+                except Exception:
+                    logger.exception("Job like notification failed")
+
             return JobLikeResponse(job_id=job_id, liked=liked)
         except Exception as e:
             self.session.rollback()
@@ -200,6 +221,36 @@ class JobService:
                 data.parent_id
             )
             self.session.commit()
+
+            try:
+                display = NotificationService.display_name(current_user)
+                service = NotificationService(self.session)
+                if data.parent_id:
+                    parent = self.session.get(JobComment, data.parent_id)
+                    if parent and parent.user_id != current_user.id:
+                        service.notify_reply(
+                            recipient_id=parent.user_id,
+                            actor_id=current_user.id,
+                            actor_display=display,
+                            target_type="job",
+                            target_id=job.id,
+                            comment_id=comment.id,
+                            parent_comment_id=parent.id,
+                        )
+                else:
+                    if job.user_id != current_user.id:
+                        service.notify_comment(
+                            recipient_id=job.user_id,
+                            actor_id=current_user.id,
+                            actor_display=display,
+                            target_type="job",
+                            target_id=job.id,
+                            comment_id=comment.id,
+                            target_label="job",
+                        )
+            except Exception:
+                logger.exception("Job comment notification failed")
+
             return JobCommentResponse.model_validate(comment)
         except Exception as e:
             self.session.rollback()

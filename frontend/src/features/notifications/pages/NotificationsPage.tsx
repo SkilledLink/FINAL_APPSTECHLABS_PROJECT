@@ -1,47 +1,28 @@
 // src/features/notifications/pages/NotificationsPage.tsx
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import {
-  Bell,
-  Inbox,
-  Mail,
-  CheckCheck,
-  Filter,
-} from 'lucide-react';
-import type {
-  NotificationFilter,
-  NotificationType,
-} from '../types/notification.types';
+import { Bell, Inbox, Mail, CheckCheck, Filter } from 'lucide-react';
+
+import type { NotificationFilter, NotificationNamespace } from '../types/notification.types';
 import { useNotifications } from '../hooks/useNotifications';
 import { NotificationList } from '../components/NotificationList';
-import { getNotificationTypeConfig } from '../services/notificationService';
+import {
+  NAMESPACE_CONFIG,
+  SIDEBAR_NAMESPACES,
+  getNamespace,
+} from '../services/notificationService';
 
 const tabs: { key: NotificationFilter; label: string; icon: typeof Inbox }[] = [
   { key: 'all', label: 'All', icon: Inbox },
   { key: 'unread', label: 'Unread', icon: Mail },
 ];
 
-const sidebarCategories: { type: NotificationType; label: string }[] = [
-  { type: 'follower', label: 'Followers' },
-  { type: 'job_alert', label: 'Job Alerts' },
-  { type: 'message', label: 'Messages' },
-  { type: 'local_job', label: 'Local Jobs' },
-];
-
-interface NotificationsPageProps {
-  theme?: 'light' | 'dark';
-  onToggleTheme?: () => void;
-}
-
-export function NotificationsPage({
-  theme = 'light',
-  onToggleTheme = () => {},
-}: NotificationsPageProps = {}) {
+export function NotificationsPage() {
   const {
     notifications,
-    allNotifications,
     unreadCount,
+    summary,
     loading,
     filter,
     setFilter,
@@ -51,32 +32,25 @@ export function NotificationsPage({
   } = useNotifications();
 
   const [activeCategory, setActiveCategory] =
-    useState<NotificationType | null>(null);
+    useState<NotificationNamespace | null>(null);
 
-  const visibleNotifications = activeCategory
-    ? notifications.filter((n) => n.type === activeCategory)
-    : notifications;
-
-  const categoryCounts = sidebarCategories.reduce(
-    (acc, cat) => {
-      acc[cat.type] = allNotifications.filter(
-        (n) => n.type === cat.type && !n.read,
-      ).length;
-      return acc;
-    },
-    {} as Record<NotificationType, number>,
+  const visibleNotifications = useMemo(
+    () =>
+      activeCategory
+        ? notifications.filter((n) => getNamespace(n.type) === activeCategory)
+        : notifications,
+    [notifications, activeCategory],
   );
 
   return (
     <div className="min-h-screen w-full">
       <div className="w-full px-3 sm:px-4 md:px-6 py-4 sm:py-6">
-        {/* ═══════════ HERO HEADER ═══════════ */}
+        {/* HERO */}
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
           className="relative overflow-hidden rounded-3xl border border-white/60 dark:border-white/10 bg-white/60 dark:bg-white/[0.04] backdrop-blur-2xl shadow-lg shadow-slate-200/30 dark:shadow-black/30 p-5 sm:p-6 mb-5"
         >
-          {/* Ambient glow */}
           <div className="pointer-events-none absolute -top-20 -right-20 w-64 h-64 rounded-full bg-blue-500/20 dark:bg-blue-500/10 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-20 -left-20 w-64 h-64 rounded-full bg-indigo-500/15 dark:bg-indigo-500/10 blur-3xl" />
 
@@ -100,7 +74,6 @@ export function NotificationsPage({
               </div>
             </div>
 
-            {/* Quick stat */}
             {unreadCount > 0 && (
               <div className="inline-flex items-center gap-2 rounded-2xl bg-white/60 dark:bg-white/5 backdrop-blur-md border border-white/60 dark:border-white/10 px-4 py-2.5">
                 <span className="relative flex h-2.5 w-2.5">
@@ -115,9 +88,9 @@ export function NotificationsPage({
           </div>
         </motion.div>
 
-        {/* ═══════════ MAIN LAYOUT ═══════════ */}
+        {/* MAIN LAYOUT */}
         <div className="flex gap-5">
-          {/* ───── Sidebar (desktop) ───── */}
+          {/* SIDEBAR */}
           <aside className="hidden lg:block w-64 flex-shrink-0">
             <div className="sticky top-24 space-y-1.5">
               <div className="relative overflow-hidden rounded-2xl border border-white/60 dark:border-white/10 bg-white/60 dark:bg-white/[0.04] backdrop-blur-2xl p-3 shadow-md shadow-slate-200/30 dark:shadow-black/20">
@@ -125,7 +98,6 @@ export function NotificationsPage({
                   Categories
                 </p>
 
-                {/* All Categories */}
                 <button
                   onClick={() => setActiveCategory(null)}
                   className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
@@ -140,17 +112,16 @@ export function NotificationsPage({
                   </span>
                 </button>
 
-                {/* Category list */}
-                {sidebarCategories.map((cat) => {
-                  const config = getNotificationTypeConfig(cat.type);
+                {SIDEBAR_NAMESPACES.map((ns) => {
+                  const config = NAMESPACE_CONFIG[ns];
                   const Icon = config.icon;
-                  const count = categoryCounts[cat.type];
-                  const isActive = activeCategory === cat.type;
+                  const count = summary[ns] ?? 0;
+                  const isActive = activeCategory === ns;
 
                   return (
                     <button
-                      key={cat.type}
-                      onClick={() => setActiveCategory(cat.type)}
+                      key={ns}
+                      onClick={() => setActiveCategory(ns)}
                       className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                         isActive
                           ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
@@ -163,7 +134,7 @@ export function NotificationsPage({
                             isActive ? 'text-white' : config.iconColor
                           }`}
                         />
-                        {cat.label}
+                        {config.label}
                       </span>
                       {count > 0 && (
                         <span
@@ -180,10 +151,9 @@ export function NotificationsPage({
                   );
                 })}
 
-                {/* Mark all read */}
                 {unreadCount > 0 && (
                   <button
-                    onClick={markAllAsRead}
+                    onClick={() => void markAllAsRead()}
                     className="w-full flex items-center justify-center gap-2 px-3 py-2.5 mt-3 rounded-xl text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-500/10 border border-blue-200/60 dark:border-blue-500/20 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-all"
                   >
                     <CheckCheck className="w-3.5 h-3.5" />
@@ -194,7 +164,7 @@ export function NotificationsPage({
             </div>
           </aside>
 
-          {/* ───── Main content ───── */}
+          {/* MAIN */}
           <main className="flex-1 min-w-0">
             {/* Tabs */}
             <motion.div
@@ -233,10 +203,9 @@ export function NotificationsPage({
                 );
               })}
 
-              {/* Mark all read - mobile */}
               {unreadCount > 0 && (
                 <button
-                  onClick={markAllAsRead}
+                  onClick={() => void markAllAsRead()}
                   className="lg:hidden ml-auto flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-500/10 border border-blue-200/60 dark:border-blue-500/20 whitespace-nowrap transition-all"
                 >
                   <CheckCheck className="w-3.5 h-3.5" />
@@ -245,7 +214,7 @@ export function NotificationsPage({
               )}
             </motion.div>
 
-            {/* Category chips - mobile */}
+            {/* Category chips — mobile */}
             <div className="lg:hidden mb-4 flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
               <button
                 onClick={() => setActiveCategory(null)}
@@ -257,14 +226,14 @@ export function NotificationsPage({
               >
                 All
               </button>
-              {sidebarCategories.map((cat) => {
-                const config = getNotificationTypeConfig(cat.type);
+              {SIDEBAR_NAMESPACES.map((ns) => {
+                const config = NAMESPACE_CONFIG[ns];
                 const Icon = config.icon;
-                const isActive = activeCategory === cat.type;
+                const isActive = activeCategory === ns;
                 return (
                   <button
-                    key={cat.type}
-                    onClick={() => setActiveCategory(cat.type)}
+                    key={ns}
+                    onClick={() => setActiveCategory(ns)}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
                       isActive
                         ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/25'
@@ -272,19 +241,18 @@ export function NotificationsPage({
                     }`}
                   >
                     <Icon className="w-3 h-3" />
-                    {cat.label}
+                    {config.label}
                   </button>
                 );
               })}
             </div>
 
-            {/* Notification list */}
             <NotificationList
               notifications={visibleNotifications}
-              loading={loading}
-              onRead={markAsRead}
-              onDismiss={dismiss}
-              onMarkAllRead={markAllAsRead}
+              loading={loading && visibleNotifications.length === 0}
+              onRead={(id) => void markAsRead(id)}
+              onDismiss={(id) => void dismiss(id)}
+              onMarkAllRead={() => void markAllAsRead()}
               filter={filter}
               unreadCount={unreadCount}
             />

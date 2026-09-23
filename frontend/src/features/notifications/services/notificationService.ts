@@ -1,130 +1,293 @@
-import type { NotificationItemData, NotificationType, NotificationTypeConfig } from '../types/notification.types';
+// src/features/notifications/services/notificationService.ts
+
 import {
-  UserPlus,
-  Briefcase,
+  AlertCircle,
+  AlertTriangle,
+  BadgeCheck,
+  CheckCircle2,
+  Clock,
+  CreditCard,
+  Flag,
+  Heart,
+  Mail,
+  Megaphone,
+  MessageCircle,
   MessageSquare,
-  MapPin,
+  Reply,
+  ShieldAlert,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  Trash2,
+  UserPlus,
+  XCircle,
 } from 'lucide-react';
 
-const typeConfig: Record<NotificationType, NotificationTypeConfig> = {
-  follower: {
-    icon: UserPlus,
-    accent: 'bg-blue-100 dark:bg-blue-900/40',
-    iconColor: 'text-blue-600 dark:text-blue-400',
-    dotColor: 'bg-blue-500',
-    label: 'Follower',
+import { apiClient } from '../../../api/client';
+import type {
+  NotificationCategoryConfig,
+  NotificationDTO,
+  NotificationListResponse,
+  NotificationNamespace,
+} from '../types/notification.types';
+
+const BASE = '/users/me/notifications';
+
+/* ═══════════════════════════════════════════════════════════
+ * API CALLS
+ * ═══════════════════════════════════════════════════════════ */
+
+export async function listNotifications(params: {
+  unread_only?: boolean;
+  skip?: number;
+  limit?: number;
+} = {}): Promise<NotificationListResponse> {
+  const res = await apiClient.get<NotificationListResponse>(BASE, { params });
+  return res.data;
+}
+
+export async function getUnreadCount(): Promise<number> {
+  const res = await apiClient.get<{ unread: number }>(`${BASE}/unread-count`);
+  return res.data.unread;
+}
+
+export async function getSummary(): Promise<Record<string, number>> {
+  const res = await apiClient.get<{ counts: Record<string, number> }>(
+    `${BASE}/summary`,
+  );
+  return res.data.counts;
+}
+
+export async function getOne(id: string): Promise<NotificationDTO> {
+  const res = await apiClient.get<NotificationDTO>(`${BASE}/${id}`);
+  return res.data;
+}
+
+export async function markRead(id: string): Promise<NotificationDTO> {
+  const res = await apiClient.post<NotificationDTO>(`${BASE}/${id}/read`);
+  return res.data;
+}
+
+export async function markUnread(id: string): Promise<NotificationDTO> {
+  const res = await apiClient.post<NotificationDTO>(`${BASE}/${id}/unread`);
+  return res.data;
+}
+
+export async function bulkMarkRead(ids: string[]): Promise<number> {
+  const res = await apiClient.post<{ marked_read: number }>(
+    `${BASE}/read`,
+    { ids },
+  );
+  return res.data.marked_read;
+}
+
+export async function markAllRead(): Promise<number> {
+  const res = await apiClient.post<{ marked_read: number }>(
+    `${BASE}/read-all`,
+  );
+  return res.data.marked_read;
+}
+
+export async function deleteOne(id: string): Promise<void> {
+  await apiClient.delete(`${BASE}/${id}`);
+}
+
+export async function clearRead(): Promise<number> {
+  const res = await apiClient.delete<{ deleted: number }>(BASE);
+  return res.data.deleted;
+}
+
+export async function createTest(payload: {
+  title?: string;
+  body?: string;
+  type?: string;
+} = {}): Promise<NotificationDTO> {
+  const res = await apiClient.post<NotificationDTO>(`${BASE}/test`, payload);
+  return res.data;
+}
+
+/* ═══════════════════════════════════════════════════════════
+ * NAMESPACE RESOLUTION
+ * ═══════════════════════════════════════════════════════════ */
+
+const DOTLESS_MAP: Record<string, NotificationNamespace> = {
+  contact_message: 'admin',
+  post_rejected: 'post',
+  post_pending_review: 'post',
+};
+
+export function getNamespace(type: string): NotificationNamespace {
+  if (!type) return 'system';
+  const direct = DOTLESS_MAP[type];
+  if (direct) return direct;
+  const dot = type.indexOf('.');
+  if (dot === -1) return 'system';
+  const prefix = type.slice(0, dot) as NotificationNamespace;
+  return NAMESPACE_CONFIG[prefix] ? prefix : 'system';
+}
+
+/* ═══════════════════════════════════════════════════════════
+ * CATEGORY CONFIG
+ * ═══════════════════════════════════════════════════════════ */
+
+export const NAMESPACE_CONFIG: Record<
+  NotificationNamespace,
+  NotificationCategoryConfig
+> = {
+  social: {
+    label: 'Social',
+    icon: MessageCircle,
+    accent: 'bg-blue-500/10',
+    iconColor: 'text-blue-500',
   },
-  job_alert: {
-    icon: Briefcase,
-    accent: 'bg-amber-100 dark:bg-amber-900/40',
-    iconColor: 'text-amber-600 dark:text-amber-400',
-    dotColor: 'bg-amber-500',
-    label: 'Job Alert',
+  verification: {
+    label: 'Verification',
+    icon: BadgeCheck,
+    accent: 'bg-emerald-500/10',
+    iconColor: 'text-emerald-500',
   },
-  message: {
+  payment: {
+    label: 'Payments',
+    icon: CreditCard,
+    accent: 'bg-indigo-500/10',
+    iconColor: 'text-indigo-500',
+  },
+  review: {
+    label: 'Reviews',
+    icon: Star,
+    accent: 'bg-amber-500/10',
+    iconColor: 'text-amber-500',
+  },
+  moderation: {
+    label: 'Moderation',
+    icon: ShieldAlert,
+    accent: 'bg-rose-500/10',
+    iconColor: 'text-rose-500',
+  },
+  post: {
+    label: 'Posts',
     icon: MessageSquare,
-    accent: 'bg-violet-100 dark:bg-violet-900/40',
-    iconColor: 'text-violet-600 dark:text-violet-400',
-    dotColor: 'bg-violet-500',
-    label: 'Message',
+    accent: 'bg-purple-500/10',
+    iconColor: 'text-purple-500',
   },
-  local_job: {
-    icon: MapPin,
-    accent: 'bg-rose-100 dark:bg-rose-900/40',
-    iconColor: 'text-rose-600 dark:text-rose-400',
-    dotColor: 'bg-rose-500',
-    label: 'Local Job',
+  admin: {
+    label: 'Admin',
+    icon: Mail,
+    accent: 'bg-slate-500/10',
+    iconColor: 'text-slate-500',
+  },
+  system: {
+    label: 'System',
+    icon: Megaphone,
+    accent: 'bg-slate-500/10',
+    iconColor: 'text-slate-500',
   },
 };
 
-export function getNotificationTypeConfig(type: NotificationType): NotificationTypeConfig {
-  return typeConfig[type];
+const TYPE_OVERRIDES: Record<string, Partial<NotificationCategoryConfig>> = {
+  'social.message': { icon: MessageCircle },
+  'social.like': {
+    icon: Heart,
+    accent: 'bg-rose-500/10',
+    iconColor: 'text-rose-500',
+  },
+  'social.follow': { icon: UserPlus },
+  'social.comment': { icon: MessageSquare },
+  'social.reply': { icon: Reply },
+
+  'verification.approved': {
+    icon: BadgeCheck,
+    accent: 'bg-emerald-500/10',
+    iconColor: 'text-emerald-500',
+  },
+  'verification.rejected': {
+    icon: XCircle,
+    accent: 'bg-rose-500/10',
+    iconColor: 'text-rose-500',
+  },
+  'verification.manual_review': {
+    icon: Clock,
+    accent: 'bg-amber-500/10',
+    iconColor: 'text-amber-500',
+  },
+  'verification.expired': {
+    icon: AlertCircle,
+    accent: 'bg-slate-500/10',
+    iconColor: 'text-slate-500',
+  },
+  'verification.failed': {
+    icon: AlertTriangle,
+    accent: 'bg-rose-500/10',
+    iconColor: 'text-rose-500',
+  },
+
+  'payment.succeeded': {
+    icon: CheckCircle2,
+    accent: 'bg-emerald-500/10',
+    iconColor: 'text-emerald-500',
+  },
+  'payment.failed': {
+    icon: XCircle,
+    accent: 'bg-rose-500/10',
+    iconColor: 'text-rose-500',
+  },
+  'payment.refunded': {
+    icon: CreditCard,
+    accent: 'bg-indigo-500/10',
+    iconColor: 'text-indigo-500',
+  },
+
+  'review.received': { icon: Star },
+
+  'moderation.professional_suspended': { icon: ShieldAlert },
+  'moderation.professional_reactivated': {
+    icon: ShieldCheck,
+    accent: 'bg-emerald-500/10',
+    iconColor: 'text-emerald-500',
+  },
+  'moderation.professional_flagged': {
+    icon: Flag,
+    accent: 'bg-amber-500/10',
+    iconColor: 'text-amber-500',
+  },
+  'moderation.professional_unflagged': { icon: ShieldCheck },
+  'moderation.professional_deleted': {
+    icon: Trash2,
+    accent: 'bg-rose-500/10',
+    iconColor: 'text-rose-500',
+  },
+
+  post_rejected: {
+    icon: XCircle,
+    accent: 'bg-rose-500/10',
+    iconColor: 'text-rose-500',
+  },
+  post_pending_review: {
+    icon: Clock,
+    accent: 'bg-amber-500/10',
+    iconColor: 'text-amber-500',
+  },
+
+  'system.announcement': { icon: Megaphone },
+  'test.notification': { icon: Sparkles },
+};
+
+export function getNotificationTypeConfig(
+  type: string,
+): NotificationCategoryConfig {
+  const ns = getNamespace(type);
+  const base = NAMESPACE_CONFIG[ns];
+  const override = TYPE_OVERRIDES[type];
+  return override ? { ...base, ...override } : base;
 }
 
-const mockNotifications: NotificationItemData[] = [
-  {
-    id: 'n1',
-    type: 'follower',
-    title: 'Jane Doe started following you',
-    message: 'Jane Doe is now following your professional updates.',
-    timestamp: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-    read: false,
-    actorName: 'Jane Doe',
-    actorRole: 'Product Designer at Flowbase',
-    actions: [{ label: 'Follow Back', variant: 'primary' }],
-  },
-  {
-    id: 'n2',
-    type: 'job_alert',
-    title: 'New Job Alert: Senior React Developer',
-    message: 'A new role matching your profile was just posted. Salary range: $120k–$160k.',
-    timestamp: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-    read: false,
-    actions: [{ label: 'View Job', variant: 'primary' }],
-  },
-  {
-    id: 'n3',
-    type: 'message',
-    title: 'Alex sent you a message',
-    message: "Hey, are you free for a call this afternoon to discuss the project timeline?",
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    read: false,
-    actorName: 'Alex Rivera',
-    actorRole: 'Project Manager',
-    actions: [{ label: 'Reply', variant: 'primary' }],
-  },
-  {
-    id: 'n4',
-    type: 'local_job',
-    title: '3 new jobs posted near you',
-    message: '3 new jobs posted within 5 miles of your location (Douala).',
-    timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-    read: false,
-    actions: [{ label: 'Browse Jobs', variant: 'primary' }],
-  },
-  {
-    id: 'n5',
-    type: 'follower',
-    title: 'Marie Tchoumi started following you',
-    message: 'Marie Tchoumi is now following your professional updates.',
-    timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
-    read: true,
-    actorName: 'Marie Tchoumi',
-    actorRole: 'UX Researcher',
-    actions: [{ label: 'Follow Back', variant: 'primary' }],
-  },
-  {
-    id: 'n6',
-    type: 'job_alert',
-    title: 'New Job Alert: Frontend Lead',
-    message: 'A Frontend Lead role matching 90% of your skills was posted.',
-    timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    read: true,
-    actions: [{ label: 'View Job', variant: 'primary' }],
-  },
-  {
-    id: 'n7',
-    type: 'message',
-    title: 'Sarah sent you a message',
-    message: "Thanks for connecting! I'd love to learn more about your recent project.",
-    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    read: true,
-    actorName: 'Sarah Mbongo',
-    actorRole: 'HR Manager at TechLabs',
-    actions: [{ label: 'Reply', variant: 'primary' }],
-  },
-  {
-    id: 'n8',
-    type: 'local_job',
-    title: '5 new jobs posted near you',
-    message: '5 new jobs posted within 10 miles of your location (Douala).',
-    timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    read: true,
-    actions: [{ label: 'Browse Jobs', variant: 'primary' }],
-  },
+export const SIDEBAR_NAMESPACES: NotificationNamespace[] = [
+  'social',
+  'verification',
+  'payment',
+  'review',
+  'moderation',
+  'post',
+  'admin',
+  'system',
 ];
-
-export async function fetchNotifications(): Promise<NotificationItemData[]> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  return structuredClone(mockNotifications);
-}

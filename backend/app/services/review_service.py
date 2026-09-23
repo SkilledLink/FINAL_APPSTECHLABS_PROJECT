@@ -1,5 +1,6 @@
 # app/services/review_service.py
 
+import logging
 from uuid import UUID
 
 from fastapi import HTTPException
@@ -14,6 +15,9 @@ from app.schemas.review import (
     ReviewStatsResponse,
     ReviewUpdate,
 )
+from app.services.notification_service import NotificationService
+
+logger = logging.getLogger(__name__)
 
 
 class ReviewService:
@@ -45,11 +49,9 @@ class ReviewService:
     def create_review(self, current_user: User, payload: ReviewCreate):
         prof = self._get_professional_or_404(payload.professional_id)
 
-        # Rule: cannot review yourself
         if prof.user_id == current_user.id:
             raise HTTPException(status_code=400, detail="You cannot review yourself")
 
-        # Rule: one review per reviewer per professional
         existing = self.repo.get_by_reviewer_and_professional(
             current_user.id, prof.id
         )
@@ -68,6 +70,20 @@ class ReviewService:
             is_verified_hire=False,
         )
         self._recompute_professional_rating(prof.id)
+
+        try:
+            display = NotificationService.display_name(current_user)
+            NotificationService(self.session).notify_review(
+                recipient_id=prof.user_id,
+                actor_id=current_user.id,
+                actor_display=display,
+                rating=review.rating,
+                review_id=review.id,
+                professional_id=prof.id,
+            )
+        except Exception:
+            logger.exception("Review notification failed")
+
         return review
 
     # ─── Read ──────────────────────────────────────────────
