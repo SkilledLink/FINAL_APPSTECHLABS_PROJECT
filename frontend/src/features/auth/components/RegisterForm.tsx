@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Eye,
   EyeOff,
@@ -62,6 +62,8 @@ function PasswordRequirements({ password }: { password: string }) {
 
 export function RegisterForm({ onSuccess }: RegisterFormProps) {
   const { register, loading, error, clearError } = useAuth();
+  const navigate = useNavigate();
+
   const [step, setStep] = useState<0 | 1>(0);
   const [accountType, setAccountType] = useState<AccountType>("professional");
   const [showPassword, setShowPassword] = useState(false);
@@ -84,13 +86,26 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
       return;
     }
     setMismatch(false);
-    const data: RegisterData = { firstName, lastName, email, password, confirmPassword, accountType };
+
+    const data: RegisterData = {
+      firstName,
+      lastName,
+      email,
+      password,
+      confirmPassword,
+      accountType,
+    };
+
     const ok = await register(data);
-    if (ok) onSuccess?.();
+
+    if (ok) {
+      onSuccess?.();
+      navigate("/home", { replace: true });
+    }
   };
 
   return (
-    <div 
+    <div
       className="max-w-md w-full bg-white border border-[#E2E8F0] rounded-2xl p-6 sm:p-8 shadow-sm"
       style={{ fontFamily: "'Hanken Grotesk', sans-serif" }}
     >
@@ -402,75 +417,3 @@ export function RegisterForm({ onSuccess }: RegisterFormProps) {
     </div>
   );
 }
-import React, { useState } from 'react';
-import type { AccountType, AuthView } from '../types/auth.types';
-
-interface RegisterFormProps {
-  onNavigate?: (view: AuthView) => void;
-}
-
-export const RegisterForm: React.FC<RegisterFormProps> = ({ onNavigate }) => {
-  const [selectedType, setSelectedType] = useState<AccountType>('INDIVIDUAL');
-
-  const cardOptions = [
-    {
-      id: 'CLIENT' as AccountType,
-      title: 'Client',
-      desc: 'Hire verified professionals for projects. Secure payments, guaranteed quality.',
-    },
-    {
-      id: 'INDIVIDUAL' as AccountType,
-      title: 'Individual Professional',
-      desc: 'Find work, build your reputation, get paid fast. Ideal for solopreneurs.',
-    },
-    {
-      id: 'BUSINESS' as AccountType,
-      title: 'Business',
-      desc: 'Manage teams, bid on large projects, grow your company.',
-    },
-  ];
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Register with:', selectedType);
-  };
-
-  return (
-    <div className="w-full max-w-4xl mx-auto px-4 py-8 flex flex-col items-center">
-      <h1 className="text-3xl font-bold text-[#0F2338] mb-8">Choose Account Type</h1>
-
-      <form onSubmit={handleSubmit} className="w-full">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {cardOptions.map((option) => (
-            <div
-              key={option.id}
-              onClick={() => setSelectedType(option.id)}
-              className={`p-6 rounded-lg border-2 cursor-pointer transition ${selectedType === option.id
-                  ? 'border-blue-600 bg-blue-50'
-                  : 'border-gray-200 hover:border-gray-300'
-                }`}
-            >
-              <h3 className="text-lg font-bold text-[#0F2338] mb-2">{option.title}</h3>
-              <p className="text-sm text-gray-600">{option.desc}</p>
-            </div>
-          ))}
-        </div>
-
-        <button
-          type="submit"
-          className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition"
-        >
-          Continue
-        </button>
-      </form>
-
-      <button
-        type="button"
-        onClick={() => onNavigate?.('login')}
-        className="mt-4 text-blue-600 hover:underline text-sm"
-      >
-        Already have an account? Sign In
-      </button>
-    </div>
-  );
-};

@@ -41,27 +41,27 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
 
     if (ok) {
       onSuccess?.();
-      navigate("/home");
+      navigate("/home", { replace: true });
     }
   };
 
   return (
     <div
-      className="max-w-md w-full bg-white border border-[#E2E8F0] rounded-2xl p-6 sm:p-8 shadow-sm"
+      className="max-w-md w-full bg-white dark:bg-slate-900 border border-[#E2E8F0] dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-sm transition-colors"
       style={{ fontFamily: "'Hanken Grotesk', sans-serif" }}
     >
-      <h1 className="text-[#0F172A] text-[26px] sm:text-[30px] font-bold tracking-tight">
-        Sign in to Vantage
+      <h1 className="text-[#0F172A] dark:text-slate-100 text-[26px] sm:text-[30px] font-bold tracking-tight">
+        Sign in to SkilledLink
       </h1>
 
-      <p className="text-[#64748B] text-[15px] mt-2">
+      <p className="text-[#64748B] dark:text-slate-400 text-[15px] mt-2">
         Use your account credentials to continue.
       </p>
 
       {/* Account type toggle */}
-      <div className="mt-7 relative flex bg-[#F1F5F9] rounded-xl p-1">
+      <div className="mt-7 relative flex bg-[#F1F5F9] dark:bg-slate-800 rounded-xl p-1 transition-colors">
         <div
-          className="absolute top-1 bottom-1 w-[calc(50%-4px)] bg-[#0F172A] rounded-lg transition-transform duration-300 ease-out"
+          className="absolute top-1 bottom-1 w-[calc(50%-4px)] bg-[#0F172A] dark:bg-slate-700 rounded-lg transition-transform duration-300 ease-out"
           style={{
             transform:
               accountType === "client"
@@ -76,7 +76,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           className={`relative z-10 flex-1 text-sm font-medium py-2.5 rounded-lg transition-colors duration-300 ${
             accountType === "client"
               ? "text-white"
-              : "text-[#64748B]"
+              : "text-[#64748B] dark:text-slate-400"
           }`}
         >
           Client
@@ -88,7 +88,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           className={`relative z-10 flex-1 text-sm font-medium py-2.5 rounded-lg transition-colors duration-300 ${
             accountType === "professional"
               ? "text-white"
-              : "text-[#64748B]"
+              : "text-[#64748B] dark:text-slate-400"
           }`}
         >
           Professional
@@ -96,7 +96,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       </div>
 
       {error && (
-        <div className="mt-4 text-[13px] text-[#DC2626] bg-[#FEF2F2] border border-[#FECACA] rounded-lg px-3.5 py-2.5">
+        <div className="mt-4 text-[13px] text-[#DC2626] dark:text-red-400 bg-[#FEF2F2] dark:bg-red-950/40 border border-[#FECACA] dark:border-red-900/60 rounded-lg px-3.5 py-2.5">
           {error}
         </div>
       )}
@@ -105,7 +105,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         {/* Email */}
         <label className="block">
           <span
-            className="text-[12.5px] font-medium text-[#475569] mb-1.5 block"
+            className="text-[12.5px] font-medium text-[#475569] dark:text-slate-300 mb-1.5 block"
             style={{ fontFamily: "'JetBrains Mono', monospace" }}
           >
             Email address
@@ -114,8 +114,8 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           <div
             className={`flex items-center gap-2.5 rounded-xl border px-3.5 py-3 transition-all duration-200 ${
               focused === "email"
-                ? "border-[#4F46E5] ring-4 ring-[#4F46E5]/10"
-                : "border-[#E2E8F0] hover:border-[#CBD5E1]"
+                ? "border-[#4F46E5] dark:border-indigo-500 ring-4 ring-[#4F46E5]/10 dark:ring-indigo-500/20"
+                : "border-[#E2E8F0] dark:border-slate-800 hover:border-[#CBD5E1] dark:hover:border-slate-700"
             }`}
           >
             <Mail
@@ -123,8 +123,8 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
               strokeWidth={1.8}
               className={
                 focused === "email"
-                  ? "text-[#4F46E5]"
-                  : "text-[#94A3B8]"
+                  ? "text-[#4F46E5] dark:text-indigo-400"
+                  : "text-[#94A3B8] dark:text-slate-500"
               }
             />
 
@@ -139,7 +139,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
               }}
               onBlur={() => setFocused(null)}
               placeholder="you@company.com"
-              className="flex-1 bg-transparent outline-none text-[14.5px] text-[#0F172A] placeholder:text-[#94A3B8]"
+              className="flex-1 bg-transparent outline-none text-[14.5px] text-[#0F172A] dark:text-slate-100 placeholder:text-[#94A3B8] dark:placeholder:text-slate-600"
             />
           </div>
         </label>
@@ -147,7 +147,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         {/* Password */}
         <label className="block">
           <span
-            className="text-[12.5px] font-medium text-[#475569] mb-1.5 block"
+            className="text-[12.5px] font-medium text-[#475569] dark:text-slate-300 mb-1.5 block"
             style={{ fontFamily: "'JetBrains Mono', monospace" }}
           >
             Password
@@ -156,8 +156,8 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           <div
             className={`flex items-center gap-2.5 rounded-xl border px-3.5 py-3 transition-all duration-200 ${
               focused === "password"
-                ? "border-[#4F46E5] ring-4 ring-[#4F46E5]/10"
-                : "border-[#E2E8F0] hover:border-[#CBD5E1]"
+                ? "border-[#4F46E5] dark:border-indigo-500 ring-4 ring-[#4F46E5]/10 dark:ring-indigo-500/20"
+                : "border-[#E2E8F0] dark:border-slate-800 hover:border-[#CBD5E1] dark:hover:border-slate-700"
             }`}
           >
             <Lock
@@ -165,8 +165,8 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
               strokeWidth={1.8}
               className={
                 focused === "password"
-                  ? "text-[#4F46E5]"
-                  : "text-[#94A3B8]"
+                  ? "text-[#4F46E5] dark:text-indigo-400"
+                  : "text-[#94A3B8] dark:text-slate-500"
               }
             />
 
@@ -181,13 +181,13 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
               }}
               onBlur={() => setFocused(null)}
               placeholder="••••••••"
-              className="flex-1 bg-transparent outline-none text-[14.5px] text-[#0F172A] placeholder:text-[#94A3B8]"
+              className="flex-1 bg-transparent outline-none text-[14.5px] text-[#0F172A] dark:text-slate-100 placeholder:text-[#94A3B8] dark:placeholder:text-slate-600"
             />
 
             <button
               type="button"
               onClick={() => setShowPassword((value) => !value)}
-              className="text-[#94A3B8] hover:text-[#64748B] transition-colors"
+              className="text-[#94A3B8] dark:text-slate-500 hover:text-[#64748B] dark:hover:text-slate-300 transition-colors"
               tabIndex={-1}
             >
               {showPassword ? (
@@ -203,7 +203,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         <div className="flex justify-end -mt-1">
           <Link
             to="/forgot-password"
-            className="text-[13px] text-[#4F46E5] font-medium hover:text-[#3730A3] transition-colors"
+            className="text-[13px] text-[#4F46E5] dark:text-indigo-400 font-medium hover:text-[#3730A3] dark:hover:text-indigo-300 transition-colors"
           >
             Forgot password?
           </Link>
@@ -213,7 +213,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         <button
           type="submit"
           disabled={loading}
-          className="group w-full bg-[#4F46E5] hover:bg-[#4338CA] active:scale-[0.98] text-white font-semibold text-[15px] py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-70"
+          className="group w-full bg-[#4F46E5] dark:bg-indigo-600 hover:bg-[#4338CA] dark:hover:bg-indigo-500 active:scale-[0.98] text-white font-semibold text-[15px] py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-70"
         >
           {loading ? (
             <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
@@ -229,11 +229,11 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         </button>
       </form>
 
-      <p className="mt-7 text-center text-[14px] text-[#64748B]">
+      <p className="mt-7 text-center text-[14px] text-[#64748B] dark:text-slate-400">
         Don't have an account?{" "}
         <Link
           to="/register"
-          className="text-[#4F46E5] font-medium hover:text-[#3730A3]"
+          className="text-[#4F46E5] dark:text-indigo-400 font-medium hover:text-[#3730A3] dark:hover:text-indigo-300"
         >
           Create one
         </Link>
@@ -241,37 +241,3 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     </div>
   );
 }
-// ```
-
-// The important change is just:
-
-// ```tsx
-// import { Link, useNavigate } from "react-router-dom";
-// ```
-
-// then:
-
-// ```tsx
-// const navigate = useNavigate();
-// ```
-
-// and after successful login:
-
-// ```tsx
-// if (ok) {
-//   onSuccess?.();
-//   navigate("/home");
-// }
-// ```
-
-// So the flow becomes:
-
-// **Login succeeds → `ok === true` → `/home`**
-
-// Make sure your router actually has:
-
-// ```tsx
-// <Route path="/home" element={<Home />} />
-// ```
-
-// and not just `/`.
