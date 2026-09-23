@@ -698,30 +698,42 @@ class FeedService:
                 detail="Feed not found",
             )
 
-        self._ensure_feed_interactable(
-            feed,
-            current_user,
-        )
+        self._ensure_feed_interactable(feed, current_user)
 
         try:
-            liked = self.repo.toggle_like(
-                current_user,
-                feed,
-            )
-
+            liked = self.repo.toggle_like(current_user, feed)
             self.session.commit()
 
-            return FeedLikeResponse(
-                feed_id=feed_id,
-                liked=liked,
-            )
+            # ─── Notification hook ───
+            if feed.user_id != current_user.id:
+                try:
+                    display = NotificationService.display_name(current_user)
+                    service = NotificationService(self.session)
+                    if liked:
+                        service.notify_like(
+                            recipient_id=feed.user_id,
+                            actor_id=current_user.id,
+                            actor_display=display,
+                            target_type="feed",
+                            target_id=feed.id,
+                            target_label="post",
+                        )
+                    else:
+                        service.notify_unlike(
+                            recipient_id=feed.user_id,
+                            actor_id=current_user.id,
+                            target_type="feed",
+                            target_id=feed.id,
+                            target_label="post",
+                        )
+                except Exception:
+                    logger.exception("Like notification failed")
+
+            return FeedLikeResponse(feed_id=feed_id, liked=liked)
 
         except Exception as e:
             self.session.rollback()
-            logger.error(
-                "Like toggle failed: %s",
-                e,
-            )
+            logger.error("Like toggle failed: %s", e)
             raise
 
     # ─── Comments ───────────────────────────────────────────
@@ -739,16 +751,10 @@ class FeedService:
                 detail="Feed not found",
             )
 
-        self._ensure_feed_interactable(
-            feed,
-            current_user,
-        )
+        self._ensure_feed_interactable(feed, current_user)
 
         if data.parent_id:
-            parent = self.session.get(
-                FeedComment,
-                data.parent_id,
-            )
+            parent = self.session.get(FeedComment, data.parent_id)
 
             if not parent or parent.feed_id != feed_id:
                 raise HTTPException(
@@ -767,50 +773,41 @@ class FeedService:
             self.session.commit()
             self.session.refresh(comment)
 
-            return FeedCommentResponse.model_validate(
-                comment
-            )
+            # ─── Notification hook ───
+            try:
+                display = NotificationService.display_name(current_user)
+                service = NotificationService(self.session)
+                if data.parent_id:
+                    parent = self.session.get(FeedComment, data.parent_id)
+                    if parent and parent.user_id != current_user.id:
+                        service.notify_reply(
+                            recipient_id=parent.user_id,
+                            actor_id=current_user.id,
+                            actor_display=display,
+                            target_type="feed",
+                            target_id=feed.id,
+                            comment_id=comment.id,
+                            parent_comment_id=parent.id,
+                        )
+                else:
+                    if feed.user_id != current_user.id:
+                        service.notify_comment(
+                            recipient_id=feed.user_id,
+                            actor_id=current_user.id,
+                            actor_display=display,
+                            target_type="feed",
+                            target_id=feed.id,
+                            comment_id=comment.id,
+                            target_label="post",
+                        )
+            except Exception:
+                logger.exception("Comment notification failed")
+
+            return FeedCommentResponse.model_validate(comment)
 
         except Exception as e:
             self.session.rollback()
-            logger.error(
-                "Comment creation failed: %s",
-                e,
-            )
-            raise
-
-    def delete_comment(
-        self,
-        comment_id: UUID,
-        current_user: User,
-    ) -> None:
-        try:
-            deleted = self.repo.delete_comment(
-                comment_id,
-                current_user,
-                self._is_moderation_staff(
-                    current_user
-                ),
-            )
-
-            if not deleted:
-                raise HTTPException(
-                    status_code=404,
-                    detail="Comment not found or you lack permissions",
-                )
-
-            self.session.commit()
-
-        except HTTPException:
-            self.session.rollback()
-            raise
-
-        except Exception as e:
-            self.session.rollback()
-            logger.error(
-                "Comment deletion failed: %s",
-                e,
-            )
+            logger.error("Comment creation failed: %s", e)
             raise
 
     # ─── Trending hashtags ──────────────────────────────────

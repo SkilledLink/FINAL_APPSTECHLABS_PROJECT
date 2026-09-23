@@ -2,16 +2,17 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, BellOff, Sparkles } from 'lucide-react';
-import type { NotificationItemData } from '../types/notification.types';
+
+import type { NotificationDTO, NotificationFilter } from '../types/notification.types';
 import { NotificationItem } from './NotificationItem';
 
 interface NotificationListProps {
-  notifications: NotificationItemData[];
+  notifications: NotificationDTO[];
   loading: boolean;
   onRead: (id: string) => void;
   onDismiss: (id: string) => void;
   onMarkAllRead: () => void;
-  filter: string;
+  filter: NotificationFilter | string;
   unreadCount: number;
 }
 
@@ -53,7 +54,6 @@ export function NotificationList({
         animate={{ opacity: 1, y: 0 }}
         className="relative overflow-hidden rounded-3xl border border-dashed border-slate-300/80 dark:border-white/10 bg-white/40 dark:bg-white/[0.03] backdrop-blur-2xl p-10 sm:p-14 text-center shadow-xs"
       >
-        {/* Ambient glow */}
         <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-blue-500/15 dark:bg-blue-500/10 rounded-full blur-3xl" />
 
         <div className="relative mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25">
@@ -76,7 +76,6 @@ export function NotificationList({
   /* ── List ────────────────────────────────────────── */
   return (
     <div className="space-y-3">
-      {/* Header bar */}
       <div className="flex items-center justify-between mb-1 px-1">
         <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
           {notifications.length} notification
@@ -101,7 +100,6 @@ export function NotificationList({
         )}
       </div>
 
-      {/* Items */}
       <AnimatePresence mode="popLayout" initial={false}>
         {notifications.map((n) => (
           <NotificationItem

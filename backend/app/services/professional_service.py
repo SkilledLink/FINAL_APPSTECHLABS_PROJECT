@@ -28,6 +28,7 @@ from app.schemas.professional import (
     ProfessionalResponse,
 )
 from app.services.indexing_service import IndexingService
+from app.services.notification_service import NotificationService
 from app.services.professional_subscription_service import (
     ProfessionalSubscriptionService,
 )
@@ -64,12 +65,10 @@ class ProfessionalService:
         self.subscription_service = ProfessionalSubscriptionService(session)
 
     # ────────────────────────────────────────────────────────
-    #  Response builders (attach active tier badge)
+    #  Response builders
     # ────────────────────────────────────────────────────────
 
     def to_response(self, professional: Professional) -> ProfessionalResponse:
-        """ORM Professional → ProfessionalResponse with the professional's
-        active tier badge (if any) populated."""
         response = ProfessionalResponse.model_validate(professional)
         response.tier_badge = self.subscription_service.build_badge(
             professional.id
@@ -97,8 +96,6 @@ class ProfessionalService:
     def list_to_public_responses(
         self, professionals: list[Professional]
     ) -> list[ProfessionalPublicResponse]:
-        """Batch conversion for discovery lists. One badge lookup per
-        professional — swap for a batched query if list size grows."""
         return [self.to_public_response(p) for p in professionals]
 
     # ────────────────────────────────────────────────────────
@@ -303,6 +300,11 @@ class ProfessionalService:
             reason=reason,
         )
         self.session.commit()
+
+        # Only admin-initiated deletions notify the professional.
+        if deletion_type != DeletionType.SELF:
+            self._notify_admin_action(professional, action, reason)
+
         return professional
 
     # ────────────────────────────────────────────────────────
@@ -315,12 +317,6 @@ class ProfessionalService:
         didit_status: VerificationStatus,
         raw_data: Optional[dict] = None,
     ) -> Professional:
-        """Called by the Didit webhook handler.
-
-        IMPORTANT: attempts are NOT incremented here. `/start` already
-        counted this attempt when it created the session. Incrementing
-        again would double-count if Didit retries the webhook.
-        """
         if didit_status == VerificationStatus.APPROVED:
             professional.verification_status = VerificationStatus.APPROVED
             professional.is_verified = True
@@ -372,6 +368,28 @@ class ProfessionalService:
             },
         )
         self.session.commit()
+
+        try:
+            vmap = {
+                VerificationStatus.APPROVED: "verification.approved",
+                VerificationStatus.MANUAL_APPROVED: "verification.approved",
+                VerificationStatus.REJECTED: "verification.rejected",
+                VerificationStatus.MANUAL_REJECTED: "verification.rejected",
+                VerificationStatus.MANUAL_REVIEW: "verification.manual_review",
+                VerificationStatus.EXPIRED: "verification.expired",
+                VerificationStatus.FAILED: "verification.failed",
+            }
+            ntype = vmap.get(didit_status)
+            if ntype:
+                NotificationService(self.session).notify_verification(
+                    recipient_id=professional.user_id,
+                    status=ntype,
+                    professional_id=professional.id,
+                    source="didit",
+                )
+        except Exception:
+            logger.exception("Verification notification failed")
+
         return professional
 
     def can_retry_verification(self, professional: Professional) -> bool:
@@ -415,6 +433,8 @@ class ProfessionalService:
             reason=reason,
         )
         self.session.commit()
+
+        self._notify_admin_action(professional, action, reason)
         return professional
 
     def admin_suspend(
@@ -440,6 +460,10 @@ class ProfessionalService:
             reason=reason,
         )
         self.session.commit()
+
+        self._notify_admin_action(
+            professional, AuditAction.STATUS_SUSPENDED, reason
+        )
         return professional
 
     def admin_reactivate(
@@ -465,6 +489,10 @@ class ProfessionalService:
             reason=reason,
         )
         self.session.commit()
+
+        self._notify_admin_action(
+            professional, AuditAction.STATUS_REACTIVATED, reason
+        )
         return professional
 
     def admin_flag(
@@ -493,6 +521,8 @@ class ProfessionalService:
             reason=reason,
         )
         self.session.commit()
+
+        self._notify_admin_action(professional, AuditAction.FLAG_ADDED, reason)
         return professional
 
     def admin_unflag(
@@ -516,6 +546,10 @@ class ProfessionalService:
             reason=reason,
         )
         self.session.commit()
+
+        self._notify_admin_action(
+            professional, AuditAction.FLAG_REMOVED, reason
+        )
         return professional
 
     def admin_update_trust_score(
@@ -547,6 +581,59 @@ class ProfessionalService:
     # ────────────────────────────────────────────────────────
     #  Internals
     # ────────────────────────────────────────────────────────
+
+    def _notify_admin_action(
+        self,
+        professional: Professional,
+        action: AuditAction,
+        reason: Optional[str] = None,
+    ) -> None:
+        """Map an AuditAction to a notification type and fire. No-op for
+        actions that don't warrant a notification."""
+        mapping = {
+            AuditAction.STATUS_SUSPENDED: (
+                "moderation.professional_suspended",
+                "Your professional account was suspended",
+            ),
+            AuditAction.STATUS_REACTIVATED: (
+                "moderation.professional_reactivated",
+                "Your professional account was reactivated",
+            ),
+            AuditAction.FLAG_ADDED: (
+                "moderation.professional_flagged",
+                "Your professional account was flagged for review",
+            ),
+            AuditAction.FLAG_REMOVED: (
+                "moderation.professional_unflagged",
+                "The flag on your professional account was removed",
+            ),
+            AuditAction.PROFILE_SOFT_DELETED_ADMIN: (
+                "moderation.professional_deleted",
+                "Your professional account was deleted by an admin",
+            ),
+            AuditAction.VERIFICATION_MANUAL_APPROVED: (
+                "verification.approved",
+                "Your professional verification was approved",
+            ),
+            AuditAction.VERIFICATION_MANUAL_REJECTED: (
+                "verification.rejected",
+                "Your professional verification was rejected",
+            ),
+        }
+        entry = mapping.get(action)
+        if not entry:
+            return
+        type_, title = entry
+        try:
+            NotificationService(self.session).notify_professional_admin(
+                recipient_id=professional.user_id,
+                type_=type_,
+                title=title,
+                reason=reason,
+                professional_id=professional.id,
+            )
+        except Exception:
+            logger.exception("Admin notification failed")
 
     def _compute_completeness(self, p: Professional) -> int:
         score = 0

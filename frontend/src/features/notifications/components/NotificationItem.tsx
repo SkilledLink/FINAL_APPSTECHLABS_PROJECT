@@ -3,28 +3,15 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
-import type {
-  NotificationItemData,
-  NotificationAction,
-} from '../types/notification.types';
+
+import type { NotificationDTO } from '../types/notification.types';
 import { getNotificationTypeConfig } from '../services/notificationService';
 import { formatRelativeTime } from '../utils/time';
 
 interface NotificationItemProps {
-  notification: NotificationItemData;
+  notification: NotificationDTO;
   onRead: (id: string) => void;
   onDismiss: (id: string) => void;
-}
-
-function actionClasses(variant: NotificationAction['variant']): string {
-  switch (variant) {
-    case 'primary':
-      return 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm shadow-blue-500/25 active:scale-[0.97]';
-    case 'secondary':
-      return 'border border-white/60 dark:border-white/10 bg-white/60 dark:bg-white/5 text-slate-700 dark:text-slate-200 hover:bg-white/80 dark:hover:bg-white/10 backdrop-blur-md active:scale-[0.97]';
-    default:
-      return '';
-  }
 }
 
 export function NotificationItem({
@@ -35,7 +22,7 @@ export function NotificationItem({
   const [exiting, setExiting] = useState(false);
   const config = getNotificationTypeConfig(notification.type);
   const Icon = config.icon;
-  const isUnread = !notification.read;
+  const isUnread = !notification.read_at;
 
   const handleClick = () => {
     if (isUnread) onRead(notification.id);
@@ -106,7 +93,7 @@ export function NotificationItem({
               {notification.title}
             </p>
             <p className="text-[13px] text-slate-600 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">
-              {notification.message}
+              {notification.body}
             </p>
           </div>
 
@@ -121,36 +108,9 @@ export function NotificationItem({
           </button>
         </div>
 
-        {/* Actor role chip */}
-        {notification.actorRole && (
-          <span className="inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100/80 dark:bg-white/5 text-slate-500 dark:text-slate-400 border border-white/60 dark:border-white/10">
-            {notification.actorRole}
-          </span>
-        )}
-
-        {/* Actions */}
-        {notification.actions.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-3">
-            {notification.actions.map((action) => (
-              <button
-                key={action.label}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (isUnread) onRead(notification.id);
-                }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${actionClasses(
-                  action.variant,
-                )}`}
-              >
-                {action.label}
-              </button>
-            ))}
-          </div>
-        )}
-
         {/* Timestamp */}
         <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-2.5">
-          {formatRelativeTime(notification.timestamp)}
+          {formatRelativeTime(notification.created_at)}
         </p>
       </div>
     </motion.article>

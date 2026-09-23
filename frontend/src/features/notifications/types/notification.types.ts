@@ -1,35 +1,48 @@
-import type { LucideIcon } from 'lucide-react';
+// src/features/notifications/types/notification.types.ts
 
-export type NotificationType =
-  | 'follower'
-  | 'job_alert'
-  | 'message'
-  | 'local_job';
+import type { ComponentType } from 'react';
+
+/* ═══════════════════════════════════════════════════════════
+ * BACKEND DTOs — mirror the API response exactly, no renames.
+ * ═══════════════════════════════════════════════════════════ */
+
+export interface NotificationDTO {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  payload: Record<string, unknown> | null;
+  read_at: string | null;
+  created_at: string;
+}
+
+export interface NotificationListResponse {
+  items: NotificationDTO[];
+  total: number;
+  page: number;
+  size: number;
+  unread_count: number;
+}
+
+/* ═══════════════════════════════════════════════════════════
+ * FRONTEND-ONLY TYPES
+ * ═══════════════════════════════════════════════════════════ */
+
+export type NotificationNamespace =
+  | 'social'
+  | 'verification'
+  | 'payment'
+  | 'review'
+  | 'moderation'
+  | 'post'
+  | 'admin'
+  | 'system';
 
 export type NotificationFilter = 'all' | 'unread';
 
-export interface NotificationAction {
+export interface NotificationCategoryConfig {
   label: string;
-  variant: 'primary' | 'secondary';
-}
-
-export interface NotificationItemData {
-  id: string;
-  type: NotificationType;
-  title: string;
-  message: string;
-  timestamp: string; // ISO string
-  read: boolean;
-  avatarUrl?: string;
-  actorName?: string;
-  actorRole?: string;
-  actions: NotificationAction[];
-}
-
-export interface NotificationTypeConfig {
-  icon: LucideIcon;
-  accent: string; // tailwind classes for icon bg
-  iconColor: string; // tailwind text color
-  dotColor: string; // tailwind bg color for the unread dot
-  label: string;
+  icon: ComponentType<{ className?: string; size?: number | string }>;
+  accent: string;
+  iconColor: string;
 }

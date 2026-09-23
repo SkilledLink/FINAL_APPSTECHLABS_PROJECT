@@ -27,6 +27,10 @@ from app.api.v1 import chat
 from app.api.v1.chat import router as chat_router
 from app.api.v1.reviews import router as reviews_router
 from app.ai.ai_search import router as ai_search_router
+from app.api.v1.notifications_ext import router as notifications_ext_router
+from app.api.v1.admin_notifications import router as admin_notifications_router
+
+
 
 # ─── Contact Messages ──────────────────────────────────────
 from app.api.v1.contact_messages import router as contact_messages_router
@@ -201,6 +205,10 @@ app.include_router(report_router)
 
 # ─── Webhooks (KYC / Didit) ────────────────────────────────
 app.include_router(webhooks_router)
+
+# ─── Notifications ────────────────────────────────
+app.include_router(notifications_ext_router)
+app.include_router(admin_notifications_router)
 
 
 # ─── Health check ──────────────────────────────────────────
