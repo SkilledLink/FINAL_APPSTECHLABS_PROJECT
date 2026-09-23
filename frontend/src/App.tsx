@@ -1,6 +1,6 @@
 // src/App.tsx
 
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
 import {
   BrowserRouter,
   Routes,
@@ -9,73 +9,76 @@ import {
   Outlet,
   useParams,
   useNavigate,
-} from "react-router-dom";
+} from 'react-router-dom';
 
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 // Providers
-import { AuthProvider } from "./providers/AuthProvider";
-import { ThemeProvider } from "./providers/ThemeProvider";
-import { SocketProvider } from "./contexts/SocketContext";
-import { CallProvider } from "./features/messages/context/CallProvider";
+import { AuthProvider } from './providers/AuthProvider';
+import { ThemeProvider } from './providers/ThemeProvider';
+import { SocketProvider } from './contexts/SocketContext';
+import { CallProvider } from './features/messages/context/CallProvider';
 
 // Layouts
-import { AuthLayout } from "./features/auth/components/AuthLayout";
-import AppLayout from "./components/layout/AppLayout/AppLayout";
+import { AuthLayout } from './features/auth/components/AuthLayout';
+import AppLayout from './components/layout/AppLayout/AppLayout';
 
 // Landing
-import LandingPage from "./features/landing/pages/LandingPage";
+import LandingPage from './features/landing/pages/LandingPage';
 
 // Auth pages
-import LoginPage from "./features/auth/pages/LoginPage";
-import RegisterPage from "./features/auth/pages/RegisterPage";
-import ForgotPasswordPage from "./features/auth/pages/ForgotPasswordPage";
-import ResetPasswordPage from "./features/auth/pages/ResetPasswordPage";
-import VerifyEmailPage from "./features/auth/pages/VerifyEmailPage";
+import LoginPage from './features/auth/pages/LoginPage';
+import RegisterPage from './features/auth/pages/RegisterPage';
+import ForgotPasswordPage from './features/auth/pages/ForgotPasswordPage';
+import ResetPasswordPage from './features/auth/pages/ResetPasswordPage';
+import VerifyEmailPage from './features/auth/pages/VerifyEmailPage';
 
 // Onboarding pages
-import ChooseAccountTypePage from "./features/onboarding/pages/ChooseAccountTypePage";
-import ProfessionalWizardPage from "./features/onboarding/pages/ProfessionalWizardPage";
+import ChooseAccountTypePage from './features/onboarding/pages/ChooseAccountTypePage';
+import ProfessionalWizardPage from './features/onboarding/pages/ProfessionalWizardPage';
 
 // Auth hook
-import { useAuth } from "./features/auth/hooks/useAuth";
+import { useAuth } from './features/auth/hooks/useAuth';
 
 // AI assistant
-import { AIFloatingWidget } from "./features/ai/components/AIFloatingWidget";
+import { AIFloatingWidget } from './features/ai/components/AIFloatingWidget';
 
 // Main pages
-import HomePage from "./features/home/pages/HomePage";
-import Feed from "./features/posts/components/Feed";
-import { ProfilePage } from "./features/profile";
-import { MessagesPage } from "./features/messages";
+import HomePage from './features/home/pages/HomePage';       // ← new premium home
+import FeedsPage from './features/home/pages/FeedsPage';     // ← kept for /home/feeds
+import Feed from './features/posts/components/Feed';
+import { ProfilePage } from './features/profile';
+import { MessagesPage } from './features/messages';
 
-// notification
-import { NotificationsPage } from "./features/notifications";
+// Notification
+import { NotificationsPage } from './features/notifications';
 
 // Location-powered Discover
-import NearbyProfessionalsPage from "./features/location/pages/NearbyProfessionalsPage";
+import NearbyProfessionalsPage from './features/location/pages/NearbyProfessionalsPage';
 
 // Jobs
-import JobsPage from "./features/jobs/pages/JobsPage";
-import JobDetailsPage from "./features/jobs/pages/JobDetailsPage";
-import CreateJobPage from "./features/jobs/pages/CreateJobPage";
+import JobsPage from './features/jobs/pages/JobsPage';
+import JobDetailsPage from './features/jobs/pages/JobDetailsPage';
+import CreateJobPage from './features/jobs/pages/CreateJobPage';
 
 // Portfolio — single component, auto-switches owner vs public
-import PortfolioDashboard from "./features/portfolio/pages/PortfolioDashboard";
+import PortfolioDashboard from './features/portfolio/pages/PortfolioDashboard';
 
 // Users
-import UsersPage from "./features/users/pages/UsersPage";
-import MarketplacePage from "./features/Market/pages/Marketplace/Marketplace";
+import UsersPage from './features/users/pages/UsersPage';
+import MarketplacePage from './features/Market/pages/Marketplace/Marketplace';
 
 // Verification
-import VerificationPage from "./features/verification/pages/VerificationPage";
+import VerificationPage from './features/verification/pages/VerificationPage';
 
-// Admin
-import AdminDashboard from "./features/admin_dashboard/pages/AdminDashboard";
-import AdminCheck from "./features/admin_dashboard/components/AdminCheck";
-import ModeratorDashboard from "./features/moderator_dashboard/pages/ModeratorDashboard";
-import NotFound from "./features/not_found_page/Not_Found_Page";
+// Admin / Moderator
+import AdminDashboard from './features/admin_dashboard/pages/AdminDashboard';
+import AdminCheck from './features/admin_dashboard/components/AdminCheck';
+import ModeratorDashboard from './features/moderator_dashboard/pages/ModeratorDashboard';
+
+// 404
+import NotFound from './features/not_found_page/Not_Found_Page';
 
 // ============================================================
 const ProfessionalsPage = UsersPage;
@@ -85,20 +88,20 @@ const ProfessionalsPage = UsersPage;
 // ============================================================
 function AuthedSocketProvider({ children }: { children: React.ReactNode }) {
   const readToken = () =>
-    localStorage.getItem("access_token") ||
-    localStorage.getItem("token") ||
-    localStorage.getItem("jwt") ||
+    localStorage.getItem('access_token') ||
+    localStorage.getItem('token') ||
+    localStorage.getItem('jwt') ||
     null;
 
   const [token, setToken] = useState<string | null>(() => readToken());
 
   useEffect(() => {
     const sync = () => setToken(readToken());
-    window.addEventListener("storage", sync);
-    window.addEventListener("focus", sync);
+    window.addEventListener('storage', sync);
+    window.addEventListener('focus', sync);
     return () => {
-      window.removeEventListener("storage", sync);
-      window.removeEventListener("focus", sync);
+      window.removeEventListener('storage', sync);
+      window.removeEventListener('focus', sync);
     };
   }, []);
 
@@ -136,18 +139,13 @@ function ProtectedRoute() {
 // ============================================================
 function ProfileRoute() {
   const { id } = useParams<{ id: string }>();
-  return <ProfilePage userId={id ?? ""} />;
+  return <ProfilePage userId={id ?? ''} />;
 }
 
 function JobDetailsRoute() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  return (
-    <JobDetailsPage
-      jobId={id ?? ""}
-      onBack={() => navigate(-1)}
-    />
-  );
+  return <JobDetailsPage jobId={id ?? ''} onBack={() => navigate(-1)} />;
 }
 
 function JobDetailsRedirect() {
@@ -157,17 +155,15 @@ function JobDetailsRedirect() {
 
 /**
  * Didit redirects the browser here after the user finishes the KYC flow.
- * We just bounce to the verification page, which is already polling
- * /professionals/kyc/status and will update as soon as the webhook lands.
+ * We bounce to the verification page, which polls /professionals/kyc/status
+ * and updates as soon as the webhook lands.
  */
 function VerifyCompleteRedirect() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Give Didit's webhook a moment to reach our backend before the
-    // verification page starts polling — 1.5s covers most cases.
     const t = window.setTimeout(() => {
-      navigate("/home/verification", { replace: true });
+      navigate('/home/verification', { replace: true });
     }, 1500);
     return () => window.clearTimeout(t);
   }, [navigate]);
@@ -221,31 +217,46 @@ function App() {
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} />
                     <Route path="/verify-email" element={<VerifyEmailPage />} />
-                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                    <Route path="/reset-password" element={<ResetPasswordPage />} />
+                    <Route
+                      path="/forgot-password"
+                      element={<ForgotPasswordPage />}
+                    />
+                    <Route
+                      path="/reset-password"
+                      element={<ResetPasswordPage />}
+                    />
                   </Route>
                 </Route>
 
                 {/* AUTHENTICATED (PROTECTED) */}
                 <Route element={<ProtectedRoute />}>
                   {/* Onboarding */}
-                  <Route path="/onboarding" element={<ChooseAccountTypePage />} />
+                  <Route
+                    path="/onboarding"
+                    element={<ChooseAccountTypePage />}
+                  />
                   <Route
                     path="/onboarding/professional"
                     element={<ProfessionalWizardPage />}
                   />
 
                   {/* Didit post-verification redirect target */}
-                  <Route path="/verify/complete" element={<VerifyCompleteRedirect />} />
+                  <Route
+                    path="/verify/complete"
+                    element={<VerifyCompleteRedirect />}
+                  />
 
                   {/* Home */}
                   <Route path="/home" element={<AppLayout />}>
                     <Route index element={<HomePage />} />
-                    <Route path="feed" element={<Feed />} />
+                    <Route path="feeds" element={<FeedsPage />} />
                     <Route path="jobs" element={<JobsPage />} />
                     <Route path="jobs/create" element={<CreateJobPage />} />
                     <Route path="jobs/:id" element={<JobDetailsRoute />} />
-                    <Route path="discover" element={<NearbyProfessionalsPage />} />
+                    <Route
+                      path="discover"
+                      element={<NearbyProfessionalsPage />}
+                    />
 
                     {/* Portfolio — owner studio when no id / own id,
                         public read-only view when someone else's id */}
@@ -255,25 +266,40 @@ function App() {
                       element={<PortfolioDashboard />}
                     />
 
-                    <Route path="notifications" element={<NotificationsPage />} />
+                    <Route
+                      path="notifications"
+                      element={<NotificationsPage />}
+                    />
 
-                    {/* Messages — both routes already exist; no change needed */}
+                    {/* Messages */}
                     <Route path="messages" element={<MessagesPage />} />
                     <Route
                       path="messages/:conversationId"
                       element={<MessagesPage />}
                     />
 
-                    <Route path="professionals" element={<ProfessionalsPage />} />
+                    <Route
+                      path="professionals"
+                      element={<ProfessionalsPage />}
+                    />
                     <Route path="users" element={<UsersPage />} />
-                    <Route path="verification" element={<VerificationPage />} />
-                    <Route path="marketplace" element={<MarketplacePage />} />
+                    <Route
+                      path="verification"
+                      element={<VerificationPage />}
+                    />
+                    <Route
+                      path="marketplace"
+                      element={<MarketplacePage />}
+                    />
                     <Route path="profile" element={<ProfileRoute />} />
                     <Route path="profile/:id" element={<ProfileRoute />} />
                   </Route>
 
                   {/* Aliases */}
-                  <Route path="/jobs" element={<Navigate to="/home/jobs" replace />} />
+                  <Route
+                    path="/jobs"
+                    element={<Navigate to="/home/jobs" replace />}
+                  />
                   <Route
                     path="/jobs/create"
                     element={<Navigate to="/home/jobs/create" replace />}
@@ -291,7 +317,10 @@ function App() {
                 <Route path="/admin_dashboard" element={<AdminDashboard />} />
 
                 {/* MODERATOR DASHBOARD */}
-                <Route path="/moderator_dashboard" element={<ModeratorDashboard />} />
+                <Route
+                  path="/moderator_dashboard"
+                  element={<ModeratorDashboard />}
+                />
 
                 {/* CATCH-ALL */}
                 <Route path="*" element={<NotFound />} />

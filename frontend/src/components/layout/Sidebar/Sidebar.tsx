@@ -18,6 +18,8 @@ import {
   ImagePlus,
   Shield,
   ShieldCheck,
+  FaceAngryIcon,
+  Rss,
 } from 'lucide-react';
 import { useAuth } from '../../../features/auth/hooks/useAuth';
 import { useUser } from '../../../features/profile/hooks/useUser';
@@ -39,6 +41,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { icon: Home, label: 'Home', path: '/home', end: true },
+  { icon: Rss,label: "Feeds", path: '/home/feeds' },
   { icon: Compass, label: 'Discover', path: '/home/discover' },
   { icon: Briefcase, label: 'Jobs', path: '/home/jobs' },
   { icon: LayoutDashboard, label: 'Portfolio', path: '/home/portfolio', professionalOnly: true },

@@ -25,8 +25,8 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
     if (!lm) return 'Started a conversation';
     if (lm.type === 'audio') {
       return (
-        <span className="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-medium">
-          <Mic className="w-3.5 h-3.5" />
+        <span className="inline-flex items-center gap-1.5 text-slate-600 dark:text-slate-300 font-medium">
+          <Mic className="w-3 h-3" />
           <span>Voice note ({lm.audioDetails?.duration || 'Audio'})</span>
         </span>
       );
@@ -36,80 +36,88 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
 
   return (
     <motion.button
-      whileHover={{ scale: 1.01 }}
-      whileTap={{ scale: 0.98 }}
+      whileHover={{ scale: 1.005 }}
+      whileTap={{ scale: 0.985 }}
       onClick={() => onSelect(conversation.id)}
       className={`relative w-full text-left p-3.5 rounded-2xl transition-all duration-200 flex items-center gap-3.5 group overflow-hidden ${
         isActive
-          ? 'bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-transparent dark:from-indigo-950/50 dark:via-indigo-900/20 border border-indigo-500/30 dark:border-indigo-500/40 shadow-sm'
-          : 'bg-white/80 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700/80 shadow-2xs'
+          ? 'bg-white dark:bg-slate-800/80 border border-slate-200/90 dark:border-slate-700/70 shadow-[0_4px_16px_-6px_rgba(15,23,42,0.12)]'
+          : 'bg-transparent border border-transparent hover:bg-white/70 dark:hover:bg-slate-900/60 hover:border-slate-200/60 dark:hover:border-slate-800/60'
       }`}
     >
       {isActive && (
         <motion.div
           layoutId="activeConversationIndicator"
-          className="absolute left-0 top-3 bottom-3 w-1 bg-gradient-to-b from-blue-600 via-indigo-600 to-purple-600 rounded-r-full"
+          transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+          className="absolute left-0 top-3 bottom-3 w-[3px] bg-slate-900 dark:bg-slate-100 rounded-r-full"
         />
       )}
 
       <div className="relative shrink-0">
         <div
-          className={`p-0.5 rounded-full transition-all duration-200 ${
+          className={`p-[2px] rounded-full transition-all duration-300 ${
             isActive
-              ? 'bg-gradient-to-tr from-blue-500 via-indigo-500 to-purple-500'
-              : 'bg-transparent group-hover:bg-slate-200 dark:group-hover:bg-slate-700'
+              ? 'bg-gradient-to-tr from-slate-900 via-slate-700 to-slate-500 dark:from-slate-100 dark:via-slate-300 dark:to-slate-400'
+              : 'bg-slate-200/60 dark:bg-slate-800/60 group-hover:bg-slate-300/70 dark:group-hover:bg-slate-700/60'
           }`}
         >
           <img
             src={displayAvatar}
             alt={displayName}
-            className="w-12 h-12 rounded-full object-cover border-2 border-white dark:border-slate-900 shadow-xs"
+            className="w-12 h-12 rounded-full object-cover border-2 border-white dark:border-slate-900 shadow-sm"
           />
         </div>
         {isOnline && (
-          <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full shadow-xs" />
+          <span className="absolute bottom-0.5 right-0.5 flex items-center justify-center">
+            <span className="absolute w-3.5 h-3.5 bg-emerald-500 rounded-full animate-ping opacity-60" />
+            <span className="relative w-3 h-3 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full shadow-sm" />
+          </span>
         )}
       </div>
 
       <div className="flex-1 min-w-0 space-y-1">
         <div className="flex items-center justify-between gap-1.5">
           <h4
-            className={`font-bold text-sm truncate tracking-tight transition-colors ${
+            className={`font-semibold text-[13.5px] truncate tracking-tight transition-colors ${
               isActive
-                ? 'text-indigo-950 dark:text-indigo-100'
-                : 'text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400'
+                ? 'text-slate-900 dark:text-slate-100'
+                : 'text-slate-800 dark:text-slate-200 group-hover:text-slate-900 dark:group-hover:text-slate-100'
             }`}
           >
             {displayName}
           </h4>
           {conversation.lastMessage && (
             <span
-              className={`text-[11px] font-medium shrink-0 ${
+              className={`text-[10.5px] font-medium shrink-0 tabular-nums ${
                 (conversation.unreadCount || 0) > 0
-                  ? 'text-indigo-600 dark:text-indigo-400 font-semibold'
+                  ? 'text-slate-800 dark:text-slate-200 font-semibold'
                   : 'text-slate-400 dark:text-slate-500'
               }`}
             >
-              {new Date(conversation.lastMessage.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {new Date(conversation.lastMessage.created_at).toLocaleTimeString(
+                [],
+                { hour: '2-digit', minute: '2-digit' }
+              )}
             </span>
           )}
         </div>
 
         <div className="flex items-center">
-          <span className="inline-block text-[10px] font-semibold px-2 py-0.2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/60 truncate max-w-[140px]">
+          <span className="inline-block text-[10px] font-semibold px-1.5 py-[1px] rounded-md bg-slate-100/80 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 border border-slate-200/60 dark:border-slate-700/60 truncate max-w-[140px]">
             {role}
           </span>
         </div>
 
         <div className="flex items-center justify-between gap-2 pt-0.5">
-          <div className="text-xs text-slate-500 dark:text-slate-400 truncate flex-1 font-normal">
+          <div className="text-[12px] text-slate-500 dark:text-slate-400 truncate flex-1 font-normal">
             {renderMessagePreview()}
           </div>
           {(conversation.unreadCount || 0) > 0 && (
             <motion.span
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="shrink-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[10px] font-extrabold px-1.5 py-0.5 rounded-full min-w-[20px] text-center shadow-xs shadow-indigo-500/30"
+              initial={{ scale: 0.6, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+              className="shrink-0 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center tabular-nums shadow-sm"
             >
               {conversation.unreadCount}
             </motion.span>
