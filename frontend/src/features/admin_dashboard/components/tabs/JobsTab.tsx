@@ -24,7 +24,7 @@ const SkeletonBlock: React.FC<{ className?: string; style?: React.CSSProperties 
   className = '',
   style,
 }) => (
-  <div className={`animate-pulse rounded bg-gray-200 ${className}`} style={style} />
+  <div className={`animate-pulse rounded bg-gray-200 dark:bg-slate-700 ${className}`} style={style} />
 );
 
 const SkeletonTableRow: React.FC = () => (
@@ -56,15 +56,15 @@ const SkeletonTable: React.FC<{ rows?: number }> = ({ rows = 6 }) => (
   <div className="overflow-x-auto">
     <table className="w-full">
       <thead>
-        <tr className="bg-gray-50 border-b border-gray-100">
-          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Job</th>
-          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Client</th>
-          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Posted</th>
-          <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider"></th>
+        <tr className="bg-gray-50 dark:bg-slate-950 border-b border-gray-100 dark:border-slate-800/60">
+          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Job</th>
+          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Client</th>
+          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
+          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Posted</th>
+          <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider"></th>
         </tr>
       </thead>
-      <tbody className="divide-y divide-gray-100">
+      <tbody className="divide-y divide-gray-100 dark:divide-slate-800/60">
         {Array.from({ length: rows }).map((_, i) => (
           <SkeletonTableRow key={i} />
         ))}
@@ -94,7 +94,7 @@ const SkeletonCard: React.FC = () => (
 );
 
 const SkeletonCardList: React.FC<{ rows?: number }> = ({ rows = 6 }) => (
-  <div className="md:hidden divide-y divide-gray-100">
+  <div className="md:hidden divide-y divide-gray-100 dark:divide-slate-800/60">
     {Array.from({ length: rows }).map((_, i) => (
       <SkeletonCard key={i} />
     ))}
@@ -157,11 +157,11 @@ const Avatar: React.FC<{ name: string; src?: string; size?: number; className?: 
 // ---------- Local UI helpers ----------
 const EmptyState: React.FC<{ title: string; description?: string }> = ({ title, description }) => (
   <div className="flex flex-col items-center justify-center py-12 sm:py-16 px-4 sm:px-6 text-center">
-    <div className="p-4 bg-gray-50 rounded-2xl text-gray-400 mb-4">
+    <div className="p-4 bg-gray-50 dark:bg-slate-950 rounded-2xl text-gray-400 dark:text-slate-500 mb-4">
       <Inbox size={28} />
     </div>
-    <p className="font-semibold text-gray-900">{title}</p>
-    {description && <p className="text-sm text-gray-500 mt-1 max-w-sm">{description}</p>}
+    <p className="font-semibold text-gray-900 dark:text-slate-100">{title}</p>
+    {description && <p className="text-sm text-gray-500 dark:text-slate-400 mt-1 max-w-sm">{description}</p>}
   </div>
 );
 
@@ -169,20 +169,20 @@ const SearchInput: React.FC<{ value: string; onChange: (v: string) => void; plac
   value, onChange, placeholder = 'Search...',
 }) => (
   <div className="relative w-full sm:max-w-sm">
-    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500" />
     <input
       type="text"
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="h-10 w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-all hover:border-gray-300 hover:bg-white focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
+      className="h-10 w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-all hover:border-gray-300 hover:bg-white focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:hover:border-slate-700 dark:hover:bg-slate-900 dark:focus:bg-slate-900"
     />
   </div>
 );
 
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => (
-  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border bg-gray-100 text-gray-700 border-gray-200 capitalize whitespace-nowrap">
-    <span className="h-1.5 w-1.5 rounded-full bg-gray-400" />
+  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 border-gray-200 dark:border-slate-700 capitalize whitespace-nowrap">
+    <span className="h-1.5 w-1.5 rounded-full bg-gray-400 dark:bg-slate-500" />
     {status.replace(/_/g, ' ')}
   </span>
 );
@@ -227,21 +227,21 @@ interface CommentRowProps {
 
 const CommentRow: React.FC<CommentRowProps> = ({ comment, onDelete, depth = 0 }) => (
   <div style={{ marginLeft: Math.min(depth * 16, 32) }} className="space-y-2">
-    <div className="flex items-start gap-2 sm:gap-3 p-3 bg-gray-50 rounded-lg group">
+    <div className="flex items-start gap-2 sm:gap-3 p-3 bg-gray-50 dark:bg-slate-950 rounded-lg group">
       <div className="flex-1 min-w-0">
-        <p className="text-xs text-gray-500 font-mono truncate">
+        <p className="text-xs text-gray-500 dark:text-slate-400 font-mono truncate">
           {comment.userId.slice(0, 8)}
         </p>
-        <p className="text-sm text-gray-800 mt-1 whitespace-pre-wrap break-words">
+        <p className="text-sm text-gray-800 dark:text-slate-200 mt-1 whitespace-pre-wrap break-words">
           {comment.content}
         </p>
-        <p className="text-[11px] text-gray-400 mt-1">
+        <p className="text-[11px] text-gray-400 dark:text-slate-500 mt-1">
           {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
         </p>
       </div>
       <button
         onClick={() => onDelete(comment)}
-        className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0"
+        className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0"
         title="Delete comment"
         aria-label="Delete comment"
       >
@@ -254,7 +254,7 @@ const CommentRow: React.FC<CommentRowProps> = ({ comment, onDelete, depth = 0 })
   </div>
 );
 
-// ---------- Comment thread → text (for the single-job export) ----------
+// ---------- Comment thread → text ----------
 const flattenCommentsToText = (
   comments: JobComment[],
   depth = 0,
@@ -334,7 +334,6 @@ const JobDrawer: React.FC<DrawerProps> = ({
     return () => window.removeEventListener('keydown', onKey);
   }, [jobId, onClose]);
 
-  // ── Export this job as a standalone document ──
   const handleExportDetail = async () => {
     if (!detail || isExporting) return;
     setIsExporting(true);
@@ -415,20 +414,20 @@ const JobDrawer: React.FC<DrawerProps> = ({
       <div
         role="dialog"
         aria-modal="true"
-        className="fixed right-0 top-0 bottom-0 z-50 w-full sm:max-w-xl lg:max-w-2xl bg-white shadow-2xl flex flex-col"
+        className="fixed right-0 top-0 bottom-0 z-50 w-full sm:max-w-xl lg:max-w-2xl bg-white dark:bg-slate-900 shadow-2xl flex flex-col"
       >
-        <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-gray-100 dark:border-slate-800/60">
           <div className="min-w-0">
-            <h3 className="font-semibold text-gray-900 truncate">Job details</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-slate-100 truncate">Job details</h3>
             {detail && (
-              <p className="text-xs text-gray-500 truncate">{detail.title}</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 truncate">{detail.title}</p>
             )}
           </div>
           <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={handleExportDetail}
               disabled={!detail || isExporting}
-              className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-500 dark:text-slate-400 disabled:opacity-40 disabled:cursor-not-allowed"
               title="Download full record (PDF)"
               aria-label="Download full record"
             >
@@ -440,7 +439,7 @@ const JobDrawer: React.FC<DrawerProps> = ({
             </button>
             <button
               onClick={onClose}
-              className="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-500 dark:text-slate-400"
               aria-label="Close"
             >
               <X size={18} />
@@ -459,12 +458,12 @@ const JobDrawer: React.FC<DrawerProps> = ({
             <div className="space-y-5">
               <div>
                 <div className="flex flex-wrap items-start justify-between gap-2">
-                  <h4 className="font-semibold text-gray-900 text-base sm:text-lg break-words">
+                  <h4 className="font-semibold text-gray-900 dark:text-slate-100 text-base sm:text-lg break-words">
                     {detail.title}
                   </h4>
                   <StatusBadge status={detail.status} />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
                   Posted {formatDistanceToNow(new Date(detail.postedDate), { addSuffix: true })}
                   {' · '}
                   Updated {formatDistanceToNow(new Date(detail.updatedAt), { addSuffix: true })}
@@ -474,23 +473,23 @@ const JobDrawer: React.FC<DrawerProps> = ({
               <div className="flex items-center gap-3">
                 <Avatar name={detail.client.name} src={detail.client.avatar} size={40} />
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{detail.client.name}</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-sm font-medium text-gray-900 dark:text-slate-100 truncate">{detail.client.name}</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">
                     Client · <span className="font-mono">{detail.client.id.slice(0, 8)}</span>
                   </p>
                 </div>
               </div>
 
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                   Description
                 </p>
-                <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">
+                <p className="text-sm text-gray-700 dark:text-slate-300 whitespace-pre-wrap break-words">
                   {detail.description}
                 </p>
               </div>
 
-              <div className="flex items-center gap-4 text-xs text-gray-500">
+              <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-slate-400">
                 <span className="inline-flex items-center gap-1">
                   <Heart size={13} /> {detail.likes}
                 </span>
@@ -501,7 +500,7 @@ const JobDrawer: React.FC<DrawerProps> = ({
 
               {detail.images.length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                     Images
                   </p>
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
@@ -511,7 +510,7 @@ const JobDrawer: React.FC<DrawerProps> = ({
                         href={img}
                         target="_blank"
                         rel="noreferrer"
-                        className="group relative aspect-square rounded-lg overflow-hidden border border-gray-100 bg-gray-50"
+                        className="group relative aspect-square rounded-lg overflow-hidden border border-gray-100 dark:border-slate-800/60 bg-gray-50 dark:bg-slate-950"
                       >
                         <img
                           src={img}
@@ -528,11 +527,11 @@ const JobDrawer: React.FC<DrawerProps> = ({
               )}
 
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                   Comments ({detail.commentsList.length})
                 </p>
                 {detail.commentsList.length === 0 ? (
-                  <p className="text-xs text-gray-400 italic">No comments yet.</p>
+                  <p className="text-xs text-gray-400 dark:text-slate-500 italic">No comments yet.</p>
                 ) : (
                   <div className="space-y-2">
                     {detail.commentsList.map((c) => (
@@ -550,11 +549,11 @@ const JobDrawer: React.FC<DrawerProps> = ({
         </div>
 
         {detail && !loading && !error && (
-          <div className="border-t border-gray-100 px-4 sm:px-5 py-3 flex flex-col-reverse sm:flex-row items-stretch sm:items-center sm:justify-between gap-2">
+          <div className="border-t border-gray-100 dark:border-slate-800/60 px-4 sm:px-5 py-3 flex flex-col-reverse sm:flex-row items-stretch sm:items-center sm:justify-between gap-2">
             <button
               onClick={handleExportDetail}
               disabled={isExporting}
-              className="justify-center px-3 py-2 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 text-sm font-medium inline-flex items-center gap-1.5 disabled:opacity-60"
+              className="justify-center px-3 py-2 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-950/60 text-sm font-medium inline-flex items-center gap-1.5 disabled:opacity-60"
             >
               {isExporting ? (
                 <Loader2 size={14} className="animate-spin" />
@@ -565,7 +564,7 @@ const JobDrawer: React.FC<DrawerProps> = ({
             </button>
             <button
               onClick={() => onDeleteJob(detail)}
-              className="justify-center px-3 py-2 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 text-sm font-medium inline-flex items-center gap-1.5"
+              className="justify-center px-3 py-2 rounded-lg bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/60 text-sm font-medium inline-flex items-center gap-1.5"
             >
               <Trash2 size={14} /> Remove job
             </button>
@@ -586,12 +585,12 @@ interface JobCardProps {
 const JobCard: React.FC<JobCardProps> = ({ job, onOpen, onRemove }) => (
   <div
     onClick={onOpen}
-    className="p-4 hover:bg-gray-50/70 active:bg-gray-100 transition-colors cursor-pointer"
+    className="p-4 hover:bg-gray-50/70 active:bg-gray-100 dark:hover:bg-slate-800/50 dark:active:bg-slate-800 transition-colors cursor-pointer"
   >
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0 flex-1">
-        <p className="font-medium text-gray-900 truncate">{job.title}</p>
-        <p className="text-xs text-gray-500 line-clamp-2 mt-0.5">{job.description}</p>
+        <p className="font-medium text-gray-900 dark:text-slate-100 truncate">{job.title}</p>
+        <p className="text-xs text-gray-500 dark:text-slate-400 line-clamp-2 mt-0.5">{job.description}</p>
       </div>
       <StatusBadge status={job.status} />
     </div>
@@ -599,9 +598,9 @@ const JobCard: React.FC<JobCardProps> = ({ job, onOpen, onRemove }) => (
     <div className="flex items-center justify-between mt-3 gap-3">
       <div className="flex items-center gap-2 min-w-0">
         <Avatar name={job.client.name} src={job.client.avatar} size={24} />
-        <span className="text-xs text-gray-600 truncate">{job.client.name}</span>
+        <span className="text-xs text-gray-600 dark:text-slate-400 truncate">{job.client.name}</span>
       </div>
-      <span className="text-xs text-gray-400 whitespace-nowrap">
+      <span className="text-xs text-gray-400 dark:text-slate-500 whitespace-nowrap">
         {formatDistanceToNow(new Date(job.postedDate), { addSuffix: true })}
       </span>
     </div>
@@ -612,13 +611,13 @@ const JobCard: React.FC<JobCardProps> = ({ job, onOpen, onRemove }) => (
     >
       <button
         onClick={onOpen}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-700 dark:text-slate-300 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700"
       >
         <Eye size={14} /> View
       </button>
       <button
         onClick={onRemove}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-950/60"
       >
         <Trash2 size={14} /> Remove
       </button>
@@ -627,8 +626,6 @@ const JobCard: React.FC<JobCardProps> = ({ job, onOpen, onRemove }) => (
 );
 
 // ---------- Export configuration ----------
-
-// Full columns — used for CSV and Excel (all data, no truncation).
 const EXPORT_COLUMNS: ExportColumn[] = [
   { key: 'title', header: 'Title', width: 34 },
   { key: 'client', header: 'Client', width: 24 },
@@ -642,9 +639,6 @@ const EXPORT_COLUMNS: ExportColumn[] = [
   { key: 'description', header: 'Description', width: 60 },
 ];
 
-// Compact columns — used only for the PDF table. Description is
-// excluded on purpose: it's already in the single-job detailed
-// record, and long text in a wide table wrecks the layout.
 const PDF_COLUMNS: ExportColumn[] = [
   { key: 'title', header: 'Title', width: 40, maxChars: 45 },
   { key: 'client', header: 'Client', width: 22, maxChars: 24 },
@@ -721,8 +715,6 @@ const JobsTab: React.FC = () => {
           'Jobs',
         );
       } else {
-        // PDF list: compact landscape table. Full description stays
-        // in the single-job record (drawer → Download record).
         await exportToPDF(baseName, PDF_COLUMNS, buildTableRows(filtered), {
           title: 'Jobs',
           subtitle: subtitleParts.join('  ·  '),
@@ -769,8 +761,8 @@ const JobsTab: React.FC = () => {
     <div className="w-full">
       <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Jobs</h2>
-          <p className="text-sm sm:text-base text-gray-500 mt-1">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-slate-100">Jobs</h2>
+          <p className="text-sm sm:text-base text-gray-500 dark:text-slate-400 mt-1">
             Monitor all jobs posted across the platform
           </p>
         </div>
@@ -785,7 +777,7 @@ const JobsTab: React.FC = () => {
         />
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 overflow-hidden">
         {loading ? (
           <>
             <SkeletonCardList rows={5} />
@@ -797,7 +789,7 @@ const JobsTab: React.FC = () => {
           <EmptyState title="No jobs found" description="Try adjusting your filters." />
         ) : (
           <>
-            <div className="md:hidden divide-y divide-gray-100">
+            <div className="md:hidden divide-y divide-gray-100 dark:divide-slate-800/60">
               {filtered.map((j: AdminJob) => (
                 <JobCard
                   key={j.id}
@@ -811,40 +803,40 @@ const JobsTab: React.FC = () => {
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="bg-gray-50 border-b border-gray-100">
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Job</th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Client</th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Posted</th>
-                    <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider"></th>
+                  <tr className="bg-gray-50 dark:bg-slate-950 border-b border-gray-100 dark:border-slate-800/60">
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Job</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Client</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Posted</th>
+                    <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-gray-100 dark:divide-slate-800/60">
                   {filtered.map((j: AdminJob) => (
                     <tr
                       key={j.id}
                       onClick={() => setDetailId(j.id)}
-                      className="hover:bg-gray-50/70 transition-colors cursor-pointer"
+                      className="hover:bg-gray-50/70 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
                     >
                       <td className="px-5 py-4 max-w-xs lg:max-w-md">
-                        <p className="font-medium text-gray-900 truncate">{j.title}</p>
-                        <p className="text-xs text-gray-500 line-clamp-1">{j.description}</p>
+                        <p className="font-medium text-gray-900 dark:text-slate-100 truncate">{j.title}</p>
+                        <p className="text-xs text-gray-500 dark:text-slate-400 line-clamp-1">{j.description}</p>
                       </td>
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-2 min-w-0">
                           <Avatar name={j.client.name} src={j.client.avatar} size={28} />
-                          <span className="text-sm truncate">{j.client.name}</span>
+                          <span className="text-sm truncate text-gray-700 dark:text-slate-300">{j.client.name}</span>
                         </div>
                       </td>
                       <td className="px-5 py-4"><StatusBadge status={j.status} /></td>
-                      <td className="px-5 py-4 text-xs text-gray-500 whitespace-nowrap">
+                      <td className="px-5 py-4 text-xs text-gray-500 dark:text-slate-400 whitespace-nowrap">
                         {formatDistanceToNow(new Date(j.postedDate), { addSuffix: true })}
                       </td>
                       <td className="px-5 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => setDetailId(j.id)}
-                            className="p-2 rounded-lg text-gray-500 hover:bg-gray-100"
+                            className="p-2 rounded-lg text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800"
                             title="Details"
                             aria-label="View details"
                           >
@@ -852,7 +844,7 @@ const JobsTab: React.FC = () => {
                           </button>
                           <button
                             onClick={() => openRemoveJob(j)}
-                            className="p-2 rounded-lg text-red-500 hover:bg-red-50"
+                            className="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40"
                             title="Remove"
                             aria-label="Remove job"
                           >

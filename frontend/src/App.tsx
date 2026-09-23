@@ -16,7 +16,9 @@ import "react-toastify/dist/ReactToastify.css";
 
 // Providers
 import { AuthProvider } from "./providers/AuthProvider";
+import { ThemeProvider } from "./providers/ThemeProvider";
 import { SocketProvider } from "./contexts/SocketContext";
+import { CallProvider } from "./features/messages/context/CallProvider";
 
 // Layouts
 import { AuthLayout } from "./features/auth/components/AuthLayout";
@@ -187,112 +189,118 @@ function VerifyCompleteRedirect() {
 // ============================================================
 function App() {
   return (
-    <AuthProvider>
-      <AuthedSocketProvider>
-        <BrowserRouter>
-          <ToastContainer
-            position="top-right"
-            autoClose={3000}
-            hideProgressBar={false}
-            newestOnTop
-            closeOnClick
-            rtl={false}
-            pauseOnFocusLoss
-            draggable
-            pauseOnHover
-            theme="light"
-          />
+    <ThemeProvider>
+      <AuthProvider>
+        <AuthedSocketProvider>
+          <BrowserRouter>
+            <ToastContainer
+              position="top-right"
+              autoClose={3000}
+              hideProgressBar={false}
+              newestOnTop
+              closeOnClick
+              rtl={false}
+              pauseOnFocusLoss
+              draggable
+              pauseOnHover
+              theme="light"
+            />
 
-          <AIFloatingWidget />
+            <AIFloatingWidget />
 
-          <Routes>
-            {/* LANDING (PUBLIC) */}
-            <Route path="/" element={<LandingPage />} />
+            {/* Global call state — lives above the router outlet so calls
+                survive navigation between /home, /home/messages, /home/feed, etc. */}
+            <CallProvider>
+              <Routes>
+                {/* LANDING (PUBLIC) */}
+                <Route path="/" element={<LandingPage />} />
 
-            {/* AUTH ROUTES (PUBLIC-ONLY) */}
-            <Route element={<PublicOnlyRoute />}>
-              <Route element={<AuthLayout />}>
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<RegisterPage />} />
-                <Route path="/verify-email" element={<VerifyEmailPage />} />
-                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                <Route path="/reset-password" element={<ResetPasswordPage />} />
-              </Route>
-            </Route>
+                {/* AUTH ROUTES (PUBLIC-ONLY) */}
+                <Route element={<PublicOnlyRoute />}>
+                  <Route element={<AuthLayout />}>
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/register" element={<RegisterPage />} />
+                    <Route path="/verify-email" element={<VerifyEmailPage />} />
+                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                    <Route path="/reset-password" element={<ResetPasswordPage />} />
+                  </Route>
+                </Route>
 
-            {/* AUTHENTICATED (PROTECTED) */}
-            <Route element={<ProtectedRoute />}>
-              {/* Onboarding */}
-              <Route path="/onboarding" element={<ChooseAccountTypePage />} />
-              <Route
-                path="/onboarding/professional"
-                element={<ProfessionalWizardPage />}
-              />
+                {/* AUTHENTICATED (PROTECTED) */}
+                <Route element={<ProtectedRoute />}>
+                  {/* Onboarding */}
+                  <Route path="/onboarding" element={<ChooseAccountTypePage />} />
+                  <Route
+                    path="/onboarding/professional"
+                    element={<ProfessionalWizardPage />}
+                  />
 
-              {/* Didit post-verification redirect target */}
-              <Route path="/verify/complete" element={<VerifyCompleteRedirect />} />
+                  {/* Didit post-verification redirect target */}
+                  <Route path="/verify/complete" element={<VerifyCompleteRedirect />} />
 
-              {/* Home */}
-              <Route path="/home" element={<AppLayout />}>
-                <Route index element={<HomePage />} />
-                <Route path="feed" element={<Feed />} />
-                <Route path="jobs" element={<JobsPage />} />
-                <Route path="jobs/create" element={<CreateJobPage />} />
-                <Route path="jobs/:id" element={<JobDetailsRoute />} />
-                <Route path="discover" element={<NearbyProfessionalsPage />} />
+                  {/* Home */}
+                  <Route path="/home" element={<AppLayout />}>
+                    <Route index element={<HomePage />} />
+                    <Route path="feed" element={<Feed />} />
+                    <Route path="jobs" element={<JobsPage />} />
+                    <Route path="jobs/create" element={<CreateJobPage />} />
+                    <Route path="jobs/:id" element={<JobDetailsRoute />} />
+                    <Route path="discover" element={<NearbyProfessionalsPage />} />
 
-                {/* Portfolio — owner studio when no id / own id,
-                    public read-only view when someone else's id */}
-                <Route path="portfolio" element={<PortfolioDashboard />} />
+                    {/* Portfolio — owner studio when no id / own id,
+                        public read-only view when someone else's id */}
+                    <Route path="portfolio" element={<PortfolioDashboard />} />
+                    <Route
+                      path="portfolio/:userId"
+                      element={<PortfolioDashboard />}
+                    />
+
+                    <Route path="notifications" element={<NotificationsPage />} />
+
+                    {/* Messages — both routes already exist; no change needed */}
+                    <Route path="messages" element={<MessagesPage />} />
+                    <Route
+                      path="messages/:conversationId"
+                      element={<MessagesPage />}
+                    />
+
+                    <Route path="professionals" element={<ProfessionalsPage />} />
+                    <Route path="users" element={<UsersPage />} />
+                    <Route path="verification" element={<VerificationPage />} />
+                    <Route path="marketplace" element={<MarketplacePage />} />
+                    <Route path="profile" element={<ProfileRoute />} />
+                    <Route path="profile/:id" element={<ProfileRoute />} />
+                  </Route>
+
+                  {/* Aliases */}
+                  <Route path="/jobs" element={<Navigate to="/home/jobs" replace />} />
+                  <Route
+                    path="/jobs/create"
+                    element={<Navigate to="/home/jobs/create" replace />}
+                  />
+                  <Route path="/jobs/:id" element={<JobDetailsRedirect />} />
+                </Route>
+
+                {/* PUBLIC PORTFOLIO (standalone, no auth required) */}
                 <Route
-                  path="portfolio/:userId"
+                  path="/portfolio/:userId"
                   element={<PortfolioDashboard />}
                 />
 
-                <Route path="notifications" element={<NotificationsPage />} />
+                {/* ADMIN */}
+                <Route path="/admin_dashboard" element={<AdminDashboard />} />
 
-                {/* Messages — both routes already exist; no change needed */}
-                <Route path="messages" element={<MessagesPage />} />
-                <Route
-                  path="messages/:conversationId"
-                  element={<MessagesPage />}
-                />
+                {/* MODERATOR DASHBOARD */}
+                <Route path="/moderator_dashboard" element={<ModeratorDashboard />} />
 
-                <Route path="professionals" element={<ProfessionalsPage />} />
-                <Route path="users" element={<UsersPage />} />
-                <Route path="verification" element={<VerificationPage />} />
-                <Route path="marketplace" element={<MarketplacePage />} />
-                <Route path="profile" element={<ProfileRoute />} />
-                <Route path="profile/:id" element={<ProfileRoute />} />
-              </Route>
-
-              {/* Aliases */}
-              <Route path="/jobs" element={<Navigate to="/home/jobs" replace />} />
-              <Route
-                path="/jobs/create"
-                element={<Navigate to="/home/jobs/create" replace />}
-              />
-              <Route path="/jobs/:id" element={<JobDetailsRedirect />} />
-            </Route>
-
-            {/* PUBLIC PORTFOLIO (standalone, no auth required) */}
-            <Route
-              path="/portfolio/:userId"
-              element={<PortfolioDashboard />}
-            />
-
-            {/* ADMIN */}
-            <Route path="/admin_dashboard" element={<AdminDashboard />} />
-
-            {/* MODERATOR DASHBOARD */}
-            <Route path="/moderator_dashboard" element={<ModeratorDashboard />} />
-
-            {/* CATCH-ALL */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </AuthedSocketProvider>
-    </AuthProvider>
+                {/* CATCH-ALL */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </CallProvider>
+          </BrowserRouter>
+        </AuthedSocketProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

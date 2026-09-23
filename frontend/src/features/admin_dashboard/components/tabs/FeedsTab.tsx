@@ -22,11 +22,11 @@ const SkeletonBlock: React.FC<{ className?: string; style?: React.CSSProperties 
   className = '',
   style,
 }) => (
-  <div className={`animate-pulse rounded bg-gray-200 ${className}`} style={style} />
+  <div className={`animate-pulse rounded bg-gray-200 dark:bg-slate-700 ${className}`} style={style} />
 );
 
 const SkeletonFeedCard: React.FC = () => (
-  <div className="bg-white rounded-xl border border-gray-200 p-5">
+  <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-5">
     <div className="flex items-start gap-4">
       <SkeletonBlock className="rounded-full" style={{ width: 40, height: 40 }} />
       <div className="flex-1 min-w-0">
@@ -53,7 +53,7 @@ const SkeletonFeedCard: React.FC = () => (
           <SkeletonBlock className="h-3 w-10" />
           <SkeletonBlock className="h-3 w-10" />
         </div>
-        <div className="mt-4 pt-4 border-t border-gray-100 flex gap-2">
+        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-800/60 flex gap-2">
           <SkeletonBlock className="h-7 w-24 rounded-lg" />
           <SkeletonBlock className="h-7 w-20 rounded-lg" />
         </div>
@@ -147,11 +147,11 @@ const Avatar: React.FC<{ name: string; src?: string; size?: number; className?: 
 // ---------- Local UI ----------
 const EmptyState: React.FC<{ title: string; description?: string }> = ({ title, description }) => (
   <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-    <div className="p-4 bg-gray-50 rounded-2xl text-gray-400 mb-4">
+    <div className="p-4 bg-gray-50 dark:bg-slate-950 rounded-2xl text-gray-400 dark:text-slate-500 mb-4">
       <Inbox size={28} />
     </div>
-    <p className="font-semibold text-gray-900">{title}</p>
-    {description && <p className="text-sm text-gray-500 mt-1 max-w-sm">{description}</p>}
+    <p className="font-semibold text-gray-900 dark:text-slate-100">{title}</p>
+    {description && <p className="text-sm text-gray-500 dark:text-slate-400 mt-1 max-w-sm">{description}</p>}
   </div>
 );
 
@@ -159,13 +159,13 @@ const SearchInput: React.FC<{ value: string; onChange: (v: string) => void; plac
   value, onChange, placeholder = 'Search...',
 }) => (
   <div className="relative w-full max-w-sm">
-    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500" />
     <input
       type="text"
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="h-10 w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-all hover:border-gray-300 hover:bg-white focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
+      className="h-10 w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-all hover:border-gray-300 hover:bg-white focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:hover:border-slate-700 dark:hover:bg-slate-900 dark:focus:bg-slate-900"
     />
   </div>
 );
@@ -174,18 +174,18 @@ const Chip: React.FC<{ children: React.ReactNode; variant?: 'success' | 'warning
   children, variant = 'neutral',
 }) => {
   const styles = {
-    success: 'bg-green-50 text-green-700 border-green-200',
-    warning: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-    danger: 'bg-red-50 text-red-700 border-red-200',
-    info: 'bg-blue-50 text-blue-700 border-blue-200',
-    neutral: 'bg-gray-100 text-gray-700 border-gray-200',
+    success: 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950/40 dark:text-green-400 dark:border-green-900/60',
+    warning: 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950/40 dark:text-yellow-400 dark:border-yellow-900/60',
+    danger: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900/60',
+    info: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900/60',
+    neutral: 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
   };
   const dots = {
     success: 'bg-green-500',
     warning: 'bg-yellow-500',
     danger: 'bg-red-500',
     info: 'bg-blue-500',
-    neutral: 'bg-gray-400',
+    neutral: 'bg-gray-400 dark:bg-slate-500',
   };
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${styles[variant]}`}>
@@ -223,18 +223,16 @@ const getFeedState = (feed: { status: string; isDeleted: boolean }): FeedState =
 };
 
 const feedCardClass = (state: FeedState): string => {
-  const base = 'bg-white rounded-xl border p-5 cursor-pointer transition-all';
+  const base = 'bg-white dark:bg-slate-900 rounded-xl border p-5 cursor-pointer transition-all';
   if (state === 'deleted') {
-    return `${base} border-red-200 bg-red-50/40 border-l-4 border-l-red-500 hover:border-red-300 hover:shadow-sm`;
+    return `${base} border-red-200 dark:border-red-900/60 bg-red-50/40 dark:bg-red-950/20 border-l-4 border-l-red-500 hover:border-red-300 dark:hover:border-red-800 hover:shadow-sm`;
   }
   if (state === 'pending') {
-    return `${base} border-amber-200 bg-amber-50/40 border-l-4 border-l-amber-500 hover:border-amber-300 hover:shadow-sm`;
+    return `${base} border-amber-200 dark:border-amber-900/60 bg-amber-50/40 dark:bg-amber-950/20 border-l-4 border-l-amber-500 hover:border-amber-300 dark:hover:border-amber-800 hover:shadow-sm`;
   }
-  return `${base} border-gray-200 hover:border-blue-200 hover:shadow-sm`;
+  return `${base} border-gray-200 dark:border-slate-800 hover:border-blue-200 dark:hover:border-blue-900/60 hover:shadow-sm`;
 };
 
-// Fallback view when the backend refuses to return a single feed
-// (deleted / pending feeds often 404 on GET /admin/feeds/{id}).
 const buildFallbackDetail = (feed: AdminFeed): AdminFeedDetail => ({
   ...feed,
   commentsList: [],
@@ -250,15 +248,15 @@ const StatusBanner: React.FC<{ state: FeedState; status: string; isDeleted: bool
 
   if (state === 'deleted') {
     return (
-      <div className="flex items-start gap-3 p-3 rounded-xl bg-red-50 border border-red-200">
-        <div className="p-1.5 rounded-lg bg-red-100 text-red-600 shrink-0">
+      <div className="flex items-start gap-3 p-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/60">
+        <div className="p-1.5 rounded-lg bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 shrink-0">
           <Ban size={16} />
         </div>
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-red-800">
+          <p className="text-sm font-semibold text-red-800 dark:text-red-300">
             {isDeleted ? 'This feed has been deleted' : `Feed status: ${status.replace(/_/g, ' ')}`}
           </p>
-          <p className="text-xs text-red-700 mt-0.5">
+          <p className="text-xs text-red-700 dark:text-red-400 mt-0.5">
             It remains visible here for moderation review and audit purposes.
           </p>
         </div>
@@ -267,13 +265,13 @@ const StatusBanner: React.FC<{ state: FeedState; status: string; isDeleted: bool
   }
 
   return (
-    <div className="flex items-start gap-3 p-3 rounded-xl bg-amber-50 border border-amber-200">
-      <div className="p-1.5 rounded-lg bg-amber-100 text-amber-700 shrink-0">
+    <div className="flex items-start gap-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60">
+      <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 shrink-0">
         <Clock size={16} />
       </div>
       <div className="min-w-0">
-        <p className="text-sm font-semibold text-amber-800">Awaiting moderation review</p>
-        <p className="text-xs text-amber-700 mt-0.5">
+        <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">Awaiting moderation review</p>
+        <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
           Status: <span className="capitalize">{status.replace(/_/g, ' ')}</span> — not publicly visible yet.
         </p>
       </div>
@@ -283,13 +281,13 @@ const StatusBanner: React.FC<{ state: FeedState; status: string; isDeleted: bool
 
 // ---------- Partial data banner ----------
 const PartialDataBanner: React.FC = () => (
-  <div className="flex items-start gap-3 p-3 rounded-xl bg-blue-50 border border-blue-200">
-    <div className="p-1.5 rounded-lg bg-blue-100 text-blue-600 shrink-0">
+  <div className="flex items-start gap-3 p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/60">
+    <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 shrink-0">
       <AlertTriangle size={16} />
     </div>
     <div className="min-w-0">
-      <p className="text-sm font-semibold text-blue-800">Limited details</p>
-      <p className="text-xs text-blue-700 mt-0.5">
+      <p className="text-sm font-semibold text-blue-800 dark:text-blue-300">Limited details</p>
+      <p className="text-xs text-blue-700 dark:text-blue-400 mt-0.5">
         This feed's full record (comments, AI moderation) isn't available from the backend.
         Showing the summary from the list instead.
       </p>
@@ -306,23 +304,23 @@ interface CommentRowProps {
 
 const CommentRow: React.FC<CommentRowProps> = ({ comment, onDelete, depth = 0 }) => (
   <div style={{ marginLeft: depth * 16 }} className="space-y-2">
-    <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg group">
+    <div className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-slate-950 rounded-lg group">
       <Avatar name={comment.author.name} src={comment.author.avatar} size={32} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <p className="text-xs font-medium text-gray-700">{comment.author.name}</p>
+          <p className="text-xs font-medium text-gray-700 dark:text-slate-300">{comment.author.name}</p>
           <Chip variant="neutral">{comment.author.role}</Chip>
         </div>
-        <p className="text-sm text-gray-800 mt-1 whitespace-pre-wrap break-words">
+        <p className="text-sm text-gray-800 dark:text-slate-200 mt-1 whitespace-pre-wrap break-words">
           {comment.content}
         </p>
-        <p className="text-[11px] text-gray-400 mt-1">
+        <p className="text-[11px] text-gray-400 dark:text-slate-500 mt-1">
           {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
         </p>
       </div>
       <button
         onClick={() => onDelete(comment)}
-        className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
+        className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 opacity-0 group-hover:opacity-100 transition-opacity"
         title="Delete comment"
       >
         <Trash2 size={14} />
@@ -391,27 +389,27 @@ const FeedDrawer: React.FC<DrawerProps> = ({
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-2xl bg-white shadow-2xl flex flex-col">
+      <div className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-2xl bg-white dark:bg-slate-900 shadow-2xl flex flex-col">
         <div
           className={`flex items-center justify-between px-5 py-4 border-b ${
             state === 'deleted'
-              ? 'border-red-100 bg-red-50/60'
+              ? 'border-red-100 dark:border-red-900/60 bg-red-50/60 dark:bg-red-950/20'
               : state === 'pending'
-                ? 'border-amber-100 bg-amber-50/60'
-                : 'border-gray-100'
+                ? 'border-amber-100 dark:border-amber-900/60 bg-amber-50/60 dark:bg-amber-950/20'
+                : 'border-gray-100 dark:border-slate-800/60'
           }`}
         >
           <div className="min-w-0">
-            <h3 className="font-semibold text-gray-900 truncate">Feed details</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-slate-100 truncate">Feed details</h3>
             {view && (
-              <p className="text-xs text-gray-500 truncate">
+              <p className="text-xs text-gray-500 dark:text-slate-400 truncate">
                 {view.title || view.description.slice(0, 60)}
               </p>
             )}
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-white/70 text-gray-500"
+            className="p-2 rounded-lg hover:bg-white/70 dark:hover:bg-slate-800 text-gray-500 dark:text-slate-400"
             aria-label="Close"
           >
             <X size={18} />
@@ -435,10 +433,10 @@ const FeedDrawer: React.FC<DrawerProps> = ({
                 <Avatar name={view.author.name} src={view.author.avatar} size={48} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="font-medium text-gray-900">{view.author.name}</p>
+                    <p className="font-medium text-gray-900 dark:text-slate-100">{view.author.name}</p>
                     <Chip variant="neutral">{view.author.role}</Chip>
                   </div>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">
                     {view.createdAt
                       ? formatDistanceToNow(new Date(view.createdAt), { addSuffix: true })
                       : '—'}
@@ -465,18 +463,18 @@ const FeedDrawer: React.FC<DrawerProps> = ({
 
               {view.title && (
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                     Title
                   </p>
-                  <p className="text-base font-medium text-gray-900">{view.title}</p>
+                  <p className="text-base font-medium text-gray-900 dark:text-slate-100">{view.title}</p>
                 </div>
               )}
               {view.description && (
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                     Description
                   </p>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                  <p className="text-sm text-gray-700 dark:text-slate-300 whitespace-pre-wrap">
                     {view.description}
                   </p>
                 </div>
@@ -484,12 +482,12 @@ const FeedDrawer: React.FC<DrawerProps> = ({
 
               {view.hashtags.length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                     Hashtags
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {view.hashtags.map((h, i) => (
-                      <span key={i} className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-xs">
+                      <span key={i} className="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 text-xs">
                         #{h}
                       </span>
                     ))}
@@ -499,7 +497,7 @@ const FeedDrawer: React.FC<DrawerProps> = ({
 
               {view.images.length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                     Media ({view.images.length})
                   </p>
                   <div className="flex gap-2 flex-wrap">
@@ -509,7 +507,7 @@ const FeedDrawer: React.FC<DrawerProps> = ({
                         href={img}
                         target="_blank"
                         rel="noreferrer"
-                        className={`group relative w-32 h-32 rounded-lg overflow-hidden border border-gray-100 bg-gray-50 ${
+                        className={`group relative w-32 h-32 rounded-lg overflow-hidden border border-gray-100 dark:border-slate-800/60 bg-gray-50 dark:bg-slate-950 ${
                           state === 'deleted' ? 'opacity-70' : ''
                         }`}
                       >
@@ -529,7 +527,7 @@ const FeedDrawer: React.FC<DrawerProps> = ({
                 </div>
               )}
 
-              <div className="flex items-center gap-4 text-xs text-gray-500">
+              <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-slate-400">
                 <span className="inline-flex items-center gap-1">
                   <Heart size={13} className={view.isLiked ? 'fill-red-500 text-red-500' : ''} />
                   {view.likes}
@@ -540,11 +538,11 @@ const FeedDrawer: React.FC<DrawerProps> = ({
               </div>
 
               {view.moderation && (
-                <div className="pt-4 border-t border-gray-100">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                <div className="pt-4 border-t border-gray-100 dark:border-slate-800/60">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                     Moderation
                   </p>
-                  <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                  <div className="bg-gray-50 dark:bg-slate-950 rounded-lg p-3 space-y-2">
                     <div className="flex items-center gap-2 flex-wrap">
                       <Chip variant={severityVariant(view.moderation.severity)}>
                         severity {view.moderation.severity}
@@ -556,11 +554,11 @@ const FeedDrawer: React.FC<DrawerProps> = ({
                       ))}
                     </div>
                     {view.moderation.description && (
-                      <p className="text-xs text-gray-600 italic">
+                      <p className="text-xs text-gray-600 dark:text-slate-400 italic">
                         "{view.moderation.description}"
                       </p>
                     )}
-                    <p className="text-[11px] text-gray-400">
+                    <p className="text-[11px] text-gray-400 dark:text-slate-500">
                       {view.moderation.provider} / {view.moderation.model}
                     </p>
                   </div>
@@ -568,12 +566,12 @@ const FeedDrawer: React.FC<DrawerProps> = ({
               )}
 
               {!isFallback && (
-                <div className="pt-4 border-t border-gray-100">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                <div className="pt-4 border-t border-gray-100 dark:border-slate-800/60">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                     Comments ({view.commentsList.length})
                   </p>
                   {view.commentsList.length === 0 ? (
-                    <p className="text-xs text-gray-400 italic">No comments yet.</p>
+                    <p className="text-xs text-gray-400 dark:text-slate-500 italic">No comments yet.</p>
                   ) : (
                     <div className="space-y-2">
                       {view.commentsList.map((c) => (
@@ -592,10 +590,10 @@ const FeedDrawer: React.FC<DrawerProps> = ({
         </div>
 
         {!loading && view && (
-          <div className="border-t border-gray-100 px-5 py-3 flex items-center justify-end">
+          <div className="border-t border-gray-100 dark:border-slate-800/60 px-5 py-3 flex items-center justify-end">
             <button
               onClick={() => onDeleteFeed(view)}
-              className="px-3 py-2 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 text-sm font-medium inline-flex items-center gap-1.5"
+              className="px-3 py-2 rounded-lg bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/60 text-sm font-medium inline-flex items-center gap-1.5"
             >
               <Trash2 size={14} /> {state === 'deleted' ? 'Delete permanently' : 'Remove feed'}
             </button>
@@ -682,7 +680,6 @@ const FeedsTab: React.FC = () => {
   const handleExport = async (format: ExportFormat) => {
     if (isExporting) return;
 
-    // Export what the user currently sees (respects search + status filter).
     const rows = buildExportRows(filtered);
     if (rows.length === 0) {
       toast.info('Nothing to export for the current filters');
@@ -763,8 +760,8 @@ const FeedsTab: React.FC = () => {
     <div>
       <div className="mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Feeds</h2>
-          <p className="text-gray-500 mt-1">Moderate content posted across the platform</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Feeds</h2>
+          <p className="text-gray-500 dark:text-slate-400 mt-1">Moderate content posted across the platform</p>
         </div>
         <ExportMenu onExport={handleExport} disabled={isExporting || loading} />
       </div>
@@ -779,8 +776,8 @@ const FeedsTab: React.FC = () => {
               disabled={loading}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium capitalize transition-colors disabled:opacity-60 ${
                 filter === f
-                  ? 'bg-blue-50 text-blue-600'
-                  : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                  ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400'
+                  : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800/60'
               }`}
             >
               {f.replace(/_/g, ' ')}
@@ -790,11 +787,11 @@ const FeedsTab: React.FC = () => {
       </div>
 
       {error && feeds.length > 0 && (
-        <div className="mb-4 flex items-start gap-3 p-3 rounded-xl bg-red-50 border border-red-200">
-          <AlertTriangle size={16} className="text-red-600 shrink-0 mt-0.5" />
+        <div className="mb-4 flex items-start gap-3 p-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/60">
+          <AlertTriangle size={16} className="text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-red-800">Some feeds failed to load</p>
-            <p className="text-xs text-red-700 mt-0.5">{error}</p>
+            <p className="text-sm font-semibold text-red-800 dark:text-red-300">Some feeds failed to load</p>
+            <p className="text-xs text-red-700 dark:text-red-400 mt-0.5">{error}</p>
           </div>
         </div>
       )}
@@ -802,7 +799,7 @@ const FeedsTab: React.FC = () => {
       {loading ? (
         <SkeletonFeedList count={3} />
       ) : filtered.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800">
           <EmptyState title="No feeds found" description="Try adjusting your filters." />
         </div>
       ) : (
@@ -822,10 +819,10 @@ const FeedsTab: React.FC = () => {
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-semibold text-gray-900">{feed.author.name}</span>
+                            <span className="font-semibold text-gray-900 dark:text-slate-100">{feed.author.name}</span>
                             <Chip variant="neutral">{feed.author.role}</Chip>
                           </div>
-                          <p className="text-xs text-gray-400 mt-0.5">
+                          <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">
                             {formatDistanceToNow(new Date(feed.createdAt), { addSuffix: true })}
                           </p>
                         </div>
@@ -835,7 +832,7 @@ const FeedsTab: React.FC = () => {
                       </div>
 
                       {state === 'deleted' && (
-                        <div className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-red-700">
+                        <div className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-red-700 dark:text-red-400">
                           <Ban size={12} />
                           {feed.isDeleted
                             ? 'This feed has been deleted'
@@ -843,16 +840,16 @@ const FeedsTab: React.FC = () => {
                         </div>
                       )}
                       {state === 'pending' && (
-                        <div className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-amber-700">
+                        <div className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-400">
                           <Clock size={12} />
                           Awaiting moderation review
                         </div>
                       )}
 
                       {feed.title && (
-                        <p className="font-medium text-gray-900 mt-3">{feed.title}</p>
+                        <p className="font-medium text-gray-900 dark:text-slate-100 mt-3">{feed.title}</p>
                       )}
-                      <p className="text-sm text-gray-700 mt-1">{feed.description}</p>
+                      <p className="text-sm text-gray-700 dark:text-slate-300 mt-1">{feed.description}</p>
 
                       {feed.images.length > 0 && (
                         <div className="mt-3 flex gap-2 flex-wrap">
@@ -869,25 +866,25 @@ const FeedsTab: React.FC = () => {
                         </div>
                       )}
 
-                      <div className="mt-4 flex items-center gap-4 text-xs text-gray-500">
+                      <div className="mt-4 flex items-center gap-4 text-xs text-gray-500 dark:text-slate-400">
                         <span className="inline-flex items-center gap-1"><Heart size={13} /> {feed.likes}</span>
                         <span className="inline-flex items-center gap-1"><MessageCircle size={13} /> {feed.comments}</span>
                       </div>
 
                       <div
-                        className="mt-4 pt-4 border-t border-gray-100 flex gap-2"
+                        className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-800/60 flex gap-2"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <button
                           onClick={() => setSelected(feed)}
-                          className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 text-xs font-medium inline-flex items-center gap-1.5"
+                          className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700 text-xs font-medium inline-flex items-center gap-1.5"
                         >
                           <Eye size={14} /> Details
                         </button>
                         {state === 'deleted' ? (
                           <button
                             onClick={() => handleRemove(feed)}
-                            className="px-3 py-1.5 rounded-lg bg-red-100 text-red-800 hover:bg-red-200 text-xs font-medium inline-flex items-center gap-1.5"
+                            className="px-3 py-1.5 rounded-lg bg-red-100 dark:bg-red-950/60 text-red-800 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-950/80 text-xs font-medium inline-flex items-center gap-1.5"
                             title="Delete permanently (already removed)"
                           >
                             <Trash2 size={14} /> Delete permanently
@@ -895,7 +892,7 @@ const FeedsTab: React.FC = () => {
                         ) : (
                           <button
                             onClick={() => handleRemove(feed)}
-                            className="px-3 py-1.5 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 text-xs font-medium inline-flex items-center gap-1.5"
+                            className="px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/60 text-xs font-medium inline-flex items-center gap-1.5"
                           >
                             <Trash2 size={14} /> Remove
                           </button>
@@ -909,7 +906,7 @@ const FeedsTab: React.FC = () => {
           </div>
 
           {loadingMore && (
-            <div className="mt-6 flex items-center justify-center gap-2 text-sm text-gray-500">
+            <div className="mt-6 flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-slate-400">
               <Loader2 size={16} className="animate-spin" />
               Loading more feeds…
             </div>

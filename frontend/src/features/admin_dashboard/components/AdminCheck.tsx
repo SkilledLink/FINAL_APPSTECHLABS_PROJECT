@@ -12,14 +12,12 @@ const AdminCheck: React.FC<AdminCheckProps> = ({ children }) => {
 
   if (loading) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center">
+      <div className="h-screen w-screen flex items-center justify-center bg-gray-50 dark:bg-slate-950">
         <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
-  // currentUser comes from /users/me as snake_case (UserResponse), but is typed
-  // as camelCase UserProfile. Read both defensively.
   const u = currentUser as (typeof currentUser & {
     is_admin?: boolean;
     is_moderator?: boolean;

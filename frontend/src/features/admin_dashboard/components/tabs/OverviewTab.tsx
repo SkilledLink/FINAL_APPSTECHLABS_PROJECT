@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { useOverview } from '../../hooks/useOverview';
 import { formatDistanceToNow } from 'date-fns';
+import { useTheme } from '../../../../providers/ThemeProvider';
 import {
   exportToCSV,
   exportToExcel,
@@ -23,11 +24,11 @@ const SkeletonBlock: React.FC<{ className?: string; style?: React.CSSProperties 
   className = '',
   style,
 }) => (
-  <div className={`animate-pulse rounded bg-gray-200 ${className}`} style={style} />
+  <div className={`animate-pulse rounded bg-gray-200 dark:bg-slate-700 ${className}`} style={style} />
 );
 
 const SkeletonMetricCard: React.FC = () => (
-  <div className="bg-white rounded-xl border border-gray-200 p-5">
+  <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-5">
     <div className="flex items-start justify-between">
       <div className="space-y-2 flex-1">
         <SkeletonBlock className="h-3 w-24" />
@@ -39,7 +40,7 @@ const SkeletonMetricCard: React.FC = () => (
 );
 
 const SkeletonChartCard: React.FC<{ height?: number }> = ({ height = 280 }) => (
-  <div className="bg-white rounded-xl border border-gray-200 p-5">
+  <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-5">
     <div className="space-y-2 mb-4">
       <SkeletonBlock className="h-3.5 w-40" />
       <SkeletonBlock className="h-2.5 w-56" />
@@ -78,11 +79,11 @@ const SkeletonOverview: React.FC = () => (
 // ---------- Local UI ----------
 const EmptyState: React.FC<{ title: string; description?: string }> = ({ title, description }) => (
   <div className="flex flex-col items-center justify-center py-12 sm:py-16 px-4 sm:px-6 text-center">
-    <div className="p-4 bg-gray-50 rounded-2xl text-gray-400 mb-4">
+    <div className="p-4 bg-gray-50 dark:bg-slate-900 rounded-2xl text-gray-400 dark:text-slate-500 mb-4">
       <Inbox size={28} />
     </div>
-    <p className="font-semibold text-gray-900">{title}</p>
-    {description && <p className="text-sm text-gray-500 mt-1 max-w-sm">{description}</p>}
+    <p className="font-semibold text-gray-900 dark:text-slate-100">{title}</p>
+    {description && <p className="text-sm text-gray-500 dark:text-slate-400 mt-1 max-w-sm">{description}</p>}
   </div>
 );
 
@@ -94,20 +95,20 @@ interface MetricCardProps {
 }
 
 const colorClasses: Record<string, string> = {
-  blue: 'text-blue-500 bg-blue-50',
-  green: 'text-green-500 bg-green-50',
-  purple: 'text-purple-500 bg-purple-50',
-  orange: 'text-orange-500 bg-orange-50',
-  red: 'text-red-500 bg-red-50',
-  indigo: 'text-indigo-500 bg-indigo-50',
+  blue: 'text-blue-500 bg-blue-50 dark:bg-blue-950/40',
+  green: 'text-green-500 bg-green-50 dark:bg-green-950/40',
+  purple: 'text-purple-500 bg-purple-50 dark:bg-purple-950/40',
+  orange: 'text-orange-500 bg-orange-50 dark:bg-orange-950/40',
+  red: 'text-red-500 bg-red-50 dark:bg-red-950/40',
+  indigo: 'text-indigo-500 bg-indigo-50 dark:bg-indigo-950/40',
 };
 
 const MetricCard: React.FC<MetricCardProps> = ({ title, value, icon: Icon, color = 'blue' }) => (
-  <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5 hover:shadow-md transition-shadow">
+  <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-4 sm:p-5 hover:shadow-md transition-shadow">
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0">
-        <p className="text-xs sm:text-sm font-medium text-gray-500 truncate">{title}</p>
-        <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1.5">
+        <p className="text-xs sm:text-sm font-medium text-gray-500 dark:text-slate-400 truncate">{title}</p>
+        <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-slate-100 mt-1.5">
           {typeof value === 'number' ? value.toLocaleString() : value}
         </p>
       </div>
@@ -157,7 +158,7 @@ const ExportMenu: React.FC<ExportMenuProps> = ({ onExport, disabled }) => {
         type="button"
         onClick={() => setOpen((v) => !v)}
         disabled={disabled}
-        className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
       >
         <Download size={16} />
         <span className="hidden sm:inline">Export</span>
@@ -168,7 +169,7 @@ const ExportMenu: React.FC<ExportMenuProps> = ({ onExport, disabled }) => {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-30 mt-2 min-w-[210px] overflow-hidden rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl">
+        <div className="absolute right-0 top-full z-30 mt-2 min-w-[210px] overflow-hidden rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl dark:border-slate-800 dark:bg-slate-900">
           {items.map((item) => (
             <button
               key={item.key}
@@ -177,9 +178,9 @@ const ExportMenu: React.FC<ExportMenuProps> = ({ onExport, disabled }) => {
                 setOpen(false);
                 void onExport(item.key);
               }}
-              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50"
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 dark:text-slate-200 dark:hover:bg-slate-800"
             >
-              <span className="text-gray-500">{item.icon}</span>
+              <span className="text-gray-500 dark:text-slate-400">{item.icon}</span>
               {item.label}
             </button>
           ))}
@@ -195,74 +196,106 @@ const ChartCard: React.FC<{
   subtitle?: string;
   children: React.ReactNode;
 }> = ({ title, subtitle, children }) => (
-  <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
+  <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-4 sm:p-5">
     <div className="mb-4">
-      <p className="text-sm font-semibold text-gray-900">{title}</p>
-      {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
+      <p className="text-sm font-semibold text-gray-900 dark:text-slate-100">{title}</p>
+      {subtitle && <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{subtitle}</p>}
     </div>
     {children}
   </div>
 );
 
-const tooltipStyle = {
-  borderRadius: 12,
-  border: '1px solid #e5e7eb',
-  boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
-  fontSize: 12,
-  padding: '8px 10px',
-};
+// ---------- Chart palette from theme ----------
+interface ChartPalette {
+  grid: string;
+  tick: string;
+  tooltip: {
+    borderRadius: number;
+    border: string;
+    boxShadow: string;
+    fontSize: number;
+    padding: string;
+    background: string;
+    color: string;
+  };
+  legend: { color: string };
+  donutCenter: { value: string; label: string };
+}
 
-// ---------- User status chart (bar) ----------
+function useChartPalette(): ChartPalette {
+  const { isDark } = useTheme();
+  return isDark
+    ? {
+        grid: '#1e293b',
+        tick: '#94a3b8',
+        tooltip: {
+          borderRadius: 12,
+          border: '1px solid #334155',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+          fontSize: 12,
+          padding: '8px 10px',
+          background: '#0f172a',
+          color: '#e2e8f0',
+        },
+        legend: { color: '#cbd5e1' },
+        donutCenter: { value: '#f1f5f9', label: '#94a3b8' },
+      }
+    : {
+        grid: '#f1f5f9',
+        tick: '#64748b',
+        tooltip: {
+          borderRadius: 12,
+          border: '1px solid #e5e7eb',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+          fontSize: 12,
+          padding: '8px 10px',
+          background: '#ffffff',
+          color: '#0f172a',
+        },
+        legend: { color: '#475569' },
+        donutCenter: { value: '#0f172a', label: '#64748b' },
+      };
+}
+
+// ---------- User status chart ----------
 interface UserStatusChartProps {
   data: { name: string; value: number; fill: string }[];
 }
 
-const UserStatusChart: React.FC<UserStatusChartProps> = ({ data }) => (
-  <ChartCard
-    title="User status"
-    subtitle="Total, active and suspended accounts"
-  >
-    <div className="h-64 sm:h-72 -ml-2">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-          <XAxis
-            dataKey="name"
-            tick={{ fontSize: 11, fill: '#64748b' }}
-            axisLine={false}
-            tickLine={false}
-          />
-          <YAxis
-            tick={{ fontSize: 11, fill: '#64748b' }}
-            axisLine={false}
-            tickLine={false}
-            allowDecimals={false}
-          />
-          <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(59,130,246,0.06)' }} />
-          <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-            {data.map((d, i) => (
-              <Cell key={i} fill={d.fill} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  </ChartCard>
-);
+const UserStatusChart: React.FC<UserStatusChartProps> = ({ data }) => {
+  const p = useChartPalette();
+  return (
+    <ChartCard title="User status" subtitle="Total, active and suspended accounts">
+      <div className="h-64 sm:h-72 -ml-2">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={p.grid} vertical={false} />
+            <XAxis dataKey="name" tick={{ fontSize: 11, fill: p.tick }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 11, fill: p.tick }} axisLine={false} tickLine={false} allowDecimals={false} />
+            <Tooltip contentStyle={p.tooltip} cursor={{ fill: 'rgba(59,130,246,0.06)' }} />
+            <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+              {data.map((d, i) => (
+                <Cell key={i} fill={d.fill} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </ChartCard>
+  );
+};
 
-// ---------- Professional verification chart (donut) ----------
+// ---------- Professional chart (donut) ----------
 interface ProfessionalChartProps {
   data: { name: string; value: number; fill: string }[];
 }
 
 const ProfessionalChart: React.FC<ProfessionalChartProps> = ({ data }) => {
+  const p = useChartPalette();
   const total = data.reduce((sum, d) => sum + d.value, 0);
 
   return (
-    <ChartCard
-      title="Professional verification"
-      subtitle="Verified vs. pending vs. unverified"
-    >
+    <ChartCard title="Professional verification" subtitle="Verified vs. pending vs. unverified">
       <div className="h-64 sm:h-72 relative">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -281,11 +314,11 @@ const ProfessionalChart: React.FC<ProfessionalChartProps> = ({ data }) => {
                 <Cell key={i} fill={d.fill} />
               ))}
             </Pie>
-            <Tooltip contentStyle={tooltipStyle} />
+            <Tooltip contentStyle={p.tooltip} />
             <Legend
               verticalAlign="bottom"
               iconType="circle"
-              wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
+              wrapperStyle={{ fontSize: 12, paddingTop: 8, color: p.legend.color }}
             />
           </PieChart>
         </ResponsiveContainer>
@@ -294,65 +327,57 @@ const ProfessionalChart: React.FC<ProfessionalChartProps> = ({ data }) => {
           className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
           style={{ paddingBottom: 32 }}
         >
-          <p className="text-2xl font-bold text-gray-900">{total.toLocaleString()}</p>
-          <p className="text-[11px] text-gray-500 uppercase tracking-wider">total</p>
+          <p className="text-2xl font-bold" style={{ color: p.donutCenter.value }}>
+            {total.toLocaleString()}
+          </p>
+          <p className="text-[11px] uppercase tracking-wider" style={{ color: p.donutCenter.label }}>
+            total
+          </p>
         </div>
       </div>
     </ChartCard>
   );
 };
 
-// ---------- Platform content chart (bar) ----------
+// ---------- Platform content chart ----------
 interface ContentChartProps {
   data: { name: string; value: number; fill: string }[];
 }
 
-const ContentChart: React.FC<ContentChartProps> = ({ data }) => (
-  <ChartCard
-    title="Platform content"
-    subtitle="Feeds and jobs published"
-  >
-    <div className="h-56 sm:h-64 -ml-2">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-          <XAxis
-            dataKey="name"
-            tick={{ fontSize: 11, fill: '#64748b' }}
-            axisLine={false}
-            tickLine={false}
-          />
-          <YAxis
-            tick={{ fontSize: 11, fill: '#64748b' }}
-            axisLine={false}
-            tickLine={false}
-            allowDecimals={false}
-          />
-          <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(139,92,246,0.06)' }} />
-          <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-            {data.map((d, i) => (
-              <Cell key={i} fill={d.fill} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  </ChartCard>
-);
+const ContentChart: React.FC<ContentChartProps> = ({ data }) => {
+  const p = useChartPalette();
+  return (
+    <ChartCard title="Platform content" subtitle="Feeds and jobs published">
+      <div className="h-56 sm:h-64 -ml-2">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={p.grid} vertical={false} />
+            <XAxis dataKey="name" tick={{ fontSize: 11, fill: p.tick }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 11, fill: p.tick }} axisLine={false} tickLine={false} allowDecimals={false} />
+            <Tooltip contentStyle={p.tooltip} cursor={{ fill: 'rgba(139,92,246,0.06)' }} />
+            <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+              {data.map((d, i) => (
+                <Cell key={i} fill={d.fill} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </ChartCard>
+  );
+};
 
-// ---------- Team composition chart (donut) ----------
+// ---------- Team chart (donut) ----------
 interface TeamChartProps {
   data: { name: string; value: number; fill: string }[];
 }
 
 const TeamChart: React.FC<TeamChartProps> = ({ data }) => {
+  const p = useChartPalette();
   const total = data.reduce((sum, d) => sum + d.value, 0);
 
   return (
-    <ChartCard
-      title="Team composition"
-      subtitle="Admins and moderators"
-    >
+    <ChartCard title="Team composition" subtitle="Admins and moderators">
       <div className="h-56 sm:h-64 relative">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -371,11 +396,11 @@ const TeamChart: React.FC<TeamChartProps> = ({ data }) => {
                 <Cell key={i} fill={d.fill} />
               ))}
             </Pie>
-            <Tooltip contentStyle={tooltipStyle} />
+            <Tooltip contentStyle={p.tooltip} />
             <Legend
               verticalAlign="bottom"
               iconType="circle"
-              wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
+              wrapperStyle={{ fontSize: 12, paddingTop: 8, color: p.legend.color }}
             />
           </PieChart>
         </ResponsiveContainer>
@@ -384,8 +409,12 @@ const TeamChart: React.FC<TeamChartProps> = ({ data }) => {
           className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
           style={{ paddingBottom: 32 }}
         >
-          <p className="text-2xl font-bold text-gray-900">{total.toLocaleString()}</p>
-          <p className="text-[11px] text-gray-500 uppercase tracking-wider">total</p>
+          <p className="text-2xl font-bold" style={{ color: p.donutCenter.value }}>
+            {total.toLocaleString()}
+          </p>
+          <p className="text-[11px] uppercase tracking-wider" style={{ color: p.donutCenter.label }}>
+            total
+          </p>
         </div>
       </div>
     </ChartCard>
@@ -456,7 +485,6 @@ const OverviewTab: React.FC = () => {
     return <EmptyState title="Failed to load overview" description={error ?? ''} />;
   }
 
-  // ---------- Derived chart data ----------
   const userStatusData = [
     { name: 'Total', value: stats.totalUsers, fill: '#3b82f6' },
     { name: 'Active', value: stats.activeUsers, fill: '#10b981' },
@@ -465,9 +493,7 @@ const OverviewTab: React.FC = () => {
 
   const unverifiedProfessionals = Math.max(
     0,
-    stats.totalProfessionals
-      - stats.verifiedProfessionals
-      - stats.pendingProfessionals,
+    stats.totalProfessionals - stats.verifiedProfessionals - stats.pendingProfessionals,
   );
 
   const professionalData = [
@@ -490,13 +516,12 @@ const OverviewTab: React.FC = () => {
     <div className="w-full">
       <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Overview</h2>
-          <p className="text-sm sm:text-base text-gray-500 mt-1">Platform-wide metrics</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-slate-100">Overview</h2>
+          <p className="text-sm sm:text-base text-gray-500 dark:text-slate-400 mt-1">Platform-wide metrics</p>
         </div>
         <ExportMenu onExport={handleExport} disabled={isExporting} />
       </div>
 
-      {/* KPI cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-5 mb-6">
         <MetricCard title="Total Users" value={stats.totalUsers} icon={Users} color="blue" />
         <MetricCard title="Active Users" value={stats.activeUsers} icon={Users} color="green" />
@@ -510,19 +535,17 @@ const OverviewTab: React.FC = () => {
         <MetricCard title="Moderators" value={stats.totalModerators} icon={ShieldCheck} color="purple" />
       </div>
 
-      {/* Charts row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 mb-6">
         <UserStatusChart data={userStatusData} />
         <ProfessionalChart data={professionalData} />
       </div>
 
-      {/* Charts row 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 mb-6">
         <ContentChart data={contentData} />
         <TeamChart data={teamData} />
       </div>
 
-      <p className="text-xs text-gray-400">
+      <p className="text-xs text-gray-400 dark:text-slate-500">
         Generated {formatDistanceToNow(new Date(stats.generatedAt), { addSuffix: true })}
       </p>
     </div>

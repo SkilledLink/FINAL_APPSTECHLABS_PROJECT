@@ -20,7 +20,7 @@ const SkeletonBlock: React.FC<{ className?: string; style?: React.CSSProperties 
   className = '',
   style,
 }) => (
-  <div className={`animate-pulse rounded bg-gray-200 ${className}`} style={style} />
+  <div className={`animate-pulse rounded bg-gray-200 dark:bg-slate-700 ${className}`} style={style} />
 );
 
 const SkeletonTableRow: React.FC = () => (
@@ -48,17 +48,17 @@ const SkeletonTable: React.FC<{ rows?: number }> = ({ rows = 8 }) => (
   <div className="overflow-x-auto">
     <table className="w-full">
       <thead>
-        <tr className="bg-gray-50 border-b border-gray-100">
-          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actor</th>
-          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>
-          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Entity</th>
-          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Reason</th>
-          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">IP</th>
-          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">When</th>
-          <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider"></th>
+        <tr className="bg-gray-50 dark:bg-slate-950 border-b border-gray-100 dark:border-slate-800/60">
+          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Actor</th>
+          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Action</th>
+          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Entity</th>
+          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Reason</th>
+          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">IP</th>
+          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">When</th>
+          <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider"></th>
         </tr>
       </thead>
-      <tbody className="divide-y divide-gray-100">
+      <tbody className="divide-y divide-gray-100 dark:divide-slate-800/60">
         {Array.from({ length: rows }).map((_, i) => (
           <SkeletonTableRow key={i} />
         ))}
@@ -85,7 +85,7 @@ const SkeletonCard: React.FC = () => (
 );
 
 const SkeletonCardList: React.FC<{ rows?: number }> = ({ rows = 6 }) => (
-  <div className="md:hidden divide-y divide-gray-100">
+  <div className="md:hidden divide-y divide-gray-100 dark:divide-slate-800/60">
     {Array.from({ length: rows }).map((_, i) => (
       <SkeletonCard key={i} />
     ))}
@@ -120,11 +120,11 @@ const SkeletonDrawer: React.FC = () => (
 // ---------- Local UI ----------
 const EmptyState: React.FC<{ title: string; description?: string }> = ({ title, description }) => (
   <div className="flex flex-col items-center justify-center py-12 sm:py-16 px-4 sm:px-6 text-center">
-    <div className="p-4 bg-gray-50 rounded-2xl text-gray-400 mb-4">
+    <div className="p-4 bg-gray-50 dark:bg-slate-950 rounded-2xl text-gray-400 dark:text-slate-500 mb-4">
       <Inbox size={28} />
     </div>
-    <p className="font-semibold text-gray-900">{title}</p>
-    {description && <p className="text-sm text-gray-500 mt-1 max-w-sm">{description}</p>}
+    <p className="font-semibold text-gray-900 dark:text-slate-100">{title}</p>
+    {description && <p className="text-sm text-gray-500 dark:text-slate-400 mt-1 max-w-sm">{description}</p>}
   </div>
 );
 
@@ -132,13 +132,13 @@ const SearchInput: React.FC<{ value: string; onChange: (v: string) => void; plac
   value, onChange, placeholder = 'Search...',
 }) => (
   <div className="relative w-full sm:max-w-sm">
-    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500" />
     <input
       type="text"
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="h-10 w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-all hover:border-gray-300 hover:bg-white focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
+      className="h-10 w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-all hover:border-gray-300 hover:bg-white focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:hover:border-slate-700 dark:hover:bg-slate-900 dark:focus:bg-slate-900"
     />
   </div>
 );
@@ -147,13 +147,13 @@ const shortId = (id?: string) => (id ? id.slice(0, 8) : '—');
 
 const JsonBlock: React.FC<{ label: string; value: unknown }> = ({ label, value }) => (
   <div>
-    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+    <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
       {label}
     </p>
     {value === null || value === undefined ? (
-      <p className="text-xs text-gray-400 italic">None</p>
+      <p className="text-xs text-gray-400 dark:text-slate-500 italic">None</p>
     ) : (
-      <pre className="bg-gray-50 border border-gray-100 rounded-lg p-3 text-[11px] leading-relaxed text-gray-700 overflow-x-auto whitespace-pre-wrap break-words max-h-72 overflow-y-auto font-mono">
+      <pre className="bg-gray-50 dark:bg-slate-950 border border-gray-100 dark:border-slate-800/60 rounded-lg p-3 text-[11px] leading-relaxed text-gray-700 dark:text-slate-300 overflow-x-auto whitespace-pre-wrap break-words max-h-72 overflow-y-auto font-mono">
         {JSON.stringify(value, null, 2)}
       </pre>
     )}
@@ -175,7 +175,7 @@ interface FilterBarProps {
 }
 
 const selectClass =
-  'h-10 rounded-xl border border-gray-200 bg-gray-50 px-3 text-sm text-gray-900 outline-none transition-all hover:border-gray-300 hover:bg-white focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10';
+  'h-10 rounded-xl border border-gray-200 bg-gray-50 px-3 text-sm text-gray-900 outline-none transition-all hover:border-gray-300 hover:bg-white focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:hover:border-slate-700 dark:hover:bg-slate-900 dark:focus:bg-slate-900';
 
 const FilterBar: React.FC<FilterBarProps> = ({
   entityType, setEntityType,
@@ -188,7 +188,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
   return (
     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-5">
       <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
-        <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+        <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">
           <Filter size={12} /> Filters
         </span>
 
@@ -223,14 +223,14 @@ const FilterBar: React.FC<FilterBarProps> = ({
             onChange={(e) => setActorUserId(e.target.value)}
             disabled={disabled}
             placeholder="Actor user ID (UUID)"
-            className="h-10 w-full sm:w-64 rounded-xl border border-gray-200 bg-gray-50 px-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-all hover:border-gray-300 hover:bg-white focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 font-mono"
+            className="h-10 w-full sm:w-64 rounded-xl border border-gray-200 bg-gray-50 px-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-all hover:border-gray-300 hover:bg-white focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 font-mono dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:hover:border-slate-700 dark:hover:bg-slate-900 dark:focus:bg-slate-900"
           />
 
           {hasFilters && (
             <button
               onClick={onClear}
               disabled={disabled}
-              className="h-10 px-3 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-60"
+              className="h-10 px-3 rounded-xl text-sm font-medium text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800 disabled:opacity-60"
             >
               Clear
             </button>
@@ -303,20 +303,20 @@ const AuditLogDrawer: React.FC<DrawerProps> = ({ logId, onClose, fetchOne }) => 
       <div
         role="dialog"
         aria-modal="true"
-        className="fixed right-0 top-0 bottom-0 z-50 w-full sm:max-w-xl lg:max-w-2xl bg-white shadow-2xl flex flex-col"
+        className="fixed right-0 top-0 bottom-0 z-50 w-full sm:max-w-xl lg:max-w-2xl bg-white dark:bg-slate-900 shadow-2xl flex flex-col"
       >
-        <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-gray-100 dark:border-slate-800/60">
           <div className="min-w-0">
-            <h3 className="font-semibold text-gray-900 truncate">Audit log entry</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-slate-100 truncate">Audit log entry</h3>
             {detail && (
-              <p className="text-xs text-gray-500 font-mono truncate">
+              <p className="text-xs text-gray-500 dark:text-slate-400 font-mono truncate">
                 {detail.action}
               </p>
             )}
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 shrink-0"
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-500 dark:text-slate-400 shrink-0"
             aria-label="Close"
           >
             <X size={18} />
@@ -334,51 +334,51 @@ const AuditLogDrawer: React.FC<DrawerProps> = ({ logId, onClose, fetchOne }) => 
             <div className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                 <div>
-                  <p className="text-xs text-gray-500">Action</p>
-                  <p className="font-mono text-gray-900 break-words">{detail.action}</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">Action</p>
+                  <p className="font-mono text-gray-900 dark:text-slate-100 break-words">{detail.action}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">When</p>
-                  <p className="text-gray-900">
+                  <p className="text-xs text-gray-500 dark:text-slate-400">When</p>
+                  <p className="text-gray-900 dark:text-slate-100">
                     {formatDistanceToNow(new Date(detail.timestamp), { addSuffix: true })}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Actor role</p>
-                  <p className="text-gray-900 capitalize">{detail.actorRole ?? 'system'}</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">Actor role</p>
+                  <p className="text-gray-900 dark:text-slate-100 capitalize">{detail.actorRole ?? 'system'}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Actor user ID</p>
-                  <p className="font-mono text-xs text-gray-900 break-all">
+                  <p className="text-xs text-gray-500 dark:text-slate-400">Actor user ID</p>
+                  <p className="font-mono text-xs text-gray-900 dark:text-slate-100 break-all">
                     {detail.actorUserId ?? '—'}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Entity type</p>
-                  <p className="text-gray-900">{detail.entityType}</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">Entity type</p>
+                  <p className="text-gray-900 dark:text-slate-100">{detail.entityType}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Entity ID</p>
-                  <p className="font-mono text-xs text-gray-900 break-all">
+                  <p className="text-xs text-gray-500 dark:text-slate-400">Entity ID</p>
+                  <p className="font-mono text-xs text-gray-900 dark:text-slate-100 break-all">
                     {detail.entityId ?? '—'}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">IP address</p>
-                  <p className="font-mono text-xs text-gray-900">
+                  <p className="text-xs text-gray-500 dark:text-slate-400">IP address</p>
+                  <p className="font-mono text-xs text-gray-900 dark:text-slate-100">
                     {detail.ipAddress ?? '—'}
                   </p>
                 </div>
                 <div className="sm:col-span-2">
-                  <p className="text-xs text-gray-500">User agent</p>
-                  <p className="font-mono text-[11px] text-gray-700 break-all">
+                  <p className="text-xs text-gray-500 dark:text-slate-400">User agent</p>
+                  <p className="font-mono text-[11px] text-gray-700 dark:text-slate-300 break-all">
                     {detail.userAgent ?? '—'}
                   </p>
                 </div>
                 {detail.reason && (
                   <div className="sm:col-span-2">
-                    <p className="text-xs text-gray-500">Reason</p>
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">
+                    <p className="text-xs text-gray-500 dark:text-slate-400">Reason</p>
+                    <p className="text-sm text-gray-700 dark:text-slate-300 whitespace-pre-wrap break-words">
                       {detail.reason}
                     </p>
                   </div>
@@ -406,29 +406,29 @@ interface LogCardProps {
 const LogCard: React.FC<LogCardProps> = ({ log, onOpen }) => (
   <div
     onClick={onOpen}
-    className="p-4 hover:bg-gray-50/70 active:bg-gray-100 transition-colors cursor-pointer"
+    className="p-4 hover:bg-gray-50/70 active:bg-gray-100 dark:hover:bg-slate-800/50 dark:active:bg-slate-800 transition-colors cursor-pointer"
   >
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0">
-        <p className="text-sm font-medium text-gray-900 truncate">{log.actorRole ?? 'system'}</p>
-        <p className="text-xs text-gray-500 font-mono truncate">{shortId(log.actorUserId)}</p>
+        <p className="text-sm font-medium text-gray-900 dark:text-slate-100 truncate">{log.actorRole ?? 'system'}</p>
+        <p className="text-xs text-gray-500 dark:text-slate-400 font-mono truncate">{shortId(log.actorUserId)}</p>
       </div>
-      <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-gray-100 text-gray-700 text-xs font-mono shrink-0">
+      <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 text-xs font-mono shrink-0">
         {log.action}
       </span>
     </div>
 
-    <p className="text-xs text-gray-500 font-mono mt-2 truncate">
+    <p className="text-xs text-gray-500 dark:text-slate-400 font-mono mt-2 truncate">
       {log.entityType}:{shortId(log.entityId)}
     </p>
 
     {log.reason && (
-      <p className="text-sm text-gray-700 mt-1 line-clamp-2">{log.reason}</p>
+      <p className="text-sm text-gray-700 dark:text-slate-300 mt-1 line-clamp-2">{log.reason}</p>
     )}
 
     <div className="flex items-center justify-between mt-3 gap-3">
-      <span className="text-xs text-gray-400 font-mono truncate">{log.ipAddress ?? '—'}</span>
-      <span className="text-xs text-gray-400 whitespace-nowrap">
+      <span className="text-xs text-gray-400 dark:text-slate-500 font-mono truncate">{log.ipAddress ?? '—'}</span>
+      <span className="text-xs text-gray-400 dark:text-slate-500 whitespace-nowrap">
         {formatDistanceToNow(new Date(log.timestamp), { addSuffix: true })}
       </span>
     </div>
@@ -436,7 +436,7 @@ const LogCard: React.FC<LogCardProps> = ({ log, onOpen }) => (
     <div className="mt-3 flex justify-end" onClick={(e) => e.stopPropagation()}>
       <button
         onClick={onOpen}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-700 dark:text-slate-300 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700"
       >
         <Eye size={14} /> View details
       </button>
@@ -468,15 +468,6 @@ const buildTableRows = (logs: AuditLog[]): ExportRow[] =>
     ipAddress: l.ipAddress ?? '',
   }));
 
-/**
- * Builds one detailed section per log.
- *
- * Note: the list shape (`AuditLog`) only carries the summary fields.
- * If the backend ever includes `old_value` / `new_value` / `user_agent`
- * on the list response (or you switch this to fetch details), the
- * jsonBlocks below will pick them up automatically — otherwise they're
- * simply omitted from the document.
- */
 const buildDetailedSections = (logs: AuditLog[]): ExportSection[] =>
   logs.map((l) => {
     const anyLog = l as any;
@@ -584,7 +575,6 @@ const AuditLogsTab: React.FC = () => {
           'Audit Logs',
         );
       } else {
-        // PDF → detailed document, one section per log
         await exportToDetailedPDF(baseName, buildDetailedSections(filtered), {
           title: 'Audit Log',
           subtitle: [
@@ -609,8 +599,8 @@ const AuditLogsTab: React.FC = () => {
     <div className="w-full">
       <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Audit Logs</h2>
-          <p className="text-sm sm:text-base text-gray-500 mt-1">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-slate-100">Audit Logs</h2>
+          <p className="text-sm sm:text-base text-gray-500 dark:text-slate-400 mt-1">
             Track all administrator actions on the platform
           </p>
         </div>
@@ -634,7 +624,7 @@ const AuditLogsTab: React.FC = () => {
         disabled={loading}
       />
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 overflow-hidden">
         {loading ? (
           <>
             <SkeletonCardList rows={6} />
@@ -646,7 +636,7 @@ const AuditLogsTab: React.FC = () => {
           <EmptyState title="No audit logs found" description="Try adjusting your filters." />
         ) : (
           <>
-            <div className="md:hidden divide-y divide-gray-100">
+            <div className="md:hidden divide-y divide-gray-100 dark:divide-slate-800/60">
               {filtered.map((l: AuditLog) => (
                 <LogCard
                   key={l.id}
@@ -659,46 +649,46 @@ const AuditLogsTab: React.FC = () => {
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="bg-gray-50 border-b border-gray-100">
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actor</th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Entity</th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Reason</th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">IP</th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">When</th>
-                    <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider"></th>
+                  <tr className="bg-gray-50 dark:bg-slate-950 border-b border-gray-100 dark:border-slate-800/60">
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Actor</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Action</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Entity</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Reason</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">IP</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">When</th>
+                    <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-gray-100 dark:divide-slate-800/60">
                   {filtered.map((l: AuditLog) => (
                     <tr
                       key={l.id}
                       onClick={() => setDetailId(l.id)}
-                      className="hover:bg-gray-50/70 transition-colors cursor-pointer"
+                      className="hover:bg-gray-50/70 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
                     >
                       <td className="px-5 py-4">
-                        <p className="text-sm font-medium text-gray-900">{l.actorRole ?? 'system'}</p>
-                        <p className="text-xs text-gray-500 font-mono">{shortId(l.actorUserId)}</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-slate-100">{l.actorRole ?? 'system'}</p>
+                        <p className="text-xs text-gray-500 dark:text-slate-400 font-mono">{shortId(l.actorUserId)}</p>
                       </td>
                       <td className="px-5 py-4">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-gray-100 text-gray-700 text-xs font-mono">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 text-xs font-mono">
                           {l.action}
                         </span>
                       </td>
-                      <td className="px-5 py-4 text-xs text-gray-500 font-mono whitespace-nowrap">
+                      <td className="px-5 py-4 text-xs text-gray-500 dark:text-slate-400 font-mono whitespace-nowrap">
                         {l.entityType}:{shortId(l.entityId)}
                       </td>
-                      <td className="px-5 py-4 text-sm text-gray-700 max-w-xs truncate">
+                      <td className="px-5 py-4 text-sm text-gray-700 dark:text-slate-300 max-w-xs truncate">
                         {l.reason ?? '—'}
                       </td>
-                      <td className="px-5 py-4 text-xs text-gray-500 font-mono whitespace-nowrap">{l.ipAddress ?? '—'}</td>
-                      <td className="px-5 py-4 text-xs text-gray-500 whitespace-nowrap">
+                      <td className="px-5 py-4 text-xs text-gray-500 dark:text-slate-400 font-mono whitespace-nowrap">{l.ipAddress ?? '—'}</td>
+                      <td className="px-5 py-4 text-xs text-gray-500 dark:text-slate-400 whitespace-nowrap">
                         {formatDistanceToNow(new Date(l.timestamp), { addSuffix: true })}
                       </td>
                       <td className="px-5 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => setDetailId(l.id)}
-                          className="p-2 rounded-lg text-gray-500 hover:bg-gray-100"
+                          className="p-2 rounded-lg text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800"
                           title="Details"
                           aria-label="View details"
                         >

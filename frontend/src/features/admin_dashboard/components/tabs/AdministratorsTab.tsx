@@ -11,7 +11,7 @@ const SkeletonBlock: React.FC<{ className?: string; style?: React.CSSProperties 
   className = '',
   style,
 }) => (
-  <div className={`animate-pulse rounded bg-gray-200 ${className}`} style={style} />
+  <div className={`animate-pulse rounded bg-gray-200 dark:bg-slate-700 ${className}`} style={style} />
 );
 
 const SkeletonTableRow: React.FC = () => (
@@ -41,15 +41,15 @@ const SkeletonTable: React.FC<{ rows?: number }> = ({ rows = 6 }) => (
   <div className="overflow-x-auto">
     <table className="w-full">
       <thead>
-        <tr className="bg-gray-50 border-b border-gray-100">
-          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Administrator</th>
-          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Role</th>
-          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Last Active</th>
-          <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider"></th>
+        <tr className="bg-gray-50 dark:bg-slate-950 border-b border-gray-100 dark:border-slate-800/60">
+          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Administrator</th>
+          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Role</th>
+          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
+          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Last Active</th>
+          <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider"></th>
         </tr>
       </thead>
-      <tbody className="divide-y divide-gray-100">
+      <tbody className="divide-y divide-gray-100 dark:divide-slate-800/60">
         {Array.from({ length: rows }).map((_, i) => (
           <SkeletonTableRow key={i} />
         ))}
@@ -79,7 +79,7 @@ const SkeletonCard: React.FC = () => (
 );
 
 const SkeletonCardList: React.FC<{ rows?: number }> = ({ rows = 6 }) => (
-  <div className="md:hidden divide-y divide-gray-100">
+  <div className="md:hidden divide-y divide-gray-100 dark:divide-slate-800/60">
     {Array.from({ length: rows }).map((_, i) => (
       <SkeletonCard key={i} />
     ))}
@@ -89,11 +89,11 @@ const SkeletonCardList: React.FC<{ rows?: number }> = ({ rows = 6 }) => (
 // ---------- Local UI ----------
 const EmptyState: React.FC<{ title: string; description?: string }> = ({ title, description }) => (
   <div className="flex flex-col items-center justify-center py-12 sm:py-16 px-4 sm:px-6 text-center">
-    <div className="p-4 bg-gray-50 rounded-2xl text-gray-400 mb-4">
+    <div className="p-4 bg-gray-50 dark:bg-slate-950 rounded-2xl text-gray-400 dark:text-slate-500 mb-4">
       <Inbox size={28} />
     </div>
-    <p className="font-semibold text-gray-900">{title}</p>
-    {description && <p className="text-sm text-gray-500 mt-1 max-w-sm">{description}</p>}
+    <p className="font-semibold text-gray-900 dark:text-slate-100">{title}</p>
+    {description && <p className="text-sm text-gray-500 dark:text-slate-400 mt-1 max-w-sm">{description}</p>}
   </div>
 );
 
@@ -101,31 +101,24 @@ const SearchInput: React.FC<{ value: string; onChange: (v: string) => void; plac
   value, onChange, placeholder = 'Search...',
 }) => (
   <div className="relative w-full sm:max-w-sm">
-    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500" />
     <input
       type="text"
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="h-10 w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-all hover:border-gray-300 hover:bg-white focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
+      className="h-10 w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-all hover:border-gray-300 hover:bg-white focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:hover:border-slate-700 dark:hover:bg-slate-900 dark:focus:bg-slate-900"
     />
   </div>
 );
 
-/**
- * Single-badge display. Admin takes priority over moderator:
- *   - admin + moderator  → "admin"
- *   - admin only         → "admin"
- *   - moderator only     → "moderator"
- *   - neither            → nothing (edge case)
- */
 const RoleBadge: React.FC<{ isAdmin: boolean; isModerator: boolean }> = ({
   isAdmin,
   isModerator,
 }) => {
   if (isAdmin) {
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap bg-blue-50 text-blue-700 border-blue-200">
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900/60">
         <ShieldCheck size={11} />
         admin
       </span>
@@ -133,7 +126,7 @@ const RoleBadge: React.FC<{ isAdmin: boolean; isModerator: boolean }> = ({
   }
   if (isModerator) {
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap bg-purple-50 text-purple-700 border-purple-200">
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-400 dark:border-purple-900/60">
         <Shield size={11} />
         moderator
       </span>
@@ -144,9 +137,11 @@ const RoleBadge: React.FC<{ isAdmin: boolean; isModerator: boolean }> = ({
 
 const StatusBadge: React.FC<{ status: 'active' | 'inactive' }> = ({ status }) => (
   <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap ${
-    status === 'active' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-100 text-gray-700 border-gray-200'
+    status === 'active'
+      ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950/40 dark:text-green-400 dark:border-green-900/60'
+      : 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
   }`}>
-    <span className={`h-1.5 w-1.5 rounded-full ${status === 'active' ? 'bg-green-500' : 'bg-gray-400'}`} />
+    <span className={`h-1.5 w-1.5 rounded-full ${status === 'active' ? 'bg-green-500' : 'bg-gray-400 dark:bg-slate-500'}`} />
     {status}
   </span>
 );
@@ -174,7 +169,7 @@ const RoleToggles: React.FC<RoleToggleProps> = ({
       {admin.isAdmin ? (
         <button
           onClick={onToggleAdmin}
-          className={`${btn} ${smallBtn} bg-gray-100 text-gray-700 hover:bg-gray-200`}
+          className={`${btn} ${smallBtn} bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700`}
           title="Remove admin role"
         >
           <ShieldCheck size={11} /> Remove admin
@@ -182,7 +177,7 @@ const RoleToggles: React.FC<RoleToggleProps> = ({
       ) : (
         <button
           onClick={onToggleAdmin}
-          className={`${btn} ${smallBtn} bg-blue-50 text-blue-700 hover:bg-blue-100`}
+          className={`${btn} ${smallBtn} bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-950/40 dark:text-blue-400 dark:hover:bg-blue-950/60`}
           title="Grant admin role"
         >
           <ShieldCheck size={11} /> Make admin
@@ -192,7 +187,7 @@ const RoleToggles: React.FC<RoleToggleProps> = ({
       {admin.isModerator ? (
         <button
           onClick={onToggleModerator}
-          className={`${btn} ${smallBtn} bg-gray-100 text-gray-700 hover:bg-gray-200`}
+          className={`${btn} ${smallBtn} bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700`}
           title="Remove moderator role"
         >
           <Shield size={11} /> Remove mod
@@ -200,7 +195,7 @@ const RoleToggles: React.FC<RoleToggleProps> = ({
       ) : (
         <button
           onClick={onToggleModerator}
-          className={`${btn} ${smallBtn} bg-purple-50 text-purple-700 hover:bg-purple-100`}
+          className={`${btn} ${smallBtn} bg-purple-50 text-purple-700 hover:bg-purple-100 dark:bg-purple-950/40 dark:text-purple-400 dark:hover:bg-purple-950/60`}
           title="Grant moderator role"
         >
           <Shield size={11} /> Make mod
@@ -230,8 +225,8 @@ const AdminCard: React.FC<AdminCardProps> = ({
         className="w-10 h-10 rounded-full object-cover shrink-0"
       />
       <div className="min-w-0 flex-1">
-        <p className="font-medium text-gray-900 truncate">{admin.name}</p>
-        <p className="text-xs text-gray-500 truncate">{admin.email}</p>
+        <p className="font-medium text-gray-900 dark:text-slate-100 truncate">{admin.name}</p>
+        <p className="text-xs text-gray-500 dark:text-slate-400 truncate">{admin.email}</p>
       </div>
     </div>
 
@@ -241,7 +236,7 @@ const AdminCard: React.FC<AdminCardProps> = ({
     </div>
 
     <div className="mt-3 flex items-center justify-between gap-3">
-      <span className="text-xs text-gray-500">
+      <span className="text-xs text-gray-500 dark:text-slate-400">
         {admin.lastActive
           ? formatDistanceToNow(new Date(admin.lastActive), { addSuffix: true })
           : 'Never active'}
@@ -276,9 +271,6 @@ const AdministratorsTab: React.FC = () => {
   const filtered = useMemo(
     () =>
       administrators.filter((a) => {
-        // Filter matches what the badge displays:
-        //   - "admin"      → anyone with the admin flag (incl. admin+mod)
-        //   - "moderator"  → only pure moderators (mod && !admin)
         const matchesFilter =
           filter === 'all' ||
           (filter === 'admin' && a.isAdmin) ||
@@ -325,8 +317,8 @@ const AdministratorsTab: React.FC = () => {
     <div className="w-full">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 sm:mb-8 gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Administrators</h2>
-          <p className="text-sm sm:text-base text-gray-500 mt-1">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-slate-100">Administrators</h2>
+          <p className="text-sm sm:text-base text-gray-500 dark:text-slate-400 mt-1">
             Manage admin and moderator access
           </p>
         </div>
@@ -341,8 +333,8 @@ const AdministratorsTab: React.FC = () => {
               onClick={() => setFilter(f)}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium capitalize transition-colors ${
                 filter === f
-                  ? 'bg-blue-50 text-blue-600'
-                  : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                  ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400'
+                  : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800/60'
               }`}
             >
               {f}
@@ -351,7 +343,7 @@ const AdministratorsTab: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 overflow-hidden">
         {loading ? (
           <>
             <SkeletonCardList rows={5} />
@@ -363,8 +355,7 @@ const AdministratorsTab: React.FC = () => {
           <EmptyState title="No administrators found" description="Try adjusting your filters." />
         ) : (
           <>
-            {/* Mobile / tablet card list */}
-            <div className="md:hidden divide-y divide-gray-100">
+            <div className="md:hidden divide-y divide-gray-100 dark:divide-slate-800/60">
               {filtered.map((a: Administrator) => (
                 <AdminCard
                   key={a.id}
@@ -375,21 +366,20 @@ const AdministratorsTab: React.FC = () => {
               ))}
             </div>
 
-            {/* Desktop table */}
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="bg-gray-50 border-b border-gray-100">
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Administrator</th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Role</th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Last Active</th>
-                    <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider"></th>
+                  <tr className="bg-gray-50 dark:bg-slate-950 border-b border-gray-100 dark:border-slate-800/60">
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Administrator</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Role</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Last Active</th>
+                    <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-gray-100 dark:divide-slate-800/60">
                   {filtered.map((a: Administrator) => (
-                    <tr key={a.id} className="hover:bg-gray-50/70 transition-colors">
+                    <tr key={a.id} className="hover:bg-gray-50/70 dark:hover:bg-slate-800/50 transition-colors">
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
                           <img
@@ -398,8 +388,8 @@ const AdministratorsTab: React.FC = () => {
                             className="w-9 h-9 rounded-full object-cover shrink-0"
                           />
                           <div className="min-w-0">
-                            <p className="font-medium text-gray-900 truncate">{a.name}</p>
-                            <p className="text-xs text-gray-500 truncate">{a.email}</p>
+                            <p className="font-medium text-gray-900 dark:text-slate-100 truncate">{a.name}</p>
+                            <p className="text-xs text-gray-500 dark:text-slate-400 truncate">{a.email}</p>
                           </div>
                         </div>
                       </td>
@@ -407,7 +397,7 @@ const AdministratorsTab: React.FC = () => {
                         <RoleBadge isAdmin={a.isAdmin} isModerator={a.isModerator} />
                       </td>
                       <td className="px-5 py-4"><StatusBadge status={a.status} /></td>
-                      <td className="px-5 py-4 text-xs text-gray-500 whitespace-nowrap">
+                      <td className="px-5 py-4 text-xs text-gray-500 dark:text-slate-400 whitespace-nowrap">
                         {a.lastActive
                           ? formatDistanceToNow(new Date(a.lastActive), { addSuffix: true })
                           : '—'}

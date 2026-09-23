@@ -14,7 +14,7 @@ const SkeletonBlock: React.FC<{ className?: string; style?: React.CSSProperties 
   className = '',
   style,
 }) => (
-  <div className={`animate-pulse rounded bg-gray-200 ${className}`} style={style} />
+  <div className={`animate-pulse rounded bg-gray-200 dark:bg-slate-700 ${className}`} style={style} />
 );
 
 const SkeletonTableRow: React.FC = () => (
@@ -46,17 +46,17 @@ const SkeletonTable: React.FC<{ rows?: number }> = ({ rows = 6 }) => (
   <div className="overflow-x-auto">
     <table className="w-full">
       <thead>
-        <tr className="bg-gray-50 border-b border-gray-100">
-          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Professional</th>
-          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Rating</th>
-          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Jobs</th>
-          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Trust</th>
-          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Verification</th>
-          <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider"></th>
+        <tr className="bg-gray-50 dark:bg-slate-950 border-b border-gray-100 dark:border-slate-800/60">
+          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Professional</th>
+          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Rating</th>
+          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Jobs</th>
+          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Trust</th>
+          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
+          <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Verification</th>
+          <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider"></th>
         </tr>
       </thead>
-      <tbody className="divide-y divide-gray-100">
+      <tbody className="divide-y divide-gray-100 dark:divide-slate-800/60">
         {Array.from({ length: rows }).map((_, i) => (
           <SkeletonTableRow key={i} />
         ))}
@@ -153,11 +153,11 @@ const Avatar: React.FC<{ name: string; src?: string; size?: number; className?: 
 // ---------- Local UI ----------
 const EmptyState: React.FC<{ title: string; description?: string }> = ({ title, description }) => (
   <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-    <div className="p-4 bg-gray-50 rounded-2xl text-gray-400 mb-4">
+    <div className="p-4 bg-gray-50 dark:bg-slate-950 rounded-2xl text-gray-400 dark:text-slate-500 mb-4">
       <Inbox size={28} />
     </div>
-    <p className="font-semibold text-gray-900">{title}</p>
-    {description && <p className="text-sm text-gray-500 mt-1 max-w-sm">{description}</p>}
+    <p className="font-semibold text-gray-900 dark:text-slate-100">{title}</p>
+    {description && <p className="text-sm text-gray-500 dark:text-slate-400 mt-1 max-w-sm">{description}</p>}
   </div>
 );
 
@@ -165,47 +165,47 @@ const SearchInput: React.FC<{ value: string; onChange: (v: string) => void; plac
   value, onChange, placeholder = 'Search...',
 }) => (
   <div className="relative w-full max-w-sm">
-    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-500" />
     <input
       type="text"
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="h-10 w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-all hover:border-gray-300 hover:bg-white focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
+      className="h-10 w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-all hover:border-gray-300 hover:bg-white focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:hover:border-slate-700 dark:hover:bg-slate-900 dark:focus:bg-slate-900"
     />
   </div>
 );
 
 const statusStyles: Record<string, string> = {
-  active: 'bg-green-50 text-green-700 border-green-200',
-  pending: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-  under_review: 'bg-blue-50 text-blue-700 border-blue-200',
-  suspended: 'bg-red-50 text-red-700 border-red-200',
-  deactivated: 'bg-gray-100 text-gray-700 border-gray-200',
-  deleted: 'bg-gray-100 text-gray-500 border-gray-200',
+  active: 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950/40 dark:text-green-400 dark:border-green-900/60',
+  pending: 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950/40 dark:text-yellow-400 dark:border-yellow-900/60',
+  under_review: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900/60',
+  suspended: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900/60',
+  deactivated: 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+  deleted: 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700',
 };
 const statusDots: Record<string, string> = {
   active: 'bg-green-500',
   pending: 'bg-yellow-500',
   under_review: 'bg-blue-500',
   suspended: 'bg-red-500',
-  deactivated: 'bg-gray-400',
-  deleted: 'bg-gray-400',
+  deactivated: 'bg-gray-400 dark:bg-slate-500',
+  deleted: 'bg-gray-400 dark:bg-slate-500',
 };
 
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => (
-  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border capitalize ${statusStyles[status] ?? 'bg-gray-100 text-gray-700 border-gray-200'}`}>
-    <span className={`h-1.5 w-1.5 rounded-full ${statusDots[status] ?? 'bg-gray-400'}`} />
+  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border capitalize ${statusStyles[status] ?? 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'}`}>
+    <span className={`h-1.5 w-1.5 rounded-full ${statusDots[status] ?? 'bg-gray-400 dark:bg-slate-500'}`} />
     {status.replace(/_/g, ' ')}
   </span>
 );
 
 const VerificationBadge: React.FC<{ status: string; verified: boolean }> = ({ status, verified }) => {
   const variant = verified
-    ? 'bg-green-50 text-green-700 border-green-200'
+    ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950/40 dark:text-green-400 dark:border-green-900/60'
     : ['rejected', 'failed', 'expired', 'manual_rejected'].includes(status)
-      ? 'bg-red-50 text-red-700 border-red-200'
-      : 'bg-yellow-50 text-yellow-700 border-yellow-200';
+      ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900/60'
+      : 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950/40 dark:text-yellow-400 dark:border-yellow-900/60';
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border capitalize ${variant}`}>
       {status.replace(/_/g, ' ')}
@@ -252,22 +252,22 @@ const TrustScorePrompt: React.FC<TrustScorePromptProps> = ({
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+      <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 p-6 shadow-xl">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Change trust score</h3>
-            <p className="text-sm text-gray-500 mt-1">{professionalName}</p>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Change trust score</h3>
+            <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">{professionalName}</p>
           </div>
           <button
             onClick={onCancel}
-            className="p-1 rounded-lg hover:bg-gray-100"
+            className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-500 dark:text-slate-400"
             aria-label="Close"
           >
             <X size={18} />
           </button>
         </div>
 
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
           New score (0–100) <span className="text-red-500">*</span>
         </label>
         <input
@@ -276,10 +276,10 @@ const TrustScorePrompt: React.FC<TrustScorePromptProps> = ({
           max={100}
           value={score}
           onChange={(e) => setScore(e.target.value)}
-          className="w-full rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
+          className="w-full rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:bg-slate-900"
         />
 
-        <label className="block text-sm font-medium text-gray-700 mt-3 mb-1">
+        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mt-3 mb-1">
           Reason <span className="text-red-500">*</span>
         </label>
         <textarea
@@ -287,7 +287,7 @@ const TrustScorePrompt: React.FC<TrustScorePromptProps> = ({
           onChange={(e) => setReason(e.target.value)}
           rows={3}
           placeholder="Enter a reason (min 5 characters)..."
-          className="w-full rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
+          className="w-full rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
         />
 
         {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
@@ -296,7 +296,7 @@ const TrustScorePrompt: React.FC<TrustScorePromptProps> = ({
           <button
             onClick={onCancel}
             disabled={submitting}
-            className="px-4 py-2 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+            className="px-4 py-2 rounded-xl text-sm font-medium text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 disabled:opacity-50"
           >
             Cancel
           </button>
@@ -373,17 +373,17 @@ const ProfessionalDrawer: React.FC<DrawerProps> = ({
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-2xl bg-white shadow-2xl flex flex-col">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+      <div className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-2xl bg-white dark:bg-slate-900 shadow-2xl flex flex-col">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-800/60">
           <div className="min-w-0">
-            <h3 className="font-semibold text-gray-900 truncate">Professional details</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-slate-100 truncate">Professional details</h3>
             {detail && (
-              <p className="text-xs text-gray-500 truncate">{detail.profession}</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 truncate">{detail.profession}</p>
             )}
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-500 dark:text-slate-400"
             aria-label="Close"
           >
             <X size={18} />
@@ -399,103 +399,100 @@ const ProfessionalDrawer: React.FC<DrawerProps> = ({
 
           {detail && !loading && !error && (
             <div className="space-y-5">
-              {/* Header */}
               <div className="flex items-center gap-4">
                 <Avatar name={detail.name} src={detail.avatar} size={64} />
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-semibold text-gray-900 truncate">{detail.name}</p>
+                    <p className="font-semibold text-gray-900 dark:text-slate-100 truncate">{detail.name}</p>
                     {detail.isFlagged && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-red-50 text-red-700 border-red-200">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 border-red-200 dark:border-red-900/60">
                         <Flag size={10} /> Flagged
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-gray-500">{detail.profession}</p>
+                  <p className="text-sm text-gray-500 dark:text-slate-400">{detail.profession}</p>
                   {detail.headline && (
-                    <p className="text-xs text-gray-400 mt-0.5">{detail.headline}</p>
+                    <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{detail.headline}</p>
                   )}
                 </div>
               </div>
 
-              {/* Status row */}
               <div className="flex flex-wrap gap-2">
                 <StatusBadge status={detail.status} />
                 <VerificationBadge status={detail.verificationStatus} verified={detail.isVerified} />
                 {detail.available ? (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border bg-green-50 text-green-700 border-green-200">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-400 border-green-200 dark:border-green-900/60">
                     <span className="h-1.5 w-1.5 rounded-full bg-green-500" /> Available
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border bg-gray-100 text-gray-700 border-gray-200">
-                    <span className="h-1.5 w-1.5 rounded-full bg-gray-400" /> Unavailable
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 border-gray-200 dark:border-slate-700">
+                    <span className="h-1.5 w-1.5 rounded-full bg-gray-400 dark:bg-slate-500" /> Unavailable
                   </span>
                 )}
               </div>
 
-              {/* Key info grid */}
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <p className="text-xs text-gray-500">Rating</p>
-                  <p className="text-gray-900 inline-flex items-center gap-1">
+                  <p className="text-xs text-gray-500 dark:text-slate-400">Rating</p>
+                  <p className="text-gray-900 dark:text-slate-100 inline-flex items-center gap-1">
                     <Star size={13} className="text-yellow-400 fill-yellow-400" />
                     {detail.rating.toFixed(1)}
-                    <span className="text-xs text-gray-400">({detail.totalReviews})</span>
+                    <span className="text-xs text-gray-400 dark:text-slate-500">({detail.totalReviews})</span>
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Completed jobs</p>
-                  <p className="text-gray-900">{detail.totalJobs}</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">Completed jobs</p>
+                  <p className="text-gray-900 dark:text-slate-100">{detail.totalJobs}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Trust score</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">Trust score</p>
                   <div className="flex items-center gap-2">
-                    <p className="text-gray-900">{detail.trustScore}</p>
+                    <p className="text-gray-900 dark:text-slate-100">{detail.trustScore}</p>
                     <button
                       onClick={() => onTrustScore(detail.id, detail.trustScore, detail.name)}
-                      className="text-[10px] text-blue-600 hover:underline"
+                      className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline"
                     >
                       change
                     </button>
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Location</p>
-                  <p className="text-gray-900">{detail.location}</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">Location</p>
+                  <p className="text-gray-900 dark:text-slate-100">{detail.location}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Years of experience</p>
-                  <p className="text-gray-900">{detail.yearsOfExperience ?? '—'}</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">Years of experience</p>
+                  <p className="text-gray-900 dark:text-slate-100">{detail.yearsOfExperience ?? '—'}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Experience level</p>
-                  <p className="text-gray-900 capitalize">{detail.experienceLevel ?? '—'}</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">Experience level</p>
+                  <p className="text-gray-900 dark:text-slate-100 capitalize">{detail.experienceLevel ?? '—'}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Hourly rate</p>
-                  <p className="text-gray-900">
+                  <p className="text-xs text-gray-500 dark:text-slate-400">Hourly rate</p>
+                  <p className="text-gray-900 dark:text-slate-100">
                     {detail.hourlyRate != null
                       ? `${detail.hourlyRate.toLocaleString()} ${detail.currency}`
                       : '—'}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Response time</p>
-                  <p className="text-gray-900">
+                  <p className="text-xs text-gray-500 dark:text-slate-400">Response time</p>
+                  <p className="text-gray-900 dark:text-slate-100">
                     {detail.responseTimeHours != null
                       ? `${detail.responseTimeHours}h`
                       : '—'}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Joined</p>
-                  <p className="text-gray-900">
+                  <p className="text-xs text-gray-500 dark:text-slate-400">Joined</p>
+                  <p className="text-gray-900 dark:text-slate-100">
                     {new Date(detail.joinedDate).toLocaleDateString()}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Verified at</p>
-                  <p className="text-gray-900">
+                  <p className="text-xs text-gray-500 dark:text-slate-400">Verified at</p>
+                  <p className="text-gray-900 dark:text-slate-100">
                     {detail.verifiedAt
                       ? new Date(detail.verifiedAt).toLocaleDateString()
                       : '—'}
@@ -503,25 +500,23 @@ const ProfessionalDrawer: React.FC<DrawerProps> = ({
                 </div>
               </div>
 
-              {/* Bio */}
               {detail.bio && (
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-1">
                     Bio
                   </p>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{detail.bio}</p>
+                  <p className="text-sm text-gray-700 dark:text-slate-300 whitespace-pre-wrap">{detail.bio}</p>
                 </div>
               )}
 
-              {/* Skills / Services / Languages */}
               {detail.skills.length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                     Skills
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {detail.skills.map((s, i) => (
-                      <span key={i} className="px-2 py-0.5 rounded-md bg-gray-100 text-gray-700 text-xs">
+                      <span key={i} className="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 text-xs">
                         {s}
                       </span>
                     ))}
@@ -530,12 +525,12 @@ const ProfessionalDrawer: React.FC<DrawerProps> = ({
               )}
               {detail.services.length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                     Services
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {detail.services.map((s, i) => (
-                      <span key={i} className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-xs">
+                      <span key={i} className="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 text-xs">
                         {s}
                       </span>
                     ))}
@@ -544,12 +539,12 @@ const ProfessionalDrawer: React.FC<DrawerProps> = ({
               )}
               {detail.languages.length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                     Languages
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {detail.languages.map((l, i) => (
-                      <span key={i} className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 text-xs">
+                      <span key={i} className="px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400 text-xs">
                         {l}
                       </span>
                     ))}
@@ -557,28 +552,27 @@ const ProfessionalDrawer: React.FC<DrawerProps> = ({
                 </div>
               )}
 
-              {/* Links */}
               {(detail.websiteUrl || detail.linkedinUrl || detail.portfolioUrl) && (
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                     Links
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {detail.websiteUrl && (
                       <a href={detail.websiteUrl} target="_blank" rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline">
+                        className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline">
                         <ExternalLink size={11} /> Website
                       </a>
                     )}
                     {detail.linkedinUrl && (
                       <a href={detail.linkedinUrl} target="_blank" rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline">
+                        className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline">
                         <ExternalLink size={11} /> LinkedIn
                       </a>
                     )}
                     {detail.portfolioUrl && (
                       <a href={detail.portfolioUrl} target="_blank" rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline">
+                        className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline">
                         <ExternalLink size={11} /> Portfolio
                       </a>
                     )}
@@ -586,23 +580,22 @@ const ProfessionalDrawer: React.FC<DrawerProps> = ({
                 </div>
               )}
 
-              {/* Verification & flag info */}
               {(detail.adminOverrideStatus || detail.fraudNotes) && (
-                <div className="pt-4 border-t border-gray-100">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                <div className="pt-4 border-t border-gray-100 dark:border-slate-800/60">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                     Admin overrides
                   </p>
                   <div className="space-y-2 text-sm">
                     {detail.adminOverrideStatus && (
                       <div className="flex items-start gap-2">
-                        <Shield size={14} className="text-gray-400 mt-0.5 shrink-0" />
+                        <Shield size={14} className="text-gray-400 dark:text-slate-500 mt-0.5 shrink-0" />
                         <div>
-                          <p className="text-xs text-gray-500">Override status</p>
-                          <p className="text-gray-900 capitalize">
+                          <p className="text-xs text-gray-500 dark:text-slate-400">Override status</p>
+                          <p className="text-gray-900 dark:text-slate-100 capitalize">
                             {detail.adminOverrideStatus.replace(/_/g, ' ')}
                           </p>
                           {detail.adminOverrideReason && (
-                            <p className="text-xs text-gray-500 mt-0.5">
+                            <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
                               Reason: {detail.adminOverrideReason}
                             </p>
                           )}
@@ -613,8 +606,8 @@ const ProfessionalDrawer: React.FC<DrawerProps> = ({
                       <div className="flex items-start gap-2">
                         <AlertTriangle size={14} className="text-red-400 mt-0.5 shrink-0" />
                         <div>
-                          <p className="text-xs text-gray-500">Fraud notes</p>
-                          <p className="text-gray-700 text-sm whitespace-pre-wrap">
+                          <p className="text-xs text-gray-500 dark:text-slate-400">Fraud notes</p>
+                          <p className="text-gray-700 dark:text-slate-300 text-sm whitespace-pre-wrap">
                             {detail.fraudNotes}
                           </p>
                         </div>
@@ -624,36 +617,34 @@ const ProfessionalDrawer: React.FC<DrawerProps> = ({
                 </div>
               )}
 
-              {/* Deletion info */}
               {isDeleted && (
-                <div className="pt-4 border-t border-gray-100 bg-red-50/40 rounded-lg p-3">
-                  <p className="text-xs font-semibold text-red-700 uppercase tracking-wider mb-2">
+                <div className="pt-4 border-t border-gray-100 dark:border-slate-800/60 bg-red-50/40 dark:bg-red-950/20 rounded-lg p-3">
+                  <p className="text-xs font-semibold text-red-700 dark:text-red-400 uppercase tracking-wider mb-2">
                     Deletion
                   </p>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
-                      <p className="text-xs text-gray-500">Type</p>
-                      <p className="text-gray-900 capitalize">{detail.deletionType ?? '—'}</p>
+                      <p className="text-xs text-gray-500 dark:text-slate-400">Type</p>
+                      <p className="text-gray-900 dark:text-slate-100 capitalize">{detail.deletionType ?? '—'}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">Deleted at</p>
-                      <p className="text-gray-900">
+                      <p className="text-xs text-gray-500 dark:text-slate-400">Deleted at</p>
+                      <p className="text-gray-900 dark:text-slate-100">
                         {detail.deletedAt
                           ? new Date(detail.deletedAt).toLocaleDateString()
                           : '—'}
                       </p>
                     </div>
                     <div className="col-span-2">
-                      <p className="text-xs text-gray-500">Reason</p>
-                      <p className="text-gray-900">{detail.deletionReason ?? '—'}</p>
+                      <p className="text-xs text-gray-500 dark:text-slate-400">Reason</p>
+                      <p className="text-gray-900 dark:text-slate-100">{detail.deletionReason ?? '—'}</p>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Actions */}
-              <div className="pt-4 border-t border-gray-100">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+              <div className="pt-4 border-t border-gray-100 dark:border-slate-800/60">
+                <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-3">
                   Actions
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -661,13 +652,13 @@ const ProfessionalDrawer: React.FC<DrawerProps> = ({
                     <>
                       <button
                         onClick={() => onVerify(detail, 'manual_approved')}
-                        className="px-3 py-1.5 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 text-xs font-medium inline-flex items-center gap-1.5"
+                        className="px-3 py-1.5 rounded-lg bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-950/60 text-xs font-medium inline-flex items-center gap-1.5"
                       >
                         <CheckCircle size={13} /> Approve verification
                       </button>
                       <button
                         onClick={() => onVerify(detail, 'manual_rejected')}
-                        className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 text-xs font-medium inline-flex items-center gap-1.5"
+                        className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700 text-xs font-medium inline-flex items-center gap-1.5"
                       >
                         <XCircle size={13} /> Reject verification
                       </button>
@@ -676,7 +667,7 @@ const ProfessionalDrawer: React.FC<DrawerProps> = ({
                   {!isDeleted && detail.status === 'active' && (
                     <button
                       onClick={() => onSuspend(detail)}
-                      className="px-3 py-1.5 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 text-xs font-medium inline-flex items-center gap-1.5"
+                      className="px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/60 text-xs font-medium inline-flex items-center gap-1.5"
                     >
                       <Ban size={13} /> Suspend
                     </button>
@@ -684,7 +675,7 @@ const ProfessionalDrawer: React.FC<DrawerProps> = ({
                   {!isDeleted && detail.status === 'suspended' && (
                     <button
                       onClick={() => onReactivate(detail)}
-                      className="px-3 py-1.5 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 text-xs font-medium inline-flex items-center gap-1.5"
+                      className="px-3 py-1.5 rounded-lg bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-950/60 text-xs font-medium inline-flex items-center gap-1.5"
                     >
                       <CheckCircle size={13} /> Reactivate
                     </button>
@@ -692,7 +683,7 @@ const ProfessionalDrawer: React.FC<DrawerProps> = ({
                   {!isDeleted && !detail.isFlagged && (
                     <button
                       onClick={() => onFlag(detail)}
-                      className="px-3 py-1.5 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 text-xs font-medium inline-flex items-center gap-1.5"
+                      className="px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/60 text-xs font-medium inline-flex items-center gap-1.5"
                     >
                       <Flag size={13} /> Flag
                     </button>
@@ -700,14 +691,14 @@ const ProfessionalDrawer: React.FC<DrawerProps> = ({
                   {!isDeleted && detail.isFlagged && (
                     <button
                       onClick={() => onUnflag(detail)}
-                      className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 text-xs font-medium inline-flex items-center gap-1.5"
+                      className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700 text-xs font-medium inline-flex items-center gap-1.5"
                     >
                       <XCircle size={13} /> Unflag
                     </button>
                   )}
                   <button
                     onClick={() => onTrustScore(detail.id, detail.trustScore, detail.name)}
-                    className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-medium inline-flex items-center gap-1.5"
+                    className="px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-950/60 text-xs font-medium inline-flex items-center gap-1.5"
                   >
                     <Gauge size={13} /> Change trust score
                   </button>
@@ -717,12 +708,11 @@ const ProfessionalDrawer: React.FC<DrawerProps> = ({
           )}
         </div>
 
-        {/* Footer — delete */}
         {detail && !loading && !error && !isDeleted && (
-          <div className="border-t border-gray-100 px-5 py-3 flex items-center justify-end">
+          <div className="border-t border-gray-100 dark:border-slate-800/60 px-5 py-3 flex items-center justify-end">
             <button
               onClick={() => onDelete(detail.id, detail.name)}
-              className="px-3 py-2 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 text-sm font-medium inline-flex items-center gap-1.5"
+              className="px-3 py-2 rounded-lg bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/60 text-sm font-medium inline-flex items-center gap-1.5"
             >
               <Trash2 size={14} /> Delete professional
             </button>
@@ -784,7 +774,6 @@ const ProfessionalsTab: React.FC = () => {
     [professionals, filter, query],
   );
 
-  // Drawer action callbacks (all open prompts)
   const openVerify = (p: AdminProfessional, status: 'manual_approved' | 'manual_rejected') => {
     setPrompt({
       title: status === 'manual_approved' ? 'Approve verification' : 'Reject verification',
@@ -860,8 +849,8 @@ const ProfessionalsTab: React.FC = () => {
   return (
     <div>
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900">Professionals</h2>
-        <p className="text-gray-500 mt-1">Verify, manage and monitor service providers</p>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Professionals</h2>
+        <p className="text-gray-500 dark:text-slate-400 mt-1">Verify, manage and monitor service providers</p>
       </div>
 
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
@@ -874,8 +863,8 @@ const ProfessionalsTab: React.FC = () => {
               disabled={loading}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium capitalize transition-colors disabled:opacity-60 ${
                 filter === f
-                  ? 'bg-blue-50 text-blue-600'
-                  : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                  ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400'
+                  : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800/60'
               }`}
             >
               {f.replace(/_/g, ' ')}
@@ -884,7 +873,7 @@ const ProfessionalsTab: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 overflow-hidden">
         {loading ? (
           <SkeletonTable rows={6} />
         ) : filtered.length === 0 ? (
@@ -893,17 +882,17 @@ const ProfessionalsTab: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Professional</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Rating</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Jobs</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Trust</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Verification</th>
-                  <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider"></th>
+                <tr className="bg-gray-50 dark:bg-slate-950 border-b border-gray-100 dark:border-slate-800/60">
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Professional</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Rating</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Jobs</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Trust</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Verification</th>
+                  <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-gray-100 dark:divide-slate-800/60">
                 {filtered.map((p: AdminProfessional) => {
                   const canVerify =
                     ['pending', 'manual_review', 'not_started'].includes(p.verificationStatus) &&
@@ -915,28 +904,28 @@ const ProfessionalsTab: React.FC = () => {
                     <tr
                       key={p.id}
                       onClick={() => setDetailId(p.id)}
-                      className="hover:bg-gray-50/70 transition-colors cursor-pointer"
+                      className="hover:bg-gray-50/70 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
                     >
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
                           <Avatar name={p.name} src={p.avatar} size={36} />
                           <div>
-                            <p className="font-medium text-gray-900 flex items-center gap-2">
+                            <p className="font-medium text-gray-900 dark:text-slate-100 flex items-center gap-2">
                               {p.name}
                               {p.isFlagged && <Flag size={12} className="text-red-500" />}
                             </p>
-                            <p className="text-xs text-gray-500">{p.profession} · {p.location}</p>
+                            <p className="text-xs text-gray-500 dark:text-slate-400">{p.profession} · {p.location}</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-5 py-4">
-                        <span className="inline-flex items-center gap-1 text-sm text-gray-700">
+                        <span className="inline-flex items-center gap-1 text-sm text-gray-700 dark:text-slate-300">
                           <Star size={14} className="text-yellow-400 fill-yellow-400" />
                           {p.rating.toFixed(1)}
                         </span>
                       </td>
-                      <td className="px-5 py-4 text-sm text-gray-700">{p.totalJobs}</td>
-                      <td className="px-5 py-4 text-sm text-gray-700">{p.trustScore}</td>
+                      <td className="px-5 py-4 text-sm text-gray-700 dark:text-slate-300">{p.totalJobs}</td>
+                      <td className="px-5 py-4 text-sm text-gray-700 dark:text-slate-300">{p.trustScore}</td>
                       <td className="px-5 py-4"><StatusBadge status={p.status} /></td>
                       <td className="px-5 py-4">
                         <VerificationBadge status={p.verificationStatus} verified={p.isVerified} />
@@ -945,7 +934,7 @@ const ProfessionalsTab: React.FC = () => {
                         <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => setDetailId(p.id)}
-                            className="p-2 rounded-lg text-gray-500 hover:bg-gray-100"
+                            className="p-2 rounded-lg text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800"
                             title="Details"
                           >
                             <Eye size={16} />
@@ -954,14 +943,14 @@ const ProfessionalsTab: React.FC = () => {
                             <>
                               <button
                                 onClick={() => openVerify(p, 'manual_approved')}
-                                className="p-2 rounded-lg text-green-600 hover:bg-green-50"
+                                className="p-2 rounded-lg text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/40"
                                 title="Approve verification"
                               >
                                 <CheckCircle size={16} />
                               </button>
                               <button
                                 onClick={() => openVerify(p, 'manual_rejected')}
-                                className="p-2 rounded-lg text-gray-500 hover:bg-gray-100"
+                                className="p-2 rounded-lg text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800"
                                 title="Reject verification"
                               >
                                 <XCircle size={16} />
@@ -971,7 +960,7 @@ const ProfessionalsTab: React.FC = () => {
                           {!isDeleted && canSuspend && (
                             <button
                               onClick={() => openSuspend(p)}
-                              className="p-2 rounded-lg text-red-500 hover:bg-red-50"
+                              className="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40"
                               title="Suspend"
                             >
                               <Ban size={16} />
@@ -980,7 +969,7 @@ const ProfessionalsTab: React.FC = () => {
                           {!isDeleted && canReactivate && (
                             <button
                               onClick={() => openReactivate(p)}
-                              className="p-2 rounded-lg text-green-600 hover:bg-green-50"
+                              className="p-2 rounded-lg text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/40"
                               title="Reactivate"
                             >
                               <CheckCircle size={16} />
@@ -989,7 +978,7 @@ const ProfessionalsTab: React.FC = () => {
                           {!isDeleted && !p.isFlagged && (
                             <button
                               onClick={() => openFlag(p)}
-                              className="p-2 rounded-lg text-red-500 hover:bg-red-50"
+                              className="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40"
                               title="Flag"
                             >
                               <Flag size={16} />
@@ -998,7 +987,7 @@ const ProfessionalsTab: React.FC = () => {
                           {!isDeleted && p.isFlagged && (
                             <button
                               onClick={() => openUnflag(p)}
-                              className="p-2 rounded-lg text-gray-500 hover:bg-gray-100"
+                              className="p-2 rounded-lg text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800"
                               title="Unflag"
                             >
                               <XCircle size={16} />
@@ -1015,7 +1004,6 @@ const ProfessionalsTab: React.FC = () => {
         )}
       </div>
 
-      {/* Reason prompt (verify/suspend/reactivate/flag/unflag) */}
       {prompt && (
         <ReasonPrompt
           title={prompt.title}
@@ -1030,7 +1018,6 @@ const ProfessionalsTab: React.FC = () => {
         />
       )}
 
-      {/* Trust score prompt */}
       {trustPrompt && (
         <TrustScorePrompt
           currentScore={trustPrompt.currentScore}
@@ -1044,7 +1031,6 @@ const ProfessionalsTab: React.FC = () => {
         />
       )}
 
-      {/* Delete prompt */}
       {deletePrompt && (
         <ReasonPrompt
           title="Delete professional"
@@ -1059,7 +1045,7 @@ const ProfessionalsTab: React.FC = () => {
           onCancel={() => setDeletePrompt(null)}
           extraField={
             <div>
-              <label className="block text-sm font-medium text-gray-700 mt-3 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mt-3 mb-1">
                 Deletion type
               </label>
               <select
@@ -1067,7 +1053,7 @@ const ProfessionalsTab: React.FC = () => {
                 onChange={(e) =>
                   setDeleteType(e.target.value as 'self' | 'admin' | 'gdpr' | 'ban')
                 }
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
+                className="w-full rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:bg-slate-900"
               >
                 {DELETION_TYPES.map((t) => (
                   <option key={t.value} value={t.value}>{t.label}</option>

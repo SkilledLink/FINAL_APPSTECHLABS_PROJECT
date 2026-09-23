@@ -4,8 +4,7 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { ConversationList } from '../components/ConversationList';
 import { ChatWindow } from '../components/ChatWindow';
-import { CallOverlay } from '../components/CallOverlay';
-import { useWebRTCCall } from '../hooks/useWebRTCCall';
+import { useCall } from '../context/CallProvider';
 import { useConversations } from '../../../hooks/useConversations';
 import { useMessages } from '../../../hooks/useMessages';
 import { useRealtimeMessages } from '../hooks/useRealtimeMessages';
@@ -23,7 +22,6 @@ export const MessagesPage: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
   const { socket } = useSocketContext();
 
-  /* ── URL param: /messages/:conversationId (optional) ── */
   const { conversationId: urlConversationId } = useParams<{
     conversationId?: string;
   }>();
@@ -40,11 +38,6 @@ export const MessagesPage: React.FC = () => {
     setDisplayConversations(conversations);
   }, [conversations]);
 
-  /*
-   * Sync active conversation when the URL param changes (deep links and
-   * back/forward). We don't clear on param removal so an internal "back to
-   * list" on mobile isn't reversed by the effect.
-   */
   useEffect(() => {
     if (urlConversationId && urlConversationId !== activeConversationId) {
       setActiveConversationId(urlConversationId);
@@ -62,18 +55,16 @@ export const MessagesPage: React.FC = () => {
   const isUploading = voiceUploading || fileUploading;
   const currentUserId = normalizeId(user?.id);
 
-  // ── Presence + typing (single declaration each) ─────────
   const { onlineUsers } = usePresence(currentUserId);
   const { typingUsers, sendTyping } = useTyping(
     activeConversationId,
     currentUserId
   );
 
-  // ── Calling ──────────────────────────────────────────────
-  const callApi = useWebRTCCall(socket);
+  // ── Calling (from global CallProvider) ──────────────────
+  const callApi = useCall();
+  const { setCallParticipant } = callApi;
 
-  /* ── Realtime: new messages land here for both the sidebar and the
-   *    active conversation. ──────────────────────────────────── */
   const handleGlobalNewMessage = useCallback(
     (newMsg: any) => {
       const isActive = newMsg.conversation_id === activeConversationId;
@@ -128,7 +119,6 @@ export const MessagesPage: React.FC = () => {
 
   useRealtimeMessages(handleGlobalNewMessage);
 
-  /* ── Mark as read when active conversation changes ──────── */
   useEffect(() => {
     if (!activeConversationId || !socket) return;
     setDisplayConversations((prev) =>
@@ -354,6 +344,19 @@ export const MessagesPage: React.FC = () => {
     });
   }, [displayConversations, onlineUsers]);
 
+  /* ── Register call participants so CallOverlay / bubble /
+   *    notification can display name + avatar. ───────────── */
+  useEffect(() => {
+    conversationsWithPresence.forEach((c) => {
+      if (c.participant?.id) {
+        setCallParticipant(c.id, {
+          name: c.participant.name,
+          avatar: c.participant.avatar,
+        });
+      }
+    });
+  }, [conversationsWithPresence, setCallParticipant]);
+
   const activeConversation = useMemo(
     () =>
       conversationsWithPresence.find((c) => c.id === activeConversationId) ||
@@ -392,63 +395,42 @@ export const MessagesPage: React.FC = () => {
   }
 
   return (
-    <>
-      <div className="h-screen w-full flex overflow-hidden border-x border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-2xl">
-        <div
-          className={`${
-            activeConversationId ? 'hidden lg:block' : 'w-full'
-          } lg:w-auto h-full shrink-0 transition-all duration-300 ease-in-out`}
-        >
-          <ConversationList
-            conversations={conversationsWithPresence as any}
-            activeId={activeConversationId}
-            onSelectConversation={handleSelectConversation}
-          />
-        </div>
-        <div
-          className={`${
-            !activeConversationId ? 'hidden lg:flex' : 'flex'
-          } flex-1 h-full transition-all duration-300 ease-in-out`}
-        >
-          <ChatWindow
-            conversation={activeConversation as any}
-            messages={messages}
-            currentUserId={currentUserId}
-            onSendMessage={handleSendMessage}
-            onSendVoiceNote={handleSendVoiceNote}
-            onSendFile={handleSendFile}
-            onSendImage={handleSendImage}
-            uploading={isUploading}
-            uploadProgress={uploadProgress}
-            onBack={() => setActiveConversationId(null)}
-            onTypingChange={sendTyping}
-            typingUsers={typingUsers}
-            onCall={handleStartCall}
-            onVideoCall={handleStartVideoCall}
-            callDisabled={!!callApi.call}
-          />
-        </div>
+    <div className="h-screen w-full flex overflow-hidden border-x border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-2xl">
+      <div
+        className={`${
+          activeConversationId ? 'hidden lg:block' : 'w-full'
+        } lg:w-auto h-full shrink-0 transition-all duration-300 ease-in-out`}
+      >
+        <ConversationList
+          conversations={conversationsWithPresence as any}
+          activeId={activeConversationId}
+          onSelectConversation={handleSelectConversation}
+        />
       </div>
-
-      {/* Global call overlay — sits above everything */}
-      <CallOverlay
-        api={callApi}
-        otherUserName={
-          callApi.call
-            ? conversationsWithPresence.find(
-                (c) => c.id === callApi.call?.conversationId
-              )?.participant?.name
-            : undefined
-        }
-        otherUserAvatar={
-          callApi.call
-            ? conversationsWithPresence.find(
-                (c) => c.id === callApi.call?.conversationId
-              )?.participant?.avatar
-            : undefined
-        }
-      />
-    </>
+      <div
+        className={`${
+          !activeConversationId ? 'hidden lg:flex' : 'flex'
+        } flex-1 h-full transition-all duration-300 ease-in-out`}
+      >
+        <ChatWindow
+          conversation={activeConversation as any}
+          messages={messages}
+          currentUserId={currentUserId}
+          onSendMessage={handleSendMessage}
+          onSendVoiceNote={handleSendVoiceNote}
+          onSendFile={handleSendFile}
+          onSendImage={handleSendImage}
+          uploading={isUploading}
+          uploadProgress={uploadProgress}
+          onBack={() => setActiveConversationId(null)}
+          onTypingChange={sendTyping}
+          typingUsers={typingUsers}
+          onCall={handleStartCall}
+          onVideoCall={handleStartVideoCall}
+          callDisabled={!!callApi.call}
+        />
+      </div>
+    </div>
   );
 };
 

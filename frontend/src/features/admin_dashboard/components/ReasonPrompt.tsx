@@ -9,6 +9,7 @@ interface ReasonPromptProps {
   notesLabel?: string;
   onSubmit: (reason: string, notes?: string) => void | Promise<void>;
   onCancel: () => void;
+  extraField?: React.ReactNode;
 }
 
 const ReasonPrompt: React.FC<ReasonPromptProps> = ({
@@ -19,6 +20,7 @@ const ReasonPrompt: React.FC<ReasonPromptProps> = ({
   notesLabel = 'Notes (optional)',
   onSubmit,
   onCancel,
+  extraField,
 }) => {
   const [reason, setReason] = useState('');
   const [notes, setNotes] = useState('');
@@ -43,24 +45,24 @@ const ReasonPrompt: React.FC<ReasonPromptProps> = ({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-900 dark:border dark:border-slate-800">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">{title}</h3>
             {description && (
-              <p className="text-sm text-gray-500 mt-1 line-clamp-2">{description}</p>
+              <p className="text-sm text-gray-500 dark:text-slate-400 mt-1 line-clamp-2">{description}</p>
             )}
           </div>
           <button
             onClick={onCancel}
-            className="p-1 rounded-lg hover:bg-gray-100"
+            className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-500 dark:text-slate-400"
             aria-label="Close"
           >
             <X size={18} />
           </button>
         </div>
 
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
           Reason <span className="text-red-500">*</span>
         </label>
         <textarea
@@ -68,22 +70,24 @@ const ReasonPrompt: React.FC<ReasonPromptProps> = ({
           onChange={(e) => setReason(e.target.value)}
           rows={3}
           placeholder="Enter a reason (min 5 characters)..."
-          className="w-full rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
+          className="w-full rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:bg-slate-900"
         />
 
         {requireNotes && (
           <>
-            <label className="block text-sm font-medium text-gray-700 mt-3 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mt-3 mb-1">
               {notesLabel}
             </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
+              className="w-full rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm text-gray-900 outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:bg-slate-900"
             />
           </>
         )}
+
+        {extraField}
 
         {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
 
@@ -91,7 +95,7 @@ const ReasonPrompt: React.FC<ReasonPromptProps> = ({
           <button
             onClick={onCancel}
             disabled={submitting}
-            className="px-4 py-2 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+            className="px-4 py-2 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:text-slate-300 dark:hover:bg-slate-800"
           >
             Cancel
           </button>

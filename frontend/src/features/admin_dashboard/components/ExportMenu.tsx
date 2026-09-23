@@ -46,7 +46,7 @@ const ExportMenu: React.FC<ExportMenuProps> = ({ onExport, disabled }) => {
         type="button"
         onClick={() => setOpen((v) => !v)}
         disabled={disabled}
-        className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
       >
         <Download size={16} />
         <span className="hidden sm:inline">Export</span>
@@ -57,7 +57,7 @@ const ExportMenu: React.FC<ExportMenuProps> = ({ onExport, disabled }) => {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-30 mt-2 min-w-[210px] overflow-hidden rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl">
+        <div className="absolute right-0 top-full z-30 mt-2 min-w-[210px] overflow-hidden rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl dark:border-slate-800 dark:bg-slate-900">
           {items.map((item) => (
             <button
               key={item.key}
@@ -66,9 +66,9 @@ const ExportMenu: React.FC<ExportMenuProps> = ({ onExport, disabled }) => {
                 setOpen(false);
                 void onExport(item.key);
               }}
-              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50"
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 dark:text-slate-200 dark:hover:bg-slate-800"
             >
-              <span className="text-gray-500">{item.icon}</span>
+              <span className="text-gray-500 dark:text-slate-400">{item.icon}</span>
               {item.label}
             </button>
           ))}

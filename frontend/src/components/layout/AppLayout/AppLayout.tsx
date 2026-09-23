@@ -1,39 +1,12 @@
 // src/components/layout/AppLayout/AppLayout.tsx
-import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Header from '../Header/Header';
 import Sidebar from '../Sidebar/Sidebar';
 import MobileNavigation from '../MobileNavigation/MobileNavigation';
-
-const THEME_KEY = 'theme';
-
-function getInitialTheme(): boolean {
-  if (typeof window === 'undefined') return true; // SSR-safe default: dark
-  const stored = localStorage.getItem(THEME_KEY);
-  if (stored === 'dark') return true;
-  if (stored === 'light') return false;
-  // No stored preference → default dark
-  return true;
-}
+import { useTheme } from '../../../providers/ThemeProvider';
 
 export default function AppLayout() {
-  const [isDark, setIsDark] = useState<boolean>(getInitialTheme);
-
-  const toggleTheme = () => {
-    setIsDark((prev) => {
-      const nextTheme = !prev;
-      // Keep DOM + storage in lockstep with the inline bootstrap script
-      document.documentElement.classList.toggle('dark', nextTheme);
-      localStorage.setItem(THEME_KEY, nextTheme ? 'dark' : 'light');
-      return nextTheme;
-    });
-  };
-
-  useEffect(() => {
-    // Re-assert on mount in case anything desynced
-    document.documentElement.classList.toggle('dark', isDark);
-    localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
-  }, [isDark]);
+  const { isDark, toggleTheme } = useTheme();
 
   return (
     <div className="relative flex h-screen w-full flex-col overflow-hidden bg-[#f0f4f8] font-sans text-slate-900 transition-colors duration-300 selection:bg-blue-500 selection:text-white dark:bg-slate-950 dark:text-slate-100">
@@ -42,7 +15,6 @@ export default function AppLayout() {
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
       >
-        {/* Polygon geometry — same as AuthLayout / onboarding */}
         <div className="absolute inset-0 opacity-40 dark:opacity-25">
           <svg
             className="w-full h-full"
@@ -69,7 +41,6 @@ export default function AppLayout() {
           </svg>
         </div>
 
-        {/* Ambient glows */}
         <div className="absolute top-1/4 -left-32 w-96 h-96 bg-blue-400/30 dark:bg-blue-600/20 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-indigo-400/30 dark:bg-indigo-600/20 rounded-full blur-3xl" />
       </div>
