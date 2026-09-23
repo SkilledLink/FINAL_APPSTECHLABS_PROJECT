@@ -55,6 +55,7 @@ export const MessagesPage: React.FC = () => {
   const isUploading = voiceUploading || fileUploading;
   const currentUserId = normalizeId(user?.id);
 
+  // ── Presence + typing (single declaration each) ─────────
   const { onlineUsers } = usePresence(currentUserId);
   const { typingUsers, sendTyping } = useTyping(
     activeConversationId,
@@ -119,6 +120,7 @@ export const MessagesPage: React.FC = () => {
 
   useRealtimeMessages(handleGlobalNewMessage);
 
+  /* ── Mark as read when active conversation changes ──────── */
   useEffect(() => {
     if (!activeConversationId || !socket) return;
     setDisplayConversations((prev) =>
