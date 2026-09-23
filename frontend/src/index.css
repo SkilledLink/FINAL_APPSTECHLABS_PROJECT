@@ -3,22 +3,56 @@
 /* ═══════════ Tailwind v4 config ═══════════ */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ═══════════ Dynamic Light/Dark Variables ═══════════ */
+@layer base {
+  :root {
+    /* LIGHT MODE: Premium soft off-white to prevent eye strain (Zinc 50) */
+    --app-bg: #fafafa;
+    /* Crisp white for cards/surfaces floating on the background */
+    --app-surface: #ffffff;
+    /* Rich, soft black for text (Zinc 950) */
+    --app-text: #09090b;
+    /* Subtle borders */
+    --app-border: #e4e4e7;
+  }
+  
+  :root:is(.dark) {
+    /* DARK MODE: True OLED Black for depth and battery saving */
+    --app-bg: #000000;
+    /* Very subtle off-black for elevated cards/modals */
+    --app-surface: #0a0a0a;
+    /* Soft off-white for text to prevent blooming/halation */
+    --app-text: #ededed;
+    /* Barely visible borders to define edges */
+    --app-border: #27272a;
+  }
+
+  /* Automatically apply the best background and text colors to the whole app */
+  body {
+    background-color: var(--app-bg);
+    color: var(--app-text);
+  }
+}
+
 @theme {
+  /* Brand Colors */
   --color-primary: #4F46E5;
   --color-secondary: #64748B;
   --color-tertiary: #F59E0B;
+  
+  /* Expose our dynamic variables to Tailwind utility classes 
+     (e.g., bg-background, bg-surface, text-foreground) */
+  --color-background: var(--app-bg);
+  --color-surface: var(--app-surface);
+  --color-foreground: var(--app-text);
+  --color-border-subtle: var(--app-border);
 
-  /* Neutral is now true black */
+  /* Legacy overrides kept for your specific UI needs */
   --color-neutral: #000000;
-
-  /* ═══════════ True-black dark mode ═══════════
-     Override Tailwind's slate palette for the dark surface.
-       slate-950 → page background (pure black)
-       slate-900 → cards, panels, modals (near-black for contrast)
-     Everything else in the slate scale stays Tailwind default.  */
   --color-slate-950: #000000;
   --color-slate-900: #0a0a0a;
 
+  /* Typography */
   --font-sans: "Hanken Grotesk", sans-serif;
   --font-mono: "JetBrains Mono", monospace;
 }
@@ -29,15 +63,14 @@
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
-
 /* Hide scrollbar for IE, Edge and Firefox */
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
 
-/* ═══════════ Global scrollbar hide ═══════════ */
-/* Hides the scrollbar everywhere while keeping scroll functionality
+/* ═══════════ Global scrollbar hide ═══════════ 
+   Hides the scrollbar everywhere while keeping scroll functionality
    intact (wheel, trackpad, touch all still work). Matches the modern
    app convention used by Linear, Twitter, Notion, Vercel. */
 
@@ -45,19 +78,16 @@
 * {
   scrollbar-width: none;
 }
-
 /* IE / old Edge */
 * {
   -ms-overflow-style: none;
 }
-
 /* Chrome / Safari / new Edge */
 *::-webkit-scrollbar {
   display: none;
   width: 0;
   height: 0;
 }
-
 /* Belt-and-suspenders: explicitly target html and body since some
    browsers use separate scroll containers for the document root. */
 html,
@@ -65,7 +95,6 @@ body {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
-
 html::-webkit-scrollbar,
 body::-webkit-scrollbar {
   display: none;
@@ -78,7 +107,6 @@ body::-webkit-scrollbar {
   --filter-glass3d: blur(32px) brightness(0.85) saturate(2.5);
   --color-glass3d: hsl(189 80% 10% / 0.2);
   --noise-glass3d: url("https://www.transparenttextures.com/patterns/egg-shell.png");
-
   position: relative;
   z-index: 4;
   box-shadow:
@@ -99,7 +127,6 @@ body::-webkit-scrollbar {
   border-radius: inherit;
   overflow: hidden;
   z-index: 3;
-
   -webkit-backdrop-filter: var(--filter-glass3d);
   backdrop-filter: var(--filter-glass3d);
   background-color: var(--color-glass3d);
@@ -116,7 +143,6 @@ body::-webkit-scrollbar {
   border-radius: inherit;
   overflow: hidden;
   z-index: 5;
-
   box-shadow:
     inset 2px 2px 1px -3px hsl(205 20% 90% / 0.8),
     inset 4px 4px 2px -6px hsl(205 20% 90% / 0.3),
@@ -130,12 +156,11 @@ body::-webkit-scrollbar {
   z-index: 6;
 }
 
-/* Light-mode variant — original tokens are tuned for dark backgrounds.
-   Swaps to a brighter, more transparent pass so it doesn't read murky
-   on the #f0f4f8 layout background. Tune HSL to taste. */
+/* Light-mode variant updated to pair perfectly with the new #fafafa background.
+   Using a much cleaner, slightly frosted white approach. */
 :root:not(.dark) .glass3d {
-  --filter-glass3d: blur(28px) brightness(1.08) saturate(1.8);
-  --color-glass3d: hsl(205 60% 98% / 0.55);
+  --filter-glass3d: blur(28px) brightness(1.02) saturate(1.2);
+  --color-glass3d: rgba(255, 255, 255, 0.55);
 }
 
 /* ═══════════ Water motion ═══════════ */
@@ -153,7 +178,6 @@ body::-webkit-scrollbar {
   40%      { transform: translate3d(60px, 80px, 0) scale(1.08); }
   80%      { transform: translate3d(-70px, -40px, 0) scale(0.88); }
 }
-
 .animate-water-a { animation: water-drift-a 22s ease-in-out infinite; will-change: transform; }
 .animate-water-b { animation: water-drift-b 28s ease-in-out infinite; will-change: transform; }
 .animate-water-c { animation: water-drift-c 34s ease-in-out infinite; will-change: transform; }

@@ -28,13 +28,12 @@ interface ChatWindowProps {
   onReactMessage?: (messageId: string, emoji: string) => void;
   onTypingChange?: (isTyping: boolean) => void;
   typingUsers?: Record<string, boolean>;
-  // ── Calling ──────────────────────────────────────────
   onCall?: () => void;
   onVideoCall?: () => void;
   callDisabled?: boolean;
 }
 
-// ─── 🌌 Canvas Universe Animated Background (Dark Mode) ───
+// ─── 🌌 Refined canvas starfield (neutral slate tones) ───
 const UniverseBackground: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -58,15 +57,15 @@ const UniverseBackground: React.FC = () => {
     updateSize();
     window.addEventListener('resize', updateSize);
 
-    const starCount = 140;
+    const starCount = 120;
     const stars = Array.from({ length: starCount }, () => ({
       x: Math.random() * (width || 1000),
       y: Math.random() * (height || 1000),
-      size: Math.random() * 2 + 0.4,
-      alpha: Math.random(),
-      speed: Math.random() * 0.25 + 0.08,
-      twinkleSpeed: Math.random() * 0.02 + 0.005,
-      color: Math.random() > 0.7 ? '#93c5fd' : Math.random() > 0.4 ? '#c084fc' : '#ffffff',
+      size: Math.random() * 1.4 + 0.3,
+      alpha: Math.random() * 0.7 + 0.15,
+      speed: Math.random() * 0.15 + 0.04,
+      twinkleSpeed: Math.random() * 0.015 + 0.003,
+      color: Math.random() > 0.75 ? '#e2e8f0' : '#94a3b8',
     }));
 
     const render = () => {
@@ -81,12 +80,12 @@ const UniverseBackground: React.FC = () => {
         }
 
         star.alpha += star.twinkleSpeed;
-        if (star.alpha > 1 || star.alpha < 0.2) {
+        if (star.alpha > 1 || star.alpha < 0.1) {
           star.twinkleSpeed = -star.twinkleSpeed;
         }
 
         ctx.fillStyle = star.color;
-        ctx.globalAlpha = Math.abs(star.alpha);
+        ctx.globalAlpha = Math.abs(star.alpha) * 0.6;
         ctx.beginPath();
         ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
         ctx.fill();
@@ -107,31 +106,41 @@ const UniverseBackground: React.FC = () => {
     <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 hidden dark:block">
       <motion.div
         animate={{
-          scale: [1, 1.3, 1],
-          opacity: [0.35, 0.6, 0.35],
+          scale: [1, 1.25, 1],
+          opacity: [0.15, 0.28, 0.15],
           x: [0, 40, 0],
           y: [0, -30, 0],
         }}
-        transition={{ duration: 16, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute -top-32 -left-32 w-[30rem] h-[30rem] bg-gradient-to-tr from-indigo-600/40 via-purple-600/30 to-blue-500/10 rounded-full blur-3xl"
+        transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
+        className="absolute -top-32 -left-32 w-[32rem] h-[32rem] bg-gradient-to-tr from-slate-600/25 via-slate-700/15 to-transparent rounded-full blur-3xl"
       />
       <motion.div
         animate={{
           scale: [1.1, 1, 1.1],
-          opacity: [0.3, 0.55, 0.3],
+          opacity: [0.12, 0.24, 0.12],
           x: [0, -50, 0],
           y: [0, 40, 0],
         }}
-        transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
-        className="absolute top-1/2 -right-32 w-[32rem] h-[32rem] bg-gradient-to-bl from-blue-600/35 via-violet-600/30 to-cyan-500/10 rounded-full blur-3xl"
+        transition={{
+          duration: 22,
+          repeat: Infinity,
+          ease: 'easeInOut',
+          delay: 2,
+        }}
+        className="absolute top-1/2 -right-32 w-[34rem] h-[34rem] bg-gradient-to-bl from-slate-600/20 via-slate-700/12 to-transparent rounded-full blur-3xl"
       />
       <motion.div
         animate={{
-          scale: [1, 1.25, 1],
-          opacity: [0.25, 0.5, 0.25],
+          scale: [1, 1.2, 1],
+          opacity: [0.12, 0.22, 0.12],
         }}
-        transition={{ duration: 14, repeat: Infinity, ease: 'easeInOut', delay: 4 }}
-        className="absolute -bottom-40 left-1/3 w-[28rem] h-[28rem] bg-gradient-to-t from-fuchsia-600/30 via-indigo-600/20 to-transparent rounded-full blur-3xl"
+        transition={{
+          duration: 16,
+          repeat: Infinity,
+          ease: 'easeInOut',
+          delay: 4,
+        }}
+        className="absolute -bottom-40 left-1/3 w-[30rem] h-[30rem] bg-gradient-to-t from-slate-600/20 via-slate-700/12 to-transparent rounded-full blur-3xl"
       />
 
       <canvas ref={canvasRef} className="w-full h-full block opacity-100" />
@@ -139,12 +148,12 @@ const UniverseBackground: React.FC = () => {
   );
 };
 
-// ─── ☀️ Light Mode Ambient Glow ─────────────────────────────
+// ─── ☀️ Light mode ambient glow (neutral) ───────────────────
 const LightAmbientGlow: React.FC = () => (
   <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 dark:hidden">
-    <div className="absolute -top-24 -left-24 w-96 h-96 bg-gradient-to-br from-blue-400/20 via-indigo-300/15 to-transparent rounded-full blur-3xl" />
-    <div className="absolute top-1/3 -right-24 w-[30rem] h-[30rem] bg-gradient-to-bl from-sky-400/20 via-blue-200/15 to-transparent rounded-full blur-3xl" />
-    <div className="absolute -bottom-24 left-1/4 w-96 h-96 bg-gradient-to-t from-blue-500/15 via-sky-300/10 to-transparent rounded-full blur-3xl" />
+    <div className="absolute -top-32 -left-32 w-[26rem] h-[26rem] bg-gradient-to-br from-slate-200/50 via-slate-100/30 to-transparent rounded-full blur-3xl" />
+    <div className="absolute top-1/3 -right-32 w-[28rem] h-[28rem] bg-gradient-to-bl from-slate-200/40 via-slate-100/25 to-transparent rounded-full blur-3xl" />
+    <div className="absolute -bottom-32 left-1/4 w-[26rem] h-[26rem] bg-gradient-to-t from-slate-200/40 via-slate-100/20 to-transparent rounded-full blur-3xl" />
   </div>
 );
 
@@ -191,7 +200,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   const handleScroll = () => {
     if (!scrollContainerRef.current) return;
-    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+    const { scrollTop, scrollHeight, clientHeight } =
+      scrollContainerRef.current;
     const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
 
     if (distanceFromBottom > 60) {
@@ -204,7 +214,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const groupedMessages = messages.reduce((acc, msg, index) => {
     const prev = messages[index - 1];
     const isSameSender = prev && prev.sender_id === msg.sender_id;
-    const timeDiff = prev ? new Date(msg.created_at).getTime() - new Date(prev.created_at).getTime() : Infinity;
+    const timeDiff = prev
+      ? new Date(msg.created_at).getTime() -
+        new Date(prev.created_at).getTime()
+      : Infinity;
     const isSameGroup = isSameSender && timeDiff < 60000;
     if (isSameGroup) {
       acc[acc.length - 1].push(msg);
@@ -214,55 +227,68 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     return acc;
   }, [] as Message[][]);
 
-  const someoneIsTyping = !!typingUsers && Object.values(typingUsers).some(Boolean);
+  const someoneIsTyping =
+    !!typingUsers && Object.values(typingUsers).some(Boolean);
 
   // ── EMPTY WORKSPACE STATE ──
   if (!conversation) {
     return (
-      <div className="hidden lg:flex flex-1 flex-col items-center justify-center relative overflow-hidden bg-white dark:bg-slate-950 p-8 text-center select-none h-full">
+      <div className="hidden lg:flex flex-1 flex-col items-center justify-center relative overflow-hidden bg-transparent p-8 text-center select-none h-full">
         <LightAmbientGlow />
         <UniverseBackground />
 
         <motion.div
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          initial={{ opacity: 0, scale: 0.94, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-          className="relative z-10 flex flex-col items-center max-w-md p-8 rounded-3xl bg-white/80 dark:bg-slate-900/40 border border-blue-100/80 dark:border-slate-800/80 backdrop-blur-2xl shadow-xl shadow-blue-500/10 dark:shadow-indigo-950/40"
+          transition={{ type: 'spring', stiffness: 280, damping: 26 }}
+          className="relative z-10 flex flex-col items-center max-w-md p-10 rounded-[28px] bg-white/60 dark:bg-slate-900/40 border border-slate-200/70 dark:border-slate-800/70 backdrop-blur-2xl shadow-[0_24px_60px_-24px_rgba(15,23,42,0.15)] dark:shadow-[0_24px_60px_-24px_rgba(0,0,0,0.6)]"
         >
-          <div className="relative mb-6">
-            <div className="w-20 h-20 bg-blue-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-3xl flex items-center justify-center border border-blue-200/80 dark:border-indigo-500/30 shadow-lg shadow-blue-500/10 backdrop-blur-md">
+          <div className="relative mb-7">
+            <div className="w-20 h-20 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 text-slate-600 dark:text-slate-300 rounded-[22px] flex items-center justify-center border border-white/80 dark:border-slate-700/60 shadow-lg shadow-slate-900/5">
               <MessageSquare className="w-9 h-9 stroke-[1.5]" />
             </div>
             <motion.div
-              animate={{ rotate: [0, 15, -15, 0] }}
-              transition={{ repeat: Infinity, duration: 6, ease: 'easeInOut' }}
-              className="absolute -top-1.5 -right-1.5 p-2 bg-white dark:bg-slate-900 border border-blue-100 dark:border-slate-700/60 rounded-2xl shadow-md text-amber-500"
+              animate={{ rotate: [0, 12, -12, 0] }}
+              transition={{
+                repeat: Infinity,
+                duration: 6,
+                ease: 'easeInOut',
+              }}
+              className="absolute -top-1.5 -right-1.5 p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 rounded-2xl shadow-md text-amber-500"
             >
               <Sparkles className="w-4 h-4 fill-amber-400/20" />
             </motion.div>
           </div>
 
           <motion.h3
-            className="text-2xl font-black tracking-tight text-slate-900 dark:text-white mb-2"
+            className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white mb-2"
             animate={{ y: [0, -3, 0] }}
-            transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+            transition={{
+              repeat: Infinity,
+              duration: 3,
+              ease: 'easeInOut',
+            }}
           >
             Workspace Messages
           </motion.h3>
 
-          <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
-            Select a contact to start messaging, share media files, or exchange high-fidelity voice notes in real time.
+          <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-7 max-w-xs">
+            Select a contact to start messaging, share media files, or exchange
+            high-fidelity voice notes in real time.
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 dark:bg-slate-800/60 border border-blue-100/80 dark:border-slate-700/60 text-xs font-semibold text-slate-700 dark:text-slate-300 shadow-sm backdrop-blur-md">
-              <Lock className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" /> End-to-End Encrypted
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 text-[11px] font-semibold text-slate-700 dark:text-slate-300 shadow-sm backdrop-blur-md">
+              <Lock className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+              End-to-End Encrypted
             </span>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 dark:bg-slate-800/60 border border-blue-100/80 dark:border-slate-700/60 text-xs font-semibold text-slate-700 dark:text-slate-300 shadow-sm backdrop-blur-md">
-              <Users className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" /> Live Collaboration
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 text-[11px] font-semibold text-slate-700 dark:text-slate-300 shadow-sm backdrop-blur-md">
+              <Users className="w-3.5 h-3.5 text-emerald-500" />
+              Live Collaboration
             </span>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 dark:bg-slate-800/60 border border-blue-100/80 dark:border-slate-700/60 text-xs font-semibold text-slate-700 dark:text-slate-300 shadow-sm backdrop-blur-md">
-              <Compass className="w-3.5 h-3.5 text-cyan-500 dark:text-cyan-400" /> Dynamic Space
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 text-[11px] font-semibold text-slate-700 dark:text-slate-300 shadow-sm backdrop-blur-md">
+              <Compass className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+              Dynamic Space
             </span>
           </div>
         </motion.div>
@@ -272,11 +298,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   // ── ACTIVE CONVERSATION ──
   return (
-    <div className="flex flex-col h-[100dvh] lg:h-full max-h-[100dvh] lg:max-h-full w-full min-h-0 overflow-hidden bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 relative">
+    <div className="flex flex-col h-[100dvh] lg:h-full max-h-[100dvh] lg:max-h-full w-full min-h-0 overflow-hidden bg-transparent text-slate-900 dark:text-slate-100 relative">
       <LightAmbientGlow />
       <UniverseBackground />
 
-      <header className="flex-none shrink-0 w-full relative z-30 bg-white/95 dark:bg-slate-950/90 backdrop-blur-xl border-b border-blue-100/80 dark:border-slate-800/80 shadow-xs shadow-blue-500/5 pt-safe">
+      <header className="flex-none shrink-0 w-full relative z-30 bg-white/70 dark:bg-slate-950/60 backdrop-blur-2xl border-b border-slate-200/70 dark:border-slate-800/70 pt-safe shadow-[0_1px_0_0_rgba(15,23,42,0.02)]">
         <ChatHeader
           user={conversation.participant}
           onBack={onBack}
@@ -284,15 +310,19 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           onVideoCall={onVideoCall}
         />
 
-        <div className="flex items-center justify-center gap-2 py-1 px-4 bg-blue-50/50 dark:bg-indigo-950/40 border-t border-blue-100/60 dark:border-slate-800/40 text-[11px] font-semibold text-slate-500 dark:text-slate-400 backdrop-blur-sm">
+        <div className="flex items-center justify-center gap-2 py-1.5 px-4 bg-slate-50/60 dark:bg-slate-900/40 border-t border-slate-200/50 dark:border-slate-800/50 text-[11px] font-medium text-slate-500 dark:text-slate-400 backdrop-blur-sm">
           <motion.div
-            animate={{ scale: [1, 1.25, 1] }}
-            transition={{ repeat: Infinity, duration: 2.5, ease: 'easeInOut' }}
+            animate={{ scale: [1, 1.2, 1], opacity: [1, 0.7, 1] }}
+            transition={{
+              repeat: Infinity,
+              duration: 2.5,
+              ease: 'easeInOut',
+            }}
           >
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
           </motion.div>
-          <span>Encrypted session with</span>
-          <span className="text-slate-800 dark:text-slate-200 font-bold">
+          <span>End-to-end encrypted with</span>
+          <span className="text-slate-800 dark:text-slate-200 font-semibold">
             {conversation.participant?.name || 'User'}
           </span>
         </div>
@@ -301,7 +331,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       <main
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex-1 min-h-0 w-full overflow-y-auto p-4 sm:p-6 space-y-3 relative z-10 scroll-smooth scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-800 scrollbar-track-transparent"
+        className="flex-1 min-h-0 w-full overflow-y-auto px-4 sm:px-6 py-6 space-y-1 relative z-10 scroll-smooth scrollbar-thin scrollbar-thumb-slate-300/70 dark:scrollbar-thumb-slate-700/70 scrollbar-track-transparent"
         style={{ WebkitOverflowScrolling: 'touch' }}
       >
         <AnimatePresence initial={false} mode="popLayout">
@@ -311,11 +341,18 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             return (
               <motion.div
                 key={groupIndex}
-                initial={{ opacity: 0, y: 15 }}
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 30, delay: groupIndex * 0.02 }}
-                className={`flex flex-col ${isSender ? 'items-end' : 'items-start'} gap-1`}
+                exit={{ opacity: 0, scale: 0.96 }}
+                transition={{
+                  type: 'spring',
+                  stiffness: 380,
+                  damping: 30,
+                  delay: groupIndex * 0.015,
+                }}
+                className={`flex flex-col ${
+                  isSender ? 'items-end' : 'items-start'
+                } gap-1`}
               >
                 {group.map((msg, idx) => (
                   <MessageBubble
@@ -339,12 +376,21 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 6 }}
-              className="flex items-center gap-2 pl-2 pt-1"
+              className="flex items-center gap-2 pl-2 pt-2"
             >
-              <div className="flex items-center gap-1 px-3 py-2 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/60">
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+              <div className="flex items-center gap-1 px-3.5 py-2.5 rounded-full bg-white/80 dark:bg-slate-800/70 border border-slate-200/70 dark:border-slate-700/60 backdrop-blur-md shadow-sm">
+                <span
+                  className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce"
+                  style={{ animationDelay: '0ms' }}
+                />
+                <span
+                  className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce"
+                  style={{ animationDelay: '150ms' }}
+                />
+                <span
+                  className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce"
+                  style={{ animationDelay: '300ms' }}
+                />
               </div>
               <span className="text-xs italic text-slate-400 dark:text-slate-500">
                 {conversation.participant?.name || 'Someone'} is typing…
@@ -356,7 +402,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         <div ref={messagesEndRef} />
       </main>
 
-      <footer className="flex-none shrink-0 w-full relative z-30 bg-white/95 dark:bg-slate-950/90 backdrop-blur-xl border-t border-blue-100/80 dark:border-slate-800/80 pb-safe shadow-lg shadow-blue-500/5">
+      <footer className="flex-none shrink-0 w-full relative z-30 bg-white/70 dark:bg-slate-950/60 backdrop-blur-2xl border-t border-slate-200/70 dark:border-slate-800/70 pb-safe">
         <MessageInput
           onSendMessage={onSendMessage}
           onSendVoiceNote={onSendVoiceNote}

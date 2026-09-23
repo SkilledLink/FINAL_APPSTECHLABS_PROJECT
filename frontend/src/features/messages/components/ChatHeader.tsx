@@ -1,6 +1,16 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, Sparkles, MoreVertical, ArrowLeft, Phone, Video, Search, ShieldCheck, UserCheck } from 'lucide-react';
+import {
+  Mic,
+  Sparkles,
+  MoreVertical,
+  ArrowLeft,
+  Phone,
+  Video,
+  Search,
+  ShieldCheck,
+  UserCheck,
+} from 'lucide-react';
 import type { MessageUser } from '../types/message.types';
 
 interface ChatHeaderProps {
@@ -21,21 +31,21 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   const [showDropdown, setShowDropdown] = useState(false);
 
   return (
-    <div className="h-20 px-4 sm:px-6 border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl flex items-center justify-between shrink-0 z-20 transition-colors">
+    <div className="h-[72px] px-4 sm:px-6 flex items-center justify-between shrink-0 z-20 transition-colors">
       <div className="flex items-center gap-3 sm:gap-4 min-w-0">
         {onBack && (
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onBack}
-            className="lg:hidden p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition"
+            className="lg:hidden p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 rounded-xl transition"
           >
             <ArrowLeft className="w-5 h-5" />
           </motion.button>
         )}
 
         <div className="relative shrink-0">
-          <div className="p-0.5 rounded-full bg-gradient-to-tr from-blue-500 via-indigo-500 to-purple-500 shadow-xs">
+          <div className="p-[2px] rounded-full bg-gradient-to-tr from-slate-300 via-slate-400 to-slate-500 dark:from-slate-600 dark:via-slate-500 dark:to-slate-400">
             <img
               src={user.avatar || '/default-avatar.png'}
               alt={user.name}
@@ -43,24 +53,24 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
             />
           </div>
           {user.isOnline && (
-            <div className="absolute bottom-0 right-0 flex items-center justify-center">
-              <span className="absolute w-3.5 h-3.5 bg-emerald-500 rounded-full animate-ping opacity-75" />
-              <span className="relative w-3.5 h-3.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full shadow-xs" />
-            </div>
+            <span className="absolute bottom-0 right-0 flex items-center justify-center">
+              <span className="absolute w-3.5 h-3.5 bg-emerald-500 rounded-full animate-ping opacity-60" />
+              <span className="relative w-3 h-3 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full" />
+            </span>
           )}
         </div>
 
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <h3 className="font-extrabold text-base text-slate-900 dark:text-slate-100 tracking-tight truncate">
+            <h3 className="font-semibold text-[15px] text-slate-900 dark:text-slate-100 tracking-tight truncate">
               {user.name}
             </h3>
-            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-indigo-500/10 to-purple-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shrink-0">
-              <Sparkles className="w-2.5 h-2.5 text-amber-500" /> Pro
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0">
+              <Sparkles className="w-2.5 h-2.5" /> Pro
             </span>
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+          <div className="flex items-center gap-2 text-[11.5px] text-slate-500 dark:text-slate-400 mt-0.5">
             {user.isOnline ? (
               <span className="flex items-center gap-1.5 font-medium text-emerald-600 dark:text-emerald-400">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
@@ -71,7 +81,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
             )}
             {user.role && (
               <>
-                <span className="text-slate-300 dark:text-slate-700">•</span>
+                <span className="text-slate-300 dark:text-slate-700">·</span>
                 <span className="truncate hidden sm:inline font-medium text-slate-500 dark:text-slate-400">
                   {user.role}
                 </span>
@@ -81,10 +91,10 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         </div>
       </div>
 
-      <div className="flex items-center gap-1.5 sm:gap-2">
-        <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100/80 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 text-slate-600 dark:text-slate-300 text-xs font-semibold">
-          <Mic className="w-3.5 h-3.5 text-indigo-500" />
-          <span>Voice Memos Active</span>
+      <div className="flex items-center gap-1 sm:gap-1.5">
+        <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-slate-100/70 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 text-slate-600 dark:text-slate-300 text-[11px] font-semibold">
+          <Mic className="w-3 h-3 text-slate-500 dark:text-slate-400" />
+          <span>Voice Memos</span>
         </div>
 
         {onSearchMessages && (
@@ -92,9 +102,9 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onSearchMessages}
-            className="p-2.5 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition"
+            className="p-2.5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 rounded-xl transition"
           >
-            <Search className="w-4 h-4" />
+            <Search className="w-[18px] h-[18px]" strokeWidth={2} />
           </motion.button>
         )}
         {onCall && (
@@ -102,9 +112,9 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onCall}
-            className="p-2.5 text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition"
+            className="p-2.5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 rounded-xl transition"
           >
-            <Phone className="w-4 h-4" />
+            <Phone className="w-[18px] h-[18px]" strokeWidth={2} />
           </motion.button>
         )}
         {onVideoCall && (
@@ -112,9 +122,9 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onVideoCall}
-            className="p-2.5 text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition"
+            className="p-2.5 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 rounded-xl transition"
           >
-            <Video className="w-4 h-4" />
+            <Video className="w-[18px] h-[18px]" strokeWidth={2} />
           </motion.button>
         )}
 
@@ -123,35 +133,41 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setShowDropdown((prev) => !prev)}
-            className="p-2.5 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition"
+            className="p-2.5 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 rounded-xl transition"
           >
-            <MoreVertical className="w-4 h-4" />
+            <MoreVertical className="w-[18px] h-[18px]" strokeWidth={2} />
           </motion.button>
 
           <AnimatePresence>
             {showDropdown && (
               <>
-                <div className="fixed inset-0 z-30" onClick={() => setShowDropdown(false)} />
+                <div
+                  className="fixed inset-0 z-30"
+                  onClick={() => setShowDropdown(false)}
+                />
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95, y: -8 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: -8 }}
-                  className="absolute right-0 mt-2 w-48 py-1.5 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-xl z-40 text-xs font-medium text-slate-700 dark:text-slate-300"
+                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                  className="absolute right-0 mt-2 w-52 py-1.5 bg-white/95 dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-800 backdrop-blur-xl rounded-2xl shadow-[0_12px_32px_-12px_rgba(15,23,42,0.2)] z-40 text-[12.5px] font-medium text-slate-700 dark:text-slate-300"
                 >
                   <button
                     type="button"
-                    className="w-full px-3.5 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 transition"
+                    className="w-full px-3.5 py-2.5 text-left hover:bg-slate-100/80 dark:hover:bg-slate-800/80 flex items-center gap-2.5 transition rounded-xl mx-1"
+                    style={{ width: 'calc(100% - 8px)' }}
                     onClick={() => setShowDropdown(false)}
                   >
-                    <UserCheck className="w-3.5 h-3.5 text-slate-400" />
+                    <UserCheck className="w-4 h-4 text-slate-400" />
                     View Contact Details
                   </button>
                   <button
                     type="button"
-                    className="w-full px-3.5 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 transition"
+                    className="w-full px-3.5 py-2.5 text-left hover:bg-slate-100/80 dark:hover:bg-slate-800/80 flex items-center gap-2.5 transition rounded-xl mx-1"
+                    style={{ width: 'calc(100% - 8px)' }}
                     onClick={() => setShowDropdown(false)}
                   >
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                    <ShieldCheck className="w-4 h-4 text-emerald-500" />
                     Security & Encryption
                   </button>
                 </motion.div>

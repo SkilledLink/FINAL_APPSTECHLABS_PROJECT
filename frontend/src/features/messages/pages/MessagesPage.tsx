@@ -346,8 +346,7 @@ export const MessagesPage: React.FC = () => {
     });
   }, [displayConversations, onlineUsers]);
 
-  /* ── Register call participants so CallOverlay / bubble /
-   *    notification can display name + avatar. ───────────── */
+  /* ── Register call participants ─────────────────────────── */
   useEffect(() => {
     conversationsWithPresence.forEach((c) => {
       if (c.participant?.id) {
@@ -387,17 +386,29 @@ export const MessagesPage: React.FC = () => {
 
   if (authLoading || convLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        Loading conversations...
+      <div className="flex items-center justify-center h-screen bg-transparent">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 rounded-full border-2 border-slate-300 border-t-slate-800 dark:border-slate-700 dark:border-t-slate-200 animate-spin" />
+          <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
+            Loading conversations…
+          </span>
+        </div>
       </div>
     );
   }
+
   if (convError) {
-    return <div className="text-red-500 p-4">Error: {convError}</div>;
+    return (
+      <div className="flex items-center justify-center h-screen bg-transparent">
+        <div className="rounded-2xl border border-rose-200/60 dark:border-rose-900/40 bg-rose-50/70 dark:bg-rose-950/30 px-6 py-4 text-sm font-medium text-rose-600 dark:text-rose-400 backdrop-blur-xl">
+          Error: {convError}
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="h-screen w-full flex overflow-hidden border-x border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-2xl">
+    <div className="h-screen w-full flex overflow-hidden bg-transparent">
       <div
         className={`${
           activeConversationId ? 'hidden lg:block' : 'w-full'
