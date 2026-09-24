@@ -1,7 +1,9 @@
 # app/core/config.py
 
 from pathlib import Path
+from typing import Optional
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -14,7 +16,24 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    DATABASE_URL: str
+    # ── Database ────────────────────────────────────────────
+    # Two ways to configure (pick one):
+    #
+    #   A) Set DATABASE_URL directly (must be a fully-formed,
+    #      properly URL-encoded Postgres URL).
+    #
+    #   B) Set the individual DB_* fields below. The validator
+    #      will assemble DATABASE_URL from them, no encoding
+    #      needed — session.py re-parses via URL.create().
+    #
+    # If both are provided, DATABASE_URL wins.
+    DATABASE_URL: Optional[str] = None
+
+    DB_USER: Optional[str] = None
+    DB_PASSWORD: Optional[str] = None
+    DB_HOST: Optional[str] = None
+    DB_PORT: int = 5432
+    DB_NAME: Optional[str] = None
 
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
@@ -36,7 +55,7 @@ class Settings(BaseSettings):
     CLOUDINARY_API_KEY: str
     CLOUDINARY_API_SECRET: str
 
-        # ── Didit KYC ────────────────────────────────────────────
+    # ── Didit KYC ────────────────────────────────────────────
     DIDIT_API_KEY: str
     DIDIT_WEBHOOK_SECRET: str
     DIDIT_WORKFLOW_ID: str = "9245dbac-f2de-4f75-8b19-5a35fa43e416"
@@ -48,10 +67,7 @@ class Settings(BaseSettings):
     )
     DIDIT_TIMEOUT_SECONDS: float = 30.0
 
-    # Browser redirect target after Didit finishes (frontend route).
     DIDIT_REDIRECT_URL: str = "http://localhost:5173/verify/complete"
-
-    # Public webhook URL (used only for logging / doc).
     DIDIT_WEBHOOK_URL: str = ""
 
     DIDIT_SESSION_MAX_ATTEMPTS: int = 3
@@ -105,7 +121,6 @@ class Settings(BaseSettings):
     AI_RETRY_BACKOFF_SECONDS: float = 0.5
 
     # ── AI — per subscription tier ──────────────────────────
-    # Level 2 (AI Professional) → Groq
     AI_TIER_2_PROVIDER: str = "groq"
     AI_TIER_2_API_KEY: str = ""
     AI_TIER_2_MODEL: str = "openai/gpt-oss-120b"
@@ -114,9 +129,6 @@ class Settings(BaseSettings):
     AI_TIER_2_TEMPERATURE: float = 0.4
     AI_TIER_2_TIMEOUT_SECONDS: float = 15.0
 
-    # Level 3 (AI Professional Plus) → Gemini
-    # Primary model is a Lite Flash (better availability than full Flash).
-    # Fallbacks are tried in order if the primary returns 503/5xx.
     AI_TIER_3_PROVIDER: str = "gemini"
     AI_TIER_3_API_KEY: str = ""
     AI_TIER_3_MODEL: str = "models/gemini-3.5-flash-lite"
@@ -131,8 +143,6 @@ class Settings(BaseSettings):
     AI_TIER_3_MAX_TOKENS: int = 3000
     AI_TIER_3_TEMPERATURE: float = 0.4
     AI_TIER_3_TIMEOUT_SECONDS: float = 30.0
-
-    # Vision model for Level 3 image analysis
     AI_TIER_3_VISION_MODEL: str = "models/gemini-3.5-flash-lite"
 
     # ── Chat flags ──────────────────────────────────────────
@@ -173,6 +183,7 @@ class Settings(BaseSettings):
     SOCKET_CORS_ORIGINS: str = "http://localhost:5173"
     SOCKET_PATH: str = "socket.io"
 
+    # ── MoMo ────────────────────────────────────────────────
     MOMO_BASE_URL: str = "https://sandbox.momodeveloper.mtn.com"
     MOMO_TARGET_ENV: str = "sandbox"
     MOMO_CURRENCY: str = "EUR"
@@ -185,8 +196,45 @@ class Settings(BaseSettings):
     MOMO_WEBHOOK_SECRET: str = ""
     MOMO_COUNTRY: str = "CM"
 
-    # Which provider the service layer instantiates
     PAYMENT_PROVIDER: str = "mock"
+
+    # ──────────────────────────────────────────────────────────
+    # Validators
+    # ──────────────────────────────────────────────────────────
+    @model_validator(mode="after")
+    def _assemble_database_url(self):
+        """
+        Build DATABASE_URL from DB_* fields if it wasn't set directly.
+
+        We do NOT percent-encode here. session.py rebuilds the URL
+        via URL.create(), so raw special characters (%, @, :, #, $)
+        in the password survive the round-trip intact.
+        """
+        if self.DATABASE_URL:
+            return self
+
+        missing = [
+            name
+            for name, value in (
+                ("DB_USER", self.DB_USER),
+                ("DB_PASSWORD", self.DB_PASSWORD),
+                ("DB_HOST", self.DB_HOST),
+                ("DB_NAME", self.DB_NAME),
+            )
+            if not value
+        ]
+        if missing:
+            raise ValueError(
+                "Database configuration incomplete. Set DATABASE_URL, "
+                f"or all of DB_USER / DB_PASSWORD / DB_HOST / DB_NAME. "
+                f"Missing: {', '.join(missing)}"
+            )
+
+        self.DATABASE_URL = (
+            f"postgresql+psycopg://{self.DB_USER}:{self.DB_PASSWORD}"
+            f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        )
+        return self
 
 
 settings = Settings()
