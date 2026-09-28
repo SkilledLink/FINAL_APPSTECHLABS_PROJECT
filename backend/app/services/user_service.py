@@ -1,6 +1,6 @@
 # app/services/user_service.py
 
-from uuid import UUID
+from uuid import UUID, uuid4
 from typing import Optional
 
 from fastapi import HTTPException, UploadFile
@@ -21,10 +21,6 @@ class UserService:
 
     # ─── GET USER MODEL (plain User, for internal use) ──────────
     def get_user_model_by_id(self, user_id: UUID) -> User:
-        """
-        Fetch a plain User object (not a UserResponse).
-        Used internally by other services (e.g., ConversationService).
-        """
         user = self.repo.get_by_id(user_id)
         if not user:
             raise HTTPException(404, "User not found")
@@ -57,21 +53,12 @@ class UserService:
             size=limit,
         )
 
-    # ─── GET USER BY ID (public read, private fields stripped) ─
+    # ─── GET USER BY ID ─────────────────────────────────────────
     def get_user_by_id(self, user_id: UUID, current_user: User) -> UserResponse:
-        """
-        Fetch any user's profile.
-
-        • Any authenticated user may read another user's public profile.
-        • Soft‑deleted accounts are surfaced as 404 (do not leak that they exist).
-        • Private fields (email, is_admin, is_moderator, is_email_verified)
-          are only visible to the owner and to admins.
-        """
         user = self.repo.get_by_id(user_id)
         if not user:
             raise HTTPException(404, "User not found")
 
-        # Treat deactivated / soft-deleted users as gone.
         if getattr(user, "deleted_at", None) is not None:
             raise HTTPException(404, "User not found")
 
@@ -81,9 +68,6 @@ class UserService:
         response = self._build_user_response(user, current_user)
 
         if not (is_self or is_admin):
-            # Strip fields the viewer shouldn't see.
-            # If any of these are required in your UserResponse schema,
-            # make them Optional first — see note below.
             response.email = None
             response.is_email_verified = False
             response.is_admin = False
@@ -97,7 +81,6 @@ class UserService:
         followers_count = self.follow_repo.get_follow_count(user.id, "followers")
         following_count = self.follow_repo.get_follow_count(user.id, "following")
 
-        # Don't ask "do I follow myself?" — it's meaningless and hits the DB.
         if current_user.id == user.id:
             is_following = False
         else:
@@ -135,10 +118,13 @@ class UserService:
     # ─── UPLOAD PROFILE IMAGE ──────────────────────────────────
     def upload_profile_image(self, user: User, file: UploadFile) -> User:
         storage = StorageService()
+        # Unique public_id → new URL each time → no Cloudinary
+        # "overwrite=false" collision, no browser/CDN caching issues.
+        unique = uuid4().hex[:12]
         url = storage.upload_image(
             file,
             folder=f"users/{user.id}/profile",
-            public_id="avatar",
+            public_id=f"avatar_{unique}",
         )
         user.profile_image_url = url
         self.repo.update(user, {"profile_image_url": url})
@@ -147,10 +133,11 @@ class UserService:
     # ─── UPLOAD BANNER IMAGE ────────────────────────────────────
     def upload_banner_image(self, user: User, file: UploadFile) -> User:
         storage = StorageService()
+        unique = uuid4().hex[:12]
         url = storage.upload_image(
             file,
             folder=f"users/{user.id}/banner",
-            public_id="banner",
+            public_id=f"banner_{unique}",
         )
         user.banner_image_url = url
         self.repo.update(user, {"banner_image_url": url})

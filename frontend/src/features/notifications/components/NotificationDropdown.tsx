@@ -1,16 +1,17 @@
 // src/features/notifications/components/NotificationDropdown.tsx
 
+import type { CSSProperties } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CheckCheck, ExternalLink } from 'lucide-react';
 
 import { useNotifications } from '../hooks/useNotifications';
 import { NotificationList } from './NotificationList';
-import { getNamespace } from '../services/notificationService';
 import type { NotificationDTO } from '../types/notification.types';
 
 interface Props {
   onClose: () => void;
+  style?: CSSProperties;
 }
 
 function resolveTarget(n: NotificationDTO): string | null {
@@ -39,7 +40,7 @@ function resolveTarget(n: NotificationDTO): string | null {
   return null;
 }
 
-export function NotificationDropdown({ onClose }: Props) {
+export function NotificationDropdown({ onClose, style }: Props) {
   const {
     notifications,
     unreadCount,
@@ -51,7 +52,6 @@ export function NotificationDropdown({ onClose }: Props) {
   const navigate = useNavigate();
 
   const items = notifications.slice(0, 6);
-  const ns = items[0] ? getNamespace(items[0].type) : null;
 
   const handleItemClick = (n: NotificationDTO) => {
     if (!n.read_at) void markAsRead(n.id);
@@ -64,13 +64,16 @@ export function NotificationDropdown({ onClose }: Props) {
 
   return (
     <motion.div
+      data-notification-dropdown
       initial={{ opacity: 0, y: -6, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -6, scale: 0.98 }}
       transition={{ duration: 0.15 }}
-      className="absolute right-0 top-full mt-2 z-[9998] w-[min(92vw,420px)] overflow-hidden rounded-2xl border border-white/60 dark:border-white/10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl shadow-2xl shadow-slate-900/10 dark:shadow-black/40"
+      style={style}
+      className="fixed z-[99999] w-[min(92vw,420px)] overflow-hidden rounded-2xl border border-white/60 dark:border-white/10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl shadow-2xl shadow-slate-900/10 dark:shadow-black/40"
       role="dialog"
       aria-label="Notifications"
+      onClick={(e) => e.stopPropagation()}
     >
       {/* Header */}
       <div className="flex items-center justify-between border-b border-slate-200/70 dark:border-slate-800/70 px-4 py-3">

@@ -1,110 +1,121 @@
-import { AnimatePresence, useReducedMotion } from "framer-motion";
-import { useEffect, useLayoutEffect, useState } from "react";
-import ContactSection from "../components/ContactSection";
-import FAQ from "../components/FAQ";
-import FinalCTA from "../components/FinalCTA";
-import Footer from "../components/Footer";
-import Hero from "../components/Hero";
-import Loader from "../components/Loader";
-import Navbar from "../components/Navbar";
-import PricingSection from "../components/PricingSection";
-import ProfessionalShowcase from "../components/ProfessionalShowcase";
-import ScrollProgress from "../components/ScrollProgress";
-import Testimonials from "../components/Testimonials";
-import TradeShowcase from "../components/TradeShowcase";
-import WorkGallery from "../components/WorkGallery";
-import { globalStyles } from "../styles";
+// src/features/landing/pages/LandingPage.tsx
 
-const SECTION_IDS = [
-  "trades",
-  "professionals",
-  "work",
-  "pricing",
-  "testimonials",
-  "faq",
-  "contact",
-] as const;
+import React from "react";
 
-export default function Landing() {
-  const prefersReduced = useReducedMotion();
-  const [loading, setLoading] = useState(true);
-  const [activeNav, setActiveNav] = useState<string>("trades");
+import TopNav from "../../../features/landing/components/TopNav";
+import HeroSplit from "../../../features/landing/components/HeroSplit";
+import TradesMarquee from "../../../features/landing/components/TradesMarquee";
+import FeaturedPros from "../../../features/landing/components/FeaturedProps";
+import StatsGrid from "../../../features/landing/components/StatsGrids";
+import TestimonialSlider from "../../../features/landing/components/TestimonialSlider";
+import ContactSection from "../../../features/landing/components/ContactSection";
+import CTABanner from "../../../features/landing/components/CTABanner";
+import SideFooter from "../../../features/landing/components/SideFooter";
+import FAQSection from "../../../features/landing/components/FAQSection";
 
-  useLayoutEffect(() => {
-    if (window.location.hash) {
-      window.history.replaceState(
-        null,
-        "",
-        window.location.pathname + window.location.search
-      );
-    }
-    if ("scrollRestoration" in window.history) {
-      window.history.scrollRestoration = "manual";
-    }
-    window.scrollTo(0, 0);
-  }, []);
-
-  useEffect(() => {
-    if (prefersReduced) {
-      setLoading(false);
-      return;
-    }
-    const t = window.setTimeout(() => setLoading(false), 850);
-    return () => window.clearTimeout(t);
-  }, [prefersReduced]);
-
-  useEffect(() => {
-    if (!loading) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [loading]);
-
-  useEffect(() => {
-    const sections = SECTION_IDS.map((id) =>
-      document.getElementById(id)
-    ).filter((el): el is HTMLElement => Boolean(el));
-    if (sections.length === 0) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
-        if (visible[0]?.target.id) setActiveNav(visible[0].target.id);
-      },
-      { rootMargin: "-40% 0px -50% 0px", threshold: [0, 0.25, 0.5, 1] }
-    );
-
-    sections.forEach((s) => observer.observe(s));
-    return () => observer.disconnect();
-  }, []);
-
+const LandingPage: React.FC = () => {
   return (
-    <div className="skilled-page">
-      <style>{globalStyles}</style>
+    <div className="relative min-h-screen overflow-x-hidden bg-[#f4f7fb] dark:bg-[#04070e] text-[#0F172A] dark:text-slate-100 transition-colors duration-500">
 
-      <AnimatePresence>{loading && <Loader key="loader" />}</AnimatePresence>
+      {/* =========================================================
+          BACKGROUND SYSTEM · layered atmosphere (matches AuthLayout)
+          Fixed so it stays behind content as you scroll — parallax feel.
+      ========================================================== */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
 
-      <ScrollProgress />
+        {/* 1 · Base vertical wash */}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-blue-500/[0.03] dark:to-blue-500/[0.05]" />
 
-      <Navbar activeNav={activeNav} onNavigate={setActiveNav} />
+        {/* 2 · Primary light source — top-left */}
+        <div className="absolute -top-[42%] -left-[22%] w-[1200px] h-[1200px] rounded-full bg-blue-400/[0.12] dark:bg-blue-600/[0.14] blur-[180px]" />
 
-      <main className="relative z-0 isolate">
-        <Hero ready={!loading} />
-        <TradeShowcase />
-        <ProfessionalShowcase />
-        <WorkGallery />
-        <PricingSection />
-        <Testimonials />
-        <FAQ />
-        <ContactSection />
-        <FinalCTA />
-      </main>
+        {/* 3 · Counterweight — bottom-right */}
+        <div className="absolute -bottom-[42%] -right-[22%] w-[1000px] h-[1000px] rounded-full bg-indigo-300/[0.10] dark:bg-indigo-700/[0.10] blur-[180px]" />
 
-      <Footer />
+        {/* 4 · Precision grid — radial-masked so it fades in from nothing */}
+        <div
+          className="absolute inset-0"
+          style={{
+            maskImage:
+              "radial-gradient(ellipse 75% 70% at 50% 45%, black 15%, transparent 80%)",
+            WebkitMaskImage:
+              "radial-gradient(ellipse 75% 70% at 50% 45%, black 15%, transparent 80%)",
+          }}
+        >
+          <svg
+            className="w-full h-full text-slate-900/[0.05] dark:text-white/[0.045]"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <defs>
+              <pattern id="landing-grid" width="56" height="56" patternUnits="userSpaceOnUse">
+                <path d="M 56 0 L 0 0 0 56" fill="none" stroke="currentColor" strokeWidth="0.5" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#landing-grid)" />
+          </svg>
+        </div>
+
+        {/* 5 · Film grain — the premium texture */}
+        <svg
+          className="absolute inset-0 w-full h-full opacity-[0.16] dark:opacity-[0.26] mix-blend-overlay"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            <filter id="landing-noise">
+              <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="4" stitchTiles="stitch" />
+              <feColorMatrix type="saturate" values="0" />
+            </filter>
+          </defs>
+          <rect width="100%" height="100%" filter="url(#landing-noise)" />
+        </svg>
+
+        {/* 6 · Deep vignette — cinematic focus */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_70%_at_50%_45%,transparent_40%,rgba(15,23,42,0.06)_100%)] dark:bg-[radial-gradient(ellipse_75%_65%_at_50%_45%,transparent_35%,rgba(0,0,0,0.45)_100%)]" />
+
+        {/* 7 · Top hairline — architectural frame */}
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-slate-900/[0.06] dark:via-white/[0.06] to-transparent" />
+      </div>
+
+      {/* =========================================================
+          CONTENT · above the background layers
+      ========================================================== */}
+      <div className="relative z-10">
+
+        {/* NAVBAR */}
+        <TopNav />
+
+        <main>
+
+          {/* HERO */}
+          <HeroSplit />
+
+          {/* TRADES */}
+          <TradesMarquee />
+
+          {/* PROFESSIONALS */}
+          <FeaturedPros />
+
+          {/* THE PROBLEM / NEED WORK */}
+          <StatsGrid />
+
+          {/* TESTIMONIALS */}
+          <TestimonialSlider />
+          <FAQSection />
+
+          {/* CONTACT */}
+          <ContactSection />
+
+          {/* FINAL CTA */}
+          <CTABanner />
+
+        </main>
+
+        {/* FOOTER */}
+        <SideFooter />
+
+      </div>
     </div>
   );
-}
+};
+
+export default LandingPage;

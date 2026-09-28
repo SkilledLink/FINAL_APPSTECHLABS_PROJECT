@@ -65,21 +65,18 @@ class FeedRepository:
         """
         List feeds for the FEED LIST view.
 
-        Loads:  user  +  media
-        Omits:  comments and replies — the list card only needs a count,
-                and loading the whole comment tree per feed is the #1
-                source of slowness. Use bulk_comment_counts() instead.
-
-        Uses a constant number of SQL queries regardless of page size.
+        Loads:  user  +  media  +  comments (with authors + replies)
+        The list card renders comments inline, so we eager-load them
+        here. Counts are still fetched in bulk via bulk_comment_counts()
+        to keep aggregate queries cheap.
         """
         stmt = (
             select(Feed)
             .options(
                 selectinload(Feed.user),
                 selectinload(Feed.media),
-                # ⚠️ Deliberately NOT loading comments/replies here.
-                #    The card only needs the count, which comes from
-                #    bulk_comment_counts() — a single tiny GROUP BY.
+                selectinload(Feed.comments).selectinload(FeedComment.user),
+                selectinload(Feed.comments).selectinload(FeedComment.replies),
             )
         )
         if not include_deleted:

@@ -23,3 +23,5 @@ class ContactMessageRead(BaseModel):
 
 class ContactMessageReply(BaseModel):
     reply: str = Field(min_length=1, max_length=5000)
+
+    

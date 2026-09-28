@@ -16,14 +16,12 @@ export type CallState =
 export interface ActiveCall {
   callId: string;
   conversationId: string;
-  /** The OTHER user's id (never your own). */
   otherUserId: string;
   media: CallMedia;
   state: CallState;
   isCaller: boolean;
 }
 
-/** Public STUN servers. Add a TURN server for production. */
 const ICE_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
@@ -41,10 +39,10 @@ export function useWebRTCCall(socket: Socket | null) {
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteStreamRef = useRef<MediaStream | null>(null);
   const pendingIceRef = useRef<RTCIceCandidateInit[]>([]);
+  const pendingOffersRef = useRef<Record<string, RTCSessionDescriptionInit>>({});
   const currentCallIdRef = useRef<string | null>(null);
   const callRef = useRef<ActiveCall | null>(null);
 
-  // Keep a ref so socket handlers can read state without re-subscribing
   useEffect(() => {
     callRef.current = call;
   }, [call]);
@@ -57,6 +55,7 @@ export function useWebRTCCall(socket: Socket | null) {
     }
     pcRef.current = null;
     pendingIceRef.current = [];
+    pendingOffersRef.current = {};
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     localStreamRef.current = null;
     remoteStreamRef.current = null;
@@ -93,9 +92,6 @@ export function useWebRTCCall(socket: Socket | null) {
         }
       };
 
-      // Use the browser-provided stream directly. Creating an empty
-      // MediaStream and adding tracks to it produces a reference that
-      // never changes, so React never sees the remote video arrive.
       pc.ontrack = (e) => {
         const stream = e.streams[0];
         if (stream) {
@@ -128,7 +124,7 @@ export function useWebRTCCall(socket: Socket | null) {
     [socket]
   );
 
-  // ── Caller: initiate ────────────────────────────────────
+  /* ── Caller: initiate ──────────────────────────────────── */
   const startCall = useCallback(
     async (
       conversationId: string,
@@ -169,7 +165,6 @@ export function useWebRTCCall(socket: Socket | null) {
         const callId: string = ack.data.call_id;
 
         const pc = buildPeer(callId, calleeId);
-        // Attach local audio + video tracks so the callee can see/hear us.
         stream.getTracks().forEach((t) => pc.addTrack(t, stream));
 
         setCall({
@@ -191,7 +186,7 @@ export function useWebRTCCall(socket: Socket | null) {
     [socket, getLocalMedia, buildPeer]
   );
 
-  // ── Callee: accept ──────────────────────────────────────
+  /* ── Callee: accept ────────────────────────────────────── */
   const acceptCall = useCallback(async (): Promise<void> => {
     const current = callRef.current;
     if (!socket || !current || current.isCaller) return;
@@ -199,6 +194,13 @@ export function useWebRTCCall(socket: Socket | null) {
 
     try {
       const stream = await getLocalMedia(current.media);
+
+      // CRITICAL: build the peer and attach local tracks BEFORE emitting
+      // CALL_ACCEPT. Otherwise the caller's WEBRTC_OFFER can arrive before
+      // pcRef.current is set, and onOffer() silently drops it — leaving
+      // the call stuck at "Connecting…".
+      const pc = buildPeer(current.callId, current.otherUserId);
+      stream.getTracks().forEach((t) => pc.addTrack(t, stream));
 
       const ack: any = await new Promise((resolve) =>
         socket.emit(
@@ -209,21 +211,37 @@ export function useWebRTCCall(socket: Socket | null) {
       );
 
       if (!ack?.success) {
-        stream.getTracks().forEach((t) => t.stop());
-        localStreamRef.current = null;
-        setLocalStream(null);
+        cleanupPeer();
         setError(ack?.error?.message ?? 'Could not accept the call.');
         return;
       }
 
-      const pc = buildPeer(current.callId, current.otherUserId);
-      // ── THE FIX ─────────────────────────────────────────
-      // Attach local audio + video tracks so the caller can see/hear us.
-      // Without this, the callee was sending no media, so the caller
-      // only ever saw their own local preview.
-      stream.getTracks().forEach((t) => pc.addTrack(t, stream));
-
       setCall((c) => (c ? { ...c, state: 'connecting' } : c));
+
+      // Drain any offer that raced in before buildPeer finished.
+      const buffered = pendingOffersRef.current[current.callId];
+      if (buffered) {
+        delete pendingOffersRef.current[current.callId];
+        try {
+          await pc.setRemoteDescription(buffered);
+          for (const c of pendingIceRef.current) {
+            try {
+              await pc.addIceCandidate(c);
+            } catch {
+              /* ignore */
+            }
+          }
+          pendingIceRef.current = [];
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          socket.emit(SocketEvents.WEBRTC_ANSWER, {
+            call_id: current.callId,
+            sdp: answer,
+          });
+        } catch {
+          setError('Failed to negotiate WebRTC offer.');
+        }
+      }
     } catch (e: any) {
       setError(
         e?.name === 'NotAllowedError'
@@ -231,9 +249,9 @@ export function useWebRTCCall(socket: Socket | null) {
           : e?.message ?? 'Could not accept the call.'
       );
     }
-  }, [socket, getLocalMedia, buildPeer]);
+  }, [socket, getLocalMedia, buildPeer, cleanupPeer]);
 
-  // ── Callee: reject ──────────────────────────────────────
+  /* ── Callee: reject ────────────────────────────────────── */
   const rejectCall = useCallback((): void => {
     const current = callRef.current;
     if (!socket || !current) return;
@@ -242,7 +260,7 @@ export function useWebRTCCall(socket: Socket | null) {
     setCall(null);
   }, [socket, cleanupPeer]);
 
-  // ── Either: end ─────────────────────────────────────────
+  /* ── Either: end ───────────────────────────────────────── */
   const endCall = useCallback(
     (reason = 'HANGUP'): void => {
       const current = callRef.current;
@@ -275,7 +293,7 @@ export function useWebRTCCall(socket: Socket | null) {
     setCameraOff((c) => !c);
   }, []);
 
-  // ── Socket subscriptions ────────────────────────────────
+  /* ── Socket subscriptions ──────────────────────────────── */
   useEffect(() => {
     if (!socket) return;
 
@@ -285,7 +303,6 @@ export function useWebRTCCall(socket: Socket | null) {
       caller_id: string;
       media: CallMedia;
     }) => {
-      // Reject silently if already in a call
       if (callRef.current) {
         socket.emit(SocketEvents.CALL_REJECT, { call_id: p.call_id });
         return;
@@ -330,7 +347,11 @@ export function useWebRTCCall(socket: Socket | null) {
       sdp: RTCSessionDescriptionInit;
     }) => {
       const pc = pcRef.current;
-      if (!pc || currentCallIdRef.current !== call_id) return;
+      if (!pc || currentCallIdRef.current !== call_id) {
+        // Peer not ready yet — buffer the offer so acceptCall can drain it.
+        pendingOffersRef.current[call_id] = sdp;
+        return;
+      }
       await pc.setRemoteDescription(sdp);
       for (const c of pendingIceRef.current) {
         try {

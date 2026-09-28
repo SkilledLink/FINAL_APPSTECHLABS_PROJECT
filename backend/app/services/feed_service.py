@@ -35,9 +35,6 @@ logger = getLogger(__name__)
 
 
 # ─── Cloudinary thumbnail transforms ───────────────────────
-# Inserted between /upload/ and the version segment of the URL.
-# 400px square, auto format (WebP/AVIF where supported), auto quality.
-# Video adds so_0.1 — capture the frame at 0.1s.
 _CLOUDINARY_IMAGE_TRANSFORM = "c_fill,f_auto,h_400,q_auto,w_400"
 _CLOUDINARY_VIDEO_TRANSFORM = "c_fill,f_auto,h_400,q_auto,so_0.1,w_400"
 
@@ -58,17 +55,11 @@ class FeedService:
 
     def _ensure_feed_viewable(self, feed: Feed, user: User) -> None:
         if not self._can_view_feed(feed, user):
-            raise HTTPException(
-                status_code=404,
-                detail="Feed not found",
-            )
+            raise HTTPException(status_code=404, detail="Feed not found")
 
     def _ensure_feed_interactable(self, feed: Feed, user: User) -> None:
         if feed.status != FeedStatus.PUBLISHED.value:
-            raise HTTPException(
-                status_code=404,
-                detail="Feed not found",
-            )
+            raise HTTPException(status_code=404, detail="Feed not found")
 
     # ─── Create ─────────────────────────────────────────────
     def create_feed(
@@ -149,21 +140,13 @@ class FeedService:
             raise HTTPException(status_code=500, detail=str(e))
 
     # ─── Moderation helpers ─────────────────────────────────
-    def _log_moderation_outcome(
-        self,
-        user: User,
-        feed: Feed,
-        outcome,
-    ) -> None:
+    def _log_moderation_outcome(self, user: User, feed: Feed, outcome) -> None:
         try:
             action = {
                 "safe": "moderation.auto_safe",
                 "review": "moderation.auto_review",
                 "unsafe": "moderation.auto_unsafe",
-            }.get(
-                outcome.decision,
-                "moderation.auto_safe",
-            )
+            }.get(outcome.decision, "moderation.auto_safe")
 
             if outcome.error:
                 action = "moderation.failed"
@@ -188,12 +171,7 @@ class FeedService:
             logger.warning("Audit log write failed: %s", e)
             self.session.rollback()
 
-    def _notify_author(
-        self,
-        user: User,
-        feed: Feed,
-        outcome,
-    ) -> None:
+    def _notify_author(self, user: User, feed: Feed, outcome) -> None:
         if (
             outcome.decision == ModerationDecision.SAFE.value
             and not outcome.error
@@ -204,11 +182,9 @@ class FeedService:
             if outcome.decision == ModerationDecision.UNSAFE.value:
                 ntype = "post_rejected"
                 title = "Your post was rejected"
-
             elif outcome.decision == ModerationDecision.REVIEW.value:
                 ntype = "post_pending_review"
                 title = "Your post is under review"
-
             else:
                 return
 
@@ -216,9 +192,7 @@ class FeedService:
                 user_id=user.id,
                 type=ntype,
                 title=title,
-                body=(
-                    outcome.reason or "See moderation details."
-                )[:1000],
+                body=(outcome.reason or "See moderation details.")[:1000],
                 payload={
                     "feed_id": str(feed.id),
                     "record_id": str(outcome.record.id),
@@ -228,17 +202,10 @@ class FeedService:
             )
 
         except Exception as e:
-            logger.warning(
-                "Notification write failed: %s",
-                e,
-            )
+            logger.warning("Notification write failed: %s", e)
             self.session.rollback()
 
-    def _moderate_feed_after_change(
-        self,
-        feed: Feed,
-        user: User,
-    ):
+    def _moderate_feed_after_change(self, feed: Feed, user: User):
         feed.status = FeedStatus.PENDING_MODERATION.value
         self.session.add(feed)
         self.session.commit()
@@ -249,15 +216,9 @@ class FeedService:
                 ModerationService,
             )
 
-            outcome = ModerationService(
-                self.session
-            ).moderate_feed(feed)
-
+            outcome = ModerationService(self.session).moderate_feed(feed)
         except Exception:
-            logger.exception(
-                "Moderation crashed for feed %s",
-                feed.id,
-            )
+            logger.exception("Moderation crashed for feed %s", feed.id)
 
             feed.status = FeedStatus.PENDING_REVIEW.value
             self.session.add(feed)
@@ -268,10 +229,8 @@ class FeedService:
 
         if outcome.decision == ModerationDecision.SAFE.value:
             feed.status = FeedStatus.PUBLISHED.value
-
         elif outcome.decision == ModerationDecision.REVIEW.value:
             feed.status = FeedStatus.PENDING_REVIEW.value
-
         else:
             feed.status = FeedStatus.REJECTED.value
 
@@ -279,26 +238,14 @@ class FeedService:
         self.session.commit()
         self.session.refresh(feed)
 
-        self._log_moderation_outcome(
-            user,
-            feed,
-            outcome,
-        )
-
-        self._notify_author(
-            user,
-            feed,
-            outcome,
-        )
+        self._log_moderation_outcome(user, feed, outcome)
+        self._notify_author(user, feed, outcome)
 
         return outcome
 
     # ─── Media upload helper ────────────────────────────────
     def _handle_media_upload(
-        self,
-        feed: Feed,
-        media_file: UploadFile,
-        user_id: UUID,
+        self, feed: Feed, media_file: UploadFile, user_id: UUID
     ) -> FeedMedia:
         content_type = media_file.content_type or ""
 
@@ -324,7 +271,6 @@ class FeedService:
             media_file.file.seek(0, 2)
             file_size = media_file.file.tell()
             media_file.file.seek(0)
-
         except Exception:
             file_size = None
 
@@ -336,23 +282,13 @@ class FeedService:
         )
 
     # ─── Read ───────────────────────────────────────────────
-    def get_feed(
-        self,
-        feed_id: UUID,
-        current_user: User,
-    ) -> FeedResponse:
+    def get_feed(self, feed_id: UUID, current_user: User) -> FeedResponse:
         feed = self.repo.get_by_id(feed_id)
 
         if not feed or feed.deleted_at:
-            raise HTTPException(
-                status_code=404,
-                detail="Feed not found",
-            )
+            raise HTTPException(status_code=404, detail="Feed not found")
 
-        self._ensure_feed_viewable(
-            feed,
-            current_user,
-        )
+        self._ensure_feed_viewable(feed, current_user)
 
         return self._build_feed_response(
             feed,
@@ -408,62 +344,37 @@ class FeedService:
 
     # ─── Update ─────────────────────────────────────────────
     def update_feed(
-        self,
-        feed_id: UUID,
-        data: FeedUpdate,
-        current_user: User,
+        self, feed_id: UUID, data: FeedUpdate, current_user: User
     ) -> FeedResponse:
         feed = self.repo.get_by_id(feed_id)
 
         if not feed or feed.deleted_at:
-            raise HTTPException(
-                status_code=404,
-                detail="Feed not found",
-            )
+            raise HTTPException(status_code=404, detail="Feed not found")
 
-        if (
-            feed.user_id != current_user.id
-            and not current_user.is_admin
-        ):
-            raise HTTPException(
-                status_code=403,
-                detail="Not enough permissions",
-            )
+        if feed.user_id != current_user.id and not current_user.is_admin:
+            raise HTTPException(status_code=403, detail="Not enough permissions")
 
         try:
             update_data = data.model_dump(
-                exclude_unset=True,
-                exclude={"hashtags"},
+                exclude_unset=True, exclude={"hashtags"}
             )
 
             if update_data:
-                self.repo.update(
-                    feed,
-                    update_data,
-                )
+                self.repo.update(feed, update_data)
 
             if data.hashtags is not None:
                 self.repo.remove_hashtags(feed)
-
                 if data.hashtags:
-                    self.repo.add_hashtags(
-                        feed,
-                        data.hashtags,
-                    )
+                    self.repo.add_hashtags(feed, data.hashtags)
 
             re_moderate = any(
-                key in update_data
-                for key in ("title", "description")
+                key in update_data for key in ("title", "description")
             )
 
             if re_moderate:
-                self._moderate_feed_after_change(
-                    feed,
-                    current_user,
-                )
+                self._moderate_feed_after_change(feed, current_user)
 
             self.session.commit()
-
             feed = self.repo.get_by_id(feed.id)
 
             return self._build_feed_response(
@@ -479,58 +390,33 @@ class FeedService:
 
         except Exception as e:
             self.session.rollback()
-            logger.error(
-                "Feed update failed: %s",
-                e,
-            )
+            logger.error("Feed update failed: %s", e)
             raise
 
     # ─── Delete ─────────────────────────────────────────────
     def delete_feed(
-        self,
-        feed_id: UUID,
-        current_user: User,
-        hard: bool = False,
+        self, feed_id: UUID, current_user: User, hard: bool = False
     ) -> None:
-        feed = self.repo.get_by_id(
-            feed_id,
-            include_deleted=True,
-        )
+        feed = self.repo.get_by_id(feed_id, include_deleted=True)
 
         if not feed:
-            raise HTTPException(
-                status_code=404,
-                detail="Feed not found",
-            )
+            raise HTTPException(status_code=404, detail="Feed not found")
 
         is_owner = feed.user_id == current_user.id
-        is_admin = (
-            current_user.is_admin
-            or current_user.is_moderator
-        )
+        is_admin = current_user.is_admin or current_user.is_moderator
 
         if not is_owner and not is_admin:
-            raise HTTPException(
-                status_code=403,
-                detail="Not enough permissions",
-            )
+            raise HTTPException(status_code=403, detail="Not enough permissions")
 
         if not is_owner:
             hard = False
 
         try:
-            self.repo.delete(
-                feed,
-                hard=hard,
-            )
+            self.repo.delete(feed, hard=hard)
             self.session.commit()
-
         except Exception as e:
             self.session.rollback()
-            logger.error(
-                "Feed deletion failed: %s",
-                e,
-            )
+            logger.error("Feed deletion failed: %s", e)
             raise
 
     # ─── Admin moderation listing ───────────────────────────
@@ -545,10 +431,7 @@ class FeedService:
         include_deleted: bool = True,
     ) -> FeedListResponse:
         if not self._is_moderation_staff(current_user):
-            raise HTTPException(
-                status_code=403,
-                detail="Admin access required",
-            )
+            raise HTTPException(status_code=403, detail="Admin access required")
 
         feeds, total = self.repo.list(
             skip=skip,
@@ -584,46 +467,26 @@ class FeedService:
 
     # ─── Media ──────────────────────────────────────────────
     def upload_feed_media(
-        self,
-        feed_id: UUID,
-        media_file: UploadFile,
-        current_user: User,
+        self, feed_id: UUID, media_file: UploadFile, current_user: User
     ) -> FeedMediaResponse:
         feed = self.repo.get_by_id(feed_id)
 
         if not feed or feed.deleted_at:
-            raise HTTPException(
-                status_code=404,
-                detail="Feed not found",
-            )
+            raise HTTPException(status_code=404, detail="Feed not found")
 
-        if (
-            feed.user_id != current_user.id
-            and not current_user.is_admin
-        ):
-            raise HTTPException(
-                status_code=403,
-                detail="Not enough permissions",
-            )
+        if feed.user_id != current_user.id and not current_user.is_admin:
+            raise HTTPException(status_code=403, detail="Not enough permissions")
 
         try:
             media = self._handle_media_upload(
-                feed,
-                media_file,
-                current_user.id,
+                feed, media_file, current_user.id
             )
-
             self.session.commit()
             self.session.refresh(feed)
 
-            self._moderate_feed_after_change(
-                feed,
-                current_user,
-            )
+            self._moderate_feed_after_change(feed, current_user)
 
-            return FeedMediaResponse.model_validate(
-                media
-            )
+            return FeedMediaResponse.model_validate(media)
 
         except HTTPException:
             self.session.rollback()
@@ -631,72 +494,39 @@ class FeedService:
 
         except Exception as e:
             self.session.rollback()
-            logger.error(
-                "Media upload failed: %s",
-                e,
-            )
+            logger.error("Media upload failed: %s", e)
             raise
 
-    def delete_feed_media(
-        self,
-        media_id: UUID,
-        current_user: User,
-    ) -> None:
-        media = self.session.get(
-            FeedMedia,
-            media_id,
-        )
+    def delete_feed_media(self, media_id: UUID, current_user: User) -> None:
+        media = self.session.get(FeedMedia, media_id)
 
         if not media:
-            raise HTTPException(
-                status_code=404,
-                detail="Media not found",
-            )
+            raise HTTPException(status_code=404, detail="Media not found")
 
-        feed = self.repo.get_by_id(
-            media.feed_id,
-        )
+        feed = self.repo.get_by_id(media.feed_id)
 
         if not feed or feed.deleted_at:
-            raise HTTPException(
-                status_code=404,
-                detail="Feed not found",
-            )
+            raise HTTPException(status_code=404, detail="Feed not found")
 
-        if (
-            feed.user_id != current_user.id
-            and not current_user.is_admin
-        ):
-            raise HTTPException(
-                status_code=403,
-                detail="Not enough permissions",
-            )
+        if feed.user_id != current_user.id and not current_user.is_admin:
+            raise HTTPException(status_code=403, detail="Not enough permissions")
 
         try:
             self.repo.delete_media(media_id)
             self.session.commit()
-
         except Exception as e:
             self.session.rollback()
-            logger.error(
-                "Media deletion failed: %s",
-                e,
-            )
+            logger.error("Media deletion failed: %s", e)
             raise
 
     # ─── Likes ──────────────────────────────────────────────
     def toggle_like(
-        self,
-        feed_id: UUID,
-        current_user: User,
+        self, feed_id: UUID, current_user: User
     ) -> FeedLikeResponse:
         feed = self.repo.get_by_id(feed_id)
 
         if not feed or feed.deleted_at:
-            raise HTTPException(
-                status_code=404,
-                detail="Feed not found",
-            )
+            raise HTTPException(status_code=404, detail="Feed not found")
 
         self._ensure_feed_interactable(feed, current_user)
 
@@ -704,7 +534,6 @@ class FeedService:
             liked = self.repo.toggle_like(current_user, feed)
             self.session.commit()
 
-            # ─── Notification hook ───
             if feed.user_id != current_user.id:
                 try:
                     display = NotificationService.display_name(current_user)
@@ -746,20 +575,15 @@ class FeedService:
         feed = self.repo.get_by_id(feed_id)
 
         if not feed or feed.deleted_at:
-            raise HTTPException(
-                status_code=404,
-                detail="Feed not found",
-            )
+            raise HTTPException(status_code=404, detail="Feed not found")
 
         self._ensure_feed_interactable(feed, current_user)
 
         if data.parent_id:
             parent = self.session.get(FeedComment, data.parent_id)
-
             if not parent or parent.feed_id != feed_id:
                 raise HTTPException(
-                    status_code=400,
-                    detail="Invalid parent comment",
+                    status_code=400, detail="Invalid parent comment"
                 )
 
         try:
@@ -811,18 +635,9 @@ class FeedService:
             raise
 
     # ─── Trending hashtags ──────────────────────────────────
-    def get_trending_hashtags(
-        self,
-        limit: int = 20,
-    ) -> List[HashtagResponse]:
-        hashtags = self.repo.get_trending_hashtags(
-            limit
-        )
-
-        return [
-            HashtagResponse.model_validate(h)
-            for h in hashtags
-        ]
+    def get_trending_hashtags(self, limit: int = 20) -> List[HashtagResponse]:
+        hashtags = self.repo.get_trending_hashtags(limit)
+        return [HashtagResponse.model_validate(h) for h in hashtags]
 
     # ─── Thumbnails (media-only profile grid) ───────────────
     def _derive_thumbnail_url(self, media: FeedMedia) -> Optional[str]:
@@ -907,10 +722,10 @@ class FeedService:
         Fetch, in a constant number of queries, everything the response
         builder needs for the given page of feeds.
 
-        NOTE: `media` is intentionally NOT fetched here. It is eager-loaded
-        by FeedRepository.list() via selectinload, so the response builder
-        reads `feed.media` directly. Fetching it again would double the
-        query count for the same data.
+        NOTE: `media` and `comments` are intentionally NOT fetched here —
+        both are eager-loaded by FeedRepository.list() via selectinload,
+        so the response builder reads `feed.media` / `feed.comments`
+        directly.
         """
         feed_ids = [f.id for f in feeds]
 
@@ -930,8 +745,9 @@ class FeedService:
         return {
             "like_counts": self.repo.bulk_like_counts(feed_ids),
             "comment_counts": self.repo.bulk_comment_counts(feed_ids),
-            "liked_feed_ids": self.repo.bulk_liked_feed_ids(current_user, feed_ids),
-            # media is NOT fetched — feed.media was already loaded by list()
+            "liked_feed_ids": self.repo.bulk_liked_feed_ids(
+                current_user, feed_ids
+            ),
             "hashtag_map": self.repo.bulk_hashtags_by_feed(feed_ids),
             "moderation_map": moderation_map,
         }
@@ -953,9 +769,8 @@ class FeedService:
         Same output as _build_feed_response(), but takes pre-fetched maps
         instead of firing queries.
 
-        `feed.media` is expected to already be loaded by
-        FeedRepository.list() via selectinload — no extra query is made
-        for media here.
+        `feed.media` and `feed.comments` are expected to already be loaded
+        by FeedRepository.list() via selectinload.
         """
         likes_count = like_counts.get(feed.id, 0)
         comments_count = comment_counts.get(feed.id, 0)
@@ -967,20 +782,23 @@ class FeedService:
             (feed.media or []),
             key=lambda m: m.created_at,
         )
-        media = [
-            FeedMediaResponse.model_validate(m)
-            for m in media_items
-        ]
+        media = [FeedMediaResponse.model_validate(m) for m in media_items]
 
         hashtags = [
             HashtagResponse.model_validate(h)
             for h in hashtag_map.get(feed.id, [])
         ]
 
-        # Comments are NOT eager-loaded by list(), so we don't render them
-        # on the list view — the API consumer only needs comments_count.
-        # The detail endpoint (get_feed) loads the full comment tree.
-        comments = []
+        # `feed.comments` is already loaded. Only top-level comments
+        # are rendered — replies live inside each comment's `replies`.
+        comments = [
+            FeedCommentResponse.model_validate(c)
+            for c in sorted(
+                (feed.comments or []),
+                key=lambda c: c.created_at,
+            )
+            if c.parent_id is None
+        ]
 
         response = FeedResponse(
             id=feed.id,
@@ -1096,4 +914,4 @@ class FeedService:
                     created_at=active.created_at,
                 )
 
-        return response
+        return response 

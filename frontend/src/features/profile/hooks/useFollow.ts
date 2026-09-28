@@ -20,7 +20,7 @@ interface UseFollowReturn {
   getFollowing: (userId: string, skip?: number, limit?: number) => Promise<UserProfile[] | null>;
 }
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://192.168.68.67:8000';
 
 const DEFAULT_RELATION: ViewerRelation = {
   isFollowing: false,
@@ -158,7 +158,9 @@ export const useFollow = (): UseFollowReturn => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${API_BASE}/users/me/follow-status/${userId}`, { headers: getAuthHeaders() });
+      const response = await fetch(`${API_BASE}/users/me/follow-status/${userId}`, {
+        headers: getAuthHeaders(),
+      });
       if (!response.ok) throw new Error(`Failed to check follow status: ${response.status}`);
       return await response.json();
     } catch (err) {
@@ -170,65 +172,84 @@ export const useFollow = (): UseFollowReturn => {
     }
   }, []);
 
-  const checkViewerRelation = useCallback(async (userId: string): Promise<ViewerRelation | null> => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`${API_BASE}/users/me/relation/${userId}`, { headers: getAuthHeaders() });
-      if (response.status === 404) {
-        const fallback = await fetch(`${API_BASE}/users/me/follow-status/${userId}`, { headers: getAuthHeaders() });
-        if (!fallback.ok) return { ...DEFAULT_RELATION };
-        const data = await fallback.json();
-        return { ...DEFAULT_RELATION, isFollowing: !!(data.is_following ?? data.isFollowing) };
+  const checkViewerRelation = useCallback(
+    async (userId: string): Promise<ViewerRelation | null> => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch(`${API_BASE}/users/me/relation/${userId}`, {
+          headers: getAuthHeaders(),
+        });
+        if (response.status === 404) {
+          const fallback = await fetch(`${API_BASE}/users/me/follow-status/${userId}`, {
+            headers: getAuthHeaders(),
+          });
+          if (!fallback.ok) return { ...DEFAULT_RELATION };
+          const data = await fallback.json();
+          return { ...DEFAULT_RELATION, isFollowing: !!(data.is_following ?? data.isFollowing) };
+        }
+        if (!response.ok) throw new Error(`Failed to check viewer relation: ${response.status}`);
+        const data = await response.json();
+        return mapRelation(data);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to check viewer relation';
+        setError(message);
+        return { ...DEFAULT_RELATION };
+      } finally {
+        setLoading(false);
       }
-      if (!response.ok) throw new Error(`Failed to check viewer relation: ${response.status}`);
-      const data = await response.json();
-      return mapRelation(data);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to check viewer relation';
-      setError(message);
-      return { ...DEFAULT_RELATION };
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    [],
+  );
 
-  const getFollowers = useCallback(async (userId: string, skip = 0, limit = 20): Promise<UserProfile[] | null> => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`${API_BASE}/users/${userId}/followers?skip=${skip}&limit=${limit}`, { headers: getAuthHeaders() });
-      if (!response.ok) throw new Error(`Failed to get followers: ${response.status}`);
-      const data = await response.json();
-      const items = data.items || data;
-      // Map the raw API response to our frontend UserProfile type
-      return items.map(mapFollowerFromAPI);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to get followers';
-      setError(message);
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const getFollowers = useCallback(
+    async (userId: string, skip = 0, limit = 20): Promise<UserProfile[] | null> => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch(
+          `${API_BASE}/users/${userId}/followers?skip=${skip}&limit=${limit}`,
+          { headers: getAuthHeaders() },
+        );
+        if (!response.ok) throw new Error(`Failed to get followers: ${response.status}`);
+        const data = await response.json();
+        const items = data.items || data;
+        // Map the raw API response to our frontend UserProfile type
+        return items.map(mapFollowerFromAPI);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to get followers';
+        setError(message);
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
 
-  const getFollowing = useCallback(async (userId: string, skip = 0, limit = 20): Promise<UserProfile[] | null> => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`${API_BASE}/users/${userId}/following?skip=${skip}&limit=${limit}`, { headers: getAuthHeaders() });
-      if (!response.ok) throw new Error(`Failed to get following: ${response.status}`);
-      const data = await response.json();
-      const items = data.items || data;
-      return items.map(mapFollowerFromAPI);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to get following';
-      setError(message);
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const getFollowing = useCallback(
+    async (userId: string, skip = 0, limit = 20): Promise<UserProfile[] | null> => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch(
+          `${API_BASE}/users/${userId}/following?skip=${skip}&limit=${limit}`,
+          { headers: getAuthHeaders() },
+        );
+        if (!response.ok) throw new Error(`Failed to get following: ${response.status}`);
+        const data = await response.json();
+        const items = data.items || data;
+        return items.map(mapFollowerFromAPI);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to get following';
+        setError(message);
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
 
   return {
     loading,

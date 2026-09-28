@@ -39,8 +39,6 @@ import PortfolioAboutTab from '../components/PortfolioAboutTab';
 import PortfolioCreateForm from '../components/PortfolioCreateForm';
 import EditPortfolioModal from '../components/EditPortfolioModal';
 
-/* ───────────────────────── Shared tokens ───────────────────────── */
-
 const GLASS_CARD =
   'relative overflow-hidden rounded-none border-y border-slate-200/70 ' +
   'sm:rounded-xl sm:border ' +
@@ -51,8 +49,6 @@ const GLASS_CARD =
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
-/* ───────────────────────── Ambience ───────────────────────── */
-
 function Ambience() {
   return (
     <>
@@ -62,8 +58,6 @@ function Ambience() {
     </>
   );
 }
-
-/* ───────────────────────── Section header ───────────────────────── */
 
 function SectionHeader({
   index,
@@ -98,8 +92,6 @@ function SectionHeader({
   );
 }
 
-/* ───────────────────────── Status pill ───────────────────────── */
-
 function StatusPill({ isPublic }: { isPublic: boolean }) {
   if (isPublic) {
     return (
@@ -126,10 +118,6 @@ function StatusPill({ isPublic }: { isPublic: boolean }) {
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════
- * OWNER DASHBOARD
- * ═══════════════════════════════════════════════════════════════ */
-
 function OwnerDashboard() {
   const { user } = useAuth();
   const isProfessional =
@@ -151,6 +139,8 @@ function OwnerDashboard() {
     createService,
     updateService,
     deleteService,
+    uploadServiceBanner,
+    uploadServiceGallery,
     createWork,
     updateWork,
     deleteWork,
@@ -200,7 +190,11 @@ function OwnerDashboard() {
             saving={saving}
             onCreate={async (input) => {
               const created = await createPortfolio(input);
-              if (created) setTab('services');
+              if (created) {
+                toast.success('Portfolio created');
+                setTab('services');
+                await refresh();
+              }
             }}
           />
         </div>
@@ -218,7 +212,6 @@ function OwnerDashboard() {
     <div className="relative flex min-h-screen w-full flex-col bg-slate-50 text-slate-900 transition-colors dark:bg-slate-950 dark:text-slate-100">
       <Ambience />
 
-      {/* ═══════ Top bar ═══════ */}
       <header className="sticky top-0 z-30 w-full border-b border-slate-200/70 bg-white/85 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/75">
         <div className="flex h-14 w-full items-center justify-between gap-2 px-4 sm:gap-3 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
@@ -278,9 +271,7 @@ function OwnerDashboard() {
         </div>
       </header>
 
-      {/* ═══════ Main content ═══════ */}
       <main className="relative z-10 w-full flex-1 px-4 pt-5 pb-8 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
-        {/* 01 Profile */}
         <motion.section
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
@@ -298,7 +289,6 @@ function OwnerDashboard() {
           />
         </motion.section>
 
-        {/* 02 At a glance */}
         <motion.section
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
@@ -317,7 +307,6 @@ function OwnerDashboard() {
           />
         </motion.section>
 
-        {/* 03 Subscription & AI */}
         <motion.section
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
@@ -359,7 +348,6 @@ function OwnerDashboard() {
           />
         </motion.section>
 
-        {/* 04 Manage panel */}
         <motion.section
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
@@ -399,14 +387,16 @@ function OwnerDashboard() {
                       services={services}
                       saving={saving}
                       isOwner
-                      onCreate={async (input) => {
-                        await createService(input);
-                      }}
-                      onUpdate={async (id, input) => {
-                        await updateService(id, input);
-                      }}
+                      onCreate={async (input) => await createService(input)}
+                      onUpdate={async (id, input) => await updateService(id, input)}
                       onDelete={async (id) => {
                         await deleteService(id);
+                      }}
+                      onUploadBanner={async (id, file) => {
+                        await uploadServiceBanner(id, file);
+                      }}
+                      onUploadGallery={async (id, files) => {
+                        await uploadServiceGallery(id, files);
                       }}
                     />
                   )}
@@ -417,18 +407,14 @@ function OwnerDashboard() {
                       services={services}
                       saving={saving}
                       isOwner
-                      onCreate={async (input) => {
-                        await createWork(input);
-                      }}
-                      onUpdate={async (id, input) => {
-                        await updateWork(id, input);
-                      }}
+                      onCreate={async (input) => await createWork(input)}
+                      onUpdate={async (id, input) => await updateWork(id, input)}
                       onDelete={async (id) => {
                         await deleteWork(id);
                       }}
-                      onUploadImages={async (id, files) => {
-                        return await uploadWorkImages(id, files);
-                      }}
+                      onUploadImages={async (id, files) =>
+                        await uploadWorkImages(id, files)
+                      }
                     />
                   )}
 
@@ -471,7 +457,6 @@ function OwnerDashboard() {
         </motion.section>
       </main>
 
-      {/* Modals */}
       <EditPortfolioModal
         open={editOpen}
         portfolio={portfolio}
@@ -479,7 +464,10 @@ function OwnerDashboard() {
         onClose={() => setEditOpen(false)}
         onSubmit={async (input) => {
           const updated = await updatePortfolio(input);
-          if (updated) setEditOpen(false);
+          if (updated) {
+            toast.success('Portfolio updated');
+            setEditOpen(false);
+          }
         }}
       />
 
@@ -489,9 +477,6 @@ function OwnerDashboard() {
         currentLevel={active?.subscription?.tier?.level ?? 0}
         onClose={() => setUpgradeOpen(false)}
         onSuccess={async () => {
-          // The mock provider resolves and persists the subscription
-          // synchronously during fetch_provider_status, so a single
-          // refresh after a short delay is enough.
           await new Promise((r) => setTimeout(r, 800));
           await refreshSub();
         }}
@@ -499,10 +484,6 @@ function OwnerDashboard() {
     </div>
   );
 }
-
-/* ═══════════════════════════════════════════════════════════════
- * PUBLIC VIEW
- * ═══════════════════════════════════════════════════════════════ */
 
 function PublicView({ userId }: { userId: string }) {
   const navigate = useNavigate();
@@ -536,16 +517,13 @@ function PublicView({ userId }: { userId: string }) {
     }
   };
 
-  if (loading && !data) {
-    return <LoadingState label="Loading portfolio…" />;
-  }
+  if (loading && !data) return <LoadingState label="Loading portfolio…" />;
 
   if (error || !data || !portfolio) {
     return (
       <ErrorState
         message={
-          error ??
-          "This professional hasn't published a portfolio yet."
+          error ?? "This professional hasn't published a portfolio yet."
         }
         onRetry={refresh}
       />
@@ -587,12 +565,6 @@ function PublicView({ userId }: { userId: string }) {
               <h1 className="truncate text-[13px] font-semibold tracking-tight text-slate-900 dark:text-white">
                 {portfolio.business_name || fullName}
               </h1>
-              {portfolio.is_verified && (
-                <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-blue-500/20 bg-blue-500/8 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:border-blue-400/20 dark:text-blue-400">
-                  <ShieldCheck className="h-3 w-3" />
-                  <span className="hidden md:inline">Verified</span>
-                </span>
-              )}
             </nav>
           </div>
 
@@ -621,7 +593,6 @@ function PublicView({ userId }: { userId: string }) {
       </header>
 
       <main className="relative z-10 w-full flex-1 px-4 pt-5 pb-8 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
-        {/* 01 Profile */}
         <motion.section
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
@@ -635,7 +606,6 @@ function PublicView({ userId }: { userId: string }) {
           <PortfolioHeader portfolio={portfolio} isOwner={false} />
         </motion.section>
 
-        {/* 02 At a glance */}
         <motion.section
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
@@ -654,7 +624,6 @@ function PublicView({ userId }: { userId: string }) {
           />
         </motion.section>
 
-        {/* 03 Portfolio details */}
         <motion.section
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
@@ -694,8 +663,8 @@ function PublicView({ userId }: { userId: string }) {
                       services={services}
                       saving={false}
                       isOwner={false}
-                      onCreate={async () => {}}
-                      onUpdate={async () => {}}
+                      onCreate={async () => null}
+                      onUpdate={async () => null}
                       onDelete={async () => {}}
                     />
                   )}
@@ -706,8 +675,8 @@ function PublicView({ userId }: { userId: string }) {
                       services={services}
                       saving={false}
                       isOwner={false}
-                      onCreate={async () => {}}
-                      onUpdate={async () => {}}
+                      onCreate={async () => null}
+                      onUpdate={async () => null}
                       onDelete={async () => {}}
                       onUploadImages={async () => null}
                     />
@@ -728,34 +697,12 @@ function PublicView({ userId }: { userId: string }) {
                 </motion.div>
               </AnimatePresence>
             </div>
-
-            <div className="flex flex-col gap-2 border-t border-slate-200/70 bg-slate-50/60 px-4 py-3 dark:border-white/10 dark:bg-slate-950/40 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3 sm:px-6 lg:px-8">
-              <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                <Info className="h-3.5 w-3.5 shrink-0 text-blue-500" />
-                <span>
-                  {tab === 'services' &&
-                    `${services.length} service${services.length === 1 ? '' : 's'} configured`}
-                  {tab === 'works' &&
-                    `${works.length} project${works.length === 1 ? '' : 's'} showcased`}
-                  {tab === 'availability' &&
-                    `${liveCount} slot${liveCount === 1 ? '' : 's'} available this week`}
-                  {tab === 'about' && 'Full biography and credentials'}
-                </span>
-              </div>
-              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
-                SkilledLink Portfolio
-              </span>
-            </div>
           </div>
         </motion.section>
       </main>
     </div>
   );
 }
-
-/* ═══════════════════════════════════════════════════════════════
- * DEFAULT EXPORT
- * ═══════════════════════════════════════════════════════════════ */
 
 interface PortfolioDashboardProps {
   userId?: string;

@@ -1,6 +1,7 @@
 # app/services/professional_ai_usage_service.py
 
 import logging
+import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID
@@ -23,7 +24,6 @@ from app.schemas.professional_ai_usage import AIUsageCheckResponse
 
 logger = logging.getLogger(__name__)
 
-# Sentinel for "no limit". Must fit an int column and stay non-negative.
 UNLIMITED_LIMIT = 2_147_483_647
 
 
@@ -38,6 +38,21 @@ class ProfessionalAIUsageService:
     def check(
         self, professional_id: UUID, feature_key: str
     ) -> AIUsageCheckResponse:
+        # Dev bypass — set DEV_SKIP_AI_QUOTA=1 in .env to disable quota
+        # checks entirely while developing. Remove before any demo.
+        if os.getenv("DEV_SKIP_AI_QUOTA") == "1":
+            logger.warning(
+                "[AI_USAGE] DEV_SKIP_AI_QUOTA=1 — bypassing quota for %s",
+                feature_key,
+            )
+            return AIUsageCheckResponse(
+                feature_key=feature_key,
+                allowed=True,
+                usage_count=0,
+                usage_limit=UNLIMITED_LIMIT,
+                remaining=UNLIMITED_LIMIT,
+            )
+
         sub = self.sub_repo.get_active_for_professional(professional_id)
         if not sub:
             return self._denied(feature_key, reason="no_active_subscription")
@@ -89,6 +104,24 @@ class ProfessionalAIUsageService:
     ) -> ProfessionalAIUsage:
         if amount < 1:
             raise HTTPException(400, "amount must be >= 1")
+
+        # Dev bypass — do not record usage when quota is skipped.
+        if os.getenv("DEV_SKIP_AI_QUOTA") == "1":
+            sub = self.sub_repo.get_active_for_professional(professional_id)
+            if not sub:
+                raise HTTPException(403, "No active subscription")
+            return self.repo.get_or_create(
+                professional_id=professional_id,
+                feature_key=feature_key,
+                period_start=datetime.now(timezone.utc).replace(
+                    day=1, hour=0, minute=0, second=0, microsecond=0
+                ),
+                period_end=datetime.now(timezone.utc).replace(
+                    day=1, hour=0, minute=0, second=0, microsecond=0
+                ) + timedelta(days=31),
+                usage_limit=UNLIMITED_LIMIT,
+                subscription_id=sub.id,
+            )
 
         sub = self.sub_repo.get_active_for_professional(professional_id)
         if not sub:

@@ -3,8 +3,7 @@ import axios from 'axios';
 
 /* ───────────────────────── Config ───────────────────────── */
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://192.168.68.67:8000';
 
 /* ───────────────────────── Public endpoints ─────────────────────────
  * Any request whose URL contains one of these substrings will NEVER
@@ -30,7 +29,7 @@ const PUBLIC_PATHS = [
 
 function isPublicPath(url?: string): boolean {
   if (!url) return false;
-  return PUBLIC_PATHS.some((p) => url.includes(p));
+  return PUBLIC_PATHS.some(p => url.includes(p));
 }
 
 /* ───────────────────────── Client ─────────────────────────
@@ -58,19 +57,18 @@ export const apiClient = axios.create({
  * unset at the client level, but this guards against future changes).
  * ─────────────────────────────────────────────────────────────────── */
 apiClient.interceptors.request.use(
-  (config) => {
+  config => {
     try {
       const token = localStorage.getItem('access_token');
       if (token) {
         config.headers = config.headers ?? {};
-     
+
         config.headers.Authorization = `Bearer ${token}`;
       }
 
       // If the caller is sending FormData, drop any Content-Type so
       // the browser / axios sets multipart with the correct boundary.
-      const isFormData =
-        typeof FormData !== 'undefined' && config.data instanceof FormData;
+      const isFormData = typeof FormData !== 'undefined' && config.data instanceof FormData;
       if (isFormData) {
         // axios v1 uses AxiosHeaders; the delete method exists on both
         // plain objects and AxiosHeaders instances.
@@ -85,7 +83,7 @@ apiClient.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  error => Promise.reject(error),
 );
 
 /* ───────────────────────── Response interceptor ─────────────────────────
@@ -95,8 +93,8 @@ apiClient.interceptors.request.use(
  *   - Already on /login → don't redirect again (prevents loop)
  * ─────────────────────────────────────────────────────────────────── */
 apiClient.interceptors.response.use(
-  (response) => response,
-  async (error) => {
+  response => response,
+  async error => {
     const status = error?.response?.status;
     const url: string | undefined = error?.config?.url;
 
@@ -109,16 +107,13 @@ apiClient.interceptors.response.use(
         /* ignore storage errors */
       }
 
-      if (
-        typeof window !== 'undefined' &&
-        !window.location.pathname.startsWith('/login')
-      ) {
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
         window.location.href = '/login';
       }
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 /* ───────────────────────── User API ───────────────────────── */

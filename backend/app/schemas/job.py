@@ -24,6 +24,7 @@ class JobCommentResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     replies: List["JobCommentResponse"] = Field(default_factory=list)
+    user: Optional[UserResponse] = None          # ← NEW
 
     class Config:
         from_attributes = True

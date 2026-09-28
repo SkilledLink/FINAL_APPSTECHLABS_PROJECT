@@ -93,7 +93,8 @@ const formatRate = (rate: number, currency?: string | null): string => {
 };
 
 /* ─────────────────────────────────────────────────────── */
-/*  BIO CARD                                               */
+/*  BIO CARD — personal bio only                           */
+/*  The professional bio lives on the portfolio page.      */
 /* ─────────────────────────────────────────────────────── */
 
 export const ProfileBio: React.FC<{ profile: UserProfile }> = ({ profile }) => (
@@ -104,17 +105,6 @@ export const ProfileBio: React.FC<{ profile: UserProfile }> = ({ profile }) => (
     <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-sm">
       {profile.bio || 'No bio yet.'}
     </p>
-
-    {profile.professional && (
-      <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800">
-        <h4 className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">
-          Professional Bio
-        </h4>
-        <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
-          {profile.professional.bio || 'No professional bio provided.'}
-        </p>
-      </div>
-    )}
   </div>
 );
 
@@ -129,8 +119,6 @@ export const ProfileDetails: React.FC<{ profile: UserProfile }> = ({ profile }) 
     </h3>
 
     <div className="space-y-2 text-sm">
-    
-
       {profile.location && (
         <div className="flex items-center gap-2.5 text-slate-600 dark:text-slate-300">
           <MapPin className="w-4 h-4 text-indigo-500 shrink-0" />

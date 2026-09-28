@@ -1,7 +1,7 @@
 // services/aiService.ts
 import type { MatchRecommendation, ImageAnalysis } from '../types/ai.types';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://192.168.68.67:8000';
 
 /** Raw shape returned by the backend /chat/ endpoint */
 interface BackendProfessionalCard {

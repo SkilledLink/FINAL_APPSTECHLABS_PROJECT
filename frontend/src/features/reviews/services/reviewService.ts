@@ -1,12 +1,8 @@
 // src/features/reviews/services/reviewService.ts
 
-import type {
-  Review,
-  ReviewStats,
-  ReviewCreatePayload,
-} from '../types/review.types';
+import type { Review, ReviewStats, ReviewCreatePayload } from '../types/review.types';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://192.168.68.67:8000';
 
 const getAuthHeaders = (): HeadersInit => {
   const token = localStorage.getItem('access_token');
@@ -49,16 +45,15 @@ const mapStatsFromAPI = (raw: any): ReviewStats => ({
 export const fetchProfessionalReviews = async (
   professionalId: string,
   skip = 0,
-  limit = 20
+  limit = 20,
 ): Promise<{ items: Review[]; total: number }> => {
   const params = new URLSearchParams({
     skip: String(skip),
     limit: String(limit),
   });
-  const res = await fetch(
-    `${API_BASE}/professionals/${professionalId}/reviews?${params}`,
-    { headers: getAuthHeaders() }
-  );
+  const res = await fetch(`${API_BASE}/professionals/${professionalId}/reviews?${params}`, {
+    headers: getAuthHeaders(),
+  });
   if (!res.ok) throw new Error(`Failed to load reviews (${res.status})`);
   const data = await res.json();
   return {
@@ -68,32 +63,26 @@ export const fetchProfessionalReviews = async (
 };
 
 export const fetchProfessionalReviewStats = async (
-  professionalId: string
+  professionalId: string,
 ): Promise<ReviewStats> => {
-  const res = await fetch(
-    `${API_BASE}/professionals/${professionalId}/reviews/stats`,
-    { headers: getAuthHeaders() }
-  );
+  const res = await fetch(`${API_BASE}/professionals/${professionalId}/reviews/stats`, {
+    headers: getAuthHeaders(),
+  });
   if (!res.ok) throw new Error(`Failed to load review stats (${res.status})`);
   const data = await res.json();
   return mapStatsFromAPI(data);
 };
 
-export const checkHasReviewed = async (
-  professionalId: string
-): Promise<boolean> => {
-  const res = await fetch(
-    `${API_BASE}/professionals/${professionalId}/reviews/me`,
-    { headers: getAuthHeaders() }
-  );
+export const checkHasReviewed = async (professionalId: string): Promise<boolean> => {
+  const res = await fetch(`${API_BASE}/professionals/${professionalId}/reviews/me`, {
+    headers: getAuthHeaders(),
+  });
   if (!res.ok) return false;
   const data = await res.json();
   return Boolean(data.has_reviewed);
 };
 
-export const createReview = async (
-  payload: ReviewCreatePayload
-): Promise<Review> => {
+export const createReview = async (payload: ReviewCreatePayload): Promise<Review> => {
   const res = await fetch(`${API_BASE}/reviews`, {
     method: 'POST',
     headers: getAuthHeaders(),
@@ -110,7 +99,9 @@ export const createReview = async (
     try {
       const parsed = JSON.parse(errText);
       if (parsed?.detail) detail = parsed.detail;
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     throw new Error(detail);
   }
   const data = await res.json();
@@ -119,7 +110,7 @@ export const createReview = async (
 
 export const updateReview = async (
   reviewId: string,
-  patch: Partial<ReviewCreatePayload>
+  patch: Partial<ReviewCreatePayload>,
 ): Promise<Review> => {
   const body: Record<string, unknown> = {};
   if (patch.rating !== undefined) body.rating = patch.rating;

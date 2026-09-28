@@ -1,9 +1,10 @@
+// src/Service/socket/socket.ts
 import { io, Socket } from 'socket.io-client';
 
 const SOCKET_URL =
-  (import.meta.env.VITE_SOCKET_URL as string | undefined) ??
-  (import.meta.env.VITE_API_URL as string | undefined) ??
-  'http://localhost:8000';
+  (import.meta.env.VITE_SOCKET_URL as string | undefined) ||
+  (import.meta.env.VITE_API_URL as string | undefined) ||
+  window.location.origin;   // ← same-origin: the tunnel URL
 
 let socket: Socket | null = null;
 
@@ -12,12 +13,10 @@ export function getSocket(): Socket | null {
 }
 
 export function connectSocket(token: string): Socket {
-  // Reuse existing socket if the token hasn't changed.
   if (socket && (socket.auth as any)?.token === token) {
     if (!socket.connected) socket.connect();
     return socket;
   }
-  // Token changed (login/logout) — tear down and reconnect.
   if (socket) {
     socket.removeAllListeners();
     socket.disconnect();

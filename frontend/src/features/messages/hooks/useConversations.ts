@@ -86,8 +86,21 @@ export function useConversations() {
   const [error, setError] = useState<Error | null>(null);
   const fetchingRef = useRef(false);
 
+  // Stable refs — these must NOT be in fetchConversations' dep array,
+  // otherwise an unstable isAuthenticated / user identity from useAuth()
+  // will rebuild the callback on every render and trigger an infinite
+  // fetch loop via the useEffect below.
+  const isAuthedRef = useRef(isAuthenticated);
+  isAuthedRef.current = isAuthenticated;
+
+  const userId = user?.id;
+
   const fetchConversations = useCallback(async () => {
-    if (!isAuthenticated() || !user || fetchingRef.current) {
+    if (fetchingRef.current) {
+      setLoading(false);
+      return;
+    }
+    if (!userId || !isAuthedRef.current || !isAuthedRef.current()) {
       setLoading(false);
       return;
     }
@@ -103,7 +116,7 @@ export function useConversations() {
       setLoading(false);
       fetchingRef.current = false;
     }
-  }, [isAuthenticated, user]);
+  }, [userId]);
 
   useEffect(() => {
     fetchConversations();

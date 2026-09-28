@@ -20,10 +20,12 @@ import { ProfileMediaTab } from '../components/ProfileMediaTab';
 import { ProfilePostsTab } from '../components/ProfilePostsTab';
 import { EditProfileForm } from '../components/EditProfileForm';
 import { ProfileStateView } from '../components/ProfileStateView';
-import { ProfessionalOnboardingModal } from './ProfessionalOnboardingModal';
 import { ReviewsTab } from '../../reviews/components/ReviewsTab';
 import { ReviewForm } from '../../reviews/components/ReviewForm';
-import { createReview, checkHasReviewed } from '../../reviews/services/reviewService';
+import {
+  createReview,
+  checkHasReviewed,
+} from '../../reviews/services/reviewService';
 import ReportModal from '../../reports/components/ReportModal';
 import type {
   ProfileTab,
@@ -33,7 +35,7 @@ import type {
 
 const API_BASE =
   (import.meta.env.VITE_API_URL as string | undefined) ||
-  'http://localhost:8000';
+  'http://192.168.68.67:8000';
 
 export const ProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -43,7 +45,11 @@ export const ProfilePage: React.FC = () => {
   const { updateUser: updateUserAPI, fetchUser } = useUser();
   const { follow, unfollow, getFollowers } = useFollow();
   const { updateProfessional } = useProfessional();
-  const { uploadProfileImage, uploadBannerImage } = useProfileImage();
+  const {
+    uploadProfileImage,
+    uploadBannerImage,
+    uploading,
+  } = useProfileImage();
 
   const {
     profile,
@@ -58,7 +64,6 @@ export const ProfilePage: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<ProfileTab>('overview');
   const [isEditing, setIsEditing] = useState(false);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [followersPreview, setFollowersPreview] = useState<any[]>([]);
 
@@ -94,12 +99,11 @@ export const ProfilePage: React.FC = () => {
       try {
         const res = await fetch(
           `${API_BASE}/users/${profile.id}/professional`,
-          { headers }
+          { headers },
         );
         if (cancelled) return;
 
         if (!res.ok) {
-          // Not a professional (or endpoint failed) — no button.
           setProfessionalId(null);
           setHasReviewed(false);
           return;
@@ -138,17 +142,21 @@ export const ProfilePage: React.FC = () => {
       if (payload.user && Object.keys(payload.user).length > 0) {
         const updated = await updateUserAPI(payload.user);
         if (!updated) {
-          throw new Error('Could not save your basic info. Please try again.');
+          throw new Error(
+            'Could not save your basic info. Please try again.',
+          );
         }
         mutate(updated);
         updateAuthUser(updated);
       }
 
       if (payload.professional && profile.professional) {
-        const updatedProf = await updateProfessional(payload.professional);
+        const updatedProf = await updateProfessional(
+          payload.professional,
+        );
         if (!updatedProf) {
           throw new Error(
-            'Could not save your professional details. Please try again.'
+            'Could not save your professional details. Please try again.',
           );
         }
         mutate({ professional: updatedProf });
@@ -163,12 +171,16 @@ export const ProfilePage: React.FC = () => {
       updateProfessional,
       mutate,
       updateAuthUser,
-    ]
+    ],
   );
 
   /* ── Submit review ────────────────────────────────────── */
   const handleSubmitReview = useCallback(
-    async (payload: { rating: number; title: string; comment: string }) => {
+    async (payload: {
+      rating: number;
+      title: string;
+      comment: string;
+    }) => {
       if (!professionalId) return false;
       try {
         await createReview({
@@ -182,12 +194,14 @@ export const ProfilePage: React.FC = () => {
         return true;
       } catch (err) {
         toast.error(
-          err instanceof Error ? err.message : 'Failed to submit review'
+          err instanceof Error
+            ? err.message
+            : 'Failed to submit review',
         );
         return false;
       }
     },
-    [professionalId]
+    [professionalId],
   );
 
   /* ── Follow toggle ────────────────────────────────────── */
@@ -197,7 +211,10 @@ export const ProfilePage: React.FC = () => {
     const wasFollowing = viewerRelation.isFollowing;
     const originalFollowers = profile.followersCount ?? 0;
 
-    setViewerRelation((prev) => ({ ...prev, isFollowing: !wasFollowing }));
+    setViewerRelation((prev) => ({
+      ...prev,
+      isFollowing: !wasFollowing,
+    }));
     mutate({
       followersCount: wasFollowing
         ? Math.max(0, originalFollowers - 1)
@@ -209,7 +226,10 @@ export const ProfilePage: React.FC = () => {
       : await follow(profile.id);
 
     if (!success) {
-      setViewerRelation((prev) => ({ ...prev, isFollowing: wasFollowing }));
+      setViewerRelation((prev) => ({
+        ...prev,
+        isFollowing: wasFollowing,
+      }));
       mutate({ followersCount: originalFollowers });
     }
   }, [
@@ -222,37 +242,57 @@ export const ProfilePage: React.FC = () => {
     setViewerRelation,
   ]);
 
-  /* ── Upgrade success ──────────────────────────────────── */
-  const handleUpgradeSuccess = useCallback(async () => {
-    setShowUpgradeModal(false);
-    if (!profile || !isOwnProfile) return;
+  /* ── Upgrade: navigate to onboarding wizard ───────────── */
+  const handleUpgrade = useCallback(() => {
+    navigate('/onboarding/professional');
+  }, [navigate]);
 
-    const userData = await fetchUser(profile.id);
-    if (!userData) return;
-
-    mutate(userData);
-    updateAuthUser(userData);
-    await refetch();
-  }, [profile, isOwnProfile, fetchUser, mutate, updateAuthUser, refetch]);
-
-  /* ── Image upload ─────────────────────────────────────── */
+  /* ── Image upload (with toasts, progress handled in hook) */
   const handleImageUpload = useCallback(
     async (file: File, type: 'profile' | 'banner') => {
       if (!profile || !isOwnProfile) return;
 
-      const result =
-        type === 'profile'
-          ? await uploadProfileImage(file)
-          : await uploadBannerImage(file);
+      const isProfile = type === 'profile';
+      const toastId = toast.loading(
+        isProfile ? 'Uploading profile picture…' : 'Uploading banner…',
+        { position: 'top-center' },
+      );
 
-      if (!result) return;
+      const result = isProfile
+        ? await uploadProfileImage(file)
+        : await uploadBannerImage(file);
+
+      if (!result) {
+        toast.update(toastId, {
+          render: isProfile
+            ? 'Failed to upload profile picture'
+            : 'Failed to upload banner',
+          type: 'error',
+          isLoading: false,
+          autoClose: 4000,
+          closeButton: true,
+        });
+        return;
+      }
 
       const patch: Partial<UserProfile> = {};
-      if (result.profileImageUrl) patch.profileImageUrl = result.profileImageUrl;
-      if (result.bannerImageUrl) patch.bannerImageUrl = result.bannerImageUrl;
+      if (result.profileImageUrl)
+        patch.profileImageUrl = result.profileImageUrl;
+      if (result.bannerImageUrl)
+        patch.bannerImageUrl = result.bannerImageUrl;
 
       mutate(patch);
       updateAuthUser({ ...profile, ...patch });
+
+      toast.update(toastId, {
+        render: isProfile
+          ? 'Profile picture updated'
+          : 'Banner updated',
+        type: 'success',
+        isLoading: false,
+        autoClose: 2000,
+        closeButton: true,
+      });
     },
     [
       profile,
@@ -261,7 +301,7 @@ export const ProfilePage: React.FC = () => {
       uploadBannerImage,
       mutate,
       updateAuthUser,
-    ]
+    ],
   );
 
   /* ── Nav handlers ─────────────────────────────────────── */
@@ -289,12 +329,19 @@ export const ProfilePage: React.FC = () => {
       }
     } else {
       await navigator.clipboard.writeText(url);
+      toast.success('Profile link copied', { autoClose: 1500 });
     }
   }, [profile]);
 
   /* ── Loading / error state ───────────────────────────── */
   if (status !== 'ready' || !profile) {
-    return <ProfileStateView status={status} error={error} onRetry={refetch} />;
+    return (
+      <ProfileStateView
+        status={status}
+        error={error}
+        onRetry={refetch}
+      />
+    );
   }
 
   const isProfessional = !!profile.professional;
@@ -302,9 +349,8 @@ export const ProfilePage: React.FC = () => {
     !isOwnProfile && !!professionalId && !hasReviewed;
 
   return (
-    <div className="w-full min-h-screen bg-slate-50 dark:bg-slate-950">
-      <div className="w-full px-3 sm:px-4 md:px-5 pt-4 pb-24 lg:pb-6 space-y-4">
-
+    <div className="min-h-screen w-full bg-slate-50 dark:bg-slate-950">
+      <div className="w-full space-y-4 px-3 pb-24 pt-4 sm:px-4 md:px-5 lg:pb-6">
         {/* ── Top bar: Report + Write review ─────────────── */}
         {!isOwnProfile && (
           <div className="flex flex-wrap items-center justify-end gap-2">
@@ -312,15 +358,15 @@ export const ProfilePage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowReviewForm(true)}
-                className="inline-flex items-center gap-2 rounded-full bg-indigo-600 hover:bg-indigo-700 px-4 py-2 text-xs font-bold text-white shadow-md shadow-indigo-600/25 transition active:scale-[0.98]"
+                className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-indigo-600/25 transition active:scale-[0.98] hover:bg-indigo-700"
               >
                 <MessageSquarePlus className="h-3.5 w-3.5" />
                 Write a review
               </button>
             )}
 
-            {!isOwnProfile && hasReviewed && (
-              <span className="text-[11px] text-slate-400 italic">
+            {hasReviewed && (
+              <span className="text-[11px] italic text-slate-400">
                 You've already reviewed this professional
               </span>
             )}
@@ -330,7 +376,7 @@ export const ProfilePage: React.FC = () => {
               onClick={() => setShowReportModal(true)}
               aria-label={`Report ${profile.firstName} ${profile.lastName}`}
               title="Report this user"
-              className="inline-flex items-center gap-2 rounded-full border border-rose-200 dark:border-rose-900/60 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-950/70 px-3 py-1.5 text-xs font-semibold text-rose-700 dark:text-rose-300 shadow-sm transition"
+              className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 shadow-sm transition hover:bg-rose-100 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-950/70"
             >
               <Flag className="h-3.5 w-3.5" />
               Report
@@ -348,17 +394,18 @@ export const ProfilePage: React.FC = () => {
           canRequestService={viewerRelation?.canRequestService ?? false}
           followersCount={profile.followersCount}
           followersPreview={followersPreview}
+          uploading={uploading}
           onFollow={handleFollowToggle}
           onMessage={handleMessage}
           onRequestService={handleRequestService}
-          onUpgrade={() => setShowUpgradeModal(true)}
+          onUpgrade={handleUpgrade}
           onEditProfile={() => setIsEditing(true)}
           onImageUpload={handleImageUpload}
           onShare={handleShare}
         />
 
         {/* ── Dashboard ───────────────────────────────────── */}
-        <div className="flex flex-col lg:flex-row gap-4 items-start">
+        <div className="flex flex-col items-start gap-4 lg:flex-row">
           <ProfileTabs
             activeTab={activeTab}
             onChangeTab={setActiveTab}
@@ -366,10 +413,10 @@ export const ProfilePage: React.FC = () => {
             layout="vertical"
           />
 
-          <div className="flex-1 min-w-0 w-full">
+          <div className="w-full min-w-0 flex-1">
             {activeTab === 'overview' && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
-                <div className="md:col-span-2 space-y-4">
+              <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-3">
+                <div className="space-y-4 md:col-span-2">
                   <ProfileBio profile={profile} />
                   {isProfessional && (
                     <>
@@ -381,35 +428,40 @@ export const ProfilePage: React.FC = () => {
                     </>
                   )}
                 </div>
-                <div className="md:col-span-1 space-y-4">
+                <div className="space-y-4 md:col-span-1">
                   <ProfileDetails profile={profile} />
                 </div>
               </div>
             )}
 
-            {activeTab === 'work' && isProfessional && profile.professional && (
-              <ProfileWorkTab
-                profile={profile}
-                onRequestService={handleRequestService}
-                onViewAllServices={() => setActiveTab('services')}
-              />
-            )}
+            {activeTab === 'work' &&
+              isProfessional &&
+              profile.professional && (
+                <ProfileWorkTab
+                  profile={profile}
+                  onRequestService={handleRequestService}
+                  onViewAllServices={() => setActiveTab('services')}
+                />
+              )}
 
             {activeTab === 'services' && isProfessional && (
-              <div className="p-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs">
+              <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-slate-800/80 dark:bg-slate-900">
                 <h3 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">
                   All Services
                 </h3>
                 <ul className="mt-4 space-y-2">
-                  {(profile.professional?.services ?? []).map((service, idx) => (
-                    <li
-                      key={idx}
-                      className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl text-sm text-slate-700 dark:text-slate-300"
-                    >
-                      {service}
-                    </li>
-                  ))}
-                  {(profile.professional?.services ?? []).length === 0 && (
+                  {(profile.professional?.services ?? []).map(
+                    (service, idx) => (
+                      <li
+                        key={idx}
+                        className="rounded-xl bg-slate-50 p-3 text-sm text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                      >
+                        {service}
+                      </li>
+                    ),
+                  )}
+                  {(profile.professional?.services ?? []).length ===
+                    0 && (
                     <li className="text-sm text-slate-400">
                       No services listed.
                     </li>
@@ -418,19 +470,26 @@ export const ProfilePage: React.FC = () => {
               </div>
             )}
 
-            {activeTab === 'reviews' && isProfessional && profile.professional && (
-              <ReviewsTab
-                professionalId={profile.professional.id}
+            {activeTab === 'reviews' &&
+              isProfessional &&
+              profile.professional && (
+                <ReviewsTab
+                  professionalId={profile.professional.id}
+                  isOwnProfile={isOwnProfile}
+                  currentUserId={currentUser?.id}
+                />
+              )}
+
+            {activeTab === 'media' && (
+              <ProfileMediaTab
+                userId={profile.id}
                 isOwnProfile={isOwnProfile}
-                currentUserId={currentUser?.id}
               />
             )}
 
-            {activeTab === 'media' && (
-              <ProfileMediaTab userId={profile.id} isOwnProfile={isOwnProfile} />
+            {activeTab === 'posts' && (
+              <ProfilePostsTab userId={profile.id} />
             )}
-
-            {activeTab === 'posts' && <ProfilePostsTab userId={profile.id} />}
           </div>
         </div>
       </div>
@@ -441,14 +500,6 @@ export const ProfilePage: React.FC = () => {
           profile={profile}
           onSave={handleSaveProfile}
           onCancel={() => setIsEditing(false)}
-        />
-      )}
-
-      {showUpgradeModal && isOwnProfile && (
-        <ProfessionalOnboardingModal
-          userId={profile.id}
-          onClose={() => setShowUpgradeModal(false)}
-          onSuccess={handleUpgradeSuccess}
         />
       )}
 

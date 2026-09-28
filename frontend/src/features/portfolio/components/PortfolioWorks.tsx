@@ -60,6 +60,9 @@ export default function PortfolioWorks({
   /**
    * Two-step save: persist the work record first, then upload any
    * new before/after images using the resulting id.
+   *
+   * Throws if the record creation fails so the form's error handler
+   * can surface the failure instead of silently dropping the images.
    */
   const handleSubmit = async (
     input: WorkCreateInput,
@@ -68,13 +71,15 @@ export default function PortfolioWorks({
     const hasFiles = Boolean(files.before || files.after);
 
     if (editing) {
-      await onUpdate(editing.id, input);
+      const updated = await onUpdate(editing.id, input);
+      if (!updated) throw new Error('Failed to update work');
       if (hasFiles) {
         await onUploadImages(editing.id, files);
       }
     } else {
       const created = await onCreate(input);
-      if (created && hasFiles) {
+      if (!created) throw new Error('Failed to create work');
+      if (hasFiles) {
         await onUploadImages(created.id, files);
       }
     }
@@ -159,6 +164,7 @@ export default function PortfolioWorks({
             <PortfolioWorkCard
               key={work.id}
               work={work}
+              isOwner={isOwner}
               onEdit={() => handleEdit(work)}
               onDelete={() => onDelete(work.id)}
               onUploadImages={(before, after) =>
@@ -169,18 +175,20 @@ export default function PortfolioWorks({
         </div>
       )}
 
-      {/* ═══════════ Work form modal ═══════════ */}
-      <PortfolioWorkForm
-        open={formOpen}
-        initial={editing}
-        services={services}
-        saving={saving}
-        onClose={() => {
-          setFormOpen(false);
-          setEditing(null);
-        }}
-        onSubmit={handleSubmit}
-      />
+      {/* ═══════════ Work form modal (owner only) ═══════════ */}
+      {isOwner && (
+        <PortfolioWorkForm
+          open={formOpen}
+          initial={editing}
+          services={services}
+          saving={saving}
+          onClose={() => {
+            setFormOpen(false);
+            setEditing(null);
+          }}
+          onSubmit={handleSubmit}
+        />
+      )}
     </div>
   );
 }

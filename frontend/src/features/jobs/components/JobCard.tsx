@@ -231,10 +231,20 @@ export default function JobCard({ job, onOpenDetails, onPatch }: JobCardProps) {
 
     if (res) {
       setCommentText('');
-      setComments((prev) => [...prev, res]);
+
+      // Build the new comments array once, then use it for BOTH local
+      // state and the patch — otherwise the parent's re-render (triggered
+      // by pushPatch) resets `comments` back to the stale job.comments.
+      const nextComments = [...comments, res];
       const nextCount = commentsCount + 1;
+
+      setComments(nextComments);
       setCommentsCount(nextCount);
-      pushPatch({ comments_count: nextCount });
+
+      pushPatch({
+        comments: nextComments,
+        comments_count: nextCount,
+      });
     }
   };
 
@@ -465,13 +475,27 @@ export default function JobCard({ job, onOpenDetails, onPatch }: JobCardProps) {
                 <div className="max-h-52 space-y-2.5 overflow-y-auto pr-1 scrollbar-thin">
                   {comments.map((c) => {
                     const isMine = user?.id === c.user_id;
-                    const commentAuthor = isMine ? 'You' : 'User';
+                    const commentAuthor = isMine
+                      ? 'You'
+                      : c.user
+                        ? `${c.user.first_name || ''} ${
+                            c.user.last_name || ''
+                          }`.trim() || 'User'
+                        : 'User';
+                    const commentAvatar = isMine
+                      ? undefined
+                      : c.user?.profile_image_url ?? undefined;
+
                     return (
                       <div
                         key={c.id}
                         className="flex items-start gap-2.5 text-xs"
                       >
-                        <Avatar name={commentAuthor} size="sm" />
+                        <Avatar
+                          name={commentAuthor}
+                          avatar={commentAvatar}
+                          size="sm"
+                        />
                         <div className="min-w-0 flex-1 rounded-sm border border-slate-200/60 bg-white/70 p-2.5 dark:border-white/10 dark:bg-slate-800/40">
                           <div className="flex items-center justify-between gap-2">
                             <span className="font-semibold text-slate-900 dark:text-slate-200">
