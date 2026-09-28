@@ -16,7 +16,7 @@ export default function LoginPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const success = await login({ email, password });
-    if (success) navigate("/");
+    if (success) navigate("/home");
   };
 
   return (

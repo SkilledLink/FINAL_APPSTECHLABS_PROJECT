@@ -135,14 +135,20 @@ function ChipInput({
 
 export default function ProfessionalWizardPage() {
   const navigate = useNavigate();
-  const { refreshUser } = useAuth();
+
+  // Grab everything we might need from the auth hook. Depending on how
+  // your AuthProvider is wired, either one of these will exist.
+  const auth = useAuth() as any;
+  const refreshUser: undefined | (() => Promise<any>) = auth?.refreshUser;
+  const updateUser:
+    | undefined
+    | ((patch: Record<string, unknown>) => void) = auth?.updateUser;
 
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<ProfessionalCreateInput>(
     DEFAULT_WIZARD_STATE,
   );
 
-  /* Location is kept separate from `form` — it goes to a different endpoint. */
   const [locationData, setLocationData] =
     useState<ProfessionalLocationInput | null>(null);
   const [radiusKm, setRadiusKm] = useState(10);
@@ -175,65 +181,86 @@ export default function ProfessionalWizardPage() {
     setSaving(true);
     setError(null);
 
+    /* ── 1. Create the Professional row (critical) ────────── */
     try {
-      /* ── 1. Create the Professional row ────────────────────
-       * Backend flips `account_type` → "professional" in the same
-       * transaction. If a row already exists, backend returns 409. */
       await onboardingService.createProfessional({
         ...form,
-        // If the user picked a location but didn't type city/region/country,
-        // derive them from the location meta so the Professional row is
-        // denormalized correctly (used by the list endpoint).
         country: form.country || locationData?.country || undefined,
         region: form.region || locationData?.region || undefined,
         city: form.city || locationData?.city || undefined,
       });
-
-      /* ── 2. Save the professional location (best-effort) ──
-       * Location has its own table (PostGIS). Failures here do not
-       * roll back the professional — user can set it from dashboard. */
-      if (locationData) {
-        try {
-          await locationService.setMyLocation(locationData);
-
-          /* 3. Optional: create a service area for the radius */
-          try {
-            await locationService.createServiceArea({
-              center_latitude: locationData.latitude,
-              center_longitude: locationData.longitude,
-              radius_km: radiusKm,
-              area_name:
-                locationData.city ||
-                locationData.region ||
-                locationData.location_name ||
-                "Primary service area",
-            });
-          } catch {
-            /* Service area is a nice-to-have — swallow the error */
-          }
-        } catch (locErr) {
-          // eslint-disable-next-line no-console
-          console.warn("Location save failed during onboarding:", locErr);
-          toast.warn(
-            "Profile created — but we couldn't save your location. Set it later from your dashboard.",
-          );
-        }
-      }
-
-      await refreshUser();
-      toast.success("Professional profile created 🎉");
-      navigate("/home", { replace: true });
     } catch (err: any) {
-      // 409 = user already has a Professional row — just send them home
+      // 409 = user already has a Professional row — treat as success
       if (err?.status === 409) {
-        await refreshUser();
-        navigate("/home", { replace: true });
+        toast.info("You already have a professional profile.");
+      } else {
+        const msg = err?.message ?? "Something went wrong. Please try again.";
+        setError(msg);
+        toast.error(msg, { autoClose: 5000 });
+        setSaving(false);
         return;
       }
-      setError(err?.message ?? "Something went wrong. Please try again.");
-    } finally {
-      setSaving(false);
     }
+
+    /* ── 2. Sync local auth state IMMEDIATELY ──────────────
+     * The backend has just flipped account_type to "professional".
+     * React holds the OLD user object in memory, so if we navigate
+     * to /home right now, HomePage still thinks we're a regular user
+     * and renders stale UI. Patch the local user first.
+     */
+    try {
+      if (typeof updateUser === "function") {
+        updateUser({ account_type: "professional" });
+      }
+    } catch (e) {
+      console.warn("updateUser patch failed:", e);
+    }
+
+    /* ── 3. Save location (best effort) ──────────────────── */
+    if (locationData) {
+      try {
+        await locationService.setMyLocation(locationData);
+        try {
+          await locationService.createServiceArea({
+            center_latitude: locationData.latitude,
+            center_longitude: locationData.longitude,
+            radius_km: radiusKm,
+            area_name:
+              locationData.city ||
+              locationData.region ||
+              locationData.location_name ||
+              "Primary service area",
+          });
+        } catch {
+          /* service area is a nice-to-have */
+        }
+      } catch (locErr) {
+        console.warn("Location save failed during onboarding:", locErr);
+        toast.warn("Profile created — we couldn't save your location.");
+      }
+    }
+
+    /* ── 4. Refresh from server (best effort) ────────────── */
+    try {
+      if (typeof refreshUser === "function") {
+        await refreshUser();
+      }
+    } catch (refreshErr) {
+      console.warn("refreshUser failed:", refreshErr);
+    }
+
+    /* ── 5. Success + navigate ───────────────────────────── */
+    toast.success("🎉 Professional profile created!", {
+      autoClose: 4000,
+      position: "top-center",
+    });
+
+    // Small delay so the toast is visible before the route swap.
+    window.setTimeout(() => {
+      navigate("/home", { replace: true });
+    }, 700);
+
+    setSaving(false);
   };
 
   return (
@@ -243,7 +270,7 @@ export default function ProfessionalWizardPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
       >
-        {/* ── HEADER ───────────────────────────────────── */}
+        {/* HEADER */}
         <div className="text-center mb-6 sm:mb-8">
           <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400 mb-4">
             <Sparkles size={12} />
@@ -258,7 +285,7 @@ export default function ProfessionalWizardPage() {
           </p>
         </div>
 
-        {/* ── STEP INDICATOR ───────────────────────────── */}
+        {/* STEP INDICATOR */}
         <div className="mb-6 sm:mb-8 flex items-start justify-center">
           {STEPS.map((s, i) => {
             const Icon = s.icon;
@@ -304,7 +331,7 @@ export default function ProfessionalWizardPage() {
           })}
         </div>
 
-        {/* ── FORM CARD ────────────────────────────────── */}
+        {/* FORM CARD */}
         <div className="rounded-3xl border border-white/60 dark:border-slate-800/60 bg-white/55 dark:bg-slate-900/45 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.08)] dark:shadow-[0_25px_60px_rgba(0,0,0,0.5)] p-6 sm:p-8">
           {error && (
             <div className="mb-5 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-xs font-medium text-rose-700 dark:text-rose-400">
@@ -321,7 +348,7 @@ export default function ProfessionalWizardPage() {
               transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
               className="space-y-5"
             >
-              {/* ═══════════ STEP 1 ═══════════ */}
+              {/* STEP 1 */}
               {step === 1 && (
                 <>
                   <div className="mb-2">
@@ -420,7 +447,7 @@ export default function ProfessionalWizardPage() {
                 </>
               )}
 
-              {/* ═══════════ STEP 2 ═══════════ */}
+              {/* STEP 2 */}
               {step === 2 && (
                 <>
                   <div className="mb-2">
@@ -493,7 +520,7 @@ export default function ProfessionalWizardPage() {
                 </>
               )}
 
-              {/* ═══════════ STEP 3 ═══════════ */}
+              {/* STEP 3 */}
               {step === 3 && (
                 <>
                   <div className="mb-2">
@@ -506,7 +533,6 @@ export default function ProfessionalWizardPage() {
                     </p>
                   </div>
 
-                  {/* Real geo picker — search, current location, map, radius */}
                   <LocationPicker
                     live
                     showRadius
@@ -523,7 +549,6 @@ export default function ProfessionalWizardPage() {
                     }}
                   />
 
-                  {/* Confirmation chip appears as soon as a location is set */}
                   {locationData && (
                     <div className="flex items-start gap-2.5 rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.06] px-4 py-3">
                       <MapPin
@@ -607,7 +632,7 @@ export default function ProfessionalWizardPage() {
             </motion.div>
           </AnimatePresence>
 
-          {/* ── NAV ────────────────────────────────────── */}
+          {/* NAV */}
           <div className="mt-8 flex items-center justify-between gap-3">
             <button
               type="button"

@@ -1,7 +1,8 @@
+// src/components/layout/Header/Header.tsx
+
 import React, { useState } from 'react';
 import {
   Search,
-  Bell,
   X,
   MapPin,
   Star,
@@ -11,6 +12,10 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ProfileLink } from '../../../features/profile/components/ProfileLink';
+import { NotificationBell } from '../../../features/notifications';
+
+import LogoLight from '../../../assets/LogoLight.png';
+import LogoDark from '../../../assets/LogoDark.png';
 
 interface HeaderProps {
   isDark: boolean;
@@ -105,12 +110,13 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
 
   return (
     <>
-      <header className="h-20 w-full bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border-b border-blue-300/30 dark:border-blue-400/20 flex items-center justify-between px-6 sm:px-8 z-30 shadow-sm transition-colors duration-300 shrink-0 relative overflow-hidden">
+      <header className="h-24 w-full bg-white/60 dark:bg-[#070b14]/60 backdrop-blur-xl border-b border-blue-300/30 dark:border-blue-400/20 flex items-center justify-between px-6 sm:px-8 z-30 shadow-sm transition-colors duration-300 shrink-0 relative overflow-hidden">
+
         {/* Background lightning */}
         <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
           <svg
             className="w-full h-full opacity-40 dark:opacity-45"
-            viewBox="0 0 1200 80"
+            viewBox="0 0 1200 96"
             preserveAspectRatio="none"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
@@ -144,7 +150,7 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
             </defs>
 
             <motion.path
-              d="M -50 15 L 120 45 L 180 25 L 290 60 L 350 35 L 480 65 L 560 20 L 710 55 L 830 25 L 940 60 L 1050 30 L 1250 50"
+              d="M -50 18 L 120 54 L 180 30 L 290 72 L 350 42 L 480 78 L 560 24 L 710 66 L 830 30 L 940 72 L 1050 36 L 1250 60"
               stroke="url(#thunder-blue-grad-1)"
               strokeWidth="1.1"
               strokeLinecap="round"
@@ -163,7 +169,7 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
             />
 
             <motion.path
-              d="M 180 25 L 220 5 L 270 18 M 480 65 L 510 85 M 710 55 L 750 75 L 790 65 M 940 60 L 980 78"
+              d="M 180 30 L 220 6 L 270 22 M 480 78 L 510 102 M 710 66 L 750 90 L 790 78 M 940 72 L 980 94"
               stroke="#93c5fd"
               strokeWidth="0.75"
               strokeLinecap="round"
@@ -180,17 +186,35 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
             />
           </svg>
 
-          {/* Glowing gradient aura with blue-300 accent for light mode */}
+          {/* Glowing gradient aura */}
           <div className="absolute -top-10 left-1/3 w-72 h-24 bg-blue-300/20 dark:bg-blue-500/15 rounded-full blur-3xl" />
         </div>
 
-        {/* Logo */}
+        {/* ═══════════════════════════════════════════════════════
+            Logo — theme-aware, matches AuthLayout scale
+        ═══════════════════════════════════════════════════════ */}
         <div className="flex items-center gap-6 flex-1 z-10 relative">
           <Link
             to="/"
-            className="text-2xl font-black tracking-tight text-slate-900 dark:text-white shrink-0 select-none"
+            className="
+              group
+              flex items-center
+              shrink-0 select-none
+              outline-none
+            "
+            aria-label="SkilledLink home"
           >
-            Skilled<span className="text-blue-500 dark:text-blue-400">Link</span>
+            <img
+              src={isDark ? LogoDark : LogoLight}
+              alt="SkilledLink"
+              className="
+                h-32 w-32
+                sm:h-32 sm:w-32
+                object-contain
+                transition-all duration-500
+                group-hover:scale-[1.03]
+              "
+            />
           </Link>
         </div>
 
@@ -204,14 +228,7 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
             <Search size={20} />
           </button>
 
-          <Link
-            to="/home/notifications"
-            className="p-2 text-slate-700 dark:text-slate-200 hover:bg-blue-50/60 dark:hover:bg-slate-800/60 hover:text-blue-600 dark:hover:text-blue-400 rounded-xl transition-all relative border border-transparent hover:border-blue-200/50 dark:hover:border-slate-700/50"
-            aria-label="Notifications"
-          >
-            <Bell size={20} />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-500 rounded-full ring-2 ring-white dark:ring-slate-900" />
-          </Link>
+          <NotificationBell />
         </div>
       </header>
 
@@ -389,10 +406,11 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
                                     )}
 
                                     <span
-                                      className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white dark:border-slate-900 ${professional.available
+                                      className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white dark:border-slate-900 ${
+                                        professional.available
                                           ? 'bg-green-500'
                                           : 'bg-slate-400'
-                                        }`}
+                                      }`}
                                     />
                                   </div>
 
@@ -422,23 +440,23 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
                                     {(professional.city ||
                                       professional.region ||
                                       professional.country) && (
-                                        <div className="flex items-center gap-1.5 mt-2 text-xs text-slate-500 dark:text-slate-400">
-                                          <MapPin
-                                            size={13}
-                                            className="shrink-0"
-                                          />
+                                      <div className="flex items-center gap-1.5 mt-2 text-xs text-slate-500 dark:text-slate-400">
+                                        <MapPin
+                                          size={13}
+                                          className="shrink-0"
+                                        />
 
-                                          <span className="truncate">
-                                            {[
-                                              professional.city,
-                                              professional.region,
-                                              professional.country,
-                                            ]
-                                              .filter(Boolean)
-                                              .join(', ')}
-                                          </span>
-                                        </div>
-                                      )}
+                                        <span className="truncate">
+                                          {[
+                                            professional.city,
+                                            professional.region,
+                                            professional.country,
+                                          ]
+                                            .filter(Boolean)
+                                            .join(', ')}
+                                        </span>
+                                      </div>
+                                    )}
 
                                     {/* Stats */}
                                     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 text-xs text-slate-500 dark:text-slate-400">
@@ -465,7 +483,7 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
                                             {professional.years_of_experience}{' '}
                                             yr
                                             {professional.years_of_experience !==
-                                              1
+                                            1
                                               ? 's'
                                               : ''}{' '}
                                             experience
@@ -514,16 +532,18 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
                                 {/* Availability */}
                                 <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
                                   <span
-                                    className={`inline-flex items-center gap-1.5 text-xs font-semibold ${professional.available
+                                    className={`inline-flex items-center gap-1.5 text-xs font-semibold ${
+                                      professional.available
                                         ? 'text-green-600 dark:text-green-400'
                                         : 'text-slate-400 dark:text-slate-500'
-                                      }`}
+                                    }`}
                                   >
                                     <span
-                                      className={`w-1.5 h-1.5 rounded-full ${professional.available
+                                      className={`w-1.5 h-1.5 rounded-full ${
+                                        professional.available
                                           ? 'bg-green-500'
                                           : 'bg-slate-400'
-                                        }`}
+                                      }`}
                                     />
 
                                     {professional.available

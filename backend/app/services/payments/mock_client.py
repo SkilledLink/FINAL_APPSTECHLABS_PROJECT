@@ -73,7 +73,7 @@ def _decide_outcome(phone: str) -> tuple[str, float]:
     # can show the "waiting" phase before flipping to success.
     return "SUCCESSFUL", 3.0
 
-
+  
 class MockMomoClient:
     """PaymentProviderClient implementation that never leaves the process."""
 

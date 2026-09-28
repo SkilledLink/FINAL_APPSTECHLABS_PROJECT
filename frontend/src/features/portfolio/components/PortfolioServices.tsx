@@ -1,8 +1,12 @@
-// src/features/portfolio/components/PortfolioServices.tsx
 import { Plus, Wrench, Trash2, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { Service, ServiceCreateInput } from '../types/portfolio.types';
+import { toast } from 'react-toastify';
+import type {
+  Service,
+  ServiceCreateInput,
+  ServiceUpdateInput,
+} from '../types/portfolio.types';
 import PortfolioServiceForm from './PortfolioServiceForm';
 import PortfolioServiceCard from './PortfolioServiceCard';
 
@@ -10,12 +14,12 @@ interface PortfolioServicesProps {
   services: Service[];
   saving?: boolean;
   isOwner?: boolean;
-  onCreate: (input: ServiceCreateInput) => Promise<void>;
-  onUpdate: (id: string, input: ServiceCreateInput) => Promise<void>;
+  onCreate: (input: ServiceCreateInput) => Promise<Service | null>;
+  onUpdate: (id: string, input: ServiceUpdateInput) => Promise<Service | null>;
   onDelete: (id: string) => Promise<void>;
+  onUploadBanner?: (id: string, file: File) => Promise<void>;
+  onUploadGallery?: (id: string, files: File[]) => Promise<void>;
 }
-
-/* ───────────────────────── Shared tokens ───────────────────────── */
 
 const BTN_PRIMARY =
   'group inline-flex w-full items-center justify-center gap-1.5 rounded ' +
@@ -34,8 +38,6 @@ const BTN_DANGER =
   'text-sm font-semibold text-white shadow-sm shadow-rose-500/25 ' +
   'transition-colors hover:bg-rose-500 disabled:opacity-50';
 
-/* ─────────────────────────────────────────────────────────────── */
-
 export default function PortfolioServices({
   services,
   saving = false,
@@ -43,6 +45,8 @@ export default function PortfolioServices({
   onCreate,
   onUpdate,
   onDelete,
+  onUploadBanner,
+  onUploadGallery,
 }: PortfolioServicesProps) {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Service | null>(null);
@@ -51,8 +55,6 @@ export default function PortfolioServices({
 
   const count = services.length;
   const targetService = services.find((s) => s.id === confirmDelete);
-
-  /* ── Handlers ── */
 
   const handleAdd = () => {
     setEditing(null);
@@ -64,27 +66,31 @@ export default function PortfolioServices({
     setFormOpen(true);
   };
 
-  const handleSubmit = async (input: ServiceCreateInput) => {
-    if (editing) {
-      await onUpdate(editing.id, input);
-    } else {
-      await onCreate(input);
+  const handleSubmit = async (
+    input: ServiceCreateInput
+  ): Promise<Service | null> => {
+    try {
+      const saved = editing
+        ? await onUpdate(editing.id, input)
+        : await onCreate(input);
+      return saved;
+    } catch {
+      return null;
     }
-    setFormOpen(false);
-    setEditing(null);
   };
 
   const handleDelete = async (id: string) => {
     setDeletingId(id);
     try {
       await onDelete(id);
+      toast.success('Service deleted');
       setConfirmDelete(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete');
     } finally {
       setDeletingId(null);
     }
   };
-
-  /* ── Delete confirm modal (portal) ── */
 
   const deleteModal =
     confirmDelete != null
@@ -109,10 +115,7 @@ export default function PortfolioServices({
                          bg-white/95 dark:bg-slate-900/95 backdrop-blur-3xl
                          shadow-[0_25px_60px_-15px_rgba(0,0,0,0.5)]"
             >
-              {/* Top accent — rose for destructive */}
               <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-rose-500/40 to-transparent" />
-
-              {/* Glow */}
               <div className="pointer-events-none absolute -top-16 left-1/2 h-40 w-40 -translate-x-1/2 rounded-full bg-rose-500/15 blur-3xl" />
 
               <div className="relative p-6">
@@ -171,11 +174,8 @@ export default function PortfolioServices({
         )
       : null;
 
-  /* ── Render ── */
-
   return (
     <div className="space-y-5 sm:space-y-6">
-      {/* ═══════════ Header ═══════════ */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-start gap-3">
           <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-blue-500/20 bg-blue-500/10 text-blue-600 dark:border-blue-400/20 dark:text-blue-400">
@@ -209,7 +209,6 @@ export default function PortfolioServices({
         )}
       </div>
 
-      {/* ═══════════ Empty state ═══════════ */}
       {count === 0 ? (
         <div className="relative overflow-hidden rounded-md border border-dashed border-blue-500/25 bg-blue-500/[0.03] px-6 py-10 text-center backdrop-blur-sm dark:border-blue-400/20 dark:bg-blue-500/[0.04]">
           <div className="pointer-events-none absolute left-1/2 top-0 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/15 blur-3xl" />
@@ -241,12 +240,12 @@ export default function PortfolioServices({
           </div>
         </div>
       ) : (
-        /* ═══════════ Grid ═══════════ */
         <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2">
           {services.map((service) => (
             <PortfolioServiceCard
               key={service.id}
               service={service}
+              isOwner={isOwner}
               onEdit={() => handleEdit(service)}
               onDelete={() => handleDelete(service.id)}
             />
@@ -254,20 +253,26 @@ export default function PortfolioServices({
         </div>
       )}
 
-      {/* ═══════════ Service form modal ═══════════ */}
-      <PortfolioServiceForm
-        open={formOpen}
-        initial={editing}
-        saving={saving}
-        onClose={() => {
-          setFormOpen(false);
-          setEditing(null);
-        }}
-        onSubmit={handleSubmit}
-      />
+      {isOwner && (
+        <PortfolioServiceForm
+          open={formOpen}
+          initial={editing}
+          saving={saving}
+          onClose={() => {
+            setFormOpen(false);
+            setEditing(null);
+          }}
+          onSubmit={handleSubmit}
+          onUploadBanner={onUploadBanner}
+          onUploadGallery={onUploadGallery}
+          onSuccess={() => {
+            setFormOpen(false);
+            setEditing(null);
+          }}
+        />
+      )}
 
-      {/* ═══════════ Delete confirmation (portal) ═══════════ */}
-      {deleteModal}
+      {isOwner && deleteModal}
     </div>
   );
 }

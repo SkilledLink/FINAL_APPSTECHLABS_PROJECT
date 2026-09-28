@@ -94,8 +94,7 @@ export interface AISearchParams {
 
 /* ── Config ──────────────────────────────────────────────── */
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://192.168.68.67:8000';
 
 function getAccessToken(): string | null {
   try {
@@ -111,16 +110,13 @@ function getAccessToken(): string | null {
 
 /* ── Mapper — backend card → DiscoverProfessional ────────── */
 
-function toDiscoverProfessional(
-  card: BackendProfessionalCard,
-): DiscoverProfessional {
+function toDiscoverProfessional(card: BackendProfessionalCard): DiscoverProfessional {
   const displayName =
     [card.first_name, card.last_name].filter(Boolean).join(' ').trim() ||
     card.name ||
     'Professional';
 
-  const locationLabel =
-    [card.city, card.country].filter(Boolean).join(', ') || null;
+  const locationLabel = [card.city, card.country].filter(Boolean).join(', ') || null;
 
   const publicLocation =
     card.city || card.country
@@ -172,16 +168,12 @@ export const aiSearchService = {
 
     if (params.query) formData.append('query', params.query);
     if (params.city) formData.append('city', params.city);
-    if (params.latitude != null)
-      formData.append('latitude', String(params.latitude));
-    if (params.longitude != null)
-      formData.append('longitude', String(params.longitude));
-    if (params.radiusKm != null)
-      formData.append('radius_km', String(params.radiusKm));
+    if (params.latitude != null) formData.append('latitude', String(params.latitude));
+    if (params.longitude != null) formData.append('longitude', String(params.longitude));
+    if (params.radiusKm != null) formData.append('radius_km', String(params.radiusKm));
     if (params.verifiedOnly) formData.append('verified_only', 'true');
     if (params.availableOnly) formData.append('available_only', 'true');
-    if (params.minRating != null)
-      formData.append('min_rating', String(params.minRating));
+    if (params.minRating != null) formData.append('min_rating', String(params.minRating));
     formData.append('limit', String(params.limit ?? 20));
     if (params.image) formData.append('image', params.image);
 

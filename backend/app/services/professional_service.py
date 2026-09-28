@@ -428,7 +428,7 @@ class ProfessionalService:
             action,
             actor_user_id=admin_user_id,
             actor_role="admin",
-            old_value={"verification_status": old.value},
+            old_value={"verification_status": getattr(old, "value", old)},
             new_value={"verification_status": new_status.value},
             reason=reason,
         )

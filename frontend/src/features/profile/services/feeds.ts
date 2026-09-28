@@ -1,12 +1,8 @@
 // src/features/profile/services/feeds.ts
 
-import type {
-  FeedThumbnail,
-  FeedThumbnailPage,
-} from '../types/profile.types';
+import type { FeedThumbnail, FeedThumbnailPage } from '../types/profile.types';
 
-const API_BASE =
-  import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://192.168.68.67:8000';
 
 const getAuthHeaders = (): HeadersInit => {
   const token = localStorage.getItem('access_token');
@@ -36,7 +32,7 @@ export const fetchUserMedia = async (
   userId: string,
   skip: number,
   limit: number,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<FeedThumbnailPage> => {
   const params = new URLSearchParams({
     user_id: userId,
@@ -44,14 +40,11 @@ export const fetchUserMedia = async (
     limit: String(limit),
   });
 
-  const response = await fetch(
-    `${API_BASE}/feeds/thumbnails?${params.toString()}`,
-    {
-      method: 'GET',
-      headers: getAuthHeaders(),
-      signal,
-    }
-  );
+  const response = await fetch(`${API_BASE}/feeds/thumbnails?${params.toString()}`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+    signal,
+  });
 
   if (!response.ok) {
     throw new Error(`Failed to fetch media: ${response.status}`);

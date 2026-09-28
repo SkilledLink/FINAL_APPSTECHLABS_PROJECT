@@ -1,12 +1,12 @@
-import { useState } from "react";
-import type { FormEvent } from "react";
-import { Link } from "react-router-dom";
-import { ArrowRight, ArrowLeft, Mail, MailCheck } from "lucide-react";
-import { useAuth } from "../hooks/useAuth";
+import { useState } from 'react';
+import type { FormEvent } from 'react';
+import { Link } from 'react-router-dom';
+import { ArrowRight, ArrowLeft, Mail, MailCheck } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 
 export function ForgotPasswordForm() {
   const { forgotPassword, loading, error, clearError } = useAuth();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState('');
   const [focused, setFocused] = useState(false);
   const [sent, setSent] = useState(false);
 
@@ -64,15 +64,22 @@ export function ForgotPasswordForm() {
             Email address
           </span>
           <div
-            className={`flex items-center gap-2.5 rounded-xl border px-3.5 py-3 transition-all duration-200 ${focused ? "border-[#4F46E5] ring-4 ring-[#4F46E5]/10" : "border-[#E2E8F0] hover:border-[#CBD5E1]"
-              }`}
+            className={`flex items-center gap-2.5 rounded-xl border px-3.5 py-3 transition-all duration-200 ${
+              focused
+                ? 'border-[#4F46E5] ring-4 ring-[#4F46E5]/10'
+                : 'border-[#E2E8F0] hover:border-[#CBD5E1]'
+            }`}
           >
-            <Mail size={17} strokeWidth={1.8} className={focused ? "text-[#4F46E5]" : "text-[#94A3B8]"} />
+            <Mail
+              size={17}
+              strokeWidth={1.8}
+              className={focused ? 'text-[#4F46E5]' : 'text-[#94A3B8]'}
+            />
             <input
               type="email"
               required
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={e => setEmail(e.target.value)}
               onFocus={() => {
                 setFocused(true);
                 clearError();
@@ -94,7 +101,10 @@ export function ForgotPasswordForm() {
           ) : (
             <>
               Send reset link
-              <ArrowRight size={16} className="transition-transform duration-200 group-hover:translate-x-0.5" />
+              <ArrowRight
+                size={16}
+                className="transition-transform duration-200 group-hover:translate-x-0.5"
+              />
             </>
           )}
         </button>
@@ -129,14 +139,16 @@ export const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onNaviga
   return (
     <div className="w-full max-w-sm mx-auto p-8">
       <h1 className="text-2xl font-bold text-gray-900 mb-2">Forgot Password?</h1>
-      <p className="text-sm text-gray-600 mb-6">Enter your email to receive password reset instructions.</p>
+      <p className="text-sm text-gray-600 mb-6">
+        Enter your email to receive password reset instructions.
+      </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
           type="email"
           required
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={e => setEmail(e.target.value)}
           placeholder="Enter your email"
           className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />

@@ -17,20 +17,46 @@
   }
   
   :root:is(.dark) {
-    /* DARK MODE: True OLED Black for depth and battery saving */
-    --app-bg: #000000;
-    /* Very subtle off-black for elevated cards/modals */
-    --app-surface: #0a0a0a;
-    /* Soft off-white for text to prevent blooming/halation */
-    --app-text: #ededed;
-    /* Barely visible borders to define edges */
-    --app-border: #27272a;
+    /* DARK MODE: Very deep navy base (#011c44).
+       Surfaces lift into brighter navy so cards read clearly. */
+    --app-bg: #011c44;
+    /* Elevated navy for cards/modals — clear contrast lift above the base */
+    --app-surface: #01306e;
+    /* Near-white with a blue tint — comfortable on the deep navy */
+    --app-text: #e6f0ff;
+    /* Lighter blue border — visible without shouting */
+    --app-border: #14417f;
   }
 
   /* Automatically apply the best background and text colors to the whole app */
   body {
     background-color: var(--app-bg);
     color: var(--app-text);
+  }
+
+  /* Dark mode: layer radial glows that add depth to the deep navy base —
+     cyan light top-left, blue glow bottom-right. */
+  :root:is(.dark) body {
+    background:
+      radial-gradient(
+        ellipse 85% 65% at 0% 0%,
+        rgba(56, 189, 248, 0.20) 0%,
+        rgba(56, 189, 248, 0.07) 25%,
+        transparent 55%
+      ),
+      radial-gradient(
+        ellipse 75% 65% at 100% 100%,
+        rgba(2, 74, 181, 0.40) 0%,
+        rgba(2, 74, 181, 0.18) 30%,
+        transparent 70%
+      ),
+      radial-gradient(
+        ellipse 60% 50% at 50% 120%,
+        rgba(0, 14, 42, 0.55) 0%,
+        transparent 60%
+      ),
+      var(--app-bg);
+    background-attachment: fixed;
   }
 }
 
@@ -47,10 +73,11 @@
   --color-foreground: var(--app-text);
   --color-border-subtle: var(--app-border);
 
-  /* Legacy overrides kept for your specific UI needs */
+  /* Legacy overrides kept for your specific UI needs
+     (updated to blend with the new deep navy palette) */
   --color-neutral: #000000;
-  --color-slate-950: #000000;
-  --color-slate-900: #0a0a0a;
+  --color-slate-950: #010f29;
+  --color-slate-900: #011c44;
 
   /* Typography */
   --font-sans: "Hanken Grotesk", sans-serif;
@@ -161,6 +188,13 @@ body::-webkit-scrollbar {
 :root:not(.dark) .glass3d {
   --filter-glass3d: blur(28px) brightness(1.02) saturate(1.2);
   --color-glass3d: rgba(255, 255, 255, 0.55);
+}
+
+/* Dark-mode variant: frosted deep-navy tint so glass surfaces stay
+   in the same family as the base navy. */
+:root:is(.dark) .glass3d {
+  --filter-glass3d: blur(32px) brightness(1.1) saturate(1.6);
+  --color-glass3d: rgba(1, 48, 110, 0.55);
 }
 
 /* ═══════════ Water motion ═══════════ */

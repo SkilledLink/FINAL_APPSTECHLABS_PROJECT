@@ -34,6 +34,8 @@ export interface UsePortfolioResult {
   createService: (input: ServiceCreateInput) => Promise<Service | null>;
   updateService: (id: string, input: ServiceUpdateInput) => Promise<Service | null>;
   deleteService: (id: string) => Promise<boolean>;
+  uploadServiceBanner: (id: string, file: File) => Promise<Service | null>;
+  uploadServiceGallery: (id: string, files: File[]) => Promise<Service | null>;
 
   createWork: (input: WorkCreateInput) => Promise<Work | null>;
   updateWork: (id: string, input: WorkUpdateInput) => Promise<Work | null>;
@@ -189,6 +191,42 @@ export function usePortfolio(enabled = true): UsePortfolioResult {
     }
   }, []);
 
+  const uploadServiceBanner = useCallback(
+    async (id: string, file: File) => {
+      setSaving(true);
+      setError(null);
+      try {
+        const s = await portfolioService.uploadServiceBanner(id, file);
+        setServices((prev) => prev.map((x) => (x.id === id ? s : x)));
+        return s;
+      } catch (err: any) {
+        setError(err?.message ?? 'Failed to upload banner');
+        throw err;
+      } finally {
+        setSaving(false);
+      }
+    },
+    []
+  );
+
+  const uploadServiceGallery = useCallback(
+    async (id: string, files: File[]) => {
+      setSaving(true);
+      setError(null);
+      try {
+        const s = await portfolioService.uploadServiceGallery(id, files);
+        setServices((prev) => prev.map((x) => (x.id === id ? s : x)));
+        return s;
+      } catch (err: any) {
+        setError(err?.message ?? 'Failed to upload gallery');
+        throw err;
+      } finally {
+        setSaving(false);
+      }
+    },
+    []
+  );
+
   /* ── Works ──────────────────────────────────────── */
 
   const createWork = useCallback(async (input: WorkCreateInput) => {
@@ -284,6 +322,8 @@ export function usePortfolio(enabled = true): UsePortfolioResult {
     createService,
     updateService,
     deleteService,
+    uploadServiceBanner,
+    uploadServiceGallery,
     createWork,
     updateWork,
     deleteWork,
@@ -295,7 +335,9 @@ export function usePortfolio(enabled = true): UsePortfolioResult {
 /* ── Public portfolio ───────────────────────────────── */
 
 export function usePublicPortfolio(userId: string | undefined) {
-  const [data, setData] = useState<import('../types/portfolio.types').PublicPortfolio | null>(null);
+  const [data, setData] = useState<
+    import('../types/portfolio.types').PublicPortfolio | null
+  >(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

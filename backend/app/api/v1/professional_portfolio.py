@@ -148,6 +148,19 @@ def upload_work_images(
     return service.upload_work_images(work_id, current_user, before, after)
 
 
+@router.post("/portfolio/works/{work_id}/gallery", response_model=WorkResponse)
+def upload_work_gallery(
+    work_id: UUID,
+    images: List[UploadFile] = File(...),
+    current_user: User = Depends(get_current_active_user),
+    session: Session = Depends(get_session),
+):
+    if not images:
+        raise HTTPException(400, "At least one image must be provided")
+    service = ProfessionalPortfolioService(session)
+    return service.upload_work_gallery(work_id, current_user, images)
+
+
 # ---------- Services (owner) ----------
 @router.post("/portfolio/services", response_model=ServiceResponse, status_code=status.HTTP_201_CREATED)
 def create_service(
@@ -191,6 +204,36 @@ def delete_service(
 ):
     service = ProfessionalPortfolioService(session)
     service.delete_service(service_id, current_user)
+
+
+@router.post(
+    "/portfolio/services/{service_id}/banner",
+    response_model=ServiceResponse,
+)
+def upload_service_banner(
+    service_id: UUID,
+    banner: UploadFile = File(...),
+    current_user: User = Depends(get_current_active_user),
+    session: Session = Depends(get_session),
+):
+    service = ProfessionalPortfolioService(session)
+    return service.upload_service_banner(service_id, current_user, banner)
+
+
+@router.post(
+    "/portfolio/services/{service_id}/gallery",
+    response_model=ServiceResponse,
+)
+def upload_service_gallery(
+    service_id: UUID,
+    images: List[UploadFile] = File(...),
+    current_user: User = Depends(get_current_active_user),
+    session: Session = Depends(get_session),
+):
+    if not images:
+        raise HTTPException(400, "At least one image must be provided")
+    service = ProfessionalPortfolioService(session)
+    return service.upload_service_gallery(service_id, current_user, images)
 
 
 # ---------- Availability (owner) ----------

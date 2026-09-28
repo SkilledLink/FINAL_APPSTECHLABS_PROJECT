@@ -17,8 +17,7 @@ import type {
 
 /* ───────────────────────── Public HTTP client (no 401 logout) ───────────────────────── */
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://192.168.68.67:8000';
 
 const publicHttp = axios.create({
   baseURL: API_BASE_URL,
@@ -26,12 +25,12 @@ const publicHttp = axios.create({
   timeout: 15_000,
 });
 
-publicHttp.interceptors.request.use((config) => {
+publicHttp.interceptors.request.use(config => {
   try {
     const token = localStorage.getItem('access_token');
     if (token) {
       config.headers = config.headers ?? {};
-      
+
       config.headers.Authorization = `Bearer ${token}`;
     }
   } catch {
@@ -67,9 +66,7 @@ function normalizeProfessional(p: any): DiscoverProfessional {
           display_name:
             rawLoc.display_name ??
             rawLoc.location_name ??
-            [rawLoc.city, rawLoc.region, rawLoc.country]
-              .filter(Boolean)
-              .join(', ') ??
+            [rawLoc.city, rawLoc.region, rawLoc.country].filter(Boolean).join(', ') ??
             '',
           city: rawLoc.city ?? null,
           region: rawLoc.region ?? null,
@@ -81,8 +78,8 @@ function normalizeProfessional(p: any): DiscoverProfessional {
     typeof p?.distance_km === 'number'
       ? p.distance_km
       : typeof p?.distance === 'number'
-      ? p.distance
-      : null;
+        ? p.distance
+        : null;
 
   return {
     id: p.id,
@@ -110,9 +107,7 @@ function normalizeProfessional(p: any): DiscoverProfessional {
 }
 
 function normalizeListResponse(data: any): DiscoverResponse {
-  const rawItems = Array.isArray(data)
-    ? data
-    : data?.items ?? data?.results ?? [];
+  const rawItems = Array.isArray(data) ? data : (data?.items ?? data?.results ?? []);
 
   const items = rawItems.map(normalizeProfessional);
 
@@ -135,11 +130,7 @@ function normalizeSearchResponse(data: any): LocationSearchResponse {
 /* ───────────────────────── Service ───────────────────────── */
 
 export const locationService = {
-  async search(
-    q: string,
-    limit = 8,
-    country?: string
-  ): Promise<LocationSearchResponse> {
+  async search(q: string, limit = 8, country?: string): Promise<LocationSearchResponse> {
     try {
       const { data } = await publicHttp.get('/locations/search', {
         params: { q, limit, country: country || undefined },
@@ -201,9 +192,13 @@ export const locationService = {
             '[discover:nearby] raw response shape =',
             Array.isArray(data) ? 'array' : 'object',
             '\nfirst item keys =',
-            data?.items?.[0] ? Object.keys(data.items[0]) : data?.[0] ? Object.keys(data[0]) : 'empty',
+            data?.items?.[0]
+              ? Object.keys(data.items[0])
+              : data?.[0]
+                ? Object.keys(data[0])
+                : 'empty',
             '\nfirst item =',
-            data?.items?.[0] ?? data?.[0] ?? null
+            data?.items?.[0] ?? data?.[0] ?? null,
           );
         }
 
@@ -226,9 +221,13 @@ export const locationService = {
           '[discover:list] raw response shape =',
           Array.isArray(data) ? 'array' : 'object',
           '\nfirst item keys =',
-          data?.items?.[0] ? Object.keys(data.items[0]) : data?.[0] ? Object.keys(data[0]) : 'empty',
+          data?.items?.[0]
+            ? Object.keys(data.items[0])
+            : data?.[0]
+              ? Object.keys(data[0])
+              : 'empty',
           '\nfirst item =',
-          data?.items?.[0] ?? data?.[0] ?? null
+          data?.items?.[0] ?? data?.[0] ?? null,
         );
       }
 
@@ -262,9 +261,7 @@ export const locationService = {
 
   async getMyLocation(): Promise<ProfessionalLocation | null> {
     try {
-      const { data } = await apiClient.get<ProfessionalLocation>(
-        '/professionals/me/location'
-      );
+      const { data } = await apiClient.get<ProfessionalLocation>('/professionals/me/location');
       return data;
     } catch (err: any) {
       if (err?.response?.status === 404) return null;
@@ -272,13 +269,11 @@ export const locationService = {
     }
   },
 
-  async setMyLocation(
-    input: ProfessionalLocationInput
-  ): Promise<ProfessionalLocation> {
+  async setMyLocation(input: ProfessionalLocationInput): Promise<ProfessionalLocation> {
     try {
       const { data } = await apiClient.put<ProfessionalLocation>(
         '/professionals/me/location',
-        input
+        input,
       );
       return data;
     } catch (err) {
@@ -286,13 +281,11 @@ export const locationService = {
     }
   },
 
-  async updateMyLocation(
-    input: Partial<ProfessionalLocationInput>
-  ): Promise<ProfessionalLocation> {
+  async updateMyLocation(input: Partial<ProfessionalLocationInput>): Promise<ProfessionalLocation> {
     try {
       const { data } = await apiClient.patch<ProfessionalLocation>(
         '/professionals/me/location',
-        input
+        input,
       );
       return data;
     } catch (err) {
@@ -311,7 +304,7 @@ export const locationService = {
   async listServiceAreas(): Promise<ServiceAreaListResponse> {
     try {
       const { data } = await apiClient.get<ServiceAreaListResponse>(
-        '/professionals/me/service-areas'
+        '/professionals/me/service-areas',
       );
       return data;
     } catch (err) {
@@ -321,10 +314,7 @@ export const locationService = {
 
   async createServiceArea(input: ServiceAreaInput): Promise<ServiceArea> {
     try {
-      const { data } = await apiClient.post<ServiceArea>(
-        '/professionals/me/service-areas',
-        input
-      );
+      const { data } = await apiClient.post<ServiceArea>('/professionals/me/service-areas', input);
       return data;
     } catch (err) {
       throw new Error(toMessage(err, 'Failed to create service area'));
@@ -333,12 +323,12 @@ export const locationService = {
 
   async updateServiceArea(
     areaId: string,
-    input: Partial<ServiceAreaInput> & { status?: 'active' | 'paused' }
+    input: Partial<ServiceAreaInput> & { status?: 'active' | 'paused' },
   ): Promise<ServiceArea> {
     try {
       const { data } = await apiClient.patch<ServiceArea>(
         `/professionals/me/service-areas/${areaId}`,
-        input
+        input,
       );
       return data;
     } catch (err) {

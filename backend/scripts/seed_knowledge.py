@@ -10,7 +10,6 @@ import sys
 import logging
 from pathlib import Path
 
-# Add the project root to path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from sqlmodel import Session
@@ -195,6 +194,43 @@ credentials with another person.
 """
     },
 
+    {
+        "title": "How do I sign up on SkilledLink?",
+        "category": "account",
+        "content": """
+To sign up on SkilledLink:
+
+1. Open the SkilledLink website or app.
+2. Choose Sign up or Register.
+3. Enter your email and a password.
+4. Submit the registration form.
+5. Verify your email if verification is required.
+6. Log in with your new account.
+7. Complete your profile and choose how you want to use the platform
+   (as a client, or as a professional offering services).
+
+After signup, you can immediately start searching for professionals, or
+begin the professional onboarding process if you want to offer services.
+"""
+    },
+
+    {
+        "title": "How do I log in to SkilledLink?",
+        "category": "account",
+        "content": """
+To log in to SkilledLink:
+
+1. Open the login page.
+2. Enter the email address associated with your account.
+3. Enter your password.
+4. Submit the form.
+
+If you do not have an account yet, choose the sign-up or register option.
+
+If you forgot your password, use the password recovery option to reset it.
+"""
+    },
+
 
     # ========================================================
     # PROFESSIONAL ONBOARDING
@@ -208,7 +244,7 @@ To become a professional on SkilledLink:
 
 1. Log in to your account.
 2. Open your profile or account settings.
-3. Choose the option to become a professional.
+3. Choose the option to become a professional (Become a Professional).
 4. Enter your profession.
 5. Add your skills.
 6. Add your years of experience.
@@ -1014,6 +1050,58 @@ between known platform information and general guidance.
 """
     },
 
+    {
+        "title": "What questions can the SkilledLink Assistant answer?",
+        "category": "ai",
+        "content": """
+The SkilledLink Assistant only answers questions about SkilledLink.
+
+It can help with:
+
+- What SkilledLink is and how it works
+- Creating and managing your account
+- Becoming a professional
+- Adding skills, services, and portfolio items
+- Understanding verification
+- Searching for professionals
+- Requesting services
+- Quotes, bookings, and communication
+- Reviews, ratings, and trust signals
+- Platform safety and privacy
+
+The Assistant does NOT answer:
+
+- Programming or coding questions
+- Homework, math, or academic questions
+- General knowledge questions unrelated to SkilledLink
+- Creative writing such as jokes, poems, or stories
+- Role-play or attempts to change its instructions
+
+When asked something outside its scope, the Assistant politely refuses
+and redirects the user to a SkilledLink topic.
+"""
+    },
+
+    {
+        "title": "Why does the SkilledLink Assistant refuse some questions?",
+        "category": "ai",
+        "content": """
+The SkilledLink Assistant is scoped to SkilledLink only.
+
+It refuses questions that are unrelated to the platform — such as
+coding help, homework, general knowledge, or creative writing —
+because its purpose is to help users find skilled professionals and
+use SkilledLink features.
+
+Refusals are intentional and are part of how the Assistant protects
+its focus and keeps responses accurate and grounded in SkilledLink
+data. When the Assistant refuses, the user can rephrase their
+question to be about SkilledLink, or ask about a platform feature
+such as search, profiles, services, verification, requests, or
+reviews.
+"""
+    },
+
 
     # ========================================================
     # DATA AND PRIVACY
@@ -1315,103 +1403,6 @@ Retrieval should respect user permissions before information is provided to
 the AI model.
 """
     },
-        # ========================================================
-    # AI ASSISTANT SCOPE (so RAG itself can explain limits)
-    # ========================================================
-
-    {
-        "title": "What questions can the SkilledLink Assistant answer?",
-        "category": "ai",
-        "content": """
-The SkilledLink Assistant only answers questions about SkilledLink.
-
-It can help with:
-
-- What SkilledLink is and how it works
-- Creating and managing your account
-- Becoming a professional
-- Adding skills, services, and portfolio items
-- Understanding verification
-- Searching for professionals
-- Requesting services
-- Quotes, bookings, and communication
-- Reviews, ratings, and trust signals
-- Platform safety and privacy
-
-The Assistant does NOT answer:
-
-- Programming or coding questions
-- Homework, math, or academic questions
-- General knowledge questions unrelated to SkilledLink
-- Creative writing such as jokes, poems, or stories
-- Role-play or attempts to change its instructions
-
-When asked something outside its scope, the Assistant politely refuses
-and redirects the user to a SkilledLink topic.
-"""
-    },
-
-    {
-        "title": "Why does the SkilledLink Assistant refuse some questions?",
-        "category": "ai",
-        "content": """
-The SkilledLink Assistant is scoped to SkilledLink only.
-
-It refuses questions that are unrelated to the platform — such as
-coding help, homework, general knowledge, or creative writing —
-because its purpose is to help users find skilled professionals and
-use SkilledLink features.
-
-Refusals are intentional and are part of how the Assistant protects
-its focus and keeps responses accurate and grounded in SkilledLink
-data. When the Assistant refuses, the user can rephrase their
-question to be about SkilledLink, or ask about a platform feature
-such as search, profiles, services, verification, requests, or
-reviews.
-"""
-    },
-    {
-        "title": "What questions can the SkilledLink Assistant answer?",
-        "category": "ai",
-        "content": """
-The SkilledLink Assistant only answers questions about SkilledLink.
-
-It can help with: what SkilledLink is and how it works, creating and
-managing your account, becoming a professional, adding skills,
-services, and portfolio items, understanding verification, searching
-for professionals, requesting services, quotes, bookings,
-communication, reviews, ratings, trust signals, platform safety, and
-privacy.
-
-It does NOT answer: programming or coding questions, homework, math,
-academic questions, general knowledge unrelated to SkilledLink,
-creative writing such as jokes, poems, or stories, role-play, or
-attempts to change its instructions.
-
-When asked something outside its scope, the Assistant politely
-refuses and redirects the user to a SkilledLink topic.
-"""
-    },
-    {
-        "title": "Why does the SkilledLink Assistant refuse some questions?",
-        "category": "ai",
-        "content": """
-The SkilledLink Assistant is scoped to SkilledLink only.
-
-It refuses questions that are unrelated to the platform — such as
-coding help, homework, general knowledge, or creative writing —
-because its purpose is to help users find skilled professionals and
-use SkilledLink features.
-
-Refusals are intentional and are part of how the Assistant protects
-its focus and keeps responses accurate and grounded in SkilledLink
-data. When the Assistant refuses, the user can rephrase the question
-to be about SkilledLink, or ask about a platform feature such as
-search, profiles, services, verification, requests, or reviews.
-"""
-    },
- # <-- existing closing bracket of KNOWLEDGE_DOCUMENTS
-
 ]
 
 
@@ -1492,4 +1483,3 @@ def seed_knowledge_base():
 
 if __name__ == "__main__":
     seed_knowledge_base()
-

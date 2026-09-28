@@ -35,12 +35,10 @@ logger = logging.getLogger(__name__)
 
 
 # ── Module-level caches / limiters ──────────────────────────
-# Whole-content cache: hash(title + description + image hashes) -> result
 _content_cache = TTLCache(
     ttl_seconds=settings.MODERATION_TEXT_CACHE_TTL_SECONDS,
     max_size=settings.MODERATION_TEXT_CACHE_MAX_SIZE,
 )
-# Process-level RPM limiter, safety-margined below Gemini free tier.
 _provider_limiter = SlidingWindowLimiter(
     max_per_minute=settings.MODERATION_MAX_CALLS_PER_MINUTE,
 )
@@ -72,14 +70,12 @@ class ModerationService:
         self.repo = ModerationRepository(session)
         self.fetcher = CloudinaryImageFetcher()
 
-        # On free tier, Gemini handles both text AND images. The "text"
-        # provider is used only when a feed has no images.
         self.text_provider = text_provider or build_text_provider()
         self.image_provider = image_provider or build_image_provider()
         self.multimodal_provider = multimodal_provider or self.image_provider
 
         self.text_moderator = TextModerator(self.text_provider)
-        self.image_moderator = None  # reserved for multi-image fallback
+        self.image_moderator = None
         self.multimodal_moderator = MultimodalModerator(self.multimodal_provider)
         self.video_moderator = VideoModerator()
 
@@ -89,6 +85,23 @@ class ModerationService:
         supersede any prior active record, and return the outcome."""
 
         self.repo.supersede_for_feed(feed.id)
+
+        # ── FAST PATH: any video → auto-approve, skip the LLM ──
+        # Video moderation is not implemented (see video_moderator.py).
+        # For the demo we auto-publish videos rather than routing them
+        # to manual review. Calling Gemini anyway costs 2–5 seconds of
+        # latency for zero change in outcome. Short-circuit here.
+        #
+        # ⚠️ FOR PRODUCTION: revert to REVIEW — auto-publishing
+        # unmoderated video is a policy risk.
+        video_media = self._video_media(feed)
+        if video_media:
+            logger.info(
+                "Feed %s has %d video(s) — auto-approving without LLM call",
+                feed.id,
+                len(video_media),
+            )
+            return self._persist_video_auto_approved(feed, video_media)
 
         # ── Fetch images once, keep bytes for hashing + multimodal call ──
         images_bytes: list[tuple[bytes, str]] = []
@@ -135,22 +148,8 @@ class ModerationService:
             images=images_bytes,
         )
 
-        # ── Videos: always review (no video provider) ────────
-        video_results: list[ProviderResult] = []
-        for media in self._video_media(feed):
-            r = self.video_moderator.moderate(
-                media_url=media.media_url,
-                duration_seconds=media.duration_seconds,
-            )
-            if r is not None:
-                video_results.append(r)
-                image_meta.append({
-                    "media_type": "video",
-                    "url": media.media_url,
-                })
-
-        # ── Combine (single multimodal result + any videos) ──
-        combined = decision_engine.combine([result, *video_results])
+        # ── Combine (single multimodal result) ───────────────
+        combined = decision_engine.combine([result])
         decision = decision_engine.decide(combined.severity)
 
         # ── Persist ──────────────────────────────────────────
@@ -169,7 +168,6 @@ class ModerationService:
         self.session.commit()
         self.session.refresh(record)
 
-        # Cache the outcome (only successful runs — failures shouldn't stick)
         if not result.error:
             _content_cache.set(
                 cache_key,
@@ -285,7 +283,6 @@ class ModerationService:
     def _persist_from_cached(
         self, feed: Feed, cached: dict, image_meta: list[dict],
     ) -> ModerationOutcome:
-        """Persist a fresh ModerationRecord using the cached verdict."""
         record = ModerationRecord(
             feed_id=feed.id,
             decision=cached["decision"],
@@ -317,6 +314,62 @@ class ModerationService:
             categories=cached["categories"],
             provider=cached["provider"],
             model=cached["model"],
+            error=None,
+            record=record,
+        )
+
+    def _persist_video_auto_approved(
+        self, feed: Feed, video_media: list[FeedMedia],
+    ) -> ModerationOutcome:
+        """
+        Video posts skip moderation entirely and go live immediately.
+
+        Rationale for the demo: video moderation isn't implemented, and
+        routing every video to review makes publishing feel slow. Videos
+        are auto-published.
+
+        ⚠️ FOR PRODUCTION: revert this to REVIEW — auto-publishing
+        unmoderated video is a policy risk.
+        """
+        image_meta = [
+            {
+                "media_type": "video",
+                "url": m.media_url,
+                "duration_seconds": m.duration_seconds,
+            }
+            for m in video_media
+        ]
+
+        record = ModerationRecord(
+            feed_id=feed.id,
+            decision=ModerationDecision.SAFE.value,
+            combined_severity=1,
+            combined_confidence=100,
+            text_result={
+                "description": "Video auto-approved",
+                "reason": "Video moderation disabled for demo",
+                "categories": [],
+                "provider": "internal",
+                "model": "video_auto_publish",
+            },
+            image_results=image_meta,
+            provider="internal",
+            model="video_auto_publish",
+            error=None,
+        )
+        self.repo.create(record)
+        self.session.commit()
+        self.session.refresh(record)
+
+        return ModerationOutcome(
+            decision=ModerationDecision.SAFE.value,
+            severity=1,
+            confidence=100,
+            description="Video auto-approved",
+            reason="Video moderation disabled for demo",
+            categories=[],
+            provider="internal",
+            model="video_auto_publish",
             error=None,
             record=record,
         )
@@ -389,7 +442,7 @@ class ModerationService:
             "error": r.error,
             "raw": r.raw,
             "fallback_used": r.fallback_used,
-            "primary_provider": r.primary_provider,
+            "primary_provider": r.primary_provider, 
             "primary_model": r.primary_model,
             "primary_error": r.primary_error,
         }
