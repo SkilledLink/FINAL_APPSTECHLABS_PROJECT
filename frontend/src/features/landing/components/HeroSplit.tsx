@@ -150,17 +150,20 @@ const Hero: React.FC = () => {
         <EmberField count={28} />
         <SparkFlash />
 
-        {/* ─────────────  FADE TO HERO'S OWN COLOR  ─────────────
-            The hero dissolves into its own dark ink at the bottom,
-            closing itself off. The next section starts fresh on
-            its own background with a clean edge. */}
+        {/* FADE TO PAGE */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] h-40 sm:h-52"
           style={{
             background:
-              "linear-gradient(to bottom, rgba(6,20,46,0) 0%, rgba(6,20,46,0.45) 55%, rgba(6,20,46,0.85) 82%, #06142e 100%)",
+              "linear-gradient(to bottom, rgba(248,250,252,0) 0%, rgba(248,250,252,0.35) 45%, rgba(248,250,252,0.85) 78%, #f8fafc 100%)",
           }}
+        />
+
+        {/* Dark mode override — same fade but into slate-950 */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-[6] hidden h-40 bg-gradient-to-b from-transparent via-slate-950/40 to-slate-950 sm:h-52 dark:block"
         />
 
         <div className="relative z-10 flex min-h-[92vh] flex-col">
@@ -171,8 +174,6 @@ const Hero: React.FC = () => {
               transition={{ duration: 0.7, delay: 0.1 }}
               className="flex items-baseline justify-between text-[11px] font-medium uppercase tracking-[0.22em] text-white/70"
             >
-              
-              {/* Replaced plain text with two-tone text logo */}
               <div className="flex items-baseline gap-0 text-sm font-bold tracking-tight normal-case">
                 <span className="text-white">Skilled</span>
                 <span className="text-blue-500">Link</span>

@@ -188,6 +188,8 @@ function Stage({ on, children }: On & { children: React.ReactNode }) {
   );
 }
 
+/* ---------------- SCENES ---------------- */
+
 const Register = ({ on }: On) => (
   <Stage on={on}>
     <Pop on={on} from={1} delay={0.1}>
@@ -435,7 +437,7 @@ const FeaturedProps: React.FC = () => {
   return (
     <section
       id="professionals"
-      className="relative overflow-hidden bg-[#f8fafc] py-28 lg:py-40"
+      className="relative overflow-hidden bg-[#f8fafc] py-28 lg:py-40 dark:bg-slate-950"
     >
       <div className="mx-auto max-w-[1280px] px-6 sm:px-10 lg:px-16">
         <motion.div
@@ -443,7 +445,7 @@ const FeaturedProps: React.FC = () => {
           whileInView={{ opacity: 1 }}
           viewport={{ once: true, amount: 0.5 }}
           transition={{ duration: 0.7 }}
-          className="flex items-baseline justify-between text-[11px] font-medium uppercase tracking-[0.22em] text-slate-500"
+          className="flex items-baseline justify-between text-[11px] font-medium uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400"
         >
           <span>03 / Professionals</span>
           <span>For the trades</span>
@@ -455,7 +457,7 @@ const FeaturedProps: React.FC = () => {
           viewport={{ once: true, amount: 0.5 }}
           transition={{ duration: 1.2, delay: 0.15, ease }}
           style={{ transformOrigin: "left" }}
-          className="mt-5 h-px w-full bg-slate-200"
+          className="mt-5 h-px w-full bg-slate-200 dark:bg-slate-800"
         />
 
         <div className="mt-14 grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-end lg:gap-20">
@@ -464,7 +466,7 @@ const FeaturedProps: React.FC = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.4 }}
             transition={{ duration: 0.9, delay: 0.2, ease }}
-            className="max-w-[14ch] text-[clamp(2.25rem,5vw,4rem)] font-normal leading-[1.02] tracking-[-0.035em] text-[#06142e]"
+            className="max-w-[14ch] text-[clamp(2.25rem,5vw,4rem)] font-normal leading-[1.02] tracking-[-0.035em] text-[#06142e] dark:text-white"
             style={{ fontFamily: '"Fraunces", Georgia, serif' }}
           >
             From account to hired.
@@ -476,7 +478,7 @@ const FeaturedProps: React.FC = () => {
             viewport={{ once: true, amount: 0.4 }}
             transition={{ duration: 0.8, delay: 0.35, ease }}
           >
-            <p className="max-w-[46ch] text-[17px] leading-8 text-slate-600">
+            <p className="max-w-[46ch] text-[17px] leading-8 text-slate-600 dark:text-slate-300">
               Every professional on SkilledLink starts the same way. A standard
               account, no roles, no labels. When you are ready, you unlock the
               professional tools, build your profile, and get found by
@@ -484,7 +486,7 @@ const FeaturedProps: React.FC = () => {
             </p>
             <Link
               to="/onboarding"
-              className="mt-8 inline-block text-[15px] text-blue-600 underline decoration-blue-600/30 decoration-1 underline-offset-[7px] transition-colors duration-200 hover:decoration-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600"
+              className="mt-8 inline-block text-[15px] text-blue-600 underline decoration-blue-600/30 decoration-1 underline-offset-[7px] transition-colors duration-200 hover:decoration-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600 dark:text-blue-400 dark:decoration-blue-400/30 dark:hover:decoration-blue-400 dark:focus-visible:outline-blue-400"
             >
               Start the path
             </Link>
@@ -515,7 +517,10 @@ const FeaturedProps: React.FC = () => {
             <div aria-hidden="true" className="relative grid grid-cols-6 items-end">
               {milestones.map((m, i) => (
                 <div key={m.number} className="flex justify-center px-2">
-                  <m.Scene on={active >= i} />
+                  {/* Paper card keeps illustrations readable on dark */}
+                  <div className="w-full rounded-md bg-white/0 p-2 dark:bg-white/[0.04]">
+                    <m.Scene on={active >= i} />
+                  </div>
                 </div>
               ))}
             </div>
@@ -561,14 +566,14 @@ const FeaturedProps: React.FC = () => {
                     style={{ left: pct(p.x, W) }}
                   >
                     <motion.span
-                      className="absolute left-0 top-0 w-0 origin-top border-l border-dashed border-blue-600/50"
+                      className="absolute left-0 top-0 w-0 origin-top border-l border-dashed border-blue-600/50 dark:border-blue-400/50"
                       style={{ height: dotTop }}
                       initial={false}
                       animate={{ scaleY: on ? 1 : 0 }}
                       transition={t(0.6, 0.1)}
                     />
                     <motion.span
-                      className="absolute left-0 h-5 w-5 rounded-full border border-blue-600/45"
+                      className="absolute left-0 h-5 w-5 rounded-full border border-blue-600/45 dark:border-blue-400/45"
                       style={{ top: dotTop, x: "-50%", y: "-50%" }}
                       initial={false}
                       animate={{ scale: on ? 1 : 0.4, opacity: on ? 1 : 0 }}
@@ -587,7 +592,7 @@ const FeaturedProps: React.FC = () => {
                     />
                     {i === 5 && active === 5 && !reduce && (
                       <motion.span
-                        className="absolute left-0 h-5 w-5 rounded-full border border-blue-600"
+                        className="absolute left-0 h-5 w-5 rounded-full border border-blue-600 dark:border-blue-400"
                         style={{ top: dotTop, x: "-50%", y: "-50%" }}
                         initial={{ scale: 0.3, opacity: 0.9 }}
                         animate={{ scale: 3, opacity: 0 }}
@@ -599,7 +604,7 @@ const FeaturedProps: React.FC = () => {
               })}
 
               <motion.span
-                className="pointer-events-none absolute z-10 h-3.5 w-3.5 rounded-full bg-blue-600 ring-4 ring-[#f8fafc]"
+                className="pointer-events-none absolute z-10 h-3.5 w-3.5 rounded-full bg-blue-600 ring-4 ring-[#f8fafc] dark:bg-blue-400 dark:ring-slate-950"
                 style={{ left: tx, top: ty, x: "-50%", y: "-50%" }}
                 initial={false}
                 animate={{ opacity: active >= 0 && !done ? 1 : 0, scale: done ? 0.4 : 1 }}
@@ -607,7 +612,7 @@ const FeaturedProps: React.FC = () => {
               >
                 {!reduce && (
                   <motion.span
-                    className="absolute inset-0 rounded-full bg-blue-600"
+                    className="absolute inset-0 rounded-full bg-blue-600 dark:bg-blue-400"
                     animate={{ scale: [1, 2.8], opacity: [0.5, 0] }}
                     transition={{ duration: 1.2, repeat: Infinity, ease: "easeOut" }}
                   />
@@ -623,7 +628,9 @@ const FeaturedProps: React.FC = () => {
                     <motion.span
                       className="block text-[11px] font-medium tabular-nums"
                       initial={false}
-                      animate={{ color: on ? BLUE : "rgba(100,116,139,0.35)" }}
+                      animate={{
+                        color: on ? BLUE : "rgba(100,116,139,0.35)",
+                      }}
                       transition={{ duration: 0.4 }}
                     >
                       {m.number}
@@ -631,7 +638,7 @@ const FeaturedProps: React.FC = () => {
 
                     <span className="mt-2 block overflow-hidden pb-1">
                       <motion.h4
-                        className="text-[17px] font-normal leading-tight text-[#06142e]"
+                        className="text-[17px] font-normal leading-tight text-[#06142e] dark:text-white"
                         style={{ fontFamily: '"Fraunces", Georgia, serif' }}
                         initial={false}
                         animate={{ y: on ? "0%" : "115%" }}
@@ -642,7 +649,7 @@ const FeaturedProps: React.FC = () => {
                     </span>
 
                     <motion.p
-                      className="mx-auto mt-2 max-w-[22ch] text-[12.5px] leading-5 text-slate-500"
+                      className="mx-auto mt-2 max-w-[22ch] text-[12.5px] leading-5 text-slate-500 dark:text-slate-400"
                       initial={false}
                       animate={{ opacity: on ? 1 : 0, y: on ? 0 : 8 }}
                       transition={t(0.8, 0.3)}
@@ -664,7 +671,7 @@ const FeaturedProps: React.FC = () => {
             animate={{ opacity: done && !reduce ? 1 : 0 }}
             transition={{ duration: 0.6 }}
             tabIndex={done && !reduce ? 0 : -1}
-            className="text-[14px] text-slate-500 underline decoration-slate-300 decoration-1 underline-offset-[6px] transition-colors hover:text-[#06142e] hover:decoration-slate-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600"
+            className="text-[14px] text-slate-500 underline decoration-slate-300 decoration-1 underline-offset-[6px] transition-colors hover:text-[#06142e] hover:decoration-slate-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600 dark:text-slate-400 dark:decoration-slate-600 dark:hover:text-white dark:hover:decoration-slate-400 dark:focus-visible:outline-blue-400"
           >
             Replay the path
           </motion.button>

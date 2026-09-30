@@ -2,13 +2,13 @@
 
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Sun, Moon } from "lucide-react";
 
 interface NavbarProps {
   activeNav?: string;
   onNavigate?: (id: string) => void;
 }
 
-/* Reduced to three primary sections */
 const navItems = [
   { id: "trades", label: "Trades" },
   { id: "professionals", label: "Professionals" },
@@ -16,7 +16,7 @@ const navItems = [
 ];
 
 /* ═══════════════════════════════════════════════════════════
-   THEME HELPERS — kept exported for compatibility
+   THEME HELPERS — single source of truth for the whole app
 ═══════════════════════════════════════════════════════════ */
 
 export const THEME_KEY = "theme";
@@ -69,6 +69,31 @@ const TopNav: React.FC<NavbarProps> = ({ activeNav, onNavigate }) => {
     activeNav || "home"
   );
   const [visible, setVisible] = useState(false);
+
+  /* ─── THEME STATE ─── */
+  const [isDark, setIsDark] = useState<boolean>(() => getInitialTheme());
+
+  /* Apply theme whenever it changes */
+  useEffect(() => {
+    applyTheme(isDark);
+  }, [isDark]);
+
+  /* Stay in sync if another part of the app toggles the theme */
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      const domDark = document.documentElement.classList.contains("dark");
+      setIsDark((prev) => (prev === domDark ? prev : domDark));
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  const toggleTheme = () => setIsDark((prev) => !prev);
 
   /* ─── REVEAL AFTER HERO ─── */
   useEffect(() => {
@@ -180,14 +205,13 @@ const TopNav: React.FC<NavbarProps> = ({ activeNav, onNavigate }) => {
     <>
       {/* ═══════════════════════════════════════════
           MASTHEAD
-          Layout: [SkilledLink]  [Nav items]  [Login · Get started]
       ═══════════════════════════════════════════ */}
       <header
-        className={`fixed top-0 left-0 right-0 z-50 border-b border-slate-200 bg-[#f8fafc] transition-transform duration-500 ease-out ${
+        className={`fixed top-0 left-0 right-0 z-50 border-b border-slate-200 bg-[#f8fafc] transition-transform duration-500 ease-out dark:border-slate-800 dark:bg-slate-950 ${
           visible ? "translate-y-0" : "-translate-y-full"
         }`}
       >
-        <nav className=" flex h-16 w-full items-center justify-between px-6 sm:h-20 sm:px-10 lg:px-16">
+        <nav className="flex h-16 w-full items-center justify-between px-6 sm:h-20 sm:px-10 lg:px-16">
           {/* LEFT — WORDMARK */}
           <button
             type="button"
@@ -196,11 +220,11 @@ const TopNav: React.FC<NavbarProps> = ({ activeNav, onNavigate }) => {
           >
             <div className="text-[22px] font-bold tracking-tight sm:text-[26px]">
               <span className="text-slate-900 dark:text-white">Skilled</span>
-              <span className="text-blue-500">Link</span>
+              <span className="text-blue-500 dark:text-blue-400">Link</span>
             </div>
           </button>
 
-          {/* CENTER — NAV ITEMS (desktop only) */}
+          {/* CENTER — NAV ITEMS */}
           <ul className="hidden items-baseline gap-8 lg:flex">
             {navItems.map((item) => {
               const isActive = currentSection === item.id;
@@ -212,15 +236,15 @@ const TopNav: React.FC<NavbarProps> = ({ activeNav, onNavigate }) => {
                     onClick={() => handleNavigate(item.id)}
                     className={`relative pb-1 text-[12px] font-bold uppercase tracking-[0.22em] transition-colors duration-200 ${
                       isActive
-                        ? "text-blue-600"
-                        : "text-slate-500 hover:text-blue-600"
+                        ? "text-blue-600 dark:text-blue-400"
+                        : "text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
                     }`}
                   >
                     {item.label}
 
                     <span
                       aria-hidden="true"
-                      className={`absolute -bottom-0.5 left-0 right-0 h-px origin-left bg-blue-600 transition-transform duration-300 ${
+                      className={`absolute -bottom-0.5 left-0 right-0 h-px origin-left bg-blue-600 transition-transform duration-300 dark:bg-blue-400 ${
                         isActive ? "scale-x-100" : "scale-x-0"
                       }`}
                     />
@@ -230,12 +254,22 @@ const TopNav: React.FC<NavbarProps> = ({ activeNav, onNavigate }) => {
             })}
           </ul>
 
-          {/* RIGHT — LOGIN + GET STARTED (desktop) */}
-          <div className="hidden items-baseline gap-8 lg:flex">
+          {/* RIGHT — THEME TOGGLE + LOGIN + GET STARTED */}
+          <div className="hidden items-baseline gap-6 lg:flex">
+            {/* THEME TOGGLE */}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition-colors duration-200 hover:border-blue-600 hover:text-blue-600 dark:border-slate-800 dark:text-slate-400 dark:hover:border-blue-400 dark:hover:text-blue-400"
+            >
+              {isDark ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
+
             <button
               type="button"
               onClick={handleLogin}
-              className="text-[12px] font-bold uppercase tracking-[0.22em] text-slate-500 transition-colors duration-200 hover:text-blue-600"
+              className="text-[12px] font-bold uppercase tracking-[0.22em] text-slate-500 transition-colors duration-200 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
             >
               Login
             </button>
@@ -243,18 +277,28 @@ const TopNav: React.FC<NavbarProps> = ({ activeNav, onNavigate }) => {
             <button
               type="button"
               onClick={handleGetStarted}
-              className="bg-blue-600 px-5 py-2.5 text-[12px] font-bold uppercase tracking-[0.22em] text-white transition-colors duration-200 hover:bg-blue-700"
+              className="bg-blue-600 px-5 py-2.5 text-[12px] font-bold uppercase tracking-[0.22em] text-white transition-colors duration-200 hover:bg-blue-700 dark:bg-blue-500 dark:text-slate-950 dark:hover:bg-blue-400"
             >
               Get started
             </button>
           </div>
 
-          {/* MOBILE RIGHT — Join button (stands in for the desktop cluster) */}
-          <div className="flex items-center gap-6 lg:hidden">
+          {/* MOBILE */}
+          <div className="flex items-center gap-4 lg:hidden">
+            {/* THEME TOGGLE */}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition-colors duration-200 hover:border-blue-600 hover:text-blue-600 dark:border-slate-800 dark:text-slate-400 dark:hover:border-blue-400 dark:hover:text-blue-400"
+            >
+              {isDark ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
+
             <button
               type="button"
               onClick={handleGetStarted}
-              className="bg-blue-600 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.22em] text-white transition-colors duration-200 hover:bg-blue-700"
+              className="bg-blue-600 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.22em] text-white transition-colors duration-200 hover:bg-blue-700 dark:bg-blue-500 dark:text-slate-950 dark:hover:bg-blue-400"
             >
               Join
             </button>
@@ -264,7 +308,7 @@ const TopNav: React.FC<NavbarProps> = ({ activeNav, onNavigate }) => {
               onClick={() => setMobileOpen((p) => !p)}
               aria-label={mobileOpen ? "Close menu" : "Open menu"}
               aria-expanded={mobileOpen}
-              className="text-[12px] font-bold uppercase tracking-[0.22em] text-blue-600 transition-colors duration-200 hover:text-blue-700"
+              className="text-[12px] font-bold uppercase tracking-[0.22em] text-blue-600 transition-colors duration-200 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
             >
               {mobileOpen ? "Close" : "Menu"}
             </button>
@@ -280,10 +324,9 @@ const TopNav: React.FC<NavbarProps> = ({ activeNav, onNavigate }) => {
           role="dialog"
           aria-modal="true"
           aria-label="Navigation menu"
-          className="fixed inset-0 z-40 bg-[#f8fafc] lg:hidden"
+          className="fixed inset-0 z-40 bg-[#f8fafc] lg:hidden dark:bg-slate-950"
         >
           <div className="mx-auto flex h-full max-w-[1280px] flex-col px-6 pt-24 sm:px-10 sm:pt-28">
-            {/* NAV LIST */}
             <ul className="flex-1">
               {navItems.map((item, i) => {
                 const isActive = currentSection === item.id;
@@ -291,7 +334,7 @@ const TopNav: React.FC<NavbarProps> = ({ activeNav, onNavigate }) => {
                 return (
                   <li
                     key={item.id}
-                    className="border-t border-slate-200 last:border-b"
+                    className="border-t border-slate-200 last:border-b dark:border-slate-800"
                   >
                     <button
                       type="button"
@@ -301,7 +344,9 @@ const TopNav: React.FC<NavbarProps> = ({ activeNav, onNavigate }) => {
                       <span className="flex items-baseline gap-5">
                         <span
                           className={`text-[12px] font-bold tabular-nums transition-colors duration-200 ${
-                            isActive ? "text-blue-600" : "text-slate-400"
+                            isActive
+                              ? "text-blue-600 dark:text-blue-400"
+                              : "text-slate-400 dark:text-slate-500"
                           }`}
                         >
                           {String(i + 1).padStart(2, "0")}
@@ -310,8 +355,8 @@ const TopNav: React.FC<NavbarProps> = ({ activeNav, onNavigate }) => {
                         <span
                           className={`text-[clamp(1.5rem,5vw,2rem)] font-bold leading-tight tracking-[-0.03em] transition-colors duration-200 ${
                             isActive
-                              ? "text-blue-600"
-                              : "text-blue-600/70 hover:text-blue-600"
+                              ? "text-blue-600 dark:text-blue-400"
+                              : "text-blue-600/70 hover:text-blue-600 dark:text-blue-400/70 dark:hover:text-blue-400"
                           }`}
                           style={{
                             fontFamily: '"Fraunces", Georgia, serif',
@@ -324,7 +369,7 @@ const TopNav: React.FC<NavbarProps> = ({ activeNav, onNavigate }) => {
                       {isActive && (
                         <span
                           aria-hidden="true"
-                          className="h-1 w-1 rounded-full bg-blue-600"
+                          className="h-1 w-1 rounded-full bg-blue-600 dark:bg-blue-400"
                         />
                       )}
                     </button>
@@ -333,13 +378,12 @@ const TopNav: React.FC<NavbarProps> = ({ activeNav, onNavigate }) => {
               })}
             </ul>
 
-            {/* ACTIONS */}
-            <div className="border-t border-slate-200 py-8">
+            <div className="border-t border-slate-200 py-8 dark:border-slate-800">
               <div className="flex flex-wrap items-baseline gap-x-10 gap-y-4">
                 <button
                   type="button"
                   onClick={handleLogin}
-                  className="text-[13px] font-bold uppercase tracking-[0.22em] text-blue-600 transition-colors duration-200 hover:text-blue-700"
+                  className="text-[13px] font-bold uppercase tracking-[0.22em] text-blue-600 transition-colors duration-200 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                 >
                   Login
                 </button>
@@ -347,13 +391,13 @@ const TopNav: React.FC<NavbarProps> = ({ activeNav, onNavigate }) => {
                 <button
                   type="button"
                   onClick={handleGetStarted}
-                  className="bg-blue-600 px-6 py-3 text-[13px] font-bold uppercase tracking-[0.22em] text-white transition-colors duration-200 hover:bg-blue-700"
+                  className="bg-blue-600 px-6 py-3 text-[13px] font-bold uppercase tracking-[0.22em] text-white transition-colors duration-200 hover:bg-blue-700 dark:bg-blue-500 dark:text-slate-950 dark:hover:bg-blue-400"
                 >
                   Get started
                 </button>
               </div>
 
-              <p className="mt-8 text-[10px] font-medium uppercase tracking-[0.24em] text-slate-400">
+              <p className="mt-8 text-[10px] font-medium uppercase tracking-[0.24em] text-slate-400 dark:text-slate-500">
                 SkilledLink · Cameroon
               </p>
             </div>
