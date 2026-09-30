@@ -171,7 +171,13 @@ const Hero: React.FC = () => {
               transition={{ duration: 0.7, delay: 0.1 }}
               className="flex items-baseline justify-between text-[11px] font-medium uppercase tracking-[0.22em] text-white/70"
             >
-              <span>SkilledLink</span>
+              
+              {/* Replaced plain text with two-tone text logo */}
+              <div className="flex items-baseline gap-0 text-sm font-bold tracking-tight normal-case">
+                <span className="text-white">Skilled</span>
+                <span className="text-blue-500">Link</span>
+              </div>
+
               <span className="flex items-center gap-2.5">
                 <span className="h-[6px] w-[6px] bg-blue-500" aria-hidden="true" />
                 <span>Cameroon</span>

@@ -14,9 +14,6 @@ import { Link } from 'react-router-dom';
 import { ProfileLink } from '../../../features/profile/components/ProfileLink';
 import { NotificationBell } from '../../../features/notifications';
 
-import LogoLight from '../../../assets/LogoLight.png';
-import LogoDark from '../../../assets/LogoDark.png';
-
 interface HeaderProps {
   isDark: boolean;
   toggleTheme: () => void;
@@ -204,17 +201,10 @@ export default function Header({ isDark, toggleTheme }: HeaderProps) {
             "
             aria-label="SkilledLink home"
           >
-            <img
-              src={isDark ? LogoDark : LogoLight}
-              alt="SkilledLink"
-              className="
-                h-32 w-32
-                sm:h-32 sm:w-32
-                object-contain
-                transition-all duration-500
-                group-hover:scale-[1.03]
-              "
-            />
+            <div className="text-3xl font-bold tracking-tight transition-all duration-500 group-hover:scale-[1.03]">
+              <span className="text-slate-900 dark:text-white">Skilled</span>
+              <span className="text-blue-500">Link</span>
+            </div>
           </Link>
         </div>
 
