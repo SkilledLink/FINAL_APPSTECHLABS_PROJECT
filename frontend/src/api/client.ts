@@ -2,8 +2,8 @@
 import axios from 'axios';
 
 /* ───────────────────────── Config ───────────────────────── */
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://192.168.68.67:8000';
+const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://192.168.68.67:8000')
+  .replace(/\/+$/, '');
 
 /* ───────────────────────── Public endpoints ─────────────────────────
  * Any request whose URL contains one of these substrings will NEVER
