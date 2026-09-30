@@ -119,17 +119,9 @@ from app.models.professional_ai_usage import ProfessionalAIUsage  # noqa: F401
 from app.models.webhook_event import WebhookEvent  # noqa: F401
 
 # ─── Vector / AI knowledge base models (pgvector) ──────────
-# Imported so they register with SQLModel.metadata. If your project
-# exposes them under a different module path, adjust the import below.
-# (The SQL in the deploy log referenced `knowledge_documents`, so make
-# sure whatever module defines it is imported here — directly or
-# transitively — BEFORE SQLModel.metadata.create_all runs.)
 try:
     from app.models.knowledge_document import KnowledgeDocument  # noqa: F401
 except ImportError:
-    # Module name may differ (e.g. app.models.knowledge, app.ai.models…).
-    # If the table still isn't created after deploy, find the actual module
-    # and import it explicitly here.
     pass
 
 
@@ -149,15 +141,15 @@ async def lifespan(app: FastAPI):
         raise e
 
     # 2) Ensure required Postgres extensions exist BEFORE create_all.
-    #    `vector` is required by models that use VECTOR(N) columns
-    #    (e.g. knowledge_documents.embedding).
+    #    - vector   → required by knowledge_documents.embedding (pgvector)
+    #    - postgis  → required by professional_locations.location (geometry)
+    #    - pg_trgm  → optional, useful for fast ILIKE / fuzzy search
     try:
         with engine.begin() as connection:
             connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-            # Optional: trigram indexes for fast ILIKE / fuzzy search.
-            # Safe to keep even if you don't use it — it's tiny.
+            connection.execute(text("CREATE EXTENSION IF NOT EXISTS postgis"))
             connection.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
-        print("✅ Postgres extensions ensured (vector, pg_trgm).")
+        print("✅ Postgres extensions ensured (vector, postgis, pg_trgm).")
     except Exception as e:
         print("❌ Failed to enable Postgres extensions.")
         print(f"Error details: {e}")
@@ -165,8 +157,7 @@ async def lifespan(app: FastAPI):
 
     # 3) Create any missing tables (idempotent).
     #    All models are imported above, so SQLModel.metadata is fully populated.
-    #    NOTE: we intentionally do NOT swallow ProgrammingError here — if this
-    #    fails, we want the deploy to fail loudly so the actual cause surfaces.
+    #    Fails loudly on error — no silent swallowing.
     try:
         SQLModel.metadata.create_all(engine)
         print("✅ Database tables are ready.")
