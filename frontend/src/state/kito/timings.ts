@@ -1,0 +1,15 @@
+export const timings = {
+  breath: 3.2,
+  blinkMin: 2.8,
+  blinkMax: 5.2,
+  blinkDuration: 0.09,
+  lookFollow: 0.18,
+  walkCycle: 0.96,
+  fastCycle: 0.6,
+  crossfade: 0.15,
+  successDuration: 900,
+  confusedDuration: 800,
+  settleWindow: 500,
+  stateTick: 200,
+  defaultEase: 0.3,
+} as const;

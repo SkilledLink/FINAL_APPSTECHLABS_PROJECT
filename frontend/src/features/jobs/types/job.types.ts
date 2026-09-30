@@ -36,8 +36,6 @@ export interface JobComment {
   created_at: string;
   updated_at: string;
   replies: JobComment[];
-  // NOTE: backend doesn't send the user object on comments yet.
-  // If you add `user: UserResponse` to JobCommentResponse, add it here too:
   user?: JobAuthor;
 }
 
@@ -54,7 +52,7 @@ export interface Job {
   comments_count: number;
   is_liked: boolean;
 
-  user?: JobAuthor;         // ← author
+  user?: JobAuthor;
   images: JobImage[];
   comments: JobComment[];
 }
@@ -62,8 +60,8 @@ export interface Job {
 /* -------- Requests / lists -------- */
 
 export interface JobListParams {
-  page?: number;   // 1-based, matches backend
-  size?: number;   // matches backend
+  page?: number;
+  size?: number;
   user_id?: string;
   search?: string;
 }
@@ -96,7 +94,7 @@ export interface JobImageResponse {
 
 export interface JobLikeResponse {
   job_id: string;
-  liked: boolean;   // ← matches backend
+  liked: boolean;
 }
 
 export interface JobCommentCreateInput {
@@ -112,4 +110,5 @@ export interface JobCommentResponse {
   created_at: string;
   updated_at: string;
   replies: JobComment[];
+  user?: JobAuthor;
 }

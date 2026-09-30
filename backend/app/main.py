@@ -61,6 +61,9 @@ from app.api.v1.ai_features import router as ai_features_router
 # ─── Database ──────────────────────────────────────────────
 from app.database.session import engine
 
+# ─── Settings (for CORS + other env-driven config) ─────────
+from app.core.config import settings
+
 # ─── Models (registering with SQLModel.metadata) ──────────
 from app.models.user import User  # noqa: F401
 from app.models.refresh_token import RefreshToken  # noqa: F401
@@ -149,9 +152,18 @@ app = FastAPI(
 
 
 # ─── CORS ──────────────────────────────────────────────────
+# Allow ALL origins (dev-friendly / open API).
+#
+# NOTE:
+#   Using allow_origins=["*"] together with allow_credentials=True is
+#   rejected by browsers (CORS spec forbids "*" when credentials are sent).
+#   So we use allow_origin_regex=".*" which echoes the incoming Origin back,
+#   allowing credentials (cookies / Authorization) from any origin.
+#
+# ⚠️  For production, tighten this to an explicit allow-list.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173","http://192.168.68.59:5173"],
+    allow_origin_regex=".*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

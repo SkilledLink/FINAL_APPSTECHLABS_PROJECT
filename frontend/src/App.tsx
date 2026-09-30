@@ -1,5 +1,3 @@
-// src/App.tsx
-
 import { useState, useEffect } from 'react';
 import {
   BrowserRouter,
@@ -45,8 +43,8 @@ import { useAuth } from './features/auth/hooks/useAuth';
 import { AIFloatingWidget } from './features/ai/components/AIFloatingWidget';
 
 // Main pages
-import HomePage from './features/home/pages/HomePage';       // ← new premium home
-import FeedsPage from './features/home/pages/FeedsPage';     // ← kept for /home/feeds
+import HomePage from './features/home/pages/HomePage';
+import FeedsPage from './features/home/pages/FeedsPage';
 import Feed from './features/posts/components/Feed';
 import { ProfilePage } from './features/profile';
 import { MessagesPage } from './features/messages';
@@ -62,7 +60,7 @@ import JobsPage from './features/jobs/pages/JobsPage';
 import JobDetailsPage from './features/jobs/pages/JobDetailsPage';
 import CreateJobPage from './features/jobs/pages/CreateJobPage';
 
-// Portfolio — single component, auto-switches owner vs public
+// Portfolio
 import PortfolioDashboard from './features/portfolio/pages/PortfolioDashboard';
 
 // Users
@@ -81,11 +79,13 @@ import ModeratorDashboard from './features/moderator_dashboard/pages/ModeratorDa
 import NotFound from './features/not_found_page/Not_Found_Page';
 
 // ============================================================
+
 const ProfessionalsPage = UsersPage;
 
 // ============================================================
 // SOCKET AUTH BRIDGE
 // ============================================================
+
 function AuthedSocketProvider({ children }: { children: React.ReactNode }) {
   const readToken = () =>
     localStorage.getItem('access_token') ||
@@ -97,8 +97,10 @@ function AuthedSocketProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const sync = () => setToken(readToken());
+
     window.addEventListener('storage', sync);
     window.addEventListener('focus', sync);
+
     return () => {
       window.removeEventListener('storage', sync);
       window.removeEventListener('focus', sync);
@@ -111,6 +113,7 @@ function AuthedSocketProvider({ children }: { children: React.ReactNode }) {
 // ============================================================
 // PUBLIC-ONLY ROUTE
 // ============================================================
+
 function PublicOnlyRoute() {
   const { isAuthenticated } = useAuth();
 
@@ -124,6 +127,7 @@ function PublicOnlyRoute() {
 // ============================================================
 // PROTECTED ROUTE
 // ============================================================
+
 function ProtectedRoute() {
   const { isAuthenticated } = useAuth();
 
@@ -137,19 +141,28 @@ function ProtectedRoute() {
 // ============================================================
 // DYNAMIC ROUTE WRAPPERS & ALIAS REDIRECTS
 // ============================================================
+
 function ProfileRoute() {
   const { id } = useParams<{ id: string }>();
+
   return <ProfilePage userId={id ?? ''} />;
 }
 
 function JobDetailsRoute() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  return <JobDetailsPage jobId={id ?? ''} onBack={() => navigate(-1)} />;
+
+  return (
+    <JobDetailsPage
+      jobId={id ?? ''}
+      onBack={() => navigate(-1)}
+    />
+  );
 }
 
 function JobDetailsRedirect() {
   const { id } = useParams<{ id: string }>();
+
   return <Navigate to={`/home/jobs/${id}`} replace />;
 }
 
@@ -165,6 +178,7 @@ function VerifyCompleteRedirect() {
     const t = window.setTimeout(() => {
       navigate('/home/verification', { replace: true });
     }, 1500);
+
     return () => window.clearTimeout(t);
   }, [navigate]);
 
@@ -183,6 +197,7 @@ function VerifyCompleteRedirect() {
 // ============================================================
 // MAIN APP
 // ============================================================
+
 function App() {
   return (
     <ThemeProvider>
@@ -204,7 +219,7 @@ function App() {
 
             <AIFloatingWidget />
 
-            {/* Global call state — lives above the router outlet so calls
+            {/* Global call state lives above the router outlet so calls
                 survive navigation between /home, /home/messages, /home/feed, etc. */}
             <CallProvider>
               <Routes>
@@ -217,34 +232,19 @@ function App() {
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} />
                     <Route path="/verify-email" element={<VerifyEmailPage />} />
-                    <Route
-                      path="/forgot-password"
-                      element={<ForgotPasswordPage />}
-                    />
-                    <Route
-                      path="/reset-password"
-                      element={<ResetPasswordPage />}
-                    />
+                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                    <Route path="/reset-password" element={<ResetPasswordPage />} />
                   </Route>
                 </Route>
 
                 {/* AUTHENTICATED (PROTECTED) */}
                 <Route element={<ProtectedRoute />}>
                   {/* Onboarding */}
-                  <Route
-                    path="/onboarding"
-                    element={<ChooseAccountTypePage />}
-                  />
-                  <Route
-                    path="/onboarding/professional"
-                    element={<ProfessionalWizardPage />}
-                  />
+                  <Route path="/onboarding" element={<ChooseAccountTypePage />} />
+                  <Route path="/onboarding/professional" element={<ProfessionalWizardPage />} />
 
                   {/* Didit post-verification redirect target */}
-                  <Route
-                    path="/verify/complete"
-                    element={<VerifyCompleteRedirect />}
-                  />
+                  <Route path="/verify/complete" element={<VerifyCompleteRedirect />} />
 
                   {/* Home */}
                   <Route path="/home" element={<AppLayout />}>
@@ -253,74 +253,40 @@ function App() {
                     <Route path="jobs" element={<JobsPage />} />
                     <Route path="jobs/create" element={<CreateJobPage />} />
                     <Route path="jobs/:id" element={<JobDetailsRoute />} />
-                    <Route
-                      path="discover"
-                      element={<NearbyProfessionalsPage />}
-                    />
+                    <Route path="discover" element={<NearbyProfessionalsPage />} />
 
-                    {/* Portfolio — owner studio when no id / own id,
-                        public read-only view when someone else's id */}
+                    {/* Portfolio */}
                     <Route path="portfolio" element={<PortfolioDashboard />} />
-                    <Route
-                      path="portfolio/:userId"
-                      element={<PortfolioDashboard />}
-                    />
+                    <Route path="portfolio/:userId" element={<PortfolioDashboard />} />
 
-                    <Route
-                      path="notifications"
-                      element={<NotificationsPage />}
-                    />
+                    <Route path="notifications" element={<NotificationsPage />} />
 
                     {/* Messages */}
                     <Route path="messages" element={<MessagesPage />} />
-                    <Route
-                      path="messages/:conversationId"
-                      element={<MessagesPage />}
-                    />
+                    <Route path="messages/:conversationId" element={<MessagesPage />} />
 
-                    <Route
-                      path="professionals"
-                      element={<ProfessionalsPage />}
-                    />
+                    <Route path="professionals" element={<ProfessionalsPage />} />
                     <Route path="users" element={<UsersPage />} />
-                    <Route
-                      path="verification"
-                      element={<VerificationPage />}
-                    />
-                    <Route
-                      path="marketplace"
-                      element={<MarketplacePage />}
-                    />
+                    <Route path="verification" element={<VerificationPage />} />
+                    <Route path="marketplace" element={<MarketplacePage />} />
                     <Route path="profile" element={<ProfileRoute />} />
                     <Route path="profile/:id" element={<ProfileRoute />} />
                   </Route>
 
                   {/* Aliases */}
-                  <Route
-                    path="/jobs"
-                    element={<Navigate to="/home/jobs" replace />}
-                  />
-                  <Route
-                    path="/jobs/create"
-                    element={<Navigate to="/home/jobs/create" replace />}
-                  />
+                  <Route path="/jobs" element={<Navigate to="/home/jobs" replace />} />
+                  <Route path="/jobs/create" element={<Navigate to="/home/jobs/create" replace />} />
                   <Route path="/jobs/:id" element={<JobDetailsRedirect />} />
                 </Route>
 
-                {/* PUBLIC PORTFOLIO (standalone, no auth required) */}
-                <Route
-                  path="/portfolio/:userId"
-                  element={<PortfolioDashboard />}
-                />
+                {/* PUBLIC PORTFOLIO */}
+                <Route path="/portfolio/:userId" element={<PortfolioDashboard />} />
 
                 {/* ADMIN */}
                 <Route path="/admin_dashboard" element={<AdminDashboard />} />
 
                 {/* MODERATOR DASHBOARD */}
-                <Route
-                  path="/moderator_dashboard"
-                  element={<ModeratorDashboard />}
-                />
+                <Route path="/moderator_dashboard" element={<ModeratorDashboard />} />
 
                 {/* CATCH-ALL */}
                 <Route path="*" element={<NotFound />} />

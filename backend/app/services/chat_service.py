@@ -147,10 +147,23 @@ class ChatService:
             if ai_intent.requires_database:
                 return self._handle_database_pending(user_id, message, ai_intent)
 
-            # ── Everything else — CANNED, no LLM ─────────
-            # (Previously called _handle_llm_only, which caused
-            #  the "help me code" leaks and the latency.)
-            return self._finalize(user_id, message, OFF_TOPIC_RESPONSE)
+            # ── Fallback: try RAG before refusing ────────
+            #
+            # RAG is SAFE by construction:
+            #   • If the query is off-topic, retrieval finds no
+            #     matching docs → canned SkilledLink-focused reply,
+            #     zero LLM tokens spent.
+            #   • If the query is on-topic, the docs ground the
+            #     answer and the strict SYSTEM_PROMPT keeps the
+            #     model from drifting to coding / homework / etc.
+            #
+            # Routing unknown intents here is what makes "how do I
+            # create an account?" actually reach the knowledge base.
+            logger.info(
+                "chat.routing_to_rag intent=%s reason=fallback",
+                ai_intent.intent.value,
+            )
+            return self._handle_rag(user_id, message)
 
         except Exception as e:
             self.session.rollback()
@@ -232,6 +245,11 @@ class ChatService:
             context_docs = self.knowledge_service.retrieve_context(
                 message, limit=settings.RAG_TOP_K,
             )
+
+        logger.info(
+            "chat.rag retrieved=%d query=%r",
+            len(context_docs), message[:80],
+        )
 
         # No context → canned reply. Don't burn tokens on an LLM
         # call that would just say "I don't know".

@@ -18,7 +18,7 @@ interface UseProfessionalReturn {
   updateProfessional: (data: Partial<Professional>) => Promise<Professional | null>;
 }
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://192.168.68.67:8000';
 
 /* ─────────────────────────────────────────────────────────── */
 /*  Normalise API → frontend (snake_case → camelCase)         */
@@ -31,10 +31,8 @@ const normaliseProfessional = (data: any): Professional => ({
   profession: data.profession,
   headline: data.headline ?? null,
   bio: data.bio ?? null,
-  experienceLevel:
-    data.experience_level ?? data.experienceLevel ?? 'INTERMEDIATE',
-  yearsOfExperience:
-    data.years_of_experience ?? data.yearsOfExperience ?? 0,
+  experienceLevel: data.experience_level ?? data.experienceLevel ?? 'INTERMEDIATE',
+  yearsOfExperience: data.years_of_experience ?? data.yearsOfExperience ?? 0,
   companyName: data.company_name ?? data.companyName ?? null,
   jobTitle: data.job_title ?? data.jobTitle ?? null,
   employmentType: data.employment_type ?? data.employmentType ?? null,
@@ -54,8 +52,7 @@ const normaliseProfessional = (data: any): Professional => ({
   city: data.city ?? null,
   available: data.available ?? true,
   availabilityNotes: data.availability_notes ?? data.availabilityNotes ?? null,
-  responseTimeHours:
-    data.response_time_hours ?? data.responseTimeHours ?? null,
+  responseTimeHours: data.response_time_hours ?? data.responseTimeHours ?? null,
   isVerified: data.is_verified ?? data.isVerified ?? false,
   verificationStatus: data.verification_status ?? data.verificationStatus,
   rating: Number(data.rating ?? 0),
@@ -71,24 +68,19 @@ const normaliseProfessional = (data: any): Professional => ({
 /*    every camelCase field, including hourlyRate.            */
 /* ─────────────────────────────────────────────────────────── */
 
-const mapProfessionalToAPI = (
-  data: Partial<Professional>
-): Record<string, unknown> => {
+const mapProfessionalToAPI = (data: Partial<Professional>): Record<string, unknown> => {
   const out: Record<string, unknown> = {};
 
   if (data.profession !== undefined) out.profession = data.profession;
   if (data.headline !== undefined) out.headline = data.headline;
   if (data.bio !== undefined) out.bio = data.bio;
 
-  if (data.experienceLevel !== undefined)
-    out.experience_level = data.experienceLevel;
-  if (data.yearsOfExperience !== undefined)
-    out.years_of_experience = data.yearsOfExperience;
+  if (data.experienceLevel !== undefined) out.experience_level = data.experienceLevel;
+  if (data.yearsOfExperience !== undefined) out.years_of_experience = data.yearsOfExperience;
 
   if (data.companyName !== undefined) out.company_name = data.companyName;
   if (data.jobTitle !== undefined) out.job_title = data.jobTitle;
-  if (data.employmentType !== undefined)
-    out.employment_type = data.employmentType;
+  if (data.employmentType !== undefined) out.employment_type = data.employmentType;
 
   if (data.websiteUrl !== undefined) out.website_url = data.websiteUrl;
   if (data.linkedinUrl !== undefined) out.linkedin_url = data.linkedinUrl;
@@ -109,10 +101,8 @@ const mapProfessionalToAPI = (
   if (data.city !== undefined) out.city = data.city;
 
   if (data.available !== undefined) out.available = data.available;
-  if (data.availabilityNotes !== undefined)
-    out.availability_notes = data.availabilityNotes;
-  if (data.responseTimeHours !== undefined)
-    out.response_time_hours = data.responseTimeHours;
+  if (data.availabilityNotes !== undefined) out.availability_notes = data.availabilityNotes;
+  if (data.responseTimeHours !== undefined) out.response_time_hours = data.responseTimeHours;
 
   return out;
 };
@@ -121,9 +111,7 @@ const mapProfessionalToAPI = (
 /*  Hook                                                      */
 /* ─────────────────────────────────────────────────────────── */
 
-export const useProfessional = (
-  options: UseProfessionalOptions = {}
-): UseProfessionalReturn => {
+export const useProfessional = (options: UseProfessionalOptions = {}): UseProfessionalReturn => {
   const { autoFetch = false } = options;
   const [professional, setProfessional] = useState<Professional | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -142,10 +130,9 @@ export const useProfessional = (
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(
-          `${API_BASE}/professionals/${professionalId}`,
-          { headers: getAuthHeaders() }
-        );
+        const response = await fetch(`${API_BASE}/professionals/${professionalId}`, {
+          headers: getAuthHeaders(),
+        });
         if (!response.ok) {
           throw new Error(`Failed to fetch professional: ${response.status}`);
         }
@@ -154,15 +141,14 @@ export const useProfessional = (
         setProfessional(mapped);
         return mapped;
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Failed to fetch professional';
+        const message = err instanceof Error ? err.message : 'Failed to fetch professional';
         setError(message);
         return null;
       } finally {
         setLoading(false);
       }
     },
-    []
+    [],
   );
 
   const fetchMyProfessional = useCallback(async (): Promise<Professional | null> => {
@@ -184,8 +170,7 @@ export const useProfessional = (
       setProfessional(mapped);
       return mapped;
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Failed to fetch professional';
+      const message = err instanceof Error ? err.message : 'Failed to fetch professional';
       setError(message);
       return null;
     } finally {
@@ -208,15 +193,14 @@ export const useProfessional = (
         const data = await response.json();
         return normaliseProfessional(data);
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Failed to fetch professional';
+        const message = err instanceof Error ? err.message : 'Failed to fetch professional';
         setError(message);
         return null;
       } finally {
         setLoading(false);
       }
     },
-    []
+    [],
   );
 
   const createProfessional = useCallback(
@@ -233,9 +217,7 @@ export const useProfessional = (
         if (!response.ok) {
           const errText = await response.text().catch(() => '');
           throw new Error(
-            `Failed to create professional: ${response.status}${
-              errText ? ` - ${errText}` : ''
-            }`
+            `Failed to create professional: ${response.status}${errText ? ` - ${errText}` : ''}`,
           );
         }
         const created = await response.json();
@@ -243,15 +225,14 @@ export const useProfessional = (
         setProfessional(mapped);
         return mapped;
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Failed to create professional';
+        const message = err instanceof Error ? err.message : 'Failed to create professional';
         setError(message);
         return null;
       } finally {
         setLoading(false);
       }
     },
-    []
+    [],
   );
 
   const updateProfessional = useCallback(
@@ -274,9 +255,7 @@ export const useProfessional = (
         if (!response.ok) {
           const errText = await response.text().catch(() => '');
           throw new Error(
-            `Failed to update professional: ${response.status}${
-              errText ? ` - ${errText}` : ''
-            }`
+            `Failed to update professional: ${response.status}${errText ? ` - ${errText}` : ''}`,
           );
         }
 
@@ -285,16 +264,15 @@ export const useProfessional = (
         setProfessional(mapped);
         return mapped;
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Failed to update professional';
+        const message = err instanceof Error ? err.message : 'Failed to update professional';
         setError(message);
         return null;
       } finally {
         setLoading(false);
       }
     },
-    []
-  ); 
+    [],
+  );
 
   useEffect(() => {
     if (autoFetch) fetchMyProfessional();

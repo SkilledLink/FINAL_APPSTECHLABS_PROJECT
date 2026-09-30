@@ -18,7 +18,6 @@ import {
   ImagePlus,
   Shield,
   ShieldCheck,
-  FaceAngryIcon,
   Rss,
 } from 'lucide-react';
 import { useAuth } from '../../../features/auth/hooks/useAuth';
@@ -35,18 +34,28 @@ type NavItem = {
   label: string;
   path: string;
   end?: boolean;
-  /** When true, the item is only shown to professional accounts. */
+  /** Only shown when the account is a professional. */
   professionalOnly?: boolean;
+  /** Only shown when the account has is_admin = true. */
+  adminOnly?: boolean;
+  /** Only shown when the account has is_moderator = true. */
+  moderatorOnly?: boolean;
 };
 
 const navItems: NavItem[] = [
   { icon: Home, label: 'Home', path: '/home', end: true },
-  { icon: Rss,label: "Feeds", path: '/home/feeds' },
+  { icon: Rss, label: 'Feeds', path: '/home/feeds' },
   { icon: Compass, label: 'Discover', path: '/home/discover' },
   { icon: Briefcase, label: 'Jobs', path: '/home/jobs' },
-  { icon: LayoutDashboard, label: 'Portfolio', path: '/home/portfolio', professionalOnly: true },
+  {
+    icon: LayoutDashboard,
+    label: 'Portfolio',
+    path: '/home/portfolio',
+    professionalOnly: true,
+  },
   { icon: MessageSquareMore, label: 'Messages', path: '/home/messages' },
   { icon: Users, label: 'Network', path: '/home/professionals' },
+
 ];
 
 export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
@@ -57,9 +66,7 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
   const navigate = useNavigate();
 
   const { currentUser, logout, updateUser: updateAuthUser } = useAuth();
-
   const { user, loading } = useUser({ autoFetch: true });
-
   const { uploadProfileImage } = useProfileImage();
 
   const activeUser = user ?? currentUser;
@@ -69,13 +76,18 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
 
   const avatarUrl = activeUser?.profileImageUrl ?? null;
 
-  // Only professionals see portfolio-related nav.
   const isProfessional =
     (activeUser?.accountType ?? '').toString().toLowerCase() === 'professional';
 
   const visibleNavItems = useMemo(
-    () => navItems.filter((item) => !item.professionalOnly || isProfessional),
-    [isProfessional],
+    () =>
+      navItems.filter((item) => {
+        if (item.professionalOnly && !isProfessional) return false;
+        if (item.adminOnly && !isAdmin) return false;
+        if (item.moderatorOnly && !isModerator) return false;
+        return true;
+      }),
+    [isProfessional, isAdmin, isModerator],
   );
 
   useEffect(() => {
@@ -317,7 +329,7 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
                   <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
                     {activeUser?.firstName} {activeUser?.lastName}
                   </p>
-                  <p className="truncate text-[11px] text-slate-500 capitalize dark:text-slate-400">
+                  <p className="truncate text-[11px] capitalize text-slate-500 dark:text-slate-400">
                     {activeUser?.accountType ?? 'Member'}
                   </p>
                 </motion.div>
@@ -350,7 +362,7 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
                   </p>
                 </div>
 
-                {/* Admin / Moderator tools section */}
+                {/* Admin / Moderator tools (kept as a convenience shortcut) */}
                 {(isAdmin || isModerator) && (
                   <div className="border-b border-slate-100 py-1 dark:border-white/10">
                     {isAdmin && (
@@ -368,7 +380,6 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
                         Admin Dashboard
                       </button>
                     )}
-
                     {isModerator && (
                       <button
                         onClick={() => {
@@ -401,29 +412,7 @@ export default function Sidebar({ isDark, toggleTheme }: SidebarProps) {
                     />
                     My Profile
                   </button>
-                  <button
-                    onClick={openAvatarPicker}
-                    className="flex w-full cursor-pointer items-center gap-3 px-4 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800/60"
-                  >
-                    <ImagePlus
-                      size={15}
-                      className="text-slate-500 dark:text-slate-400"
-                    />
-                    Upload Avatar
-                  </button>
-                  <button
-                    onClick={() => {
-                      navigate('/home/settings');
-                      setIsProfileDropdownOpen(false);
-                    }}
-                    className="flex w-full cursor-pointer items-center gap-3 px-4 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800/60"
-                  >
-                    <Settings
-                      size={15}
-                      className="text-slate-500 dark:text-slate-400"
-                    />
-                    Settings
-                  </button>
+                  
                   <button
                     onClick={() => {
                       toggleTheme();

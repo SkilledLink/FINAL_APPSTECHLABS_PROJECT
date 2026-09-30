@@ -1,87 +1,17 @@
-import { AnimatePresence, useReducedMotion } from "framer-motion";
-import { useEffect, useLayoutEffect, useState } from "react";
-import ContactSection from "../components/ContactSection";
-import FAQ from "../components/FAQ";
-import FinalCTA from "../components/FinalCTA";
-import Footer from "../components/Footer";
-import Hero from "../components/Hero";
-import Loader from "../components/Loader";
-import Navbar from "../components/Navbar";
-import PricingSection from "../components/PricingSection";
-import ProfessionalShowcase from "../components/ProfessionalShowcase";
-import ScrollProgress from "../components/ScrollProgress";
-import Testimonials from "../components/Testimonials";
-import TradeShowcase from "../components/TradeShowcase";
-import WorkGallery from "../components/WorkGallery";
-import { globalStyles } from "../styles";
+// src/features/landing/pages/LandingPage.tsx
 
-const SECTION_IDS = [
-  "trades",
-  "professionals",
-  "work",
-  "pricing",
-  "testimonials",
-  "faq",
-  "contact",
-] as const;
+import React from "react";
 
-export default function Landing() {
-  const prefersReduced = useReducedMotion();
-  const [loading, setLoading] = useState(true);
-  const [activeNav, setActiveNav] = useState<string>("trades");
+import TopNav from "../../../features/landing/components/TopNav";
+import HeroSplit from "../../../features/landing/components/HeroSplit";
+import TradesMarquee from "../../../features/landing/components/TradesMarquee";
+import FeaturedPros from "../../../features/landing/components/FeaturedProps";
+import StatsGrid from "../../../features/landing/components/StatsGrids";
+import ContactSection from "../../../features/landing/components/ContactSection";
+import SideFooter from "../../../features/landing/components/SideFooter";
+import FAQSection from "../../../features/landing/components/FAQSection";
 
-  useLayoutEffect(() => {
-    if (window.location.hash) {
-      window.history.replaceState(
-        null,
-        "",
-        window.location.pathname + window.location.search
-      );
-    }
-    if ("scrollRestoration" in window.history) {
-      window.history.scrollRestoration = "manual";
-    }
-    window.scrollTo(0, 0);
-  }, []);
-
-  useEffect(() => {
-    if (prefersReduced) {
-      setLoading(false);
-      return;
-    }
-    const t = window.setTimeout(() => setLoading(false), 850);
-    return () => window.clearTimeout(t);
-  }, [prefersReduced]);
-
-  useEffect(() => {
-    if (!loading) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [loading]);
-
-  useEffect(() => {
-    const sections = SECTION_IDS.map((id) =>
-      document.getElementById(id)
-    ).filter((el): el is HTMLElement => Boolean(el));
-    if (sections.length === 0) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
-        if (visible[0]?.target.id) setActiveNav(visible[0].target.id);
-      },
-      { rootMargin: "-40% 0px -50% 0px", threshold: [0, 0.25, 0.5, 1] }
-    );
-
-    sections.forEach((s) => observer.observe(s));
-    return () => observer.disconnect();
-  }, []);
-
+const LandingPage: React.FC = () => {
   return (
     <div className="skilled-page">
       <style>{globalStyles}</style>
@@ -107,4 +37,6 @@ export default function Landing() {
       <Footer />
     </div>
   );
-}
+};
+
+export default LandingPage;

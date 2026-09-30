@@ -3,7 +3,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  BadgeCheck,
   UserPlus,
   Wrench,
   Share2,
@@ -11,11 +10,21 @@ import {
   FolderOpen,
   Eye,
   ArrowRight,
+  Camera,
+  Loader2,
 } from 'lucide-react';
 import type { UserProfile } from '../types/profile.types';
 import { StackedAvatars } from './StackedAvatars';
 import { portfolioService } from '../../portfolio/services/portfolioService';
 import { MessageUserButton } from '../../messages/components/MessageUserButton';
+import VerifiedBadge from '../../subscription/components/VerifiedBadge';
+import { subscriptionService } from '../../subscription/services/subscriptionService';
+import type { TierInfo } from '../../subscription/types/subscription.types';
+
+interface UploadState {
+  type: 'profile' | 'banner';
+  percent: number;
+}
 
 interface ProfileHeaderProps {
   profile: UserProfile;
@@ -26,8 +35,11 @@ interface ProfileHeaderProps {
   canRequestService?: boolean;
   followersCount?: number;
   followersPreview?: UserProfile[];
+  uploading?: UploadState | null;
+  /** Optional override — if provided, this tier is used verbatim. */
+  subscriptionTier?: TierInfo | null;
   onFollow?: () => void;
-  onMessage?: () => void; // kept for backwards compat; no longer used by this component
+  onMessage?: () => void;
   onRequestService?: () => void;
   onUpgrade?: () => void;
   onEditProfile?: () => void;
@@ -35,10 +47,6 @@ interface ProfileHeaderProps {
   onShare?: () => void;
 }
 
-/* ────────────────────────────────────────────────────────────
- * Portfolio route
- *   /home/portfolio/:userId
- * ──────────────────────────────────────────────────────────── */
 const portfolioRoute = (userId: string) => `/home/portfolio/${userId}`;
 
 export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
@@ -49,6 +57,8 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   canMessage = true,
   followersCount: propFollowersCount,
   followersPreview = [],
+  uploading = null,
+  subscriptionTier: subscriptionTierProp = null,
   onFollow,
   onUpgrade,
   onEditProfile,
@@ -59,10 +69,47 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const profileInputRef = useRef<HTMLInputElement>(null);
 
-  /* ── Portfolio existence check ────────────────────────── */
   const [hasPortfolio, setHasPortfolio] = useState(false);
   const [checkingPortfolio, setCheckingPortfolio] = useState(true);
 
+  /* ── Active subscription tier ────────────────────────── */
+  const [fetchedTier, setFetchedTier] = useState<TierInfo | null>(null);
+
+  useEffect(() => {
+    if (subscriptionTierProp !== undefined && subscriptionTierProp !== null) {
+      setFetchedTier(subscriptionTierProp);
+      return;
+    }
+    if (!profile?.id) return;
+    if (!profile.professional) return;
+
+    let cancelled = false;
+
+    const loadTier = async () => {
+      try {
+        if (isOwnProfile) {
+          const res = await subscriptionService.getActive();
+          const tier = res?.subscription?.tier ?? null;
+          if (!cancelled) setFetchedTier(tier);
+        } else {
+          const tier = await subscriptionService.getPublicTier(profile.id);
+          if (!cancelled) setFetchedTier(tier);
+        }
+      } catch {
+        if (!cancelled) setFetchedTier(null);
+      }
+    };
+
+    loadTier();
+    return () => {
+      cancelled = true;
+    };
+  }, [profile?.id, profile?.professional, isOwnProfile, subscriptionTierProp]);
+
+  const effectiveTier = subscriptionTierProp ?? fetchedTier;
+  const showVerified = !!profile.professional?.isVerified && !!effectiveTier;
+
+  /* ── Portfolio existence check ────────────────────────── */
   useEffect(() => {
     if (!profile?.id) return;
 
@@ -96,7 +143,6 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     navigate(portfolioRoute(profile.id));
   }, [profile?.id, navigate]);
 
-  /* ── Existing profile normalisation ────────────────────── */
   const profileData = profile as UserProfile & {
     first_name?: string;
     last_name?: string;
@@ -125,21 +171,33 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 
   const isStandardAccount = accountType === 'standard';
 
+  const isUploadingProfile = uploading?.type === 'profile';
+  const isUploadingBanner = uploading?.type === 'banner';
+  const uploadPercent = uploading?.percent ?? 0;
+  const anyUploading = !!uploading;
+
   const handleImageChange = (
     event: React.ChangeEvent<HTMLInputElement>,
-    type: 'profile' | 'banner'
+    type: 'profile' | 'banner',
   ) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
     if (!file.type.startsWith('image/')) {
       alert('Please select a valid image.');
       return;
     }
+
+    const MAX_MB = 10;
+    if (file.size > MAX_MB * 1024 * 1024) {
+      alert(`Image must be smaller than ${MAX_MB} MB.`);
+      return;
+    }
+
     onImageUpload?.(file, type);
     event.target.value = '';
   };
 
-  /* ── Render ────────────────────────────────────────────── */
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl overflow-hidden shadow-xs">
       {/* ── Banner ────────────────────────────────────── */}
@@ -157,11 +215,32 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent pointer-events-none" />
 
-        {isOwnProfile && onImageUpload && (
+        {isUploadingBanner && (
+          <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-2 bg-slate-950/75 backdrop-blur-sm">
+            <div className="text-3xl sm:text-4xl font-black tabular-nums text-white tracking-tight">
+              {uploadPercent}%
+            </div>
+            <div className="h-1.5 w-48 max-w-[60%] overflow-hidden rounded-full bg-white/20">
+              <div
+                className="h-full rounded-full bg-blue-500 transition-all duration-150 ease-out"
+                style={{ width: `${uploadPercent}%` }}
+              />
+            </div>
+            <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-white/85">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Uploading banner
+            </div>
+          </div>
+        )}
+
+        {isOwnProfile && onImageUpload && !isUploadingBanner && (
           <button
+            type="button"
             onClick={() => bannerInputRef.current?.click()}
-            className="absolute bottom-3 right-3 z-20 px-3 py-1.5 bg-white/90 dark:bg-slate-900/90 rounded-lg shadow-md text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-white transition"
+            disabled={anyUploading}
+            className="absolute bottom-3 right-3 z-20 inline-flex items-center gap-1.5 rounded-lg bg-white/90 px-3 py-1.5 text-xs font-bold text-slate-700 shadow-md transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 dark:bg-slate-900/90 dark:text-slate-200 dark:hover:bg-slate-900"
           >
+            <Camera className="h-3.5 w-3.5" />
             Edit Banner
           </button>
         )}
@@ -171,6 +250,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           type="file"
           accept="image/*"
           className="hidden"
+          disabled={anyUploading}
           onChange={(e) => handleImageChange(e, 'banner')}
         />
       </div>
@@ -178,32 +258,55 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
       {/* ── Body ──────────────────────────────────────── */}
       <div className="px-4 sm:px-6 pt-3 pb-5">
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-          {/* Left group: avatar + name */}
           <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4 flex-1 min-w-0">
             <div className="relative shrink-0 group -mt-14 sm:-mt-16 md:-mt-20">
               <img
                 src={
                   profileImageUrl ||
                   `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                    fullName
+                    fullName,
                   )}&background=random`
                 }
                 alt={fullName}
-                className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full object-cover ring-4 ring-white dark:ring-slate-900 shadow-xl bg-white dark:bg-slate-800"
+                className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full object-cover ring-4 ring-white shadow-xl bg-white dark:ring-slate-900 dark:bg-slate-800"
               />
-
-              {profile.professional?.isVerified && (
-                <span className="absolute bottom-1 right-1 bg-blue-600 text-white p-1 rounded-full ring-2 ring-white dark:ring-slate-900">
-                  <BadgeCheck className="w-3.5 h-3.5" />
-                </span>
-              )}
 
               {isOwnProfile && onImageUpload && (
                 <button
+                  type="button"
                   onClick={() => profileInputRef.current?.click()}
-                  className="absolute bottom-0 left-0 right-0 mx-auto w-full text-center bg-black/50 text-white text-[10px] font-bold py-1 rounded-b-full opacity-0 group-hover:opacity-100 transition"
+                  disabled={anyUploading}
+                  aria-label={
+                    isUploadingProfile
+                      ? `Uploading ${uploadPercent}%`
+                      : 'Change profile picture'
+                  }
+                  className={`absolute inset-0 z-10 flex flex-col items-center justify-center gap-0.5 rounded-full bg-slate-950/65 text-white backdrop-blur-[2px] transition-opacity duration-200 focus-visible:opacity-100 focus-visible:outline-none ${
+                    isUploadingProfile
+                      ? 'cursor-wait opacity-100'
+                      : 'cursor-pointer opacity-0 group-hover:opacity-100'
+                  } ${anyUploading && !isUploadingProfile ? 'cursor-not-allowed opacity-0' : ''}`}
                 >
-                  Change
+                  {isUploadingProfile ? (
+                    <>
+                      <span className="text-lg font-black tabular-nums leading-none sm:text-xl">
+                        {uploadPercent}%
+                      </span>
+                      <span className="mt-0.5 text-[9px] font-bold uppercase tracking-wider opacity-80">
+                        Uploading
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Camera
+                        className="h-5 w-5 sm:h-6 sm:w-6"
+                        strokeWidth={2.25}
+                      />
+                      <span className="text-[10px] font-bold uppercase tracking-wider">
+                        Change
+                      </span>
+                    </>
+                  )}
                 </button>
               )}
 
@@ -212,21 +315,24 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 type="file"
                 accept="image/*"
                 className="hidden"
+                disabled={anyUploading}
                 onChange={(e) => handleImageChange(e, 'profile')}
               />
             </div>
 
-            <div className="flex-1 min-w-0 pt-2 sm:pt-3 md:pt-0 space-y-1.5">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <h1 className="text-lg sm:text-2xl font-black text-slate-900 dark:text-slate-100 leading-tight">
+            <div className="flex-1 min-w-0 space-y-1.5 pt-2 sm:pt-3 md:pt-0">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <h1 className="text-lg font-black leading-tight text-slate-900 sm:text-2xl dark:text-slate-100">
                   {fullName}
                   {tradeTitle && `, ${tradeTitle}`}
                 </h1>
-                {profile.professional?.isVerified && (
-                  <BadgeCheck className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500 shrink-0" />
+
+                {showVerified && effectiveTier && (
+                  <VerifiedBadge tier={effectiveTier} size="sm" />
                 )}
+
                 {!isOwnProfile && followsYou && (
-                  <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-full border border-slate-200 dark:border-slate-700">
+                  <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
                     Follows you
                   </span>
                 )}
@@ -243,13 +349,9 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 
                 {profile.professional && (
                   <>
-                    <span className="hidden xs:inline text-slate-300 dark:text-slate-700">
+                    <span className="hidden text-slate-300 xs:inline dark:text-slate-700">
                       •
                     </span>
-                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                      {profile.professional.isVerified ? 'Verified' : 'Unverified'}
-                    </span>
-                    <span className="text-slate-300 dark:text-slate-700">•</span>
                     <span>
                       {profile.professional.yearsOfExperience || 0} Years in Trade
                     </span>
@@ -266,18 +368,17 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             </div>
           </div>
 
-          {/* ── Actions ───────────────────────────────── */}
-          <div className="flex flex-wrap items-center gap-2 shrink-0 pt-2 md:pt-3">
+          <div className="flex shrink-0 flex-wrap items-center gap-2 pt-2 md:pt-3">
             {!isOwnProfile && hasPortfolio && !checkingPortfolio && (
               <button
                 onClick={handleViewPortfolio}
                 aria-label={`View ${fullName}'s portfolio`}
-                className="group relative flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-md shadow-blue-600/25 transition-all active:scale-[0.98] overflow-hidden"
+                className="group relative flex items-center justify-center gap-1.5 overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-blue-600/25 transition-all hover:from-blue-500 hover:to-indigo-500 active:scale-[0.98]"
               >
-                <span className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.25),transparent_70%)]" />
-                <FolderOpen className="w-3.5 h-3.5 relative transition-transform group-hover:scale-110" />
+                <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.25),transparent_70%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                <FolderOpen className="relative h-3.5 w-3.5 transition-transform group-hover:scale-110" />
                 <span className="relative">View Portfolio</span>
-                <ArrowRight className="w-3 h-3 relative -mr-0.5 transition-transform group-hover:translate-x-0.5" />
+                <ArrowRight className="relative -mr-0.5 h-3 w-3 transition-transform group-hover:translate-x-0.5" />
               </button>
             )}
 
@@ -285,9 +386,9 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               <button
                 onClick={handleViewPortfolio}
                 aria-label="Preview your portfolio"
-                className="group flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-800 hover:text-blue-600 dark:hover:text-blue-400 transition-all active:scale-[0.98]"
+                className="group flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-800 transition-all hover:border-blue-300 hover:bg-slate-50 hover:text-blue-600 active:scale-[0.98] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-blue-800 dark:hover:bg-slate-700 dark:hover:text-blue-400"
               >
-                <Eye className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors" />
+                <Eye className="h-3.5 w-3.5 text-slate-500 transition-colors group-hover:text-blue-500 dark:text-slate-400 dark:group-hover:text-blue-400" />
                 <span>Preview Portfolio</span>
               </button>
             )}
@@ -295,9 +396,9 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             {isOwnProfile && isStandardAccount && (
               <button
                 onClick={onUpgrade}
-                className="flex items-center justify-center gap-1.5 px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl shadow-xs transition"
+                className="flex items-center justify-center gap-1.5 rounded-xl bg-amber-500 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-amber-600"
               >
-                <Wrench className="w-3.5 h-3.5" />
+                <Wrench className="h-3.5 w-3.5" />
                 <span>Become a Professional</span>
               </button>
             )}
@@ -305,7 +406,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             {isOwnProfile && (
               <button
                 onClick={onEditProfile}
-                className="flex items-center justify-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 text-xs font-bold rounded-xl transition"
+                className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
               >
                 Edit Profile
               </button>
@@ -315,38 +416,37 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               <>
                 <button
                   onClick={onFollow}
-                  className={`flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl transition ${
+                  className={`flex items-center justify-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition ${
                     isFollowing
-                      ? 'bg-slate-200 hover:bg-slate-300 text-slate-700 dark:bg-slate-700 dark:text-slate-200'
-                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                      ? 'bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-200'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
                   }`}
                 >
-                  <UserPlus className="w-3.5 h-3.5" />
+                  <UserPlus className="h-3.5 w-3.5" />
                   <span>{isFollowing ? 'Following' : 'Follow'}</span>
                 </button>
 
-                {/* ── Message → MessageUserButton ── */}
                 <MessageUserButton
                   userId={profile.id}
                   disabled={!canMessage}
-                  className="flex items-center justify-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700 disabled:opacity-50 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 text-xs font-bold rounded-xl transition"
+                  className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
                 />
               </>
             )}
 
             <button
               onClick={onShare}
-              className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+              className="rounded-xl border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800"
               aria-label="Share"
             >
-              <Share2 className="w-4 h-4" />
+              <Share2 className="h-4 w-4" />
             </button>
 
             <button
-              className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+              className="rounded-xl border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800"
               aria-label="More options"
             >
-              <MoreHorizontal className="w-4 h-4" />
+              <MoreHorizontal className="h-4 w-4" />
             </button>
           </div>
         </div>

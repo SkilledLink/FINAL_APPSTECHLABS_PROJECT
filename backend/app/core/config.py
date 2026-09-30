@@ -43,9 +43,14 @@ class Settings(BaseSettings):
 
     RESEND_API_KEY: str
     FROM_EMAIL: str
-
     app_name: str = "Professional Network API"
     environment: str = "development"
+
+    # ── CORS ────────────────────────────────────────────────
+    # Comma-separated list of allowed origins.
+    # Example:
+    #   CORS_ORIGINS=http://localhost:5173,http://192.168.68.67:5173
+    CORS_ORIGINS: str = ""
 
     SUPABASE_URL: str
     SUPABASE_SERVICE_ROLE_KEY: str

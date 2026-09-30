@@ -1,289 +1,164 @@
-import { AnimatePresence, motion } from "framer-motion";
-import {
-  AlertCircle,
-  ArrowRight,
-  Check,
-  Loader2,
-  Mail,
-  MessageCircle,
-  Phone,
-} from "lucide-react";
-import { useState, type FormEvent } from "react";
-import Reveal from "./Reveal";
-import { createContactMessage } from "./../../../../src/api/Contact/ContactMessages";
+import React, { FormEvent, useState } from 'react';
+import { ArrowRight } from 'lucide-react';
+import { createContactMessage } from '../../../api/Contact/ContactMessages';
 
-type Status = "idle" | "sending" | "sent" | "error";
+const ContactSection: React.FC = () => {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [message, setMessage] = useState('');
 
-export default function ContactSection() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
-  const [status, setStatus] = useState<Status>("idle");
-  const [focused, setFocused] = useState<string | null>(null);
+  const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const trimmedName = name.trim();
-    const trimmedEmail = email.trim();
-    const trimmedMessage = message.trim();
-
-    if (!trimmedName || !trimmedEmail || !trimmedMessage) {
-      setStatus("error");
+    if (!name.trim() || !email.trim() || !message.trim()) {
+      setStatus('error');
       return;
     }
 
-    setStatus("sending");
+    setStatus('sending');
 
     try {
       await createContactMessage({
-        name: trimmedName,
-        email: trimmedEmail,
-        message: trimmedMessage,
+        name: name.trim(),
+        email: email.trim(),
+        message: message.trim(),
       });
 
-      setName("");
-      setEmail("");
-      setMessage("");
-      setStatus("sent");
+      setName('');
+      setEmail('');
+      setMessage('');
+      setStatus('success');
     } catch (error) {
-      console.error("Failed to send contact message:", error);
-      setStatus("error");
+      console.error('Failed to send contact message:', error);
+      setStatus('error');
     }
   };
 
-  const resetOnChange = () => {
-    if (status === "error" || status === "sent") setStatus("idle");
-  };
-
   return (
-    <section id="contact" className="relative py-24 md:py-36">
-      <div className="mx-auto grid max-w-[1200px] gap-14 px-5 md:grid-cols-[0.9fr_1.1fr] md:gap-20 md:px-10">
-        <Reveal>
-          <span className="eyebrow">
-            <span className="text-accent">07</span> — Contact SkilledLink
-          </span>
-          <h2 className="mt-6 max-w-[12ch] text-[11vw] font-medium leading-[0.95] tracking-[-0.045em] text-fg sm:text-5xl md:text-[3.75rem]">
-            Let&rsquo;s <span className="serif text-fg-3">talk.</span>
-          </h2>
-          <p className="mt-6 max-w-sm text-[14px] leading-7 text-fg-2">
-            Need help finding a trade, joining the network or partnering
-            with us? Write to our team. We keep the experience local,
-            simple and clear.
-          </p>
-
-          <ul className="mt-10 space-y-4 text-[13px] text-fg-2">
-            <li>
-              <a
-                href="mailto:hello@skilledlink.com"
-                className="group inline-flex items-center gap-3 transition hover:text-fg"
-              >
-                <span className="flex h-9 w-9 items-center justify-center rounded-full border border-soft transition group-hover:border-medium">
-                  <Mail size={14} />
-                </span>
-                hello@skilledlink.com
-              </a>
-            </li>
-            <li>
-              <a
-                href="tel:+237690000000"
-                className="group inline-flex items-center gap-3 transition hover:text-fg"
-              >
-                <span className="flex h-9 w-9 items-center justify-center rounded-full border border-soft transition group-hover:border-medium">
-                  <Phone size={14} />
-                </span>
-                +237 690 000 000
-              </a>
-            </li>
-            <li>
-              <a
-                href="#faq"
-                className="group inline-flex items-center gap-3 transition hover:text-fg"
-              >
-                <span className="flex h-9 w-9 items-center justify-center rounded-full border border-soft transition group-hover:border-medium">
-                  <MessageCircle size={14} />
-                </span>
-                Read FAQs
-                <ArrowRight
-                  size={13}
-                  className="transition-transform duration-500 group-hover:translate-x-1"
+    <section
+      id="contact"
+      className="relative overflow-hidden bg-[#f8fafc] px-6 py-20 font-sans sm:py-24 dark:bg-slate-950"
+    >
+      <div className="mx-auto max-w-7xl">
+        <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="grid lg:grid-cols-2">
+            <div className="p-4 sm:p-6 lg:p-8">
+              <div className="h-full overflow-hidden rounded-[1.5rem] border border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-800">
+                <img
+                  src="https://static.vecteezy.com/system/resources/thumbnails/050/822/031/small/customer-support-concept-young-afro-female-manager-wearing-headset-using-laptop-at-workplace-and-looking-at-camera-free-space-photo.jpg"
+                  alt="A welder at work in Cameroon"
+                  className="h-full min-h-[360px] w-full object-cover sm:min-h-[440px]"
                 />
-              </a>
-            </li>
-          </ul>
-        </Reveal>
-
-        <Reveal delay={0.1}>
-          <form onSubmit={handleSubmit} noValidate className="space-y-9">
-            <div className="grid gap-9 sm:grid-cols-2">
-              <Field
-                id="contact-name"
-                label="Your name"
-                value={name}
-                onChange={(v) => {
-                  setName(v);
-                  resetOnChange();
-                }}
-                onFocus={() => setFocused("name")}
-                onBlur={() => setFocused(null)}
-                focused={focused === "name"}
-                autoComplete="name"
-                required
-              />
-              <Field
-                id="contact-email"
-                label="Your email"
-                type="email"
-                value={email}
-                onChange={(v) => {
-                  setEmail(v);
-                  resetOnChange();
-                }}
-                onFocus={() => setFocused("email")}
-                onBlur={() => setFocused(null)}
-                focused={focused === "email"}
-                autoComplete="email"
-                required
-              />
+              </div>
             </div>
 
-            <Field
-              id="contact-message"
-              label="Your message"
-              value={message}
-              onChange={(v) => {
-                setMessage(v);
-                resetOnChange();
-              }}
-              onFocus={() => setFocused("message")}
-              onBlur={() => setFocused(null)}
-              focused={focused === "message"}
-              multiline
-              required
-            />
+            <div className="flex items-center px-6 py-10 sm:px-10 sm:py-12 lg:px-12 lg:py-14">
+              <div className="w-full max-w-xl">
+                <span className="inline-flex rounded-full bg-blue-50 px-4 py-2 text-xs font-bold uppercase tracking-widest text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
+                  Get in touch
+                </span>
 
-            <div className="flex flex-wrap items-center gap-5">
-              <button
-                type="submit"
-                disabled={status === "sending"}
-                className="group inline-flex items-center gap-2 rounded-full px-6 py-3 text-[13px] font-semibold btn-invert disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {status === "sending" ? (
-                  <>
-                    Sending
-                    <Loader2 size={14} className="animate-spin" />
-                  </>
-                ) : (
-                  <>
-                    Send message
-                    <ArrowRight
-                      size={14}
-                      className="transition-transform duration-500 group-hover:translate-x-1"
+                <h2 className="mt-5 max-w-xl text-3xl font-bold leading-tight tracking-tight text-[#06142e] sm:text-4xl dark:text-white">
+                  Have a question, an idea, or need a hand?{' '}
+                  <span className="text-blue-600 dark:text-blue-400">Tell us what’s on your mind.</span>
+                </h2>
+
+                <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+                  <div>
+                    <label
+                      htmlFor="contact-name"
+                      className="mb-2 block text-sm font-semibold text-[#06142e] dark:text-white"
+                    >
+                      Your name
+                    </label>
+
+                    <input
+                      id="contact-name"
+                      name="name"
+                      type="text"
+                      value={name}
+                      onChange={event => setName(event.target.value)}
+                      placeholder="Enter your name"
+                      disabled={status === 'sending'}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm text-[#06142e] outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-400 dark:focus:bg-slate-800 dark:focus:ring-blue-500/20"
                     />
-                  </>
-                )}
-              </button>
+                  </div>
 
-              <AnimatePresence mode="wait">
-                {status === "sent" && (
-                  <motion.p
-                    key="sent"
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }}
-                    className="flex items-center gap-2 text-[12px] font-medium text-emerald-500"
-                  >
-                    <Check size={14} />
-                    Message sent. We&rsquo;ll be in touch soon.
-                  </motion.p>
-                )}
+                  <div>
+                    <label
+                      htmlFor="contact-email"
+                      className="mb-2 block text-sm font-semibold text-[#06142e] dark:text-white"
+                    >
+                      Email address
+                    </label>
 
-                {status === "error" && (
-                  <motion.p
-                    key="err"
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }}
-                    className="flex items-center gap-2 text-[12px] font-medium text-red-500"
+                    <input
+                      id="contact-email"
+                      name="email"
+                      type="email"
+                      value={email}
+                      onChange={event => setEmail(event.target.value)}
+                      placeholder="Enter your email"
+                      disabled={status === 'sending'}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm text-[#06142e] outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-400 dark:focus:bg-slate-800 dark:focus:ring-blue-500/20"
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="contact-message"
+                      className="mb-2 block text-sm font-semibold text-[#06142e] dark:text-white"
+                    >
+                      Message
+                    </label>
+
+                    <textarea
+                      id="contact-message"
+                      name="message"
+                      rows={4}
+                      value={message}
+                      onChange={event => setMessage(event.target.value)}
+                      placeholder="Write your message..."
+                      disabled={status === 'sending'}
+                      className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm text-[#06142e] outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-blue-400 dark:focus:bg-slate-800 dark:focus:ring-blue-500/20"
+                    />
+                  </div>
+
+                  {status === 'success' && (
+                    <p className="text-sm font-medium text-green-600 dark:text-green-400">
+                      Your message has been sent successfully.
+                    </p>
+                  )}
+
+                  {status === 'error' && (
+                    <p className="text-sm font-medium text-red-600 dark:text-red-400">
+                      Please fill in all fields and try again.
+                    </p>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={status === 'sending'}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#06142e] px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-[#0b2148] disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-500 dark:hover:bg-blue-400 dark:text-slate-950"
                   >
-                    <AlertCircle size={14} />
-                    Please check your information and try again.
-                  </motion.p>
-                )}
-              </AnimatePresence>
+                    {status === 'sending' ? 'Sending...' : 'Send Message'}
+
+                    {status !== 'sending' && <ArrowRight className="h-4 w-4" />}
+                  </button>
+                </form>
+
+                <p className="mt-5 text-xs font-medium text-slate-400 dark:text-slate-500">
+                  We’ll get back to you as soon as possible.
+                </p>
+              </div>
             </div>
-          </form>
-        </Reveal>
+          </div>
+        </div>
       </div>
     </section>
   );
-}
-
-type FieldProps = {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  onFocus: () => void;
-  onBlur: () => void;
-  focused: boolean;
-  type?: string;
-  multiline?: boolean;
-  autoComplete?: string;
-  required?: boolean;
 };
 
-function Field({
-  id,
-  label,
-  value,
-  onChange,
-  onFocus,
-  onBlur,
-  focused,
-  type = "text",
-  multiline = false,
-  autoComplete,
-  required,
-}: FieldProps) {
-  const className =
-    "w-full bg-transparent pb-3 pt-2 text-[15px] text-fg outline-none placeholder:text-transparent";
-
-  return (
-    <div className={`field-line ${focused || value ? "is-focused" : ""}`}>
-      <label
-        htmlFor={id}
-        className={`block text-[10px] uppercase tracking-[0.28em] transition-all duration-300 ${
-          focused ? "text-accent translate-x-0.5" : "text-fg-3 translate-x-0"
-        }`}
-      >
-        {label}
-      </label>
-
-      {multiline ? (
-        <textarea
-          id={id}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onFocus={onFocus}
-          onBlur={onBlur}
-          rows={4}
-          required={required}
-          className={`${className} resize-none`}
-        />
-      ) : (
-        <input
-          id={id}
-          type={type}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onFocus={onFocus}
-          onBlur={onBlur}
-          autoComplete={autoComplete}
-          required={required}
-          className={className}
-        />
-      )}
-    </div>
-  );
-}
+export default ContactSection;

@@ -1,6 +1,6 @@
 // src/features/auth/services/authService.ts
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://192.168.68.67:8000';
 
 export interface LoginCredentials {
   email: string;
@@ -66,40 +66,6 @@ export const authService = {
     return response.json();
   },
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // import type {
 //   LoginCredentials,
@@ -173,5 +139,3 @@ export const authService = {
 //     );
 //   },
 // };
-
-

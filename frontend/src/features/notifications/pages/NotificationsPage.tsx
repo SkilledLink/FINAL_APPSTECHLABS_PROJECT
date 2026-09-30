@@ -1,10 +1,14 @@
 // src/features/notifications/pages/NotificationsPage.tsx
 
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Bell, Inbox, Mail, CheckCheck, Filter } from 'lucide-react';
+import { ArrowLeft, Bell, Inbox, Mail, CheckCheck, Filter } from 'lucide-react';
 
-import type { NotificationFilter, NotificationNamespace } from '../types/notification.types';
+import type {
+  NotificationFilter,
+  NotificationNamespace,
+} from '../types/notification.types';
 import { useNotifications } from '../hooks/useNotifications';
 import { NotificationList } from '../components/NotificationList';
 import {
@@ -19,6 +23,8 @@ const tabs: { key: NotificationFilter; label: string; icon: typeof Inbox }[] = [
 ];
 
 export function NotificationsPage() {
+  const navigate = useNavigate();
+
   const {
     notifications,
     unreadCount,
@@ -42,9 +48,31 @@ export function NotificationsPage() {
     [notifications, activeCategory],
   );
 
+  const handleBack = () => {
+    // If there's no history (direct URL open), fall back to /home.
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/home');
+    }
+  };
+
   return (
     <div className="min-h-screen w-full">
       <div className="w-full px-3 sm:px-4 md:px-6 py-4 sm:py-6">
+        {/* BACK BUTTON */}
+        <motion.button
+          initial={{ opacity: 0, x: -8 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.2 }}
+          onClick={handleBack}
+          className="group inline-flex items-center gap-2 mb-4 px-3.5 py-2 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 bg-white/60 dark:bg-white/[0.04] backdrop-blur-xl border border-white/60 dark:border-white/10 hover:bg-white/80 dark:hover:bg-white/10 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-200/60 dark:hover:border-blue-500/30 transition-all shadow-sm"
+          aria-label="Go back"
+        >
+          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+          Back
+        </motion.button>
+
         {/* HERO */}
         <motion.div
           initial={{ opacity: 0, y: -8 }}

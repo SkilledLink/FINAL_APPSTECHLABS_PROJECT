@@ -3,6 +3,7 @@ from typing import Optional, Tuple, List
 from uuid import UUID
 
 from sqlmodel import Session, select, func
+from sqlalchemy.orm import selectinload
 
 from app.models.job import Job, JobImage, JobLike, JobComment
 from app.models.user import User
@@ -20,7 +21,16 @@ class JobRepository:
         return job
 
     def get_by_id(self, job_id: UUID, include_deleted: bool = False) -> Optional[Job]:
-        stmt = select(Job).where(Job.id == job_id)
+        stmt = (
+            select(Job)
+            .where(Job.id == job_id)
+            .options(
+                selectinload(Job.user),
+                selectinload(Job.images),
+                selectinload(Job.comments).selectinload(JobComment.user),
+                selectinload(Job.comments).selectinload(JobComment.replies),
+            )
+        )
         if not include_deleted:
             stmt = stmt.where(Job.deleted_at.is_(None))
         return self.session.exec(stmt).first()
@@ -33,7 +43,15 @@ class JobRepository:
         user_id: Optional[UUID] = None,
         search: Optional[str] = None,
     ) -> Tuple[List[Job], int]:
-        stmt = select(Job)
+        stmt = (
+            select(Job)
+            .options(
+                selectinload(Job.user),
+                selectinload(Job.images),
+                selectinload(Job.comments).selectinload(JobComment.user),
+                selectinload(Job.comments).selectinload(JobComment.replies),
+            )
+        )
         if not include_deleted:
             stmt = stmt.where(Job.deleted_at.is_(None))
         if user_id:
@@ -143,10 +161,18 @@ class JobRepository:
         return comment
 
     def get_comments(self, job: Job) -> List[JobComment]:
-        stmt = select(JobComment).where(
-            JobComment.job_id == job.id,
-            JobComment.parent_id.is_(None)
-        ).order_by(JobComment.created_at)
+        stmt = (
+            select(JobComment)
+            .where(
+                JobComment.job_id == job.id,
+                JobComment.parent_id.is_(None),
+            )
+            .options(
+                selectinload(JobComment.user),
+                selectinload(JobComment.replies),
+            )
+            .order_by(JobComment.created_at)
+        )
         return self.session.exec(stmt).all()
 
     def get_comment_count(self, job: Job) -> int:

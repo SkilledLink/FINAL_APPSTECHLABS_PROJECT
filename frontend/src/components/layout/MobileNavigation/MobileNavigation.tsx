@@ -1,5 +1,5 @@
 // src/components/layout/MobileNavigation/MobileNavigation.tsx
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -8,11 +8,9 @@ import {
   PlusSquare,
   Briefcase,
   User,
-  Settings,
   LogOut,
   Sun,
   Moon,
-  ImagePlus,
   X,
   Shield,        // ← NEW
   ShieldCheck,   // ← NEW
@@ -33,6 +31,28 @@ const mobileNavItems = [
   { icon: Briefcase, label: "Jobs", path: "/home/jobs" },
 ];
 
+type SidebarLink = {
+  icon: typeof Home;
+  label: string;
+  path: string;
+  end?: boolean;
+  professionalOnly?: boolean;
+  adminOnly?: boolean;
+  moderatorOnly?: boolean;
+};
+
+const sidebarLinks: SidebarLink[] = [
+  { icon: Home, label: "Home", path: "/home", end: true },
+  { icon: Rss, label: "Feeds", path: "/home/feeds" },
+  { icon: Compass, label: "Discover", path: "/home/discover" },
+  { icon: Briefcase, label: "Jobs", path: "/home/jobs" },
+  { icon: LayoutDashboard, label: "Portfolio", path: "/home/portfolio", professionalOnly: true },
+  { icon: MessageSquareMore, label: "Messages", path: "/home/messages" },
+  { icon: Users, label: "Network", path: "/home/professionals" },
+  { icon: Shield, label: "Admin Dashboard", path: "/admin_dashboard", adminOnly: true },
+  { icon: ShieldCheck, label: "Moderator Dashboard", path: "/moderator_dashboard", moderatorOnly: true },
+];
+
 export default function MobileNavigation({
   isDark,
   toggleTheme,
@@ -47,11 +67,23 @@ export default function MobileNavigation({
 
   const activeUser = user ?? currentUser;
 
-  // ← NEW: admin/mod flags
   const isAdmin = !!activeUser?.isAdmin;
   const isModerator = !!activeUser?.isModerator;
+  const isProfessional =
+    (activeUser?.accountType ?? "").toString().toLowerCase() === "professional";
 
   const avatarUrl = activeUser?.profileImageUrl ?? null;
+
+  const visibleSidebarLinks = useMemo(
+    () =>
+      sidebarLinks.filter((item) => {
+        if (item.professionalOnly && !isProfessional) return false;
+        if (item.adminOnly && !isAdmin) return false;
+        if (item.moderatorOnly && !isModerator) return false;
+        return true;
+      }),
+    [isProfessional, isAdmin, isModerator],
+  );
 
   const getInitials = (firstName?: string, lastName?: string) => {
     if (!firstName && !lastName) return "U";
@@ -72,22 +104,23 @@ export default function MobileNavigation({
 
     const updated = await uploadProfileImage(file);
     if (updated) {
-      updateAuthUser({
-        ...(activeUser as any),
-        ...updated,
-      });
+      updateAuthUser({ ...(activeUser as any), ...updated });
     }
     setIsProfileMenuOpen(false);
     e.target.value = "";
   };
 
-  const openAvatarPicker = () => {
-    fileInputRef.current?.click();
+  const openAvatarPicker = () => fileInputRef.current?.click();
+
+  const go = (path: string) => {
+    navigate(path);
+    setIsProfileMenuOpen(false);
   };
 
   return (
     <>
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/75 dark:bg-slate-950/80 backdrop-blur-2xl border-t border-blue-400/20 dark:border-blue-400/20 z-40 pb-[env(safe-area-inset-bottom)] shadow-2xl transition-colors duration-300 overflow-hidden">
+      {/* ═══════════ Bottom bar ═══════════ */}
+      <nav className="md:hidden relative z-40 w-full bg-white/85 dark:bg-slate-950/85 backdrop-blur-2xl border-t border-blue-400/20 dark:border-blue-400/20 pb-[env(safe-area-inset-bottom)] shadow-[0_-2px_16px_rgba(15,23,42,0.06)] dark:shadow-[0_-2px_16px_rgba(0,0,0,0.4)] transition-colors duration-300">
         {/* Background lightning */}
         <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
           <svg
@@ -100,10 +133,7 @@ export default function MobileNavigation({
             <defs>
               <filter
                 id="light-blue-glow-mobile"
-                x="-20%"
-                y="-20%"
-                width="140%"
-                height="140%"
+                x="-20%" y="-20%" width="140%" height="140%"
               >
                 <feGaussianBlur stdDeviation="1.5" result="blur" />
                 <feMerge>
@@ -113,10 +143,7 @@ export default function MobileNavigation({
               </filter>
               <linearGradient
                 id="thunder-blue-mobile-grad"
-                x1="0%"
-                y1="0%"
-                x2="100%"
-                y2="0%"
+                x1="0%" y1="0%" x2="100%" y2="0%"
               >
                 <stop offset="0%" stopColor="#93c5fd" stopOpacity="0.6" />
                 <stop offset="50%" stopColor="#60a5fa" stopOpacity="0.8" />
@@ -134,12 +161,7 @@ export default function MobileNavigation({
                 opacity: [0.2, 0.6, 0.25, 0.65, 0.2],
                 strokeWidth: [0.9, 1.2, 0.9, 1.3, 1],
               }}
-              transition={{
-                duration: 3.2,
-                repeat: Infinity,
-                repeatType: "reverse",
-                ease: "easeInOut",
-              }}
+              transition={{ duration: 3.2, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
             />
             <motion.path
               d="M 140 18 L 170 5 L 200 15 M 370 50 L 400 60 M 450 15 L 480 32"
@@ -150,18 +172,13 @@ export default function MobileNavigation({
               filter="url(#light-blue-glow-mobile)"
               initial={{ opacity: 0.1 }}
               animate={{ opacity: [0.1, 0.5, 0.15, 0.55, 0.1] }}
-              transition={{
-                duration: 2.6,
-                repeat: Infinity,
-                repeatType: "mirror",
-                delay: 0.4,
-              }}
+              transition={{ duration: 2.6, repeat: Infinity, repeatType: "mirror", delay: 0.4 }}
             />
           </svg>
           <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 w-64 h-16 bg-blue-400/10 dark:bg-blue-500/15 rounded-full blur-2xl" />
         </div>
 
-        {/* Nav items */}
+        {/* Primary items */}
         <div className="flex justify-around items-center h-16 px-2 relative z-10">
           {mobileNavItems.map((item) => {
             const Icon = item.icon;
@@ -182,7 +199,7 @@ export default function MobileNavigation({
                     return (
                       <motion.div
                         whileTap={{ scale: 0.9 }}
-                        className="bg-blue-600 text-white p-3.5 rounded-2xl shadow-lg shadow-blue-600/30 -mt-5 border-4 border-[#f0f4f8] dark:border-black z-20"
+                        className="bg-blue-600 text-white p-3.5 rounded-2xl shadow-lg shadow-blue-600/30 -mt-5 border-4 border-[#f0f4f8] dark:border-slate-950 z-20"
                       >
                         <Icon size={22} />
                       </motion.div>
@@ -194,22 +211,13 @@ export default function MobileNavigation({
                         <motion.div
                           layoutId="mobileActivePill"
                           className="absolute inset-x-2 top-1 bottom-1 bg-blue-500/10 dark:bg-blue-400/15 rounded-xl border border-blue-500/20 dark:border-blue-400/20"
-                          transition={{
-                            type: "spring",
-                            stiffness: 380,
-                            damping: 30,
-                          }}
+                          transition={{ type: "spring", stiffness: 380, damping: 30 }}
                         />
                       )}
-                      <motion.div
-                        whileTap={{ scale: 0.9 }}
-                        className="z-10"
-                      >
+                      <motion.div whileTap={{ scale: 0.9 }} className="z-10">
                         <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
                       </motion.div>
-                      <span className="text-[10px] font-semibold z-10">
-                        {item.label}
-                      </span>
+                      <span className="text-[10px] font-semibold z-10">{item.label}</span>
                     </div>
                   );
                 }}
@@ -217,7 +225,6 @@ export default function MobileNavigation({
             );
           })}
 
-          {/* Profile avatar */}
           <div className="relative flex flex-col items-center justify-center w-full h-full">
             <button
               onClick={() => setIsProfileMenuOpen(true)}
@@ -230,14 +237,11 @@ export default function MobileNavigation({
                     alt="Profile"
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).style.display =
-                        "none";
+                      (e.currentTarget as HTMLImageElement).style.display = "none";
                     }}
                   />
                 ) : loading ? (
-                  <span className="text-white font-bold text-sm animate-pulse">
-                    ...
-                  </span>
+                  <span className="text-white font-bold text-sm animate-pulse">...</span>
                 ) : (
                   <span className="text-white font-bold text-sm">
                     {getInitials(activeUser?.firstName, activeUser?.lastName)}
@@ -252,7 +256,7 @@ export default function MobileNavigation({
         </div>
       </nav>
 
-      {/* Bottom sheet menu */}
+      {/* ═══════════ Bottom sheet ═══════════ */}
       <AnimatePresence>
         {isProfileMenuOpen && (
           <>
@@ -270,7 +274,7 @@ export default function MobileNavigation({
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-slate-950 rounded-t-3xl shadow-2xl border-t border-blue-400/20 dark:border-blue-400/20 max-h-[80vh] overflow-y-auto"
+              className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-slate-950 rounded-t-3xl shadow-2xl border-t border-blue-400/20 dark:border-blue-400/20 max-h-[85vh] overflow-y-auto"
             >
               <div className="flex justify-center pt-3 pb-1">
                 <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full" />
@@ -285,25 +289,22 @@ export default function MobileNavigation({
                         alt="Profile"
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).style.display =
-                            "none";
+                          (e.currentTarget as HTMLImageElement).style.display = "none";
                         }}
                       />
                     ) : loading ? (
-                      <span className="text-white font-bold text-sm animate-pulse">
-                        ...
-                      </span>
+                      <span className="text-white font-bold text-sm animate-pulse">...</span>
                     ) : (
                       <span className="text-white font-bold text-lg">
                         {getInitials(activeUser?.firstName, activeUser?.lastName)}
                       </span>
                     )}
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
                       {activeUser?.firstName} {activeUser?.lastName}
                     </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
                       {activeUser?.email}
                     </p>
                   </div>
@@ -311,82 +312,43 @@ export default function MobileNavigation({
                 <button
                   onClick={() => setIsProfileMenuOpen(false)}
                   className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  aria-label="Close menu"
                 >
                   <X size={20} className="text-slate-600 dark:text-slate-300" />
                 </button>
               </div>
 
-              {/* ← NEW: Admin / Moderator tools section */}
-              {(isAdmin || isModerator) && (
-                <div className="py-2 border-b border-slate-200 dark:border-slate-800">
-                  {isAdmin && (
+              <div className="py-2 border-b border-slate-200 dark:border-slate-800">
+                <p className="px-6 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  Navigate
+                </p>
+                {visibleSidebarLinks.map((item) => {
+                  const Icon = item.icon;
+                  return (
                     <button
-                      onClick={() => {
-                        navigate("/admin_dashboard");
-                        setIsProfileMenuOpen(false);
-                      }}
+                      key={item.path}
+                      onClick={() => go(item.path)}
                       className="w-full flex items-center gap-3 px-6 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                     >
-                      <Shield
-                        size={18}
-                        className="text-blue-500 dark:text-blue-400"
-                      />
-                      Admin Dashboard
+                      <Icon size={18} className="text-slate-500 dark:text-slate-400" />
+                      {item.label}
                     </button>
-                  )}
+                  );
+                })}
+              </div>
 
-                  {isModerator && (
-                    <button
-                      onClick={() => {
-                        navigate("/moderator_dashboard");
-                        setIsProfileMenuOpen(false);
-                      }}
-                      className="w-full flex items-center gap-3 px-6 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-                    >
-                      <ShieldCheck
-                        size={18}
-                        className="text-blue-500 dark:text-blue-400"
-                      />
-                      Moderator Dashboard
-                    </button>
-                  )}
-                </div>
-              )}
-
-              <div className="py-2">
+              <div className="py-2 border-b border-slate-200 dark:border-slate-800">
+                <p className="px-6 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  Account
+                </p>
                 <button
-                  onClick={() => {
-                    navigate("/home/profile");
-                    setIsProfileMenuOpen(false);
-                  }}
+                  onClick={() => go("/home/profile")}
                   className="w-full flex items-center gap-3 px-6 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                 >
                   <User size={18} className="text-slate-500 dark:text-slate-400" />
                   My Profile
                 </button>
-                <button
-                  onClick={openAvatarPicker}
-                  className="w-full flex items-center gap-3 px-6 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-                >
-                  <ImagePlus
-                    size={18}
-                    className="text-slate-500 dark:text-slate-400"
-                  />
-                  Upload Avatar
-                </button>
-                <button
-                  onClick={() => {
-                    navigate("/home/settings");
-                    setIsProfileMenuOpen(false);
-                  }}
-                  className="w-full flex items-center gap-3 px-6 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-                >
-                  <Settings
-                    size={18}
-                    className="text-slate-500 dark:text-slate-400"
-                  />
-                  Settings
-                </button>
+              
                 <button
                   onClick={() => {
                     toggleTheme();

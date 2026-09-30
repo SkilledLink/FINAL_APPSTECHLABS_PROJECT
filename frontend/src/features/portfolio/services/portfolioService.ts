@@ -114,6 +114,48 @@ export const portfolioService = {
     }
   },
 
+  /**
+   * Upload a banner image for a service.
+   *
+   * NOTE: Like uploadWorkImages, we do NOT set Content-Type manually.
+   * Axios sets `multipart/form-data; boundary=...` automatically from the
+   * FormData body. Setting it by hand strips the boundary and FastAPI's
+   * multipart parser drops the file field.
+   */
+  async uploadServiceBanner(serviceId: string, file: File): Promise<Service> {
+    try {
+      const form = new FormData();
+      form.append('banner', file);
+
+      const { data } = await apiClient.post<Service>(
+        `${BASE}/services/${serviceId}/banner`,
+        form
+      );
+      return data;
+    } catch (err) {
+      throw new Error(toMessage(err, 'Failed to upload banner'));
+    }
+  },
+
+  /**
+   * Upload one or more gallery images for a service.
+   * Field name must be `images` (matches the FastAPI endpoint signature).
+   */
+  async uploadServiceGallery(serviceId: string, files: File[]): Promise<Service> {
+    try {
+      const form = new FormData();
+      files.forEach((f) => form.append('images', f));
+
+      const { data } = await apiClient.post<Service>(
+        `${BASE}/services/${serviceId}/gallery`,
+        form
+      );
+      return data;
+    } catch (err) {
+      throw new Error(toMessage(err, 'Failed to upload gallery'));
+    }
+  },
+
   /* ── Works ───────────────────────────────────────── */
 
   async listWorks(): Promise<Work[]> {

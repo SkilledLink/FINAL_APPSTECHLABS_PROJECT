@@ -1,7 +1,7 @@
 // src/features/messages/pages/MessagesPage.tsx
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { ConversationList } from '../components/ConversationList';
 import { ChatWindow } from '../components/ChatWindow';
 import { useCall } from '../context/CallProvider';
@@ -17,18 +17,23 @@ import { usePresence } from '../hooks/usePresence';
 import { useSocketContext } from '../../../contexts/SocketContext';
 import { formatFileSize, getFileIcon } from '../utils/fileUtils';
 import { normalizeId } from '../utils/idUtils';
+import { generateUUID } from '../../../utils/uuid';
 
 export const MessagesPage: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
   const { socket } = useSocketContext();
+  const navigate = useNavigate();
 
   const { conversationId: urlConversationId } = useParams<{
     conversationId?: string;
   }>();
 
+  const normalizedUrlId = normalizeId(urlConversationId);
+
   const [activeConversationId, setActiveConversationId] = useState<
     string | null
-  >(urlConversationId ?? null);
+  >(normalizedUrlId ?? null);
+
   const [displayConversations, setDisplayConversations] = useState<any[]>([]);
 
   const { conversations, loading: convLoading, error: convError } =
@@ -39,11 +44,13 @@ export const MessagesPage: React.FC = () => {
   }, [conversations]);
 
   useEffect(() => {
-    if (urlConversationId && urlConversationId !== activeConversationId) {
-      setActiveConversationId(urlConversationId);
+    const normalized = normalizeId(urlConversationId);
+    if (normalized && normalized !== activeConversationId) {
+      setActiveConversationId(normalized);
+    } else if (!normalized && activeConversationId) {
+      setActiveConversationId(null);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [urlConversationId]);
+  }, [urlConversationId, activeConversationId]);
 
   const { messages, setMessages, confirmMessage, addOptimistic } =
     useMessages(activeConversationId);
@@ -55,14 +62,12 @@ export const MessagesPage: React.FC = () => {
   const isUploading = voiceUploading || fileUploading;
   const currentUserId = normalizeId(user?.id);
 
-  // ── Presence + typing (single declaration each) ─────────
   const { onlineUsers } = usePresence(currentUserId);
   const { typingUsers, sendTyping } = useTyping(
     activeConversationId,
     currentUserId
   );
 
-  // ── Calling (from global CallProvider) ──────────────────
   const callApi = useCall();
   const { setCallParticipant } = callApi;
 
@@ -120,7 +125,6 @@ export const MessagesPage: React.FC = () => {
 
   useRealtimeMessages(handleGlobalNewMessage);
 
-  /* ── Mark as read when active conversation changes ──────── */
   useEffect(() => {
     if (!activeConversationId || !socket) return;
     setDisplayConversations((prev) =>
@@ -133,51 +137,62 @@ export const MessagesPage: React.FC = () => {
     socket.emit('message_read', { conversation_id: activeConversationId });
   }, [activeConversationId, socket]);
 
-  const handleSelectConversation = useCallback((id: string) => {
-    setActiveConversationId(id);
-  }, []);
+  const handleSelectConversation = useCallback(
+    (id: string) => {
+      const normalizedId = normalizeId(id);
+      setActiveConversationId(normalizedId);
+      navigate(`/home/messages/${normalizedId}`);
+    },
+    [navigate]
+  );
 
-  // ── Send Text ────────────────────────────────────────────
+  /* ── Send Text ──────────────────────────────────────────── */
   const handleSendMessage = useCallback(
     async (text: string) => {
       if (!activeConversationId) return;
-      const clientMessageId = crypto.randomUUID();
-      const tempId = `temp-${clientMessageId}`;
 
-      const tempMessage: any = {
-        id: tempId,
-        conversation_id: activeConversationId,
-        sender_id: currentUserId,
-        client_message_id: clientMessageId,
-        type: 'text',
-        content: text,
-        text: text,
-        created_at: new Date().toISOString(),
-        status: 'sending',
-        isRead: false,
-      };
-      addOptimistic(tempMessage);
+      try {
+        const clientMessageId = generateUUID();
+        const tempId = `temp-${clientMessageId}`;
 
-      const { realMessage, error } = await send(
-        clientMessageId,
-        text,
-        'text'
-      );
-      if (realMessage) {
-        confirmMessage(realMessage);
-      } else if (error) {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === tempId
-              ? {
-                  ...m,
-                  content: '❌ Failed to send',
-                  text: '❌ Failed to send',
-                  status: 'failed',
-                }
-              : m
-          )
+        const tempMessage: any = {
+          id: tempId,
+          conversation_id: activeConversationId,
+          sender_id: currentUserId,
+          client_message_id: clientMessageId,
+          type: 'text',
+          content: text,
+          text: text,
+          created_at: new Date().toISOString(),
+          status: 'sending',
+          isRead: false,
+        };
+        addOptimistic(tempMessage);
+
+        const { realMessage, error } = await send(
+          clientMessageId,
+          text,
+          'text'
         );
+
+        if (realMessage) {
+          confirmMessage(realMessage);
+        } else if (error) {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === tempId
+                ? {
+                    ...m,
+                    content: `❌ ${error}`,
+                    text: `❌ ${error}`,
+                    status: 'failed',
+                  }
+                : m
+            )
+          );
+        }
+      } catch (err) {
+        console.error('[send text] failed:', err);
       }
     },
     [
@@ -190,13 +205,13 @@ export const MessagesPage: React.FC = () => {
     ]
   );
 
-  // ── Send File / Image ────────────────────────────────────
+  /* ── Send File / Image ──────────────────────────────────── */
   const handleSendFile = useCallback(
     async (file: File) => {
       if (!activeConversationId) return;
       try {
         const { publicUrl, name, size, type } = await uploadFile(file);
-        const clientMessageId = crypto.randomUUID();
+        const clientMessageId = generateUUID();
         const tempId = `temp-${clientMessageId}`;
         const isImage = type.startsWith('image/');
 
@@ -267,7 +282,7 @@ export const MessagesPage: React.FC = () => {
     [handleSendFile]
   );
 
-  // ── Send Voice Note ──────────────────────────────────────
+  /* ── Send Voice Note ────────────────────────────────────── */
   const handleSendVoiceNote = useCallback(
     async (duration: string) => {
       if (!activeConversationId) return;
@@ -279,7 +294,7 @@ export const MessagesPage: React.FC = () => {
 
       try {
         const { publicUrl } = await uploadVoice(file, durationNum);
-        const clientMessageId = crypto.randomUUID();
+        const clientMessageId = generateUUID();
         const tempId = `temp-${clientMessageId}`;
 
         const tempMessage: any = {
@@ -337,7 +352,6 @@ export const MessagesPage: React.FC = () => {
     ]
   );
 
-  /* ── Enrich conversations with live presence ───────────── */
   const conversationsWithPresence = useMemo(() => {
     return displayConversations.map((c) => {
       if (!c.participant) return c;
@@ -346,7 +360,6 @@ export const MessagesPage: React.FC = () => {
     });
   }, [displayConversations, onlineUsers]);
 
-  /* ── Register call participants ─────────────────────────── */
   useEffect(() => {
     conversationsWithPresence.forEach((c) => {
       if (c.participant?.id) {
@@ -360,12 +373,12 @@ export const MessagesPage: React.FC = () => {
 
   const activeConversation = useMemo(
     () =>
-      conversationsWithPresence.find((c) => c.id === activeConversationId) ||
-      null,
+      conversationsWithPresence.find(
+        (c) => normalizeId(c.id) === normalizeId(activeConversationId)
+      ) || null,
     [conversationsWithPresence, activeConversationId]
   );
 
-  /* ── Call handlers ──────────────────────────────────────── */
   const handleStartCall = useCallback(() => {
     if (!activeConversationId || !activeConversation?.participant?.id) return;
     callApi.startCall(
@@ -384,9 +397,10 @@ export const MessagesPage: React.FC = () => {
     );
   }, [activeConversationId, activeConversation, callApi]);
 
+  /* ── Loading state ──────────────────────────────────────── */
   if (authLoading || convLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-transparent">
+      <div className="absolute inset-0 flex items-center justify-center bg-transparent">
         <div className="flex flex-col items-center gap-3">
           <div className="h-8 w-8 rounded-full border-2 border-slate-300 border-t-slate-800 dark:border-slate-700 dark:border-t-slate-200 animate-spin" />
           <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
@@ -397,9 +411,10 @@ export const MessagesPage: React.FC = () => {
     );
   }
 
+  /* ── Error state ────────────────────────────────────────── */
   if (convError) {
     return (
-      <div className="flex items-center justify-center h-screen bg-transparent">
+      <div className="absolute inset-0 flex items-center justify-center bg-transparent">
         <div className="rounded-2xl border border-rose-200/60 dark:border-rose-900/40 bg-rose-50/70 dark:bg-rose-950/30 px-6 py-4 text-sm font-medium text-rose-600 dark:text-rose-400 backdrop-blur-xl">
           Error: {convError}
         </div>
@@ -407,8 +422,9 @@ export const MessagesPage: React.FC = () => {
     );
   }
 
+  /* ── Main render ────────────────────────────────────────── */
   return (
-    <div className="h-screen w-full flex overflow-hidden bg-transparent">
+    <div className="absolute inset-0 flex overflow-hidden bg-transparent">
       <div
         className={`${
           activeConversationId ? 'hidden lg:block' : 'w-full'
@@ -420,28 +436,42 @@ export const MessagesPage: React.FC = () => {
           onSelectConversation={handleSelectConversation}
         />
       </div>
+
+      {/* ChatWindow Area with Loading Fallback */}
       <div
         className={`${
           !activeConversationId ? 'hidden lg:flex' : 'flex'
-        } flex-1 h-full transition-all duration-300 ease-in-out`}
+        } flex-1 h-full min-h-0 transition-all duration-300 ease-in-out`}
       >
-        <ChatWindow
-          conversation={activeConversation as any}
-          messages={messages}
-          currentUserId={currentUserId}
-          onSendMessage={handleSendMessage}
-          onSendVoiceNote={handleSendVoiceNote}
-          onSendFile={handleSendFile}
-          onSendImage={handleSendImage}
-          uploading={isUploading}
-          uploadProgress={uploadProgress}
-          onBack={() => setActiveConversationId(null)}
-          onTypingChange={sendTyping}
-          typingUsers={typingUsers}
-          onCall={handleStartCall}
-          onVideoCall={handleStartVideoCall}
-          callDisabled={!!callApi.call}
-        />
+        {activeConversation ? (
+          <ChatWindow
+            conversation={activeConversation as any}
+            messages={messages}
+            currentUserId={currentUserId}
+            onSendMessage={handleSendMessage}
+            onSendVoiceNote={handleSendVoiceNote}
+            onSendFile={handleSendFile}
+            onSendImage={handleSendImage}
+            uploading={isUploading}
+            uploadProgress={uploadProgress}
+            onBack={() => {
+              setActiveConversationId(null);
+              navigate('/home/messages');
+            }}
+            onTypingChange={sendTyping}
+            typingUsers={typingUsers}
+            onCall={handleStartCall}
+            onVideoCall={handleStartVideoCall}
+            callDisabled={!!callApi.call}
+          />
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center h-full p-8 text-center bg-transparent">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900 dark:border-slate-100 mb-4"></div>
+            <p className="text-slate-500 dark:text-slate-400 font-medium">
+              Loading conversation…
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

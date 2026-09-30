@@ -65,7 +65,6 @@ class ProfessionalPortfolioService:
         """Get portfolio for a user. Raises 404 if not found, 403 if private."""
         logger.info(f"get_portfolio called with user_id: {user_id} (type: {type(user_id)})")
 
-        # Ensure user_id is a valid UUID (it already is, but catch conversion errors)
         if not isinstance(user_id, UUID):
             try:
                 user_id = UUID(str(user_id))
@@ -103,8 +102,6 @@ class ProfessionalPortfolioService:
 
             self.session.commit()
 
-            # Trigger AI reindexing after portfolio update (if headline/bio changed)
-            # We'll call regardless; the indexing service will compile and update if needed.
             try:
                 IndexingService(self.session).regenerate_vector(user.id)
             except Exception as e:
@@ -124,7 +121,6 @@ class ProfessionalPortfolioService:
             self.session.delete(portfolio)
             self.session.commit()
 
-            # Trigger AI reindexing to clear embedding (or set to none)
             try:
                 IndexingService(self.session).regenerate_vector(user.id)
             except Exception as e:
@@ -142,7 +138,6 @@ class ProfessionalPortfolioService:
             work = self.repo.create_work(portfolio, data.model_dump())
             self.session.commit()
 
-            # Trigger AI reindexing after work creation
             try:
                 IndexingService(self.session).regenerate_vector(user.id)
             except Exception as e:
@@ -171,7 +166,6 @@ class ProfessionalPortfolioService:
                 self.repo.update_work(work, update_data)
             self.session.commit()
 
-            # Trigger AI reindexing after work update
             try:
                 IndexingService(self.session).regenerate_vector(user.id)
             except Exception as e:
@@ -189,7 +183,6 @@ class ProfessionalPortfolioService:
             self.repo.delete_work(work)
             self.session.commit()
 
-            # Trigger AI reindexing after work deletion
             try:
                 IndexingService(self.session).regenerate_vector(user.id)
             except Exception as e:
@@ -200,33 +193,91 @@ class ProfessionalPortfolioService:
             logger.error(f"Work deletion failed: {e}")
             raise
 
-    def upload_work_images(self, work_id: UUID, user: User, before: Optional[UploadFile], after: Optional[UploadFile]) -> WorkResponse:
+    def upload_work_images(
+        self,
+        work_id: UUID,
+        user: User,
+        before: Optional[UploadFile],
+        after: Optional[UploadFile],
+    ) -> WorkResponse:
         work = self._get_work_for_owner(work_id, user)
         try:
             if before:
                 url = self.storage.upload_image(
                     before,
-                    folder=f"professionals/{user.id}/portfolio/{work_id}/before",
-                    public_id=f"before_{uuid4()}"
+                    folder=f"professionals/{user.id}/portfolio/works/{work_id}/before",
+                    public_id=f"before_{uuid4()}",
+                    resource_type="image",
+                    allowed_mime_types=[
+                        "image/jpeg", "image/jpg", "image/png",
+                        "image/webp", "image/gif",
+                    ],
                 )
                 work.before_image_url = url
             if after:
                 url = self.storage.upload_image(
                     after,
-                    folder=f"professionals/{user.id}/portfolio/{work_id}/after",
-                    public_id=f"after_{uuid4()}"
+                    folder=f"professionals/{user.id}/portfolio/works/{work_id}/after",
+                    public_id=f"after_{uuid4()}",
+                    resource_type="image",
+                    allowed_mime_types=[
+                        "image/jpeg", "image/jpg", "image/png",
+                        "image/webp", "image/gif",
+                    ],
                 )
                 work.after_image_url = url
+
             self.repo.update_work(work, {})
             self.session.commit()
 
             # Images don't affect search text, so we skip reindexing here.
-            # If you want to reindex when images change, you could add it, but it's unnecessary.
-
             return WorkResponse.model_validate(work)
+        except HTTPException:
+            self.session.rollback()
+            raise
         except Exception as e:
             self.session.rollback()
             logger.error(f"Image upload failed: {e}")
+            raise
+
+    def upload_work_gallery(
+        self,
+        work_id: UUID,
+        user: User,
+        images: List[UploadFile],
+    ) -> WorkResponse:
+        if not images:
+            raise HTTPException(400, "At least one image must be provided")
+
+        work = self._get_work_for_owner(work_id, user)
+        try:
+            new_urls: List[str] = []
+            for image in images:
+                url = self.storage.upload_image(
+                    image,
+                    folder=f"professionals/{user.id}/portfolio/works/{work_id}/gallery",
+                    public_id=f"gallery_{uuid4()}",
+                    resource_type="image",
+                    allowed_mime_types=[
+                        "image/jpeg", "image/jpg", "image/png",
+                        "image/webp", "image/gif",
+                    ],
+                )
+                new_urls.append(url)
+
+            # Reassign to force SQLAlchemy to detect the JSON change
+            work.gallery = list(work.gallery or []) + new_urls
+
+            self.repo.update_work(work, {})
+            self.session.commit()
+            return WorkResponse.model_validate(work)
+
+        except HTTPException:
+            self.session.rollback()
+            raise
+        except Exception as e:
+            self.session.rollback()
+            logger.error(f"Work gallery upload failed: {e}")
             raise
 
     # ---------- Services ----------
@@ -236,7 +287,6 @@ class ProfessionalPortfolioService:
             service = self.repo.create_service(portfolio, data.model_dump())
             self.session.commit()
 
-            # Trigger AI reindexing after service creation
             try:
                 IndexingService(self.session).regenerate_vector(user.id)
             except Exception as e:
@@ -256,7 +306,6 @@ class ProfessionalPortfolioService:
                 self.repo.update_service(service, update_data)
             self.session.commit()
 
-            # Trigger AI reindexing after service update
             try:
                 IndexingService(self.session).regenerate_vector(user.id)
             except Exception as e:
@@ -274,7 +323,6 @@ class ProfessionalPortfolioService:
             self.repo.delete_service(service)
             self.session.commit()
 
-            # Trigger AI reindexing after service deletion
             try:
                 IndexingService(self.session).regenerate_vector(user.id)
             except Exception as e:
@@ -283,6 +331,77 @@ class ProfessionalPortfolioService:
         except Exception as e:
             self.session.rollback()
             logger.error(f"Service deletion failed: {e}")
+            raise
+
+    def upload_service_banner(
+        self,
+        service_id: UUID,
+        user: User,
+        banner: UploadFile,
+    ) -> ServiceResponse:
+        service = self._get_service_for_owner(service_id, user)
+        try:
+            url = self.storage.upload_image(
+                banner,
+                folder=f"professionals/{user.id}/portfolio/services/{service_id}/banner",
+                public_id=f"banner_{uuid4()}",
+                resource_type="image",
+                allowed_mime_types=[
+                    "image/jpeg", "image/jpg", "image/png",
+                    "image/webp", "image/gif",
+                ],
+            )
+
+            service.banner_image_url = url
+            self.repo.update_service(service, {})
+            self.session.commit()
+            return ServiceResponse.model_validate(service)
+
+        except HTTPException:
+            self.session.rollback()
+            raise
+        except Exception as e:
+            self.session.rollback()
+            logger.error(f"Service banner upload failed: {e}")
+            raise
+
+    def upload_service_gallery(
+        self,
+        service_id: UUID,
+        user: User,
+        images: List[UploadFile],
+    ) -> ServiceResponse:
+        if not images:
+            raise HTTPException(400, "At least one image must be provided")
+
+        service = self._get_service_for_owner(service_id, user)
+        try:
+            new_urls: List[str] = []
+            for image in images:
+                url = self.storage.upload_image(
+                    image,
+                    folder=f"professionals/{user.id}/portfolio/services/{service_id}/gallery",
+                    public_id=f"gallery_{uuid4()}",
+                    resource_type="image",
+                    allowed_mime_types=[
+                        "image/jpeg", "image/jpg", "image/png",
+                        "image/webp", "image/gif",
+                    ],
+                )
+                new_urls.append(url)
+
+            service.gallery = list(service.gallery or []) + new_urls
+
+            self.repo.update_service(service, {})
+            self.session.commit()
+            return ServiceResponse.model_validate(service)
+
+        except HTTPException:
+            self.session.rollback()
+            raise
+        except Exception as e:
+            self.session.rollback()
+            logger.error(f"Service gallery upload failed: {e}")
             raise
 
     # ---------- Availability ----------
@@ -353,7 +472,12 @@ class ProfessionalPortfolioService:
             raise HTTPException(403, "Not authorized to modify this service")
         return service
 
-    def _build_portfolio_response(self, portfolio: ProfessionalPortfolio, user: User, include_nested: bool = True) -> PortfolioResponse:
+    def _build_portfolio_response(
+        self,
+        portfolio: ProfessionalPortfolio,
+        user: User,
+        include_nested: bool = True,
+    ) -> PortfolioResponse:
         if not include_nested:
             return PortfolioResponse.model_validate(portfolio)
 
