@@ -1,37 +1,22 @@
 // src/features/landing/components/TopNav.tsx
 
 import React, { useEffect, useState } from "react";
-import {
-  Menu,
-  X,
-  ArrowRight,
-  ChevronDown,
-  Sun,
-  Moon,
-} from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
-import LogoLight from "../../../assets/LogoLight.png";
-import LogoDark from "../../../assets/LogoDark.png";
 
 interface NavbarProps {
   activeNav?: string;
   onNavigate?: (id: string) => void;
 }
 
+/* Reduced to three primary sections */
 const navItems = [
-  { id: "home", label: "Home" },
   { id: "trades", label: "Trades" },
   { id: "professionals", label: "Professionals" },
-  { id: "need-work", label: "Need Work" },
-  { id: "reviews", label: "Testimonials" },
-  { id: "faq", label: "FAQ" },
   { id: "contact", label: "Contact" },
 ];
 
 /* ═══════════════════════════════════════════════════════════
-   THEME HELPERS — central source of truth, usable anywhere
-   (import these in ThemeProvider, other components, etc.)
+   THEME HELPERS — kept exported for compatibility
 ═══════════════════════════════════════════════════════════ */
 
 export const THEME_KEY = "theme";
@@ -39,7 +24,6 @@ export const THEME_KEY = "theme";
 export function getInitialTheme(): boolean {
   if (typeof document === "undefined") return false;
 
-  // 1. Explicit user preference wins
   try {
     const stored = localStorage.getItem(THEME_KEY);
     if (stored === "dark") return true;
@@ -48,10 +32,8 @@ export function getInitialTheme(): boolean {
     /* ignore */
   }
 
-  // 2. DOM (set by the <head> script)
   if (document.documentElement.classList.contains("dark")) return true;
 
-  // 3. System preference
   try {
     if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
       return true;
@@ -67,11 +49,8 @@ export function applyTheme(isDark: boolean) {
   if (typeof document === "undefined") return;
 
   const root = document.documentElement;
-  if (isDark) {
-    root.classList.add("dark");
-  } else {
-    root.classList.remove("dark");
-  }
+  if (isDark) root.classList.add("dark");
+  else root.classList.remove("dark");
 
   try {
     localStorage.setItem(THEME_KEY, isDark ? "dark" : "light");
@@ -82,47 +61,19 @@ export function applyTheme(isDark: boolean) {
 
 /* ═══════════════════════════════════════════════════════════ */
 
-const TopNav: React.FC<NavbarProps> = ({
-  activeNav,
-  onNavigate,
-}) => {
+const TopNav: React.FC<NavbarProps> = ({ activeNav, onNavigate }) => {
   const navigate = useNavigate();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [currentSection, setCurrentSection] = useState(
     activeNav || "home"
   );
-  const [isScrolled, setIsScrolled] = useState(false);
+  const [visible, setVisible] = useState(false);
 
-  /* ─── THEME STATE ─── */
-  const [isDark, setIsDark] = useState<boolean>(() => getInitialTheme());
-
-  /* Apply theme whenever it changes */
-  useEffect(() => {
-    applyTheme(isDark);
-  }, [isDark]);
-
-  /* Stay in sync if another component toggles the theme */
-  useEffect(() => {
-    const observer = new MutationObserver(() => {
-      const domDark = document.documentElement.classList.contains("dark");
-      setIsDark((prev) => (prev === domDark ? prev : domDark));
-    });
-
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class"],
-    });
-
-    return () => observer.disconnect();
-  }, []);
-
-  const toggleTheme = () => setIsDark((prev) => !prev);
-
-  /* ─── SCROLL STATE ─── */
+  /* ─── REVEAL AFTER HERO ─── */
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 24);
+      setVisible(window.scrollY > window.innerHeight * 0.6);
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -131,19 +82,28 @@ const TopNav: React.FC<NavbarProps> = ({
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  /* ─── ACTIVE SECTION DETECTION ─── */
+  /* ─── ACTIVE SECTION ─── */
   useEffect(() => {
     const handleScroll = () => {
       const scrollPosition = window.scrollY + 160;
       let activeSection = "home";
 
-      navItems.forEach((item) => {
-        const section = document.getElementById(item.id);
+      const allSections = [
+        "home",
+        "trades",
+        "professionals",
+        "need-work",
+        "faq",
+        "contact",
+      ];
+
+      allSections.forEach((id) => {
+        const section = document.getElementById(id);
         if (section) {
           const sectionTop =
             section.getBoundingClientRect().top + window.scrollY;
           if (scrollPosition >= sectionTop) {
-            activeSection = item.id;
+            activeSection = id;
           }
         }
       });
@@ -157,15 +117,21 @@ const TopNav: React.FC<NavbarProps> = ({
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  /* ─── SCROLL LOCK (mobile) ─── */
+  /* ─── SCROLL LOCK + ESCAPE ─── */
   useEffect(() => {
+    document.body.style.overflow = mobileOpen ? "hidden" : "";
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileOpen(false);
+    };
+
     if (mobileOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
+      window.addEventListener("keydown", onKey);
     }
+
     return () => {
       document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKey);
     };
   }, [mobileOpen]);
 
@@ -187,7 +153,7 @@ const TopNav: React.FC<NavbarProps> = ({
     if (window.location.pathname === "/") {
       const section = document.getElementById(id);
       if (section) {
-        const navbarHeight = 100;
+        const navbarHeight = 80;
         const sectionTop =
           section.getBoundingClientRect().top + window.scrollY - navbarHeight;
         window.scrollTo({ top: sectionTop, behavior: "smooth" });
@@ -212,408 +178,184 @@ const TopNav: React.FC<NavbarProps> = ({
 
   return (
     <>
-      {/* =========================================================
-          MAIN NAVBAR
-      ========================================================== */}
+      {/* ═══════════════════════════════════════════
+          MASTHEAD
+          Layout: [SkilledLink]  [Nav items]  [Login · Get started]
+      ═══════════════════════════════════════════ */}
       <header
-        className="
-          fixed top-0 left-0 right-0 z-50
-          px-3 sm:px-5 lg:px-8
-          transition-all duration-500
-        "
+        className={`fixed top-0 left-0 right-0 z-50 border-b border-slate-200 bg-[#f8fafc] transition-transform duration-500 ease-out ${
+          visible ? "translate-y-0" : "-translate-y-full"
+        }`}
       >
-        <nav
-          className={`
-            mx-auto max-w-[1440px]
-            mt-3 sm:mt-4
-            h-[68px] sm:h-[72px]
-            rounded-2xl sm:rounded-[20px]
-            flex items-center justify-between
-            px-3 sm:px-5 lg:px-6
-            transition-all duration-500
-
-            ${
-              isScrolled
-                ? `
-                  bg-white/85 dark:bg-surface/85
-                  backdrop-blur-2xl
-                  border border-slate-200/80 dark:border-border-subtle
-                  shadow-[0_18px_50px_rgba(15,23,42,0.10)]
-                  dark:shadow-[0_18px_50px_rgba(0,0,0,0.45)]
-                `
-                : `
-                  bg-white/45 dark:bg-surface/30
-                  backdrop-blur-xl
-                  border border-white/50 dark:border-white/[0.06]
-                  shadow-[0_10px_40px_rgba(15,23,42,0.04)]
-                `
-            }
-          `}
-        >
-          {/* ─────────── LOGO ─────────── */}
+        <nav className="mx-auto flex h-16 max-w-[1280px] items-center justify-between px-6 sm:h-20 sm:px-10 lg:px-16">
+          {/* LEFT — WORDMARK */}
           <button
             type="button"
             onClick={() => handleNavigate("home")}
-            className="group relative shrink-0 flex items-center cursor-pointer outline-none"
-            aria-label="SkilledLink home"
+            className="text-[17px] font-bold uppercase tracking-[0.22em] text-blue-600 transition-colors duration-200 hover:text-blue-700 sm:text-[18px]"
           >
-            <img
-              src={isDark ? LogoDark : LogoLight}
-              alt="SkilledLink"
-              className="
-                h-[52px] w-[112px]
-                sm:h-[58px] sm:w-[124px]
-                object-contain
-                transition-all duration-300
-                group-hover:scale-[1.03]
-              "
-            />
-            <span
-              className="
-                absolute left-1/2 -bottom-1
-                -translate-x-1/2
-                w-10 h-1 rounded-full
-                bg-gradient-to-r from-blue-600 via-cyan-400 to-blue-600
-                opacity-0 group-hover:opacity-70
-                blur-sm transition-opacity duration-300
-              "
-            />
+            SkilledLink
           </button>
 
-          {/* ─────────── DESKTOP NAV ─────────── */}
-          <div className="hidden xl:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
+          {/* CENTER — NAV ITEMS (desktop only) */}
+          <ul className="hidden items-baseline gap-8 lg:flex">
             {navItems.map((item) => {
               const isActive = currentSection === item.id;
+
               return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => handleNavigate(item.id)}
-                  className={`
-                    relative px-3.5 py-2.5 rounded-xl
-                    text-[13px] font-semibold tracking-[-0.01em]
-                    transition-all duration-300
-                    ${
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    onClick={() => handleNavigate(item.id)}
+                    className={`relative pb-1 text-[12px] font-bold uppercase tracking-[0.22em] transition-colors duration-200 ${
                       isActive
-                        ? "text-blue-600 dark:text-cyan-400 bg-blue-50/80 dark:bg-cyan-400/[0.08]"
-                        : "text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-white/[0.05]"
-                    }
-                  `}
-                >
-                  {item.label}
-                  <span
-                    className={`
-                      absolute left-1/2 -translate-x-1/2 bottom-[3px]
-                      h-[2px] rounded-full
-                      bg-gradient-to-r from-blue-600 to-cyan-400
-                      transition-all duration-300
-                      ${isActive ? "w-5 opacity-100" : "w-0 opacity-0"}
-                    `}
-                  />
-                </button>
+                        ? "text-blue-600"
+                        : "text-slate-500 hover:text-blue-600"
+                    }`}
+                  >
+                    {item.label}
+
+                    <span
+                      aria-hidden="true"
+                      className={`absolute -bottom-0.5 left-0 right-0 h-px origin-left bg-blue-600 transition-transform duration-300 ${
+                        isActive ? "scale-x-100" : "scale-x-0"
+                      }`}
+                    />
+                  </button>
+                </li>
               );
             })}
-          </div>
+          </ul>
 
-          {/* ─────────── DESKTOP ACTIONS ─────────── */}
-          <div className="hidden lg:flex items-center gap-2">
-            {/* Theme toggle */}
-            <button
-              type="button"
-              onClick={toggleTheme}
-              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-              className="
-                group relative
-                flex h-10 w-10 items-center justify-center
-                rounded-xl
-                bg-slate-100/70 dark:bg-white/[0.05]
-                border border-slate-200/70 dark:border-border-subtle
-                text-slate-600 dark:text-slate-300
-                hover:text-blue-600 dark:hover:text-cyan-400
-                hover:border-blue-300/70 dark:hover:border-cyan-400/30
-                hover:bg-blue-50/70 dark:hover:bg-cyan-400/[0.06]
-                transition-all duration-300 cursor-pointer
-              "
-            >
-              <span className="transition-transform duration-500 group-hover:rotate-[20deg]">
-                {isDark ? <Sun size={16} /> : <Moon size={16} />}
-              </span>
-            </button>
-
-            {/* Login */}
+          {/* RIGHT — LOGIN + GET STARTED (desktop) */}
+          <div className="hidden items-baseline gap-8 lg:flex">
             <button
               type="button"
               onClick={handleLogin}
-              className="
-                group flex items-center gap-1.5
-                px-3.5 py-2.5 rounded-xl
-                text-[13px] font-semibold
-                text-slate-600 dark:text-slate-300
-                hover:text-slate-950 dark:hover:text-white
-                transition-all duration-300
-              "
+              className="text-[12px] font-bold uppercase tracking-[0.22em] text-slate-500 transition-colors duration-200 hover:text-blue-600"
             >
-              <span>Login</span>
-              <ChevronDown
-                size={13}
-                className="
-                  rotate-[-90deg] opacity-40
-                  group-hover:translate-x-0.5 group-hover:opacity-100
-                  transition-all
-                "
-              />
+              Login
             </button>
 
-            <div className="h-7 w-px bg-slate-200 dark:bg-border-subtle mx-1" />
-
-            {/* Get Started */}
             <button
               type="button"
               onClick={handleGetStarted}
-              className="
-                group relative
-                flex items-center gap-2 overflow-hidden
-                rounded-xl
-                bg-gradient-to-r from-blue-600 via-blue-600 to-cyan-500
-                px-5 py-2.5
-                text-[13px] font-bold text-white
-                shadow-[0_8px_24px_rgba(37,99,235,0.25)]
-                transition-all duration-300
-                hover:-translate-y-0.5
-                hover:shadow-[0_12px_30px_rgba(37,99,235,0.35)]
-                active:translate-y-0
-              "
+              className="bg-blue-600 px-5 py-2.5 text-[12px] font-bold uppercase tracking-[0.22em] text-white transition-colors duration-200 hover:bg-blue-700"
             >
-              <span
-                className="
-                  absolute inset-0 -translate-x-full
-                  bg-gradient-to-r from-transparent via-white/20 to-transparent
-                  group-hover:translate-x-full
-                  transition-transform duration-700
-                "
-              />
-              <span className="relative z-10">Get Started</span>
-              <ArrowRight
-                size={15}
-                className="relative z-10 transition-transform duration-300 group-hover:translate-x-0.5"
-              />
+              Get started
             </button>
           </div>
 
-          {/* ─────────── MOBILE ACTIONS ─────────── */}
-          <div className="flex lg:hidden items-center gap-2">
+          {/* MOBILE RIGHT — Join button (stands in for the desktop cluster) */}
+          <div className="flex items-center gap-6 lg:hidden">
             <button
               type="button"
-              onClick={toggleTheme}
-              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-              className="
-                group relative
-                flex h-10 w-10 items-center justify-center
-                rounded-xl
-                bg-slate-100/70 dark:bg-white/[0.05]
-                border border-slate-200/70 dark:border-border-subtle
-                text-slate-600 dark:text-slate-300
-                hover:text-blue-600 dark:hover:text-cyan-400
-                transition-all duration-300 cursor-pointer
-              "
+              onClick={handleGetStarted}
+              className="bg-blue-600 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.22em] text-white transition-colors duration-200 hover:bg-blue-700"
             >
-              <span className="transition-transform duration-500 group-hover:rotate-[20deg]">
-                {isDark ? <Sun size={16} /> : <Moon size={16} />}
-              </span>
+              Join
             </button>
 
             <button
               type="button"
-              onClick={() => setMobileOpen((prev) => !prev)}
-              className="
-                relative flex h-10 w-10 items-center justify-center
-                rounded-xl
-                bg-slate-100/70 dark:bg-white/[0.06]
-                border border-slate-200/70 dark:border-border-subtle
-                text-slate-700 dark:text-slate-200
-                hover:text-blue-600 dark:hover:text-cyan-400
-                hover:border-blue-300 dark:hover:border-cyan-400/30
-                transition-all duration-300 cursor-pointer
-              "
+              onClick={() => setMobileOpen((p) => !p)}
               aria-label={mobileOpen ? "Close menu" : "Open menu"}
               aria-expanded={mobileOpen}
+              className="text-[12px] font-bold uppercase tracking-[0.22em] text-blue-600 transition-colors duration-200 hover:text-blue-700"
             >
-              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {mobileOpen ? "Close" : "Menu"}
             </button>
           </div>
         </nav>
       </header>
 
-      {/* =========================================================
+      {/* ═══════════════════════════════════════════
           MOBILE MENU
-      ========================================================== */}
+      ═══════════════════════════════════════════ */}
       {mobileOpen && (
-        <>
-          <div
-            className="
-              fixed inset-0 z-40
-              bg-slate-950/30 dark:bg-black/60
-              backdrop-blur-sm lg:hidden
-            "
-            onClick={() => setMobileOpen(false)}
-          />
-
-          <div
-            className="
-              fixed top-[92px] left-3 right-3 z-50
-              max-h-[calc(100vh-108px)] overflow-y-auto
-              rounded-[22px]
-              bg-white/95 dark:bg-surface/95
-              backdrop-blur-2xl
-              border border-slate-200/80 dark:border-border-subtle
-              shadow-[0_25px_80px_rgba(15,23,42,0.18)]
-              dark:shadow-[0_25px_80px_rgba(0,0,0,0.60)]
-              p-3 lg:hidden
-            "
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between px-3 py-3 mb-2 border-b border-slate-100 dark:border-border-subtle">
-              <img
-                src={isDark ? LogoDark : LogoLight}
-                alt="SkilledLink"
-                className="h-12 w-24 object-contain"
-              />
-              <span
-                className="
-                  rounded-full
-                  bg-blue-50 dark:bg-cyan-400/[0.08]
-                  px-2.5 py-1
-                  text-[10px] font-bold uppercase tracking-wider
-                  text-blue-600 dark:text-cyan-400
-                  border border-blue-100 dark:border-cyan-400/20
-                "
-              >
-                Connect • Hire • Grow
-              </span>
-            </div>
-
-            {/* Nav */}
-            <div className="space-y-1">
-              {navItems.map((item) => {
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Navigation menu"
+          className="fixed inset-0 z-40 bg-[#f8fafc] lg:hidden"
+        >
+          <div className="mx-auto flex h-full max-w-[1280px] flex-col px-6 pt-24 sm:px-10 sm:pt-28">
+            {/* NAV LIST */}
+            <ul className="flex-1">
+              {navItems.map((item, i) => {
                 const isActive = currentSection === item.id;
+
                 return (
-                  <button
+                  <li
                     key={item.id}
-                    type="button"
-                    onClick={() => handleNavigate(item.id)}
-                    className={`
-                      group w-full flex items-center justify-between
-                      rounded-xl px-4 py-3.5 text-left
-                      text-sm font-semibold transition-all duration-200
-                      ${
-                        isActive
-                          ? "bg-blue-50 dark:bg-cyan-400/[0.08] text-blue-600 dark:text-cyan-400"
-                          : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/[0.04] hover:text-slate-950 dark:hover:text-white"
-                      }
-                    `}
+                    className="border-t border-slate-200 last:border-b"
                   >
-                    <span>{item.label}</span>
-                    <ArrowRight
-                      size={15}
-                      className={`
-                        transition-all duration-200
-                        ${
-                          isActive
-                            ? "opacity-100 translate-x-0"
-                            : "opacity-0 -translate-x-2 group-hover:opacity-50 group-hover:translate-x-0"
-                        }
-                      `}
-                    />
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => handleNavigate(item.id)}
+                      className="flex w-full items-baseline justify-between gap-6 py-5 text-left"
+                    >
+                      <span className="flex items-baseline gap-5">
+                        <span
+                          className={`text-[12px] font-bold tabular-nums transition-colors duration-200 ${
+                            isActive ? "text-blue-600" : "text-slate-400"
+                          }`}
+                        >
+                          {String(i + 1).padStart(2, "0")}
+                        </span>
+
+                        <span
+                          className={`text-[clamp(1.5rem,5vw,2rem)] font-bold leading-tight tracking-[-0.03em] transition-colors duration-200 ${
+                            isActive
+                              ? "text-blue-600"
+                              : "text-blue-600/70 hover:text-blue-600"
+                          }`}
+                          style={{
+                            fontFamily: '"Fraunces", Georgia, serif',
+                          }}
+                        >
+                          {item.label}
+                        </span>
+                      </span>
+
+                      {isActive && (
+                        <span
+                          aria-hidden="true"
+                          className="h-1 w-1 rounded-full bg-blue-600"
+                        />
+                      )}
+                    </button>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
 
-            {/* Actions */}
-            <div className="mt-3 pt-3 border-t border-slate-100 dark:border-border-subtle space-y-2">
-              {/* Theme switch row */}
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className="
-                  w-full flex items-center justify-between
-                  rounded-xl px-4 py-3
-                  text-sm font-semibold
-                  text-slate-700 dark:text-slate-200
-                  hover:bg-slate-50 dark:hover:bg-white/[0.04]
-                  transition-colors
-                "
-              >
-                <span className="flex items-center gap-2.5">
-                  {isDark ? (
-                    <Sun size={16} className="text-cyan-400" />
-                  ) : (
-                    <Moon size={16} className="text-blue-600" />
-                  )}
-                  <span>{isDark ? "Light mode" : "Dark mode"}</span>
-                </span>
-                <span
-                  className={`
-                    relative inline-flex h-5 w-9 items-center rounded-full
-                    transition-colors duration-300
-                    ${isDark ? "bg-cyan-400/30" : "bg-slate-200"}
-                  `}
+            {/* ACTIONS */}
+            <div className="border-t border-slate-200 py-8">
+              <div className="flex flex-wrap items-baseline gap-x-10 gap-y-4">
+                <button
+                  type="button"
+                  onClick={handleLogin}
+                  className="text-[13px] font-bold uppercase tracking-[0.22em] text-blue-600 transition-colors duration-200 hover:text-blue-700"
                 >
-                  <span
-                    className={`
-                      absolute top-0.5 h-4 w-4 rounded-full
-                      bg-white dark:bg-cyan-400 shadow-sm
-                      transition-transform duration-300
-                      ${isDark ? "translate-x-[18px]" : "translate-x-0.5"}
-                    `}
-                  />
-                </span>
-              </button>
+                  Login
+                </button>
 
-              <button
-                type="button"
-                onClick={handleLogin}
-                className="
-                  w-full rounded-xl px-4 py-3.5 text-left
-                  text-sm font-semibold
-                  text-slate-700 dark:text-slate-200
-                  hover:bg-slate-50 dark:hover:bg-white/[0.04]
-                  transition-colors
-                "
-              >
-                Already have an account?{" "}
-                <span className="text-blue-600 dark:text-cyan-400">Login</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={handleGetStarted}
+                  className="bg-blue-600 px-6 py-3 text-[13px] font-bold uppercase tracking-[0.22em] text-white transition-colors duration-200 hover:bg-blue-700"
+                >
+                  Get started
+                </button>
+              </div>
 
-              <button
-                type="button"
-                onClick={handleGetStarted}
-                className="
-                  group w-full flex items-center justify-center gap-2
-                  rounded-xl
-                  bg-gradient-to-r from-blue-600 to-cyan-500
-                  px-5 py-3.5
-                  text-sm font-bold text-white
-                  shadow-lg shadow-blue-600/20
-                  transition-all duration-300
-                  hover:shadow-xl hover:shadow-blue-600/25
-                "
-              >
-                <span>Get Started</span>
-                <ArrowRight
-                  size={16}
-                  className="transition-transform group-hover:translate-x-1"
-                />
-              </button>
-            </div>
-
-            {/* Footer */}
-            <div className="mt-4 px-3 pb-2 flex items-center justify-center gap-2 text-[10px] font-medium text-slate-400 dark:text-slate-500">
-              <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.7)]" />
-              <span>Professional Service Network</span>
+              <p className="mt-8 text-[10px] font-medium uppercase tracking-[0.24em] text-slate-400">
+                SkilledLink · Cameroon
+              </p>
             </div>
           </div>
-        </>
+        </div>
       )}
     </>
   );

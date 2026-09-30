@@ -7,9 +7,7 @@ import HeroSplit from "../../../features/landing/components/HeroSplit";
 import TradesMarquee from "../../../features/landing/components/TradesMarquee";
 import FeaturedPros from "../../../features/landing/components/FeaturedProps";
 import StatsGrid from "../../../features/landing/components/StatsGrids";
-import TestimonialSlider from "../../../features/landing/components/TestimonialSlider";
 import ContactSection from "../../../features/landing/components/ContactSection";
-import CTABanner from "../../../features/landing/components/CTABanner";
 import SideFooter from "../../../features/landing/components/SideFooter";
 import FAQSection from "../../../features/landing/components/FAQSection";
 
@@ -99,14 +97,12 @@ const LandingPage: React.FC = () => {
           <StatsGrid />
 
           {/* TESTIMONIALS */}
-          <TestimonialSlider />
           <FAQSection />
 
           {/* CONTACT */}
           <ContactSection />
 
           {/* FINAL CTA */}
-          <CTABanner />
 
         </main>
 
