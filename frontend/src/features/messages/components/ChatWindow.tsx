@@ -28,8 +28,8 @@ interface ChatWindowProps {
 }
 
 const UniverseBackground: React.FC = () => {
-  // ... unchanged from your file ...
-  return null; // placeholder — keep your existing implementation
+  // ... keep your existing implementation ...
+  return null;
 };
 
 const LightAmbientGlow: React.FC = () => (
@@ -59,36 +59,56 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   onVideoCall,
   callDisabled = false,
 }) => {
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
 
+  /* ────────────────────────────────────────────────────────────
+     THE FIX — no more scrollIntoView()
+     ────────────────────────────────────────────────────────────
+     scrollIntoView() walks up the DOM and scrolls EVERY scrollable
+     ancestor, which was shifting the whole AppLayout <main>. Setting
+     scrollTop directly only touches the inner messages container.
+
+     `instant` vs `smooth`:
+       - On conversation switch → instant (no visible jump)
+       - On new message         → smooth (nice UX)
+  */
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
-    messagesEndRef.current?.scrollIntoView({ behavior });
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior,
+    });
     setIsUserScrolling(false);
   };
 
+  /* Conversation changed → jump to bottom instantly */
   useEffect(() => {
-    if (!isUserScrolling) {
-      scrollToBottom('auto');
-    }
+    if (!conversation?.id) return;
+    // Wait one frame so the new messages have rendered and the
+    // container has its final scrollHeight.
+    const id = window.requestAnimationFrame(() => {
+      scrollToBottom('instant' as ScrollBehavior);
+    });
+    return () => window.cancelAnimationFrame(id);
   }, [conversation?.id]);
 
+  /* New message arrived → smooth scroll (unless user is reading older) */
   useEffect(() => {
-    if (!isUserScrolling) {
+    if (isUserScrolling) return;
+    const id = window.requestAnimationFrame(() => {
       scrollToBottom('smooth');
-    }
-  }, [messages]);
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [messages, isUserScrolling]);
 
   const handleScroll = () => {
-    if (!scrollContainerRef.current) return;
-    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const { scrollTop, scrollHeight, clientHeight } = container;
     const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-    if (distanceFromBottom > 60) {
-      setIsUserScrolling(true);
-    } else {
-      setIsUserScrolling(false);
-    }
+    setIsUserScrolling(distanceFromBottom > 60);
   };
 
   const groupedMessages = messages.reduce((acc, msg, index) => {
@@ -108,7 +128,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   const someoneIsTyping = !!typingUsers && Object.values(typingUsers).some(Boolean);
 
-  // ── EMPTY WORKSPACE STATE ──
+  /* ── EMPTY WORKSPACE STATE ── */
   if (!conversation) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center relative overflow-hidden bg-transparent p-8 text-center select-none h-full">
@@ -166,7 +186,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     );
   }
 
-  // ── ACTIVE CONVERSATION ──
+  /* ── ACTIVE CONVERSATION ── */
   return (
     <div className="flex flex-col h-full max-h-full w-full min-h-0 overflow-hidden bg-transparent text-slate-900 dark:text-slate-100 relative">
       <LightAmbientGlow />
@@ -194,10 +214,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         </div>
       </header>
 
+      {/* ⚠️ Note the added `overscroll-contain` — stops inner scroll
+          from bleeding into outer scroll containers. */}
       <main
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex-1 min-h-0 w-full overflow-y-auto px-4 sm:px-6 py-6 space-y-1 relative z-10 scroll-smooth scrollbar-thin scrollbar-thumb-slate-300/70 dark:scrollbar-thumb-slate-700/70 scrollbar-track-transparent"
+        className="flex-1 min-h-0 w-full overflow-y-auto overscroll-contain px-4 sm:px-6 py-6 space-y-1 relative z-10 scroll-smooth scrollbar-thin scrollbar-thumb-slate-300/70 dark:scrollbar-thumb-slate-700/70 scrollbar-track-transparent"
         style={{ WebkitOverflowScrolling: 'touch' }}
       >
         <AnimatePresence initial={false} mode="popLayout">
@@ -263,7 +285,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           )}
         </AnimatePresence>
 
-        <div ref={messagesEndRef} />
+        {/* Bottom anchor — kept for future use, but no longer
+            triggers scrollIntoView. */}
+        <div id="messages-end-anchor" />
       </main>
 
       <footer className="flex-none shrink-0 w-full relative z-30 bg-white/70 dark:bg-slate-950/60 backdrop-blur-2xl border-t border-slate-200/70 dark:border-slate-800/70 pb-safe">

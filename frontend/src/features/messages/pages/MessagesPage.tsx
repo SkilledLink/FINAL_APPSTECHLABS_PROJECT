@@ -1,7 +1,7 @@
 // src/features/messages/pages/MessagesPage.tsx
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom'; // Added useNavigate
+import { useParams, useNavigate } from 'react-router-dom';
 import { ConversationList } from '../components/ConversationList';
 import { ChatWindow } from '../components/ChatWindow';
 import { useCall } from '../context/CallProvider';
@@ -22,19 +22,18 @@ import { generateUUID } from '../../../utils/uuid';
 export const MessagesPage: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
   const { socket } = useSocketContext();
-  const navigate = useNavigate(); // Initialize navigate
+  const navigate = useNavigate();
 
   const { conversationId: urlConversationId } = useParams<{
     conversationId?: string;
   }>();
 
-  // Normalize the URL ID immediately so it matches the type of IDs from the backend
   const normalizedUrlId = normalizeId(urlConversationId);
 
   const [activeConversationId, setActiveConversationId] = useState<
     string | null
   >(normalizedUrlId ?? null);
-  
+
   const [displayConversations, setDisplayConversations] = useState<any[]>([]);
 
   const { conversations, loading: convLoading, error: convError } =
@@ -44,13 +43,11 @@ export const MessagesPage: React.FC = () => {
     setDisplayConversations(conversations);
   }, [conversations]);
 
-  // Sync state with URL when the user navigates or refreshes
   useEffect(() => {
     const normalized = normalizeId(urlConversationId);
     if (normalized && normalized !== activeConversationId) {
       setActiveConversationId(normalized);
     } else if (!normalized && activeConversationId) {
-      // If URL has no ID but state does, clear state
       setActiveConversationId(null);
     }
   }, [urlConversationId, activeConversationId]);
@@ -140,12 +137,14 @@ export const MessagesPage: React.FC = () => {
     socket.emit('message_read', { conversation_id: activeConversationId });
   }, [activeConversationId, socket]);
 
-  const handleSelectConversation = useCallback((id: string) => {
-    const normalizedId = normalizeId(id);
-    setActiveConversationId(normalizedId);
-    // Update the URL so refreshing the page keeps the chat open
-    navigate(`/home/messages/${normalizedId}`);
-  }, [navigate]);
+  const handleSelectConversation = useCallback(
+    (id: string) => {
+      const normalizedId = normalizeId(id);
+      setActiveConversationId(normalizedId);
+      navigate(`/home/messages/${normalizedId}`);
+    },
+    [navigate]
+  );
 
   /* ── Send Text ──────────────────────────────────────────── */
   const handleSendMessage = useCallback(
@@ -372,7 +371,6 @@ export const MessagesPage: React.FC = () => {
     });
   }, [conversationsWithPresence, setCallParticipant]);
 
-  // Normalize the comparison here to prevent ID type mismatch
   const activeConversation = useMemo(
     () =>
       conversationsWithPresence.find(
@@ -399,9 +397,10 @@ export const MessagesPage: React.FC = () => {
     );
   }, [activeConversationId, activeConversation, callApi]);
 
+  /* ── Loading state ──────────────────────────────────────── */
   if (authLoading || convLoading) {
     return (
-      <div className="flex items-center justify-center h-full bg-transparent">
+      <div className="absolute inset-0 flex items-center justify-center bg-transparent">
         <div className="flex flex-col items-center gap-3">
           <div className="h-8 w-8 rounded-full border-2 border-slate-300 border-t-slate-800 dark:border-slate-700 dark:border-t-slate-200 animate-spin" />
           <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
@@ -412,9 +411,10 @@ export const MessagesPage: React.FC = () => {
     );
   }
 
+  /* ── Error state ────────────────────────────────────────── */
   if (convError) {
     return (
-      <div className="flex items-center justify-center h-full bg-transparent">
+      <div className="absolute inset-0 flex items-center justify-center bg-transparent">
         <div className="rounded-2xl border border-rose-200/60 dark:border-rose-900/40 bg-rose-50/70 dark:bg-rose-950/30 px-6 py-4 text-sm font-medium text-rose-600 dark:text-rose-400 backdrop-blur-xl">
           Error: {convError}
         </div>
@@ -422,8 +422,9 @@ export const MessagesPage: React.FC = () => {
     );
   }
 
+  /* ── Main render ────────────────────────────────────────── */
   return (
-    <div className="h-full w-full flex overflow-hidden bg-transparent">
+    <div className="absolute inset-0 flex overflow-hidden bg-transparent">
       <div
         className={`${
           activeConversationId ? 'hidden lg:block' : 'w-full'
@@ -435,7 +436,7 @@ export const MessagesPage: React.FC = () => {
           onSelectConversation={handleSelectConversation}
         />
       </div>
-      
+
       {/* ChatWindow Area with Loading Fallback */}
       <div
         className={`${
@@ -455,7 +456,7 @@ export const MessagesPage: React.FC = () => {
             uploadProgress={uploadProgress}
             onBack={() => {
               setActiveConversationId(null);
-              navigate('/home/messages'); // Reset URL to base messages route
+              navigate('/home/messages');
             }}
             onTypingChange={sendTyping}
             typingUsers={typingUsers}
