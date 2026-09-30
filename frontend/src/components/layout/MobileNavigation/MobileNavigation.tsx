@@ -12,8 +12,12 @@ import {
   Sun,
   Moon,
   X,
-  Shield,        // ← NEW
-  ShieldCheck,   // ← NEW
+  Shield,
+  ShieldCheck,
+  Rss,
+  LayoutDashboard,
+  MessageSquareMore,
+  Users,
 } from "lucide-react";
 import { useAuth } from "../../../features/auth/hooks/useAuth";
 import { useUser } from "../../../features/profile/hooks/useUser";
@@ -348,7 +352,7 @@ export default function MobileNavigation({
                   <User size={18} className="text-slate-500 dark:text-slate-400" />
                   My Profile
                 </button>
-              
+
                 <button
                   onClick={() => {
                     toggleTheme();
