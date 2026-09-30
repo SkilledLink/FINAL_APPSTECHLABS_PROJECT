@@ -10,8 +10,6 @@ import {
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
-import Logo from "../../../assets/images/Logo.png";
-
 const SideFooter: React.FC = () => {
   const navigate = useNavigate();
 
@@ -74,14 +72,13 @@ const SideFooter: React.FC = () => {
             <button
               type="button"
               onClick={handleHome}
-              className="inline-flex items-center"
+              className="inline-flex items-center transition-opacity duration-200 hover:opacity-90"
               aria-label="SkilledLink home"
             >
-              <img
-                src={Logo}
-                alt="SkilledLink"
-                className="h-12 w-auto object-contain"
-              />
+              <div className="text-2xl font-bold tracking-tight">
+                <span className="text-white">Skilled</span>
+                <span className="text-blue-500">Link</span>
+              </div>
             </button>
 
             <p className="mt-5 max-w-xs text-sm leading-7 text-slate-400">

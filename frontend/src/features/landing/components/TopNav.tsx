@@ -187,14 +187,17 @@ const TopNav: React.FC<NavbarProps> = ({ activeNav, onNavigate }) => {
           visible ? "translate-y-0" : "-translate-y-full"
         }`}
       >
-        <nav className="mx-auto flex h-16 max-w-[1280px] items-center justify-between px-6 sm:h-20 sm:px-10 lg:px-16">
+        <nav className=" flex h-16 w-full items-center justify-between px-6 sm:h-20 sm:px-10 lg:px-16">
           {/* LEFT — WORDMARK */}
           <button
             type="button"
             onClick={() => handleNavigate("home")}
-            className="text-[17px] font-bold uppercase tracking-[0.22em] text-blue-600 transition-colors duration-200 hover:text-blue-700 sm:text-[18px]"
+            className="transition-opacity duration-200 hover:opacity-90"
           >
-            SkilledLink
+            <div className="text-[22px] font-bold tracking-tight sm:text-[26px]">
+              <span className="text-slate-900 dark:text-white">Skilled</span>
+              <span className="text-blue-500">Link</span>
+            </div>
           </button>
 
           {/* CENTER — NAV ITEMS (desktop only) */}

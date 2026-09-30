@@ -12,9 +12,6 @@ import {
   Sparkles,
 } from "lucide-react";
 
-import LogoLight from "../../../assets/LogoLight.png";
-import LogoDark from "../../../assets/LogoDark.png";
-
 interface AuthLayoutProps {
   heroImageSrc?: string;
 }
@@ -372,17 +369,12 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
                 blur-3xl pointer-events-none
               " />
 
-              {/* Brand Header */}
-              <div className="relative z-10 shrink-0 flex items-center gap-3 -mt-8">
-                <img
-                  src={isDark ? LogoDark : LogoLight}
-                  alt="SkilledLink"
-                  className="
-                    h-32 w-32 object-contain
-                    transition-all duration-500
-                    drop-shadow-[0_6px_16px_rgba(37,99,235,0.10)]
-                  "
-                />
+              {/* Brand Header — Replaced Image with Text Logo */}
+              <div className="relative z-10 shrink-0 flex items-center gap-3 -mt-4">
+                <div className="text-3xl font-bold tracking-tight">
+                  <span className="text-slate-900 dark:text-white">Skilled</span>
+                  <span className="text-blue-500">Link</span>
+                </div>
               </div>
 
               {/* Form Area */}
