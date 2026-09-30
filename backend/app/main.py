@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
-from sqlalchemy.exc import OperationalError, ProgrammingError
+from sqlalchemy.exc import OperationalError
 from sqlmodel import SQLModel
 
 # ─── Versioned routers ─────────────────────────────────────
@@ -118,6 +118,20 @@ from app.models.professional_ai_usage import ProfessionalAIUsage  # noqa: F401
 # ─── Webhook idempotency ledger ────────────────────────────
 from app.models.webhook_event import WebhookEvent  # noqa: F401
 
+# ─── Vector / AI knowledge base models (pgvector) ──────────
+# Imported so they register with SQLModel.metadata. If your project
+# exposes them under a different module path, adjust the import below.
+# (The SQL in the deploy log referenced `knowledge_documents`, so make
+# sure whatever module defines it is imported here — directly or
+# transitively — BEFORE SQLModel.metadata.create_all runs.)
+try:
+    from app.models.knowledge_document import KnowledgeDocument  # noqa: F401
+except ImportError:
+    # Module name may differ (e.g. app.models.knowledge, app.ai.models…).
+    # If the table still isn't created after deploy, find the actual module
+    # and import it explicitly here.
+    pass
+
 
 # ─── Lifespan ──────────────────────────────────────────────
 @asynccontextmanager
@@ -134,14 +148,28 @@ async def lifespan(app: FastAPI):
         print(f"Error details: {e}")
         raise e
 
-    # 2) Create any missing tables (idempotent).
+    # 2) Ensure required Postgres extensions exist BEFORE create_all.
+    #    `vector` is required by models that use VECTOR(N) columns
+    #    (e.g. knowledge_documents.embedding).
+    try:
+        with engine.begin() as connection:
+            connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+            # Optional: trigram indexes for fast ILIKE / fuzzy search.
+            # Safe to keep even if you don't use it — it's tiny.
+            connection.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
+        print("✅ Postgres extensions ensured (vector, pg_trgm).")
+    except Exception as e:
+        print("❌ Failed to enable Postgres extensions.")
+        print(f"Error details: {e}")
+        raise e
+
+    # 3) Create any missing tables (idempotent).
     #    All models are imported above, so SQLModel.metadata is fully populated.
+    #    NOTE: we intentionally do NOT swallow ProgrammingError here — if this
+    #    fails, we want the deploy to fail loudly so the actual cause surfaces.
     try:
         SQLModel.metadata.create_all(engine)
         print("✅ Database tables are ready.")
-    except ProgrammingError as e:
-        # Another worker may have created the tables concurrently — harmless.
-        print(f"⚠️  create_all raced another worker (safe to ignore): {e}")
     except Exception as e:
         print("❌ Failed to create database tables.")
         print(f"Error details: {e}")
@@ -227,7 +255,7 @@ app.include_router(report_router)
 # ─── Webhooks (KYC / Didit) ────────────────────────────────
 app.include_router(webhooks_router)
 
-# ─── Notifications ────────────────────────────────
+# ─── Notifications ────────────────────────────────────────
 app.include_router(notifications_ext_router)
 app.include_router(admin_notifications_router)
 
