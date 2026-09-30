@@ -57,25 +57,16 @@ const TradesMarquee: React.FC = () => {
   return (
     <section
       id="trades"
-      className="relative bg-[#f8fafc] pb-28 pt-12 lg:pb-12 lg:pt-16"
+      className="relative bg-[#f8fafc] pb-28 pt-12 lg:pb-12 lg:pt-16 dark:bg-slate-900"
     >
       <div className="mx-auto max-w-[1280px] px-6 sm:px-10 lg:px-16">
-        <motion.div
-          initial={reduce ? false : { opacity: 0 }}
-          whileInView={{ opacity: 0 }}
-          viewport={{ once: true, amount: 0.5 }}
-          transition={{ duration: 0.7 }}
-          className="flex items-baseline justify-between text-[11px] font-medium uppercase tracking-[0.22em] text-slate-500"
-        >
-        </motion.div>
-
         <motion.div
           initial={reduce ? false : { scaleX: 0 }}
           whileInView={{ scaleX: 1 }}
           viewport={{ once: true, amount: 0.5 }}
           transition={{ duration: 1.2, delay: 0.15, ease }}
           style={{ transformOrigin: "left" }}
-          className="mt-5 h-px w-full bg-slate-200"
+          className="mt-5 h-px w-full bg-slate-200 dark:bg-slate-800"
         />
 
         <div className="mt-14 grid gap-16 lg:mt-20 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:gap-20">
@@ -85,7 +76,7 @@ const TradesMarquee: React.FC = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.4 }}
               transition={{ duration: 0.9, delay: 0.2, ease }}
-              className="max-w-[18ch] text-[clamp(2rem,4.5vw,3.5rem)] font-normal leading-[1.02] tracking-[-0.035em] text-[#06142e]"
+              className="max-w-[18ch] text-[clamp(2rem,4.5vw,3.5rem)] font-normal leading-[1.02] tracking-[-0.035em] text-[#06142e] dark:text-white"
               style={{ fontFamily: '"Fraunces", Georgia, serif' }}
             >
               The people who build, wire, and fix.
@@ -96,7 +87,7 @@ const TradesMarquee: React.FC = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.4 }}
               transition={{ duration: 0.8, delay: 0.35, ease }}
-              className="mt-8 max-w-[46ch] text-[17px] leading-8 text-slate-600"
+              className="mt-8 max-w-[46ch] text-[17px] leading-8 text-slate-600 dark:text-slate-300"
             >
               SkilledLink covers the trades that keep homes,
               workshops, and businesses running. Search by trade
@@ -116,7 +107,7 @@ const TradesMarquee: React.FC = () => {
                 return (
                   <li
                     key={trade.name}
-                    className="border-t border-slate-200 last:border-b"
+                    className="border-t border-slate-200 last:border-b dark:border-slate-800"
                   >
                     <Link
                       to="/home/professionals"
@@ -127,7 +118,9 @@ const TradesMarquee: React.FC = () => {
                       <span className="flex items-baseline gap-6 sm:gap-10">
                         <span
                           className={`text-[11px] font-medium tabular-nums transition-colors duration-300 ${
-                            isActive ? "text-blue-600" : "text-slate-400"
+                            isActive
+                              ? "text-blue-600 dark:text-blue-400"
+                              : "text-slate-400 dark:text-slate-500"
                           }`}
                         >
                           {String(i + 1).padStart(2, "0")}
@@ -136,7 +129,9 @@ const TradesMarquee: React.FC = () => {
                         <span className="relative">
                           <span
                             className={`block text-[clamp(1.5rem,3.5vw,2.75rem)] font-normal leading-[1.05] tracking-[-0.03em] transition-colors duration-300 ${
-                              isActive ? "text-blue-600" : "text-[#06142e]"
+                              isActive
+                                ? "text-blue-600 dark:text-blue-400"
+                                : "text-[#06142e] dark:text-white"
                             }`}
                             style={{ fontFamily: '"Fraunces", Georgia, serif' }}
                           >
@@ -145,14 +140,14 @@ const TradesMarquee: React.FC = () => {
 
                           <span
                             aria-hidden="true"
-                            className={`absolute -bottom-1 left-0 h-[2px] bg-blue-600 transition-all duration-500 ${
+                            className={`absolute -bottom-1 left-0 h-[2px] bg-blue-600 transition-all duration-500 dark:bg-blue-400 ${
                               isActive ? "w-full" : "w-0"
                             }`}
                           />
                         </span>
                       </span>
 
-                      <span className="shrink-0 text-[10px] font-medium uppercase tracking-[0.22em] text-slate-500 sm:text-[11px]">
+                      <span className="shrink-0 text-[10px] font-medium uppercase tracking-[0.22em] text-slate-500 sm:text-[11px] dark:text-slate-400">
                         {trade.location}
                       </span>
                     </Link>
@@ -170,7 +165,7 @@ const TradesMarquee: React.FC = () => {
             >
               <Link
                 to="/home/professionals"
-                className="text-[15px] text-blue-600 underline decoration-blue-600/30 decoration-1 underline-offset-[7px] transition-colors duration-200 hover:decoration-blue-600"
+                className="text-[15px] text-blue-600 underline decoration-blue-600/30 decoration-1 underline-offset-[7px] transition-colors duration-200 hover:decoration-blue-600 dark:text-blue-400 dark:decoration-blue-400/30 dark:hover:decoration-blue-400"
               >
                 Browse all professionals
               </Link>
@@ -178,12 +173,12 @@ const TradesMarquee: React.FC = () => {
           </div>
 
           <div className="relative hidden lg:block">
-            <div className="mb-4 flex items-baseline justify-between text-[10px] font-medium uppercase tracking-[0.22em] text-slate-500">
+            <div className="mb-4 flex items-baseline justify-between text-[10px] font-medium uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
               <span>Featured trade</span>
               <span className="tabular-nums">{indexLabel}</span>
             </div>
 
-            <div className="mb-4 h-px w-full bg-slate-200" />
+            <div className="mb-4 h-px w-full bg-slate-200 dark:bg-slate-800" />
 
             <motion.div
               initial={reduce ? false : { opacity: 0, y: 24 }}
@@ -195,14 +190,14 @@ const TradesMarquee: React.FC = () => {
             >
               <span
                 aria-hidden="true"
-                className="absolute -left-4 -top-3 z-20 h-5 w-16 bg-blue-600"
+                className="absolute -left-4 -top-3 z-20 h-5 w-16 bg-blue-600 dark:bg-blue-500"
                 style={{
                   transform: "rotate(-6deg)",
                   boxShadow: "inset 0 -1px 0 rgba(0,0,0,0.08)",
                 }}
               />
 
-              <div className="relative aspect-[4/5] w-full overflow-hidden bg-slate-100">
+              <div className="relative aspect-[4/5] w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
                 <div
                   aria-hidden="true"
                   className="absolute inset-0"
@@ -276,7 +271,7 @@ const TradesMarquee: React.FC = () => {
               whileInView={{ opacity: 1 }}
               viewport={{ once: true, amount: 0.3 }}
               transition={{ duration: 0.8, delay: 0.9 }}
-              className="mt-6 text-right text-[10px] font-medium uppercase tracking-[0.24em] text-slate-400"
+              className="mt-6 text-right text-[10px] font-medium uppercase tracking-[0.24em] text-slate-400 dark:text-slate-500"
             >
               One of many, across the country
             </motion.p>

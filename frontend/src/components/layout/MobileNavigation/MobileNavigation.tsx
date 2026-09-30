@@ -8,11 +8,9 @@ import {
   PlusSquare,
   Briefcase,
   User,
-  Settings,
   LogOut,
   Sun,
   Moon,
-  ImagePlus,
   X,
   Shield,
   ShieldCheck,
@@ -20,9 +18,6 @@ import {
   Users,
   LayoutDashboard,
   MessageSquareMore,
-  Store,
-  BadgeCheck,
-  Bell,
 } from "lucide-react";
 import { useAuth } from "../../../features/auth/hooks/useAuth";
 import { useUser } from "../../../features/profile/hooks/useUser";
