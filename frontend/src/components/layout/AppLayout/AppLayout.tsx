@@ -310,9 +310,14 @@ export default function AppLayout() {
             <Sidebar isDark={isDark} toggleTheme={toggleTheme} />
           </aside>
 
+          {/* ⚠️ THE FIX: added `relative` so absolutely-positioned pages
+              (like MessagesPage) can anchor themselves to this box
+              instead of trying to resolve `h-full` against a scroll
+              container, which the CSS spec does not allow. */}
           <main
             tabIndex={-1}
             className="
+              relative
               min-w-0 min-h-0 flex-1
               overflow-y-auto overflow-x-hidden scrollbar-hide
               focus:outline-none focus:ring-2 focus:ring-blue-500/20
