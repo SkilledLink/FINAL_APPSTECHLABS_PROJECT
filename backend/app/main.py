@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlmodel import SQLModel
 
 # ─── Versioned routers ─────────────────────────────────────
@@ -29,8 +29,6 @@ from app.api.v1.reviews import router as reviews_router
 from app.ai.ai_search import router as ai_search_router
 from app.api.v1.notifications_ext import router as notifications_ext_router
 from app.api.v1.admin_notifications import router as admin_notifications_router
-
-
 
 # ─── Contact Messages ──────────────────────────────────────
 from app.api.v1.contact_messages import router as contact_messages_router
@@ -126,15 +124,26 @@ from app.models.webhook_event import WebhookEvent  # noqa: F401
 async def lifespan(app: FastAPI):
     print("⏳ Attempting to connect to the database...")
 
+    # 1) Verify connectivity
     try:
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
-
         print("✅ Database connection successful!")
-        print("✅ Database tables are ready.")
-
     except OperationalError as e:
         print("❌ Database connection FAILED.")
+        print(f"Error details: {e}")
+        raise e
+
+    # 2) Create any missing tables (idempotent).
+    #    All models are imported above, so SQLModel.metadata is fully populated.
+    try:
+        SQLModel.metadata.create_all(engine)
+        print("✅ Database tables are ready.")
+    except ProgrammingError as e:
+        # Another worker may have created the tables concurrently — harmless.
+        print(f"⚠️  create_all raced another worker (safe to ignore): {e}")
+    except Exception as e:
+        print("❌ Failed to create database tables.")
         print(f"Error details: {e}")
         raise e
 
