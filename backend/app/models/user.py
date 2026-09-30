@@ -43,13 +43,7 @@ class User(SQLModel, table=True):
         nullable=False,
     )
 
-    username: str = Field(
-        unique=True,
-        index=True,
-        nullable=False,
-        max_length=50,
-    )
-
+  
     first_name: str = Field(
         index=True,
         nullable=False,
