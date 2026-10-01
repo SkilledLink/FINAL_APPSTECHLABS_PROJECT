@@ -43,16 +43,10 @@ interface ProfileHeaderProps {
   uploading?: UploadState | null;
   /** Optional override — if provided, this tier is used verbatim. */
   subscriptionTier?: TierInfo | null;
-  /**
-   * Where the "Verify now" CTA navigates to.
-   * Defaults to `/home/verification`.
-   */
+  /** Where the "Verify now" CTA navigates to. Defaults to `/home/verification`. */
   verifyHref?: string;
-  /**
-   * Where the "Contact support" link navigates to.
-   * Defaults to `/home/support`.
-   */
-  supportHref?: string;
+  /** Anchor id of the landing-page support section. Defaults to `"contact"`. */
+  supportSectionId?: string;
   onFollow?: () => void;
   onMessage?: () => void;
   onRequestService?: () => void;
@@ -67,6 +61,23 @@ const portfolioRoute = (userId: string) => `/home/portfolio/${userId}`;
 const KYC_REMINDER_INTERVAL_MS = 30_000;
 const KYC_TOAST_ID = 'kyc-verify-reminder';
 
+/**
+ * Scrolls the browser to a section on the landing page by its id.
+ * Uses the same 80px navbar offset as TopNav's in-page navigation so
+ * the target isn't hidden under the fixed masthead.
+ */
+function scrollToLandingSection(sectionId: string) {
+  const section = document.getElementById(sectionId);
+  if (!section) return false;
+
+  const navbarHeight = 80;
+  const sectionTop =
+    section.getBoundingClientRect().top + window.scrollY - navbarHeight;
+
+  window.scrollTo({ top: sectionTop, behavior: 'smooth' });
+  return true;
+}
+
 export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   profile,
   isOwnProfile,
@@ -78,7 +89,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   uploading = null,
   subscriptionTier: subscriptionTierProp = null,
   verifyHref = '/home/verification',
-  supportHref = '/home/support',
+  supportSectionId = 'contact',
   onFollow,
   onUpgrade,
   onEditProfile,
@@ -116,9 +127,8 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           const tier = res?.subscription?.tier ?? null;
           if (!cancelled) setFetchedTier(tier);
         } else {
-          // The subscription service only exposes the active tier to the
-          // current user; public profiles rely on the optional prop override.
-          if (!cancelled) setFetchedTier(null);
+          const tier = await subscriptionService.getPublicTier(profile.id);
+          if (!cancelled) setFetchedTier(tier);
         }
       } catch {
         if (!cancelled) setFetchedTier(null);
@@ -137,12 +147,6 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   const isKycVerified = !!profile.professional?.isVerified;
   const hasActiveSubscription = !!effectiveTier;
 
-  /**
-   * Show the KYC nudge only when all of these are true:
-   *   - Viewing your own profile
-   *   - You actually have a professional profile
-   *   - You have NOT yet been verified
-   */
   const needsKycVerification =
     isOwnProfile && !!profile.professional && !isKycVerified;
 
@@ -174,6 +178,35 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
       cancelled = true;
     };
   }, [profile?.id, isOwnProfile]);
+
+  /**
+   * Navigate to the landing page's contact section.
+   *
+   * - If we're already on `/`, scroll immediately.
+   * - Otherwise, navigate to `/`, wait for the landing page to
+   *   mount, then scroll. We retry a few times so it works even on
+   *   slow first paints.
+   */
+  const goToContactSection = useCallback(() => {
+    if (window.location.pathname === '/') {
+      scrollToLandingSection(supportSectionId);
+      return;
+    }
+
+    navigate('/');
+
+    let attempts = 0;
+    const tryScroll = () => {
+      const ok = scrollToLandingSection(supportSectionId);
+      if (!ok && attempts < 20) {
+        attempts += 1;
+        window.setTimeout(tryScroll, 50);
+      }
+    };
+
+    // Small initial delay so the landing page can commit its first paint.
+    window.setTimeout(tryScroll, 100);
+  }, [navigate, supportSectionId]);
 
   /* ── KYC toast reminder — fires every 30 seconds ──────── */
   useEffect(() => {
@@ -211,7 +244,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                     type="button"
                     onClick={() => {
                       closeToast?.();
-                      navigate(supportHref);
+                      goToContactSection();
                     }}
                     className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                   >
@@ -233,16 +266,13 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
       );
     };
 
-    // First reminder after the interval, then every interval after that.
     const id = window.setInterval(showReminder, KYC_REMINDER_INTERVAL_MS);
 
     return () => {
       window.clearInterval(id);
-      // Kill any lingering reminder when we leave the page or the user
-      // gets verified while we were mounted.
       toast.dismiss(KYC_TOAST_ID);
     };
-  }, [needsKycVerification, navigate, verifyHref, supportHref]);
+  }, [needsKycVerification, navigate, verifyHref, goToContactSection]);
 
   /* ── Portfolio / nav helpers ──────────────────────────── */
   const handleViewPortfolio = useCallback(() => {
@@ -253,10 +283,6 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   const handleVerifyClick = useCallback(() => {
     navigate(verifyHref);
   }, [navigate, verifyHref]);
-
-  const handleSupportClick = useCallback(() => {
-    navigate(supportHref);
-  }, [navigate, supportHref]);
 
   const profileData = profile as UserProfile & {
     first_name?: string;
@@ -370,7 +396,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         />
       </div>
 
-      {/* ── KYC nudge banner (own profile · unverified professional) ── */}
+      {/* ── KYC nudge banner ─────────────────────────── */}
       {needsKycVerification && !bannerDismissed && (
         <div className="relative border-b border-amber-200/80 bg-gradient-to-r from-amber-50 via-amber-50/70 to-white dark:border-amber-900/50 dark:from-amber-950/40 dark:via-amber-950/20 dark:to-slate-900">
           <div className="flex flex-wrap items-start gap-3 px-4 py-3 sm:px-6">
@@ -399,7 +425,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 
                 <button
                   type="button"
-                  onClick={handleSupportClick}
+                  onClick={goToContactSection}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                 >
                   <HelpCircle className="h-3.5 w-3.5" />
@@ -491,14 +517,12 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             </div>
 
             <div className="flex-1 min-w-0 space-y-1.5 pt-2 sm:pt-3 md:pt-0">
-              {/* ── Title row: name + tier badge + "follows you" ─── */}
               <div className="flex flex-wrap items-center gap-1.5">
                 <h1 className="text-lg font-black leading-tight text-slate-900 sm:text-2xl dark:text-slate-100">
                   {fullName}
                   {tradeTitle && `, ${tradeTitle}`}
                 </h1>
 
-                {/* Subscription tier badge — stays next to the name */}
                 {hasActiveSubscription && effectiveTier && (
                   <VerifiedBadge tier={effectiveTier} size="sm" />
                 )}
@@ -510,7 +534,6 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 )}
               </div>
 
-              {/* ── Stats row: followers · years · rating · VERIFIED ─── */}
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
                 <div className="flex items-center gap-2">
                   <StackedAvatars users={followersPreview} maxVisible={3} />
@@ -538,7 +561,6 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                         : '0.0'}
                     </span>
 
-                    {/* ✅ KYC-Verified pill — sits right after the rating */}
                     {isKycVerified && (
                       <span
                         title="Identity verified by Didit"
@@ -549,7 +571,6 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                       </span>
                     )}
 
-                    {/* ⚠️ Unverified indicator — only on your own profile */}
                     {needsKycVerification && (
                       <button
                         type="button"
@@ -592,7 +613,6 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               </button>
             )}
 
-            {/* Primary verify CTA when the user still needs to do KYC */}
             {needsKycVerification && (
               <button
                 onClick={handleVerifyClick}

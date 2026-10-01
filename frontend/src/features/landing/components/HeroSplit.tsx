@@ -136,35 +136,16 @@ const Hero: React.FC = () => {
           initial={{ scale: 1.02 }}
           animate={reduce ? { scale: 1.02 } : { scale: [1.02, 1.08, 1.02] }}
           transition={
-            reduce ? { duration: 0 } : { duration: 34, ease: "easeInOut", repeat: Infinity }
+            reduce
+              ? { duration: 0 }
+              : { duration: 34, ease: "easeInOut", repeat: Infinity }
           }
         />
 
         <div className="absolute inset-0 z-[1] bg-[#06142e]/70" aria-hidden="true" />
 
-        <div
-          className="absolute inset-x-0 bottom-0 z-[2] h-40 bg-gradient-to-t from-[#06142e]/85 to-transparent"
-          aria-hidden="true"
-        />
-
         <EmberField count={28} />
         <SparkFlash />
-
-        {/* FADE TO PAGE */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] h-40 sm:h-52"
-          style={{
-            background:
-              "linear-gradient(to bottom, rgba(248,250,252,0) 0%, rgba(248,250,252,0.35) 45%, rgba(248,250,252,0.85) 78%, #f8fafc 100%)",
-          }}
-        />
-
-        {/* Dark mode override — same fade but into slate-950 */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 bottom-0 z-[6] hidden h-40 bg-gradient-to-b from-transparent via-slate-950/40 to-slate-950 sm:h-52 dark:block"
-        />
 
         <div className="relative z-10 flex min-h-[92vh] flex-col">
           <div className="mx-auto w-full max-w-[1280px] px-6 pt-10 sm:px-10 lg:px-16">
@@ -238,7 +219,7 @@ const Hero: React.FC = () => {
             </motion.div>
           </div>
 
-          <div className="mx-auto w-full max-w-[1280px] px-6 pb-40 sm:px-10 sm:pb-52 lg:px-16">
+          <div className="mx-auto w-full max-w-[1280px] px-6 pb-24 sm:px-10 sm:pb-28 lg:px-16">
             <motion.div
               initial={reduce ? false : { scaleX: 0 }}
               animate={{ scaleX: 1 }}

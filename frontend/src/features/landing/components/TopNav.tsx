@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sun, Moon } from "lucide-react";
+import { Sun, Moon, LayoutDashboard } from "lucide-react";
+import { useAuth } from "../../../providers/AuthProvider";
 
 interface NavbarProps {
   activeNav?: string;
@@ -63,6 +64,9 @@ export function applyTheme(isDark: boolean) {
 
 const TopNav: React.FC<NavbarProps> = ({ activeNav, onNavigate }) => {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
+
+  const isAuthenticated = !!currentUser;
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [currentSection, setCurrentSection] = useState(
@@ -73,12 +77,10 @@ const TopNav: React.FC<NavbarProps> = ({ activeNav, onNavigate }) => {
   /* ─── THEME STATE ─── */
   const [isDark, setIsDark] = useState<boolean>(() => getInitialTheme());
 
-  /* Apply theme whenever it changes */
   useEffect(() => {
     applyTheme(isDark);
   }, [isDark]);
 
-  /* Stay in sync if another part of the app toggles the theme */
   useEffect(() => {
     const observer = new MutationObserver(() => {
       const domDark = document.documentElement.classList.contains("dark");
@@ -201,6 +203,12 @@ const TopNav: React.FC<NavbarProps> = ({ activeNav, onNavigate }) => {
     navigate("/login");
   };
 
+  /** Authenticated users get this instead of Login/Get started. */
+  const handleGoHome = () => {
+    setMobileOpen(false);
+    navigate("/home");
+  };
+
   return (
     <>
       {/* ═══════════════════════════════════════════
@@ -254,7 +262,7 @@ const TopNav: React.FC<NavbarProps> = ({ activeNav, onNavigate }) => {
             })}
           </ul>
 
-          {/* RIGHT — THEME TOGGLE + LOGIN + GET STARTED */}
+          {/* RIGHT — THEME + AUTH-AWARE CTAs (desktop) */}
           <div className="hidden items-baseline gap-6 lg:flex">
             {/* THEME TOGGLE */}
             <button
@@ -266,21 +274,36 @@ const TopNav: React.FC<NavbarProps> = ({ activeNav, onNavigate }) => {
               {isDark ? <Sun size={15} /> : <Moon size={15} />}
             </button>
 
-            <button
-              type="button"
-              onClick={handleLogin}
-              className="text-[12px] font-bold uppercase tracking-[0.22em] text-slate-500 transition-colors duration-200 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
-            >
-              Login
-            </button>
+            {isAuthenticated ? (
+              /* Authenticated: a single "Home" button */
+              <button
+                type="button"
+                onClick={handleGoHome}
+                className="inline-flex items-center gap-2 bg-blue-600 px-5 py-2.5 text-[12px] font-bold uppercase tracking-[0.22em] text-white transition-colors duration-200 hover:bg-blue-700 dark:bg-blue-500 dark:text-slate-950 dark:hover:bg-blue-400"
+              >
+                <LayoutDashboard size={14} />
+                Home
+              </button>
+            ) : (
+              /* Anonymous: Login + Get started */
+              <>
+                <button
+                  type="button"
+                  onClick={handleLogin}
+                  className="text-[12px] font-bold uppercase tracking-[0.22em] text-slate-500 transition-colors duration-200 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
+                >
+                  Login
+                </button>
 
-            <button
-              type="button"
-              onClick={handleGetStarted}
-              className="bg-blue-600 px-5 py-2.5 text-[12px] font-bold uppercase tracking-[0.22em] text-white transition-colors duration-200 hover:bg-blue-700 dark:bg-blue-500 dark:text-slate-950 dark:hover:bg-blue-400"
-            >
-              Get started
-            </button>
+                <button
+                  type="button"
+                  onClick={handleGetStarted}
+                  className="bg-blue-600 px-5 py-2.5 text-[12px] font-bold uppercase tracking-[0.22em] text-white transition-colors duration-200 hover:bg-blue-700 dark:bg-blue-500 dark:text-slate-950 dark:hover:bg-blue-400"
+                >
+                  Get started
+                </button>
+              </>
+            )}
           </div>
 
           {/* MOBILE */}
@@ -295,13 +318,25 @@ const TopNav: React.FC<NavbarProps> = ({ activeNav, onNavigate }) => {
               {isDark ? <Sun size={15} /> : <Moon size={15} />}
             </button>
 
-            <button
-              type="button"
-              onClick={handleGetStarted}
-              className="bg-blue-600 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.22em] text-white transition-colors duration-200 hover:bg-blue-700 dark:bg-blue-500 dark:text-slate-950 dark:hover:bg-blue-400"
-            >
-              Join
-            </button>
+            {isAuthenticated ? (
+              /* Authenticated mobile: Home button instead of Join */
+              <button
+                type="button"
+                onClick={handleGoHome}
+                className="inline-flex items-center gap-1.5 bg-blue-600 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.22em] text-white transition-colors duration-200 hover:bg-blue-700 dark:bg-blue-500 dark:text-slate-950 dark:hover:bg-blue-400"
+              >
+                <LayoutDashboard size={13} />
+                Home
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleGetStarted}
+                className="bg-blue-600 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.22em] text-white transition-colors duration-200 hover:bg-blue-700 dark:bg-blue-500 dark:text-slate-950 dark:hover:bg-blue-400"
+              >
+                Join
+              </button>
+            )}
 
             <button
               type="button"
@@ -380,21 +415,36 @@ const TopNav: React.FC<NavbarProps> = ({ activeNav, onNavigate }) => {
 
             <div className="border-t border-slate-200 py-8 dark:border-slate-800">
               <div className="flex flex-wrap items-baseline gap-x-10 gap-y-4">
-                <button
-                  type="button"
-                  onClick={handleLogin}
-                  className="text-[13px] font-bold uppercase tracking-[0.22em] text-blue-600 transition-colors duration-200 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-                >
-                  Login
-                </button>
+                {isAuthenticated ? (
+                  /* Authenticated: only Home */
+                  <button
+                    type="button"
+                    onClick={handleGoHome}
+                    className="inline-flex items-center gap-2 bg-blue-600 px-6 py-3 text-[13px] font-bold uppercase tracking-[0.22em] text-white transition-colors duration-200 hover:bg-blue-700 dark:bg-blue-500 dark:text-slate-950 dark:hover:bg-blue-400"
+                  >
+                    <LayoutDashboard size={14} />
+                    Go to Home
+                  </button>
+                ) : (
+                  /* Anonymous: Login + Get started */
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleLogin}
+                      className="text-[13px] font-bold uppercase tracking-[0.22em] text-blue-600 transition-colors duration-200 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                    >
+                      Login
+                    </button>
 
-                <button
-                  type="button"
-                  onClick={handleGetStarted}
-                  className="bg-blue-600 px-6 py-3 text-[13px] font-bold uppercase tracking-[0.22em] text-white transition-colors duration-200 hover:bg-blue-700 dark:bg-blue-500 dark:text-slate-950 dark:hover:bg-blue-400"
-                >
-                  Get started
-                </button>
+                    <button
+                      type="button"
+                      onClick={handleGetStarted}
+                      className="bg-blue-600 px-6 py-3 text-[13px] font-bold uppercase tracking-[0.22em] text-white transition-colors duration-200 hover:bg-blue-700 dark:bg-blue-500 dark:text-slate-950 dark:hover:bg-blue-400"
+                    >
+                      Get started
+                    </button>
+                  </>
+                )}
               </div>
 
               <p className="mt-8 text-[10px] font-medium uppercase tracking-[0.24em] text-slate-400 dark:text-slate-500">
