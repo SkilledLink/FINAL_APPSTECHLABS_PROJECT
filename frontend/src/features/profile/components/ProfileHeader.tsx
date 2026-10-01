@@ -12,6 +12,7 @@ import {
   ArrowRight,
   Camera,
   Loader2,
+  ShieldCheck,
 } from 'lucide-react';
 import type { UserProfile } from '../types/profile.types';
 import { StackedAvatars } from './StackedAvatars';
@@ -91,9 +92,6 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           const res = await subscriptionService.getActive();
           const tier = res?.subscription?.tier ?? null;
           if (!cancelled) setFetchedTier(tier);
-        } else {
-          const tier = await subscriptionService.getPublicTier(profile.id);
-          if (!cancelled) setFetchedTier(tier);
         }
       } catch {
         if (!cancelled) setFetchedTier(null);
@@ -107,7 +105,12 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   }, [profile?.id, profile?.professional, isOwnProfile, subscriptionTierProp]);
 
   const effectiveTier = subscriptionTierProp ?? fetchedTier;
-  const showVerified = !!profile.professional?.isVerified && !!effectiveTier;
+
+  /* ── The two independent indicators ─────────────────────── */
+  // 1. KYC-verified (from Didit). Independent of subscription.
+  const isKycVerified = !!profile.professional?.isVerified;
+  // 2. Active paid subscription with a colour-coded tier badge.
+  const hasActiveSubscription = !!effectiveTier;
 
   /* ── Portfolio existence check ────────────────────────── */
   useEffect(() => {
@@ -327,7 +330,23 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                   {tradeTitle && `, ${tradeTitle}`}
                 </h1>
 
-                {showVerified && effectiveTier && (
+                {/* ── KYC-Verified pill ────────────────────────────
+                    Shows whenever Didit has approved the professional.
+                    Independent of subscription.                       */}
+                {isKycVerified && (
+                  <span
+                    title="Identity verified by Didit"
+                    className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700 dark:border-emerald-800/70 dark:bg-emerald-950/60 dark:text-emerald-300"
+                  >
+                    <ShieldCheck className="h-3 w-3" />
+                    Verified
+                  </span>
+                )}
+
+                {/* ── Subscription tier badge ──────────────────────
+                    Shows only when the professional has an active
+                    paid subscription. Colour comes from the tier.   */}
+                {hasActiveSubscription && effectiveTier && (
                   <VerifiedBadge tier={effectiveTier} size="sm" />
                 )}
 
