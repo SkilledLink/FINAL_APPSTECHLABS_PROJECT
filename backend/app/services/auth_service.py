@@ -1,4 +1,3 @@
-
 # app/services/auth_service.py
 
 from datetime import datetime, timedelta, timezone
@@ -99,6 +98,44 @@ def register_user(
     send_verification_email(user.email, raw_code)
 
     return user
+
+
+def resend_verification_email(
+    email: str,
+    session: Session,
+) -> None:
+    """
+    Issue a fresh email-verification code and re-send it.
+
+    - Silently returns if the email is not registered (don't leak existence).
+    - Raises 400 if the account is already verified.
+    - generate_verification_token() invalidates any previous unused
+      EMAIL_VERIFICATION token for this user, so the old code stops working.
+    """
+    email = email.strip().lower()
+
+    user = session.exec(
+        select(User).where(User.email == email)
+    ).first()
+
+    # Anti-enumeration: pretend we sent something even if the account
+    # doesn't exist.
+    if not user:
+        return
+
+    if user.is_email_verified:
+        raise HTTPException(
+            status_code=400,
+            detail="Email is already verified. Please sign in.",
+        )
+
+    raw_code = generate_verification_token(
+        user.id,
+        VerificationType.EMAIL_VERIFICATION,
+        session,
+    )
+
+    send_verification_email(user.email, raw_code)
 
 
 def login_user(
@@ -319,4 +356,3 @@ def logout_user(
 
         session.add(db_token)
         session.commit()
-

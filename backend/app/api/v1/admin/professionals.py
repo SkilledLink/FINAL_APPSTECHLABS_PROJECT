@@ -187,7 +187,10 @@ def soft_delete_professional(
     user = session.get(User, prof.user_id)
     snapshot = {}
     if user:
-        snapshot = {"email": user.email, "username": user.username}
+       snapshot = {
+    "email": user.email,
+    "username": f"{user.first_name} {user.last_name}".strip() or user.email,
+}
 
     return service.soft_delete(
         prof,

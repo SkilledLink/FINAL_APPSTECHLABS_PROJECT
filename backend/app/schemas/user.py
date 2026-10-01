@@ -1,8 +1,10 @@
+# app/schemas/user.py
+
 from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, computed_field
 
 from app.enums.user import AccountStatus, AccountType
 
@@ -14,8 +16,6 @@ class UserResponse(BaseModel):
 
     id: UUID
     email: EmailStr
-
-    username: Optional[str] = None
 
     first_name: str
     last_name: str
@@ -59,19 +59,27 @@ class UserResponse(BaseModel):
     following_count: int = 0
     is_following: bool = False
 
-    model_config = {
-        "from_attributes": True
-    }
+    # ============================================================
+    # COMPUTED / DERIVED
+    # ============================================================
+    # `username` is no longer stored on the User model.
+    # It's derived from first_name + last_name (falling back to email)
+    # so existing frontend code that reads `response.username` keeps
+    # working without changes.
 
+    @computed_field  # type: ignore[misc]
+    @property
+    def username(self) -> str:
+        full = f"{self.first_name} {self.last_name}".strip()
+        return full or self.email
+
+    model_config = {"from_attributes": True}
 
 
 class UserUpdate(BaseModel):
-    username: Optional[str] = Field(
-        default=None,
-        min_length=3,
-        max_length=50,
-        pattern=r"^[a-zA-Z0-9_]+$",
-    )
+    # `username` removed — the model no longer has that column.
+    # Pydantic ignores extra fields in the incoming payload by default,
+    # so the frontend can still send `username` and it will be dropped.
 
     first_name: Optional[str] = Field(
         default=None,

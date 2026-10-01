@@ -34,14 +34,19 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     const credentials: LoginCredentials = {
       email,
       password,
-      accountType,
     };
 
-    const ok = await login(credentials);
+    const result = await login(credentials);
 
-    if (ok) {
+    if (result.success) {
       onSuccess?.();
       navigate("/home", { replace: true });
+    } else if (result.unverified) {
+      onSuccess?.();
+      navigate(
+        `/verify-email?email=${encodeURIComponent(email)}`,
+        { replace: true },
+      );
     }
   };
 

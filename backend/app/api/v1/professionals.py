@@ -86,7 +86,8 @@ def delete_my_professional(
         actor_role="user",
         snapshot={
             "email": current_user.email,
-            "username": current_user.username,
+            "username": f"{current_user.first_name} {current_user.last_name}".strip()
+            or current_user.email,
         },
     )
     return None

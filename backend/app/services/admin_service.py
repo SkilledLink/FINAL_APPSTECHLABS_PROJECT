@@ -46,7 +46,7 @@ class AdminService:
                     User.email.ilike(term),
                     User.first_name.ilike(term),
                     User.last_name.ilike(term),
-                    User.username.ilike(term),
+                 
                 )
             )
 

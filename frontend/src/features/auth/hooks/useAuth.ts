@@ -30,7 +30,9 @@ export function useAuth() {
 
   const clearError = () => setError(null);
 
-  const login = async (credentials: LoginCredentials): Promise<boolean> => {
+  const login = async (
+    credentials: LoginCredentials,
+  ): Promise<{ success: boolean; unverified?: boolean }> => {
     setLoading(true);
     setError(null);
     try {
@@ -50,14 +52,21 @@ export function useAuth() {
       setUser(userData);
 
       toast.success("Welcome back! 🎉");
-      return true;
+      return { success: true };
     } catch (err: any) {
+      const statusCode = err.response?.status;
       const msg =
         err.response?.data?.detail ||
         "Login failed. Please check your credentials.";
+
+      const unverified =
+        statusCode === 403 &&
+        String(msg).toLowerCase().includes("not verified");
+
       setError(msg);
-      toast.error(msg);
-      return false;
+      if (!unverified) toast.error(msg);
+
+      return { success: false, unverified };
     } finally {
       setLoading(false);
     }
@@ -111,6 +120,25 @@ export function useAuth() {
       const msg =
         err.response?.data?.detail ||
         "Invalid or expired verification code.";
+      setError(msg);
+      toast.error(msg);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resendVerification = async (email: string): Promise<boolean> => {
+    setLoading(true);
+    setError(null);
+    try {
+      await apiClient.post("/auth/resend-verification", { email });
+      toast.success("A new verification code has been sent.");
+      return true;
+    } catch (err: any) {
+      const msg =
+        err.response?.data?.detail ||
+        "Couldn't resend the code. Please try again.";
       setError(msg);
       toast.error(msg);
       return false;
@@ -191,6 +219,7 @@ export function useAuth() {
     login,
     register,
     verifyEmail,
+    resendVerification,
     forgotPassword,
     resetPassword,
     logout,

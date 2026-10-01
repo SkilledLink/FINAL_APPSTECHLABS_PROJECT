@@ -264,7 +264,7 @@ class ProfessionalLocationService:
                     profile_completeness=professional.profile_completeness,
                     user=NearbyProfessionalUser(
                         id=user.id,
-                        username=user.username,
+                        username=f"{user.first_name} {user.last_name}".strip() or user.email,
                         first_name=user.first_name,
                         last_name=user.last_name,
                         profile_image_url=user.profile_image_url,

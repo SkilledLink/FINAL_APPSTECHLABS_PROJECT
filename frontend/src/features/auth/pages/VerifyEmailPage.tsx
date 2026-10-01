@@ -5,13 +5,22 @@ import { useAuth } from "../hooks/useAuth";
 import { OTPInput } from "../components/OTPInput";
 
 export default function VerifyEmailPage() {
-  const { verifyEmail, loading, error, clearError } = useAuth();
+  const {
+    verifyEmail,
+    resendVerification,
+    loading,
+    error,
+    clearError,
+  } = useAuth();
+
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const email = searchParams.get("email") || "";
 
   const [code, setCode] = useState("");
   const [verified, setVerified] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resending, setResending] = useState(false);
 
   const handleCodeComplete = async (value: string) => {
     setCode(value);
@@ -24,6 +33,27 @@ export default function VerifyEmailPage() {
           1200,
         );
       }
+    }
+  };
+
+  const handleResend = async () => {
+    if (!email || resendCooldown > 0 || resending) return;
+    setResending(true);
+    const ok = await resendVerification(email);
+    setResending(false);
+
+    if (ok) {
+      setCode("");
+      setResendCooldown(30);
+      const interval = window.setInterval(() => {
+        setResendCooldown((s) => {
+          if (s <= 1) {
+            window.clearInterval(interval);
+            return 0;
+          }
+          return s - 1;
+        });
+      }, 1000);
     }
   };
 
@@ -79,10 +109,15 @@ export default function VerifyEmailPage() {
         Didn't receive the code?{" "}
         <button
           type="button"
-          onClick={() => {}}
-          className="text-blue-600 dark:text-blue-400 font-semibold hover:underline transition-all ml-0.5 cursor-pointer"
+          onClick={handleResend}
+          disabled={resending || resendCooldown > 0 || !email}
+          className="text-blue-600 dark:text-blue-400 font-semibold hover:underline transition-all ml-0.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Resend
+          {resending
+            ? "Sending…"
+            : resendCooldown > 0
+            ? `Resend in ${resendCooldown}s`
+            : "Resend"}
         </button>
       </p>
 

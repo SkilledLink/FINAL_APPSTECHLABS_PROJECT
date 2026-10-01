@@ -15,8 +15,16 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const success = await login({ email, password });
-    if (success) navigate("/home");
+    const result = await login({ email, password });
+
+    if (result.success) {
+      navigate("/home");
+    } else if (result.unverified) {
+      navigate(
+        `/verify-email?email=${encodeURIComponent(email)}`,
+        { replace: true },
+      );
+    }
   };
 
   return (
@@ -121,6 +129,16 @@ export default function LoginPage() {
           )}
         </button>
       </form>
+
+      <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-3">
+        Never got your verification code?{" "}
+        <Link
+          to="/verify-email"
+          className="text-blue-600 dark:text-blue-400 font-semibold hover:underline"
+        >
+          Resend it
+        </Link>
+      </p>
 
       <div className="relative flex items-center gap-3 my-5">
         <div className="flex-1 h-px bg-slate-300/60 dark:bg-slate-800" />

@@ -18,6 +18,7 @@ from app.services.auth_service import (
     login_user,
     register_user,
     request_password_reset,
+    resend_verification_email,
     reset_password,
 )
 from app.services.verification_service import verify_token
@@ -59,6 +60,20 @@ def verify_email(payload: VerificationRequest, db: Session = Depends(get_session
         "access_token": access_token,
         "refresh_token": refresh_token,
         "token_type": "bearer",
+    }
+
+
+@router.post("/resend-verification", status_code=status.HTTP_200_OK)
+def resend_verification(
+    payload: PasswordResetRequest,
+    db: Session = Depends(get_session),
+):
+    resend_verification_email(payload.email, session=db)
+    return {
+        "message": (
+            "If an unverified account exists for that email, "
+            "a new verification code has been sent."
+        )
     }
 
 

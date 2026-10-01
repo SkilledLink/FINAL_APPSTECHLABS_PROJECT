@@ -204,7 +204,10 @@ def admin_soft_delete(
     user = session.get(User, professional.user_id)
     snapshot = {}
     if user:
-        snapshot = {"email": user.email, "username": user.username}
+        snapshot = {
+    "email": user.email,
+    "username": f"{user.first_name} {user.last_name}".strip() or user.email,
+}
 
     return service.soft_delete(
         professional,

@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   Building2,
   Sparkles,
+  ArrowLeft,
 } from "lucide-react";
 
 interface AuthLayoutProps {
@@ -286,9 +287,37 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
       />
 
       {/* =========================================================
-          TOP CONTROLS · refined, quiet
+          TOP CONTROLS · back-to-home on left, controls on right
       ========================================================== */}
 
+      {/* Top-left: back to home */}
+      <div className="absolute top-5 left-5 sm:top-6 sm:left-6 z-30">
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          type="button"
+          onClick={() => (window.location.href = "/")}
+          className="
+            flex h-9 items-center gap-2 rounded-lg
+            bg-white/60 dark:bg-white/[0.04]
+            backdrop-blur-md
+            border border-slate-900/[0.06] dark:border-white/[0.06]
+            px-3.5 text-xs font-medium
+            text-slate-600 dark:text-slate-400
+            hover:text-blue-600 dark:hover:text-cyan-400
+            hover:border-blue-500/25 dark:hover:border-cyan-400/25
+            transition-all duration-200
+            shadow-[0_1px_2px_rgba(15,23,42,0.04)]
+            cursor-pointer
+          "
+          aria-label="Back to home"
+        >
+          <ArrowLeft size={13} />
+          <span className="hidden sm:inline">Back to home</span>
+        </motion.button>
+      </div>
+
+      {/* Top-right: theme + support */}
       <div className="absolute top-5 right-5 sm:top-6 sm:right-6 z-30 flex items-center gap-2">
         <motion.button
           whileHover={{ scale: 1.04 }}
@@ -369,7 +398,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
                 blur-3xl pointer-events-none
               " />
 
-              {/* Brand Header — Replaced Image with Text Logo */}
+              {/* Brand Header */}
               <div className="relative z-10 shrink-0 flex items-center gap-3 -mt-4">
                 <div className="text-3xl font-bold tracking-tight">
                   <span className="text-slate-900 dark:text-white">Skilled</span>
