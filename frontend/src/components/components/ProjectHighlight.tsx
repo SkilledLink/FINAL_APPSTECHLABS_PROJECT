@@ -14,9 +14,9 @@ interface ProjectHighlightsProps {
 
 // Online Unsplash trade photos used as high-res fallbacks for broken or missing URLs
 const ONLINE_FALLBACK_IMAGES = [
-  'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=600&q=80', // Cabinetry / Kitchen
-  'https://images.unsplash.com/photo-1581094288338-2314dddb7ece?auto=format&fit=crop&w=600&q=80', // Plumbing / Pipe
-  'https://images.unsplash.com/photo-1562259949-e8e7689d7828?auto=format&fit=crop&w=600&q=80', // Painting
+  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS5tcJIjwxE1yS1fIJpDd6CDIVXqRwn4E7R8Oa0Jt9ugUW81J6FfSRr0XM&s=10', // Cabinetry / Kitchen
+  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR-xf7IDLpRETzqoe3hz8WqbFLKLi5YKHhn1VemTUFRNIkyKGY7eGn5Lvpn&s=10', // Plumbing / Pipe
+  'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT_Wh6T2ohcyakpqnhLqOU3dQnbRbULSOBwVrSA5GVaWIGnRFZpr6crC_Kw&s=10', // Painting
 ];
 
 const ProjectHighlights: React.FC<ProjectHighlightsProps> = ({ highlights }) => {
