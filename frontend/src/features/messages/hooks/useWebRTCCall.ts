@@ -13,6 +13,8 @@ export type CallState =
   | 'active'
   | 'ended';
 
+export type CameraFacing = 'user' | 'environment';
+
 export interface ActiveCall {
   callId: string;
   conversationId: string;
@@ -34,6 +36,16 @@ export function useWebRTCCall(socket: Socket | null) {
   const [muted, setMuted] = useState(false);
   const [cameraOff, setCameraOff] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  /**
+   * Which physical camera we're currently sending.
+   *   'user'        → front-facing (selfie)
+   *   'environment' → rear-facing
+   *
+   * On devices with a single camera this stays at 'user' and
+   * `switchCamera()` becomes a harmless no-op.
+   */
+  const [cameraFacing, setCameraFacing] = useState<CameraFacing>('user');
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
@@ -64,20 +76,47 @@ export function useWebRTCCall(socket: Socket | null) {
     setRemoteStream(null);
     setMuted(false);
     setCameraOff(false);
+    setCameraFacing('user');
   }, []);
 
-  const getLocalMedia = useCallback(async (media: CallMedia) => {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-      video:
-        media === 'video'
-          ? { width: { ideal: 640 }, height: { ideal: 480 } }
-          : false,
-    });
-    localStreamRef.current = stream;
-    setLocalStream(stream);
-    return stream;
-  }, []);
+  /**
+   * Reads the facingMode the browser actually picked (best-effort).
+   * Some browsers don't report it at all — we default to 'user'.
+   */
+  const detectFacing = (stream: MediaStream): CameraFacing => {
+    const videoTrack = stream.getVideoTracks()[0];
+    if (!videoTrack) return 'user';
+    const settings = videoTrack.getSettings?.() ?? {};
+    const raw =
+      (settings as MediaTrackSettings & { facingMode?: string }).facingMode;
+    if (raw === 'environment' || raw === 'user') return raw;
+    return 'user';
+  };
+
+  const getLocalMedia = useCallback(
+    async (media: CallMedia, facing: CameraFacing = 'user') => {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video:
+          media === 'video'
+            ? {
+                width: { ideal: 640 },
+                height: { ideal: 480 },
+                facingMode: { ideal: facing },
+              }
+            : false,
+      });
+      localStreamRef.current = stream;
+      setLocalStream(stream);
+
+      if (media === 'video') {
+        setCameraFacing(detectFacing(stream));
+      }
+
+      return stream;
+    },
+    []
+  );
 
   const buildPeer = useCallback(
     (callId: string, _otherUserId: string) => {
@@ -293,6 +332,101 @@ export function useWebRTCCall(socket: Socket | null) {
     setCameraOff((c) => !c);
   }, []);
 
+  /**
+   * Flip between the front and rear camera mid-call.
+   *
+   * Uses `RTCRtpSender.replaceTrack()` so no SDP renegotiation is
+   * needed — the remote peer just starts seeing the new camera feed.
+   *
+   * Safe to call when:
+   *   - There's no active call (no-op)
+   *   - The call has no video track (no-op)
+   *   - The device only has one camera (the request for the
+   *     "other" facing mode resolves to the same physical camera;
+   *     we detect that and skip the swap)
+   */
+  const switchCamera = useCallback(async (): Promise<void> => {
+    const pc = pcRef.current;
+    const stream = localStreamRef.current;
+    if (!pc || !stream) return;
+
+    const currentTrack = stream.getVideoTracks()[0];
+    if (!currentTrack) return;
+
+    const currentFacing = detectFacing(stream);
+    const nextFacing: CameraFacing =
+      currentFacing === 'environment' ? 'user' : 'environment';
+
+    try {
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+          facingMode: { ideal: nextFacing },
+        },
+      });
+
+      const newTrack = newStream.getVideoTracks()[0];
+      if (!newTrack) {
+        newStream.getTracks().forEach((t) => t.stop());
+        return;
+      }
+
+      // If the browser handed us back the same physical camera
+      // (single-camera device), don't bother swapping.
+      const newSettings = newTrack.getSettings?.() ?? {};
+      const newFacing =
+        (newSettings as MediaTrackSettings & { facingMode?: string })
+          .facingMode;
+      const oldSettings = currentTrack.getSettings?.() ?? {};
+      const oldDeviceId =
+        (oldSettings as MediaTrackSettings).deviceId;
+      const newDeviceId =
+        (newSettings as MediaTrackSettings).deviceId;
+
+      if (
+        oldDeviceId &&
+        newDeviceId &&
+        oldDeviceId === newDeviceId
+      ) {
+        // Same camera — bail out cleanly.
+        newStream.getTracks().forEach((t) => t.stop());
+        return;
+      }
+
+      // Swap the sender's track — no renegotiation required.
+      const sender = pc
+        .getSenders()
+        .find((s) => s.track?.kind === 'video');
+
+      if (sender) {
+        await sender.replaceTrack(newTrack);
+      }
+
+      // Swap the track inside our local MediaStream so the local
+      // preview also flips. Same stream object identity → no need
+      // to reassign srcObject on the <video> element.
+      stream.removeTrack(currentTrack);
+      stream.addTrack(newTrack);
+      currentTrack.stop();
+
+      // Update facing state from what the browser actually returned
+      // (may differ from requested ideal).
+      setCameraFacing(
+        newFacing === 'environment' || newFacing === 'user'
+          ? newFacing
+          : nextFacing
+      );
+    } catch (err) {
+      // Common cases: device doesn't have the requested facing mode,
+      // or the user revoked camera permission. Leave the current
+      // camera running — no need to bubble this to the UI.
+      // eslint-disable-next-line no-console
+      console.warn('[useWebRTCCall] switchCamera failed:', err);
+    }
+  }, []);
+
   /* ── Socket subscriptions ──────────────────────────────── */
   useEffect(() => {
     if (!socket) return;
@@ -433,6 +567,7 @@ export function useWebRTCCall(socket: Socket | null) {
     remoteStream,
     muted,
     cameraOff,
+    cameraFacing,
     error,
     startCall,
     acceptCall,
@@ -440,6 +575,7 @@ export function useWebRTCCall(socket: Socket | null) {
     endCall,
     toggleMute,
     toggleCamera,
+    switchCamera,
   };
 }
 

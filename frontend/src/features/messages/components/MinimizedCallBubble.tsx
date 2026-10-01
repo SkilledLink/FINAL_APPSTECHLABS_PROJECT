@@ -7,6 +7,7 @@ import {
   PhoneOff,
   Video,
   VideoOff,
+  SwitchCamera,
 } from 'lucide-react';
 import type { WebRTCCallApi } from '../hooks/useWebRTCCall';
 
@@ -46,6 +47,9 @@ export function MinimizedCallBubble({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const duration = useCallDuration(call?.state === 'active');
 
+  // Local state for the flip button — shows a spinner during the switch.
+  const [switchingCamera, setSwitchingCamera] = useState(false);
+
   const setVideoRef = useCallback(
     (el: HTMLVideoElement | null) => {
       if (!el || !remoteStream) return;
@@ -55,11 +59,25 @@ export function MinimizedCallBubble({
     [remoteStream]
   );
 
+  const handleSwitchCamera = useCallback(async () => {
+    if (!api.switchCamera) return;
+    setSwitchingCamera(true);
+    try {
+      await api.switchCamera();
+    } catch {
+      /* swallow — the hook logs its own errors */
+    } finally {
+      setSwitchingCamera(false);
+    }
+  }, [api]);
+
   if (!call) return null;
 
   const isVideo = call.media === 'video';
   const showRemoteVideo = isVideo && !!remoteStream;
   const displayName = otherUserName ?? 'Unknown';
+  const canSwitchCamera =
+    isVideo && !!api.switchCamera && !api.cameraOff;
 
   return (
     <motion.div
@@ -93,7 +111,7 @@ export function MinimizedCallBubble({
           </div>
         )}
 
-        {/* Duration overlay — always dark pill on video surface (both themes) */}
+        {/* Duration overlay */}
         <div className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-mono font-semibold text-white">
           {call.state === 'active' ? formatDuration(duration) : 'Connecting…'}
         </div>
@@ -104,6 +122,7 @@ export function MinimizedCallBubble({
         <p className="truncate text-sm font-semibold">{displayName}</p>
 
         <div className="mt-2 flex items-center justify-between gap-1.5">
+          {/* Mute */}
           <button
             type="button"
             onClick={api.toggleMute}
@@ -121,6 +140,7 @@ export function MinimizedCallBubble({
             )}
           </button>
 
+          {/* Video toggle */}
           {isVideo && (
             <button
               type="button"
@@ -140,6 +160,25 @@ export function MinimizedCallBubble({
             </button>
           )}
 
+          {/* ✅ Switch camera (front/back) — video only, camera on */}
+          {canSwitchCamera && (
+            <button
+              type="button"
+              onClick={handleSwitchCamera}
+              disabled={switchingCamera}
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200 disabled:cursor-wait disabled:opacity-60 dark:bg-white/15 dark:text-white dark:hover:bg-white/25"
+              aria-label="Switch camera"
+              title="Switch camera"
+            >
+              {switchingCamera ? (
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              ) : (
+                <SwitchCamera className="h-3.5 w-3.5" />
+              )}
+            </button>
+          )}
+
+          {/* Expand */}
           <button
             type="button"
             onClick={onExpand}
@@ -149,6 +188,7 @@ export function MinimizedCallBubble({
             <Maximize2 className="h-3.5 w-3.5" />
           </button>
 
+          {/* End call */}
           <button
             type="button"
             onClick={() => api.endCall('HANGUP')}
