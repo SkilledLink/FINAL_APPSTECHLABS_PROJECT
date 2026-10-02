@@ -1,5 +1,6 @@
 # app/schemas/ai_features.py
 
+from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
 
@@ -86,3 +87,20 @@ class DeepAnalysisResponse(BaseModel):
     model: str
     prompt_tokens: Optional[int] = None
     completion_tokens: Optional[int] = None
+
+
+# ─── AI USAGE (per-feature quota status) ─────────────────────────
+
+class AIUsageItem(BaseModel):
+    feature_key: str
+    feature_name: str
+    usage_count: int
+    usage_limit: int
+    remaining: int
+    period_start: datetime
+    period_end: datetime
+
+
+class AIUsageResponse(BaseModel):
+    items: List[AIUsageItem]
+    total: int

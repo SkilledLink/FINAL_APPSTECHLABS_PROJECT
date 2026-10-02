@@ -2,6 +2,7 @@
 import { apiClient } from '../../../api/client';
 import type {
   ActiveSubscriptionResponse,
+  AIUsageResponse,
   BatchAcceptResponse,
   BatchRejectResponse,
   DeepAnalysisResponse,
@@ -197,6 +198,19 @@ export const subscriptionService = {
       return data;
     } catch (err) {
       throw new Error(toMessage(err, 'Failed to reject proposals'));
+    }
+  },
+
+  /* ── AI usage ──────────────────────────────────────── */
+
+  async getAIUsage(): Promise<AIUsageResponse> {
+    try {
+      const { data } = await apiClient.get<AIUsageResponse>(
+        '/api/v1/ai/usage'
+      );
+      return data;
+    } catch (err) {
+      throw new Error(toMessage(err, 'Failed to load AI usage'));
     }
   },
 

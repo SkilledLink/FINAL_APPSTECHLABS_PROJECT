@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Award,
+  Bot,
   Check,
   Crown,
   Eye,
@@ -14,7 +15,6 @@ import {
   Plus,
   Save,
   Sparkles,
-  Star,
   Trash2,
   TrendingUp,
   X,
@@ -29,6 +29,20 @@ import type {
   TierFeatureCreatePayload,
   TierFeatureType,
 } from '../../types/admin.types';
+
+/* ───────────────────────── AI feature contract ─────────────────────────
+ * Backend: app/services/ai/features/portfolio_deep_analysis.py
+ *   FEATURE_KEY = "ai_portfolio_deep_analysis"
+ *
+ * Backend: app/services/professional_ai_usage_service.py
+ *   Reads feature.feature_value.get("limit") and .get("period")
+ *
+ * The admin UI writes exactly that shape.
+ * ────────────────────────────────────────────────────────────────────── */
+const AI_DEEP_ANALYSIS_KEY = 'ai_portfolio_deep_analysis';
+const AI_VALUE_KEY = 'limit';
+const AI_PERIOD = 'monthly';
+const AI_DEFAULT_LIMIT = 6;
 
 /* ───────────────────────── Constants ───────────────────────── */
 
@@ -65,22 +79,36 @@ const formatPrice = (amount: number, currency: string) => {
 const hexToRgba = (hex: string, alpha: number) => {
   const h = hex.replace('#', '');
   const expanded =
-    h.length === 3
-      ? h.split('').map((c) => c + c).join('')
-      : h;
+    h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
   const n = parseInt(expanded, 16);
   if (Number.isNaN(n)) return `rgba(59, 130, 246, ${alpha})`;
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 };
 
+/** Read the AI deep-analysis limit from a tier's features array. */
+const readAiLimit = (features: TierFeature[] | undefined): number => {
+  const row = features?.find((f) => f.featureKey === AI_DEEP_ANALYSIS_KEY);
+  if (!row) return AI_DEFAULT_LIMIT;
+  const raw = (row.featureValue ?? {})[AI_VALUE_KEY];
+  if (typeof raw === 'number' && Number.isFinite(raw) && raw > 0) {
+    return Math.floor(raw);
+  }
+  return AI_DEFAULT_LIMIT;
+};
+
 /* ───────────────────────── Tier Modal ───────────────────────── */
+
+interface TierModalSubmit {
+  tier: TierCreatePayload;
+  aiLimit: number;
+}
 
 interface TierModalProps {
   open: boolean;
   initial?: ProfessionalTierDetail | null;
   saving: boolean;
   onClose: () => void;
-  onSubmit: (payload: TierCreatePayload) => Promise<void>;
+  onSubmit: (payload: TierModalSubmit) => Promise<void>;
 }
 
 const EMPTY_TIER: TierCreatePayload = {
@@ -110,7 +138,9 @@ const TierModal: React.FC<TierModalProps> = ({
   onSubmit,
 }) => {
   const [form, setForm] = useState<TierCreatePayload>(EMPTY_TIER);
+  const [aiLimit, setAiLimit] = useState<string>(String(AI_DEFAULT_LIMIT));
   const [error, setError] = useState<string | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -133,10 +163,13 @@ const TierModal: React.FC<TierModalProps> = ({
         badge_shape: initial.badgeShape ?? 'circle',
         badge_description: initial.badgeDescription ?? '',
       });
+      setAiLimit(String(readAiLimit(initial.features)));
     } else {
       setForm(EMPTY_TIER);
+      setAiLimit(String(AI_DEFAULT_LIMIT));
     }
     setError(null);
+    setAiError(null);
   }, [open, initial]);
 
   useEffect(() => {
@@ -155,6 +188,8 @@ const TierModal: React.FC<TierModalProps> = ({
 
   const handleSubmit = async () => {
     setError(null);
+    setAiError(null);
+
     if (!form.name.trim() || form.name.trim().length < 2) {
       setError('Name must be at least 2 characters.');
       return;
@@ -171,15 +206,31 @@ const TierModal: React.FC<TierModalProps> = ({
       setError('Duration must be at least 1 day.');
       return;
     }
+
+    // ── AI limit validation (required, positive integer) ──
+    const trimmed = aiLimit.trim();
+    if (trimmed === '') {
+      setAiError('AI analyses per month is required.');
+      return;
+    }
+    const parsed = Number(trimmed);
+    if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 1) {
+      setAiError('Enter a whole number of 1 or more.');
+      return;
+    }
+
     try {
       await onSubmit({
-        ...form,
-        name: form.name.trim(),
-        description: form.description?.trim() || undefined,
-        badge_name: form.badge_name?.trim() || undefined,
-        badge_code: form.badge_code?.trim() || undefined,
-        badge_icon: form.badge_icon?.trim() || undefined,
-        badge_description: form.badge_description?.trim() || undefined,
+        tier: {
+          ...form,
+          name: form.name.trim(),
+          description: form.description?.trim() || undefined,
+          badge_name: form.badge_name?.trim() || undefined,
+          badge_code: form.badge_code?.trim() || undefined,
+          badge_icon: form.badge_icon?.trim() || undefined,
+          badge_description: form.badge_description?.trim() || undefined,
+        },
+        aiLimit: parsed,
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to save tier');
@@ -221,7 +272,7 @@ const TierModal: React.FC<TierModalProps> = ({
               </h3>
               <p className="text-xs text-gray-500 dark:text-slate-400">
                 {initial
-                  ? 'Update pricing, badge, and visibility'
+                  ? 'Update pricing, badge, visibility, and AI limits'
                   : 'Define a new subscription tier'}
               </p>
             </div>
@@ -336,6 +387,72 @@ const TierModal: React.FC<TierModalProps> = ({
                 disabled={saving}
                 className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm text-gray-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:bg-slate-900"
               />
+            </div>
+          </div>
+
+          {/* ───────── AI Portfolio Analysis Limit ───────── */}
+          <div className="space-y-3 rounded-2xl border border-violet-200/70 bg-gradient-to-br from-violet-50/60 to-white p-4 dark:border-violet-900/40 dark:from-violet-950/20 dark:to-slate-900">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-sm shadow-violet-500/25">
+                <Bot size={15} />
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-violet-700 dark:text-violet-300">
+                  AI portfolio analyses
+                </p>
+                <p className="text-[11px] text-gray-500 dark:text-slate-400">
+                  How many deep analyses a professional can run per month
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="ai-limit"
+                className="mb-1.5 block text-[11px] font-semibold text-gray-700 dark:text-slate-300"
+              >
+                Analyses per month *
+              </label>
+              <input
+                id="ai-limit"
+                type="number"
+                min={1}
+                step={1}
+                inputMode="numeric"
+                value={aiLimit}
+                onChange={(e) => {
+                  setAiLimit(e.target.value);
+                  if (aiError) setAiError(null);
+                }}
+                disabled={saving}
+                placeholder="e.g. 6"
+                aria-invalid={!!aiError}
+                aria-describedby={aiError ? 'ai-limit-error' : undefined}
+                className={`w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm text-gray-900 outline-none transition-all focus:ring-4 disabled:cursor-not-allowed disabled:bg-gray-100 dark:bg-slate-950 dark:text-slate-100 dark:disabled:bg-slate-900 ${
+                  aiError
+                    ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-700'
+                    : 'border-gray-200 focus:border-violet-500 focus:ring-violet-500/10 dark:border-slate-800'
+                }`}
+              />
+              {aiError ? (
+                <p
+                  id="ai-limit-error"
+                  className="mt-1 text-[11px] font-medium text-rose-600 dark:text-rose-400"
+                >
+                  {aiError}
+                </p>
+              ) : (
+                <p className="mt-1 text-[10px] leading-relaxed text-gray-500 dark:text-slate-400">
+                  Stored as feature{' '}
+                  <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-[10px] dark:bg-slate-800">
+                    {AI_DEEP_ANALYSIS_KEY}
+                  </code>{' '}
+                  →{' '}
+                  <code className="rounded bg-gray-100 px-1 py-0.5 font-mono text-[10px] dark:bg-slate-800">
+                    {`{ limit: ${aiLimit || '?'}, period: "${AI_PERIOD}" }`}
+                  </code>
+                </p>
+              )}
             </div>
           </div>
 
@@ -1041,16 +1158,59 @@ const TiersTab: React.FC = () => {
     return { total: tiers.length, active, public: publicCount, features };
   }, [tiers]);
 
-  const handleTierSubmit = async (payload: TierCreatePayload) => {
+  /**
+   * Ensure the tier has an "ai_portfolio_deep_analysis" feature row
+   * with feature_value = { limit: N, period: "monthly" }.
+   *
+   * Creates it if missing, updates it if present.
+   */
+  const reconcileAiFeature = async (
+    tier: ProfessionalTierDetail,
+    aiLimit: number,
+  ) => {
+    const existing = tier.features.find(
+      (f) => f.featureKey === AI_DEEP_ANALYSIS_KEY,
+    );
+
+    const payload: TierFeatureCreatePayload = {
+      feature_key: AI_DEEP_ANALYSIS_KEY,
+      feature_name: existing?.featureName ?? 'AI portfolio analyses',
+      feature_description:
+        existing?.featureDescription ??
+        'Monthly quota for AI portfolio deep analysis',
+      feature_type: 'json',
+      feature_value: {
+        [AI_VALUE_KEY]: aiLimit,
+        period: AI_PERIOD,
+      },
+      is_enabled: true,
+    };
+
+    if (existing) {
+      await updateFeature(tier.id, existing.id, payload);
+    } else {
+      await createFeature(tier.id, payload);
+    }
+  };
+
+  const handleTierSubmit = async ({
+    tier: payload,
+    aiLimit,
+  }: TierModalSubmit) => {
     setSavingTier(true);
     try {
+      let saved: ProfessionalTierDetail;
+
       if (editingTier) {
-        await updateTier(editingTier.id, payload);
+        saved = await updateTier(editingTier.id, payload);
+        await reconcileAiFeature(saved, aiLimit);
         toast.success('Tier updated');
       } else {
-        await createTier(payload);
+        saved = await createTier(payload);
+        await reconcileAiFeature(saved, aiLimit);
         toast.success('Tier created');
       }
+
       setTierModalOpen(false);
       setEditingTier(null);
     } finally {
