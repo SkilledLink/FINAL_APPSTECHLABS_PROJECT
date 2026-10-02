@@ -14,9 +14,7 @@ import {
   Camera,
   Loader2,
   ShieldCheck,
-  ShieldAlert,
   HelpCircle,
-  X,
 } from 'lucide-react';
 import type { UserProfile } from '../types/profile.types';
 import { StackedAvatars } from './StackedAvatars';
@@ -58,7 +56,7 @@ interface ProfileHeaderProps {
 
 const portfolioRoute = (userId: string) => `/home/portfolio/${userId}`;
 
-const KYC_REMINDER_INTERVAL_MS = 30_000;
+const KYC_REMINDER_INTERVAL_MS = 4 * 60 * 60 * 1000;
 const KYC_TOAST_ID = 'kyc-verify-reminder';
 
 /**
@@ -103,10 +101,6 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   const [hasPortfolio, setHasPortfolio] = useState(false);
   const [checkingPortfolio, setCheckingPortfolio] = useState(true);
 
-  // Local dismissal of the inline banner — user can hide it for this
-  // session but the toast reminders keep firing every 30s anyway.
-  const [bannerDismissed, setBannerDismissed] = useState(false);
-
   /* ── Active subscription tier ────────────────────────── */
   const [fetchedTier, setFetchedTier] = useState<TierInfo | null>(null);
 
@@ -127,8 +121,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           const tier = res?.subscription?.tier ?? null;
           if (!cancelled) setFetchedTier(tier);
         } else {
-          const tier = await subscriptionService.getPublicTier(profile.id);
-          if (!cancelled) setFetchedTier(tier);
+          if (!cancelled) setFetchedTier(null);
         }
       } catch {
         if (!cancelled) setFetchedTier(null);
@@ -215,17 +208,18 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     const showReminder = () => {
       // Fixed toastId → the newest reminder replaces the previous one
       // instead of stacking 20 toasts on the screen.
-      toast.warning(
+      toast.info(
         ({ closeToast }: { closeToast?: () => void }) => (
           <div className="text-sm">
             <div className="flex items-start gap-2">
-              <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
               <div className="min-w-0">
                 <p className="font-bold text-slate-900 dark:text-slate-100">
-                  Your profile isn’t verified yet
+                  Verify your account
                 </p>
                 <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">
-                  Verify your identity to unlock messaging, job bids, and payouts.
+                  Complete verification to unlock messaging, job bids, and
+                  payouts.
                 </p>
 
                 <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -235,7 +229,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                       closeToast?.();
                       navigate(verifyHref);
                     }}
-                    className="inline-flex items-center gap-1 rounded-lg bg-amber-500 px-2.5 py-1 text-[11px] font-bold text-white shadow-sm transition hover:bg-amber-600"
+                    className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1 text-[11px] font-bold text-white shadow-sm transition hover:bg-blue-700"
                   >
                     <ShieldCheck className="h-3 w-3" />
                     Verify now
@@ -396,61 +390,6 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         />
       </div>
 
-      {/* ── KYC nudge banner ─────────────────────────── */}
-      {needsKycVerification && !bannerDismissed && (
-        <div className="relative border-b border-amber-200/80 bg-gradient-to-r from-amber-50 via-amber-50/70 to-white dark:border-amber-900/50 dark:from-amber-950/40 dark:via-amber-950/20 dark:to-slate-900">
-          <div className="flex flex-wrap items-start gap-3 px-4 py-3 sm:px-6">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">
-              <ShieldAlert className="h-4.5 w-4.5" />
-            </div>
-
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                Your profile isn’t verified yet
-              </p>
-              <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">
-                Verify your identity to unlock messaging, job bids, and
-                payouts. It only takes a few minutes.
-              </p>
-
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleVerifyClick}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-[11px] font-bold text-white shadow-sm transition hover:bg-amber-600 active:scale-[0.98]"
-                >
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  Verify now
-                </button>
-
-                <button
-                  type="button"
-                  onClick={goToContactSection}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-                >
-                  <HelpCircle className="h-3.5 w-3.5" />
-                  Contact support
-                </button>
-              </div>
-
-              <p className="mt-2 text-[11px] italic text-slate-500 dark:text-slate-500">
-                Having issues verifying? Contact support and we’ll help you
-                sort it out.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setBannerDismissed(true)}
-              aria-label="Dismiss verification reminder"
-              className="ml-auto shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* ── Body ──────────────────────────────────────── */}
       <div className="px-4 sm:px-6 pt-3 pb-5">
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
@@ -570,18 +509,6 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                         Verified
                       </span>
                     )}
-
-                    {needsKycVerification && (
-                      <button
-                        type="button"
-                        onClick={handleVerifyClick}
-                        title="Your profile isn’t verified — click to start"
-                        className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700 transition hover:bg-amber-100 dark:border-amber-800/70 dark:bg-amber-950/60 dark:text-amber-300 dark:hover:bg-amber-950/80"
-                      >
-                        <ShieldAlert className="h-3 w-3" />
-                        Not verified · Verify
-                      </button>
-                    )}
                   </>
                 )}
               </div>
@@ -616,7 +543,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             {needsKycVerification && (
               <button
                 onClick={handleVerifyClick}
-                className="flex items-center justify-center gap-1.5 rounded-xl bg-amber-500 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-amber-600 active:scale-[0.98]"
+                className="flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-bold text-white shadow-xs shadow-blue-600/25 transition hover:bg-blue-700 active:scale-[0.98]"
               >
                 <ShieldCheck className="h-3.5 w-3.5" />
                 <span>Verify identity</span>
@@ -626,7 +553,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             {isOwnProfile && isStandardAccount && (
               <button
                 onClick={onUpgrade}
-                className="flex items-center justify-center gap-1.5 rounded-xl bg-amber-500 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-amber-600"
+                className="flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-bold text-white shadow-xs shadow-blue-600/25 transition hover:bg-blue-700"
               >
                 <Wrench className="h-3.5 w-3.5" />
                 <span>Become a Professional</span>
