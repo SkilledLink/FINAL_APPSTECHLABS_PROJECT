@@ -1,8 +1,11 @@
-// src/features/landing/components/Hero.tsx
+// src/features/landing/components/HeroSplit.tsx
 
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
+import { ArrowRight, ShieldCheck, Star, MapPin } from "lucide-react";
+
+/* ─────────────────────── embers ─────────────────────── */
 
 type Ember = {
   id: number;
@@ -73,6 +76,8 @@ const EmberField: React.FC<{ count?: number }> = ({ count = 28 }) => {
   );
 };
 
+/* ─────────────────────── spark flash ─────────────────────── */
+
 const SparkFlash: React.FC = () => {
   const reduce = useReducedMotion();
   const [visible, setVisible] = useState(false);
@@ -120,14 +125,17 @@ const SparkFlash: React.FC = () => {
   );
 };
 
+/* ─────────────────────── hero ─────────────────────── */
+
 const ease = [0.16, 1, 0.3, 1] as const;
 
-const Hero: React.FC = () => {
+const HeroSplit: React.FC = () => {
   const reduce = useReducedMotion();
 
   return (
     <section id="home" className="relative">
-      <div className="relative min-h-[92vh] w-full overflow-hidden bg-[#06142e]">
+      <div className="relative flex min-h-[92vh] w-full overflow-hidden bg-[#06142e]">
+        {/* Background image */}
         <motion.img
           src="https://thumbs.dreamstime.com/b/african-welder-mask-11110766.jpg"
           alt="A welder at work in Cameroon"
@@ -142,106 +150,113 @@ const Hero: React.FC = () => {
           }
         />
 
-        <div className="absolute inset-0 z-[1] bg-[#06142e]/70" aria-hidden="true" />
+        {/* Dark scrim */}
+        <div className="absolute inset-0 z-[1] bg-[#06142e]/72" aria-hidden="true" />
 
+        {/* Ambient effects */}
         <EmberField count={28} />
         <SparkFlash />
 
-        <div className="relative z-10 flex min-h-[92vh] flex-col">
-          <div className="mx-auto w-full max-w-[1280px] px-6 pt-10 sm:px-10 lg:px-16">
-            <motion.div
-              initial={reduce ? false : { opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.7, delay: 0.1 }}
-              className="flex items-baseline justify-between text-[11px] font-medium uppercase tracking-[0.22em] text-white/70"
+        {/* Content */}
+        <div className="relative z-10 mx-auto flex w-full max-w-[1280px] flex-col justify-center px-6 pb-24 pt-32 sm:px-10 sm:pb-32 sm:pt-40 lg:px-16">
+          {/* Eyebrow */}
+          <motion.div
+            initial={reduce ? false : { opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.15, ease }}
+            className="mb-8 inline-flex w-fit items-center gap-2.5 rounded-full border border-white/15 bg-white/[0.06] px-3.5 py-1.5 backdrop-blur-md"
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.9)]" />
+            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/85">
+              Now live in Cameroon
+            </span>
+          </motion.div>
+
+          {/* Headline */}
+          <motion.h1
+            initial={reduce ? false : { opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.9, delay: 0.25, ease }}
+            className="max-w-[16ch] text-[clamp(2.5rem,7.5vw,5.75rem)] font-normal leading-[0.98] tracking-[-0.035em] text-white"
+            style={{ fontFamily: '"Fraunces", Georgia, serif' }}
+          >
+            Find someone who actually shows up.
+          </motion.h1>
+
+          {/* Subtext */}
+          <motion.p
+            initial={reduce ? false : { opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.5, ease }}
+            className="mt-8 max-w-[52ch] text-[17px] leading-8 text-white/80"
+          >
+            SkilledLink connects you with electricians, plumbers,
+            carpenters, welders and mechanics across Cameroon. Find
+            someone near you who knows the work — and get it done.
+          </motion.p>
+
+          {/* CTAs */}
+          <motion.div
+            initial={reduce ? false : { opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.7, ease }}
+            className="mt-12 flex flex-wrap items-center gap-3"
+          >
+            <Link
+              to="/home/professionals"
+              className="group inline-flex items-center gap-2 rounded-full bg-white px-6 py-3.5 text-[15px] font-bold text-[#06142e] shadow-lg shadow-black/20 transition-all hover:bg-blue-50 active:scale-[0.98]"
             >
-              <div className="flex items-baseline gap-0 text-sm font-bold tracking-tight normal-case">
-                <span className="text-white">Skilled</span>
-                <span className="text-blue-500">Link</span>
-              </div>
+              Find a pro near you
+              <ArrowRight
+                size={16}
+                className="transition-transform duration-200 group-hover:translate-x-0.5"
+              />
+            </Link>
 
-              <span className="flex items-center gap-2.5">
-                <span className="h-[6px] w-[6px] bg-blue-500" aria-hidden="true" />
-                <span>Cameroon</span>
-              </span>
-            </motion.div>
+            <Link
+              to="/onboarding"
+              className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/[0.06] px-6 py-3.5 text-[15px] font-bold text-white backdrop-blur-md transition-all hover:border-white/40 hover:bg-white/[0.12] active:scale-[0.98]"
+            >
+              I'm a professional
+            </Link>
+          </motion.div>
 
-            <motion.div
-              initial={reduce ? false : { scaleX: 0 }}
-              animate={{ scaleX: 1 }}
-              transition={{ duration: 1.3, delay: 0.35, ease }}
-              style={{ transformOrigin: "left" }}
-              className="mt-5 h-px w-full bg-white/15"
+          {/* Trust strip */}
+          <motion.div
+            initial={reduce ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.95 }}
+            className="mt-14 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-white/10 pt-6 text-[12.5px] font-medium text-white/65"
+          >
+            <span className="flex items-center gap-2">
+              <ShieldCheck size={14} className="text-blue-300" />
+              <span>Identity-verified pros</span>
+            </span>
+
+            <span
+              className="hidden h-3 w-px bg-white/15 sm:block"
+              aria-hidden="true"
             />
-          </div>
 
-          <div className="mx-auto flex w-full max-w-[1280px] flex-1 flex-col justify-center px-6 py-24 sm:px-10 lg:px-16">
-            <motion.h1
-              initial={reduce ? false : { opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.9, delay: 0.4, ease }}
-              className="max-w-[16ch] text-[clamp(2.5rem,7.5vw,5.75rem)] font-normal leading-[0.98] tracking-[-0.035em] text-white"
-              style={{ fontFamily: '"Fraunces", Georgia, serif' }}
-            >
-              Find someone who actually shows up.
-            </motion.h1>
+            <span className="flex items-center gap-1.5">
+              <Star size={13} className="fill-amber-400 text-amber-400" />
+              <span>4.9 average rating</span>
+            </span>
 
-            <motion.p
-              initial={reduce ? false : { opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.75, ease }}
-              className="mt-10 max-w-[46ch] text-[17px] leading-8 text-white/80"
-            >
-              SkilledLink connects you with electricians, plumbers,
-              carpenters, welders and mechanics across Cameroon. Find
-              someone near you who knows the work, and get it done.
-            </motion.p>
-
-            <motion.div
-              initial={reduce ? false : { opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, delay: 1.05, ease }}
-              className="mt-12 flex flex-wrap items-baseline gap-x-12 gap-y-4 text-[15px]"
-            >
-              <Link
-                to="/home/professionals"
-                className="text-white underline decoration-white/40 decoration-1 underline-offset-[7px] transition-colors duration-200 hover:decoration-white"
-              >
-                Find a professional
-              </Link>
-
-              <Link
-                to="#how"
-                className="text-white/65 underline decoration-white/25 decoration-1 underline-offset-[7px] transition-colors duration-200 hover:text-white hover:decoration-white/60"
-              >
-                How it works
-              </Link>
-            </motion.div>
-          </div>
-
-          <div className="mx-auto w-full max-w-[1280px] px-6 pb-24 sm:px-10 sm:pb-28 lg:px-16">
-            <motion.div
-              initial={reduce ? false : { scaleX: 0 }}
-              animate={{ scaleX: 1 }}
-              transition={{ duration: 1.3, delay: 1.4, ease }}
-              style={{ transformOrigin: "left" }}
-              className="h-px w-full bg-white/20"
+            <span
+              className="hidden h-3 w-px bg-white/15 sm:block"
+              aria-hidden="true"
             />
 
-            <motion.div
-              initial={reduce ? false : { opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.7, delay: 1.75 }}
-              className="flex items-baseline justify-between gap-6 pt-4 text-[11px] font-medium uppercase tracking-[0.22em] text-white/60"
-            >
-              <span>Welder, at work</span>
-              <span className="hidden sm:inline">Cameroon</span>
-            </motion.div>
-          </div>
+            <span className="flex items-center gap-2">
+              <MapPin size={13} className="text-blue-300" />
+              <span>Across 6 major cities</span>
+            </span>
+          </motion.div>
         </div>
       </div>
     </section>
   );
 };
 
-export default Hero;
+export default HeroSplit;

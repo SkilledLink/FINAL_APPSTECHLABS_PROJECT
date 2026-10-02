@@ -8,13 +8,9 @@ import {
   ArrowRight,
   Briefcase,
   Check,
-  Clock,
   Loader2,
   MapPin,
-  Plus,
   Sparkles,
-  Wrench,
-  X,
 } from "lucide-react";
 import { toast } from "react-toastify";
 
@@ -34,12 +30,11 @@ import { OnboardingLayout } from "../components/OnboardingLayout";
 
 /* ───────────────────────── constants ───────────────────────── */
 
-const TOTAL_STEPS = 3;
+const TOTAL_STEPS = 2;
 
 const STEPS = [
   { id: 1, label: "Profession", icon: Briefcase },
-  { id: 2, label: "Skills", icon: Wrench },
-  { id: 3, label: "Location", icon: MapPin },
+  { id: 2, label: "Location", icon: MapPin },
 ] as const;
 
 const FIELD =
@@ -52,92 +47,11 @@ const FIELD =
 const LABEL =
   "mb-1.5 block text-xs font-semibold text-slate-700 dark:text-slate-300";
 
-/* ───────────────────────── Chip input ───────────────────────── */
-
-function ChipInput({
-  label,
-  hint,
-  values,
-  onChange,
-  placeholder,
-}: {
-  label: string;
-  hint?: string;
-  values: string[];
-  onChange: (next: string[]) => void;
-  placeholder: string;
-}) {
-  const [draft, setDraft] = useState("");
-
-  const add = () => {
-    const v = draft.trim();
-    if (!v || values.includes(v)) return;
-    onChange([...values, v]);
-    setDraft("");
-  };
-
-  const remove = (v: string) => onChange(values.filter((x) => x !== v));
-
-  return (
-    <div>
-      <label className={LABEL}>{label}</label>
-      {hint && (
-        <p className="mb-2 text-[11px] text-slate-500 dark:text-slate-400">
-          {hint}
-        </p>
-      )}
-      <div className="flex gap-2">
-        <input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              add();
-            }
-          }}
-          placeholder={placeholder}
-          className={FIELD}
-        />
-        <button
-          type="button"
-          onClick={add}
-          disabled={!draft.trim()}
-          className="shrink-0 rounded-2xl bg-blue-600 px-4 text-white hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-        >
-          <Plus size={16} />
-        </button>
-      </div>
-      {values.length > 0 && (
-        <div className="mt-2.5 flex flex-wrap gap-1.5">
-          {values.map((v) => (
-            <span
-              key={v}
-              className="inline-flex items-center gap-1 rounded-lg border border-blue-500/20 bg-blue-500/10 px-2.5 py-1 text-xs font-medium text-blue-700 dark:text-blue-300"
-            >
-              {v}
-              <button
-                type="button"
-                onClick={() => remove(v)}
-                className="ml-0.5 text-blue-600/70 hover:text-rose-500 transition-colors"
-              >
-                <X size={11} />
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 /* ───────────────────────── page ───────────────────────── */
 
 export default function ProfessionalWizardPage() {
   const navigate = useNavigate();
 
-  // Grab everything we might need from the auth hook. Depending on how
-  // your AuthProvider is wired, either one of these will exist.
   const auth = useAuth() as any;
   const refreshUser: undefined | (() => Promise<any>) = auth?.refreshUser;
   const updateUser:
@@ -181,7 +95,7 @@ export default function ProfessionalWizardPage() {
     setSaving(true);
     setError(null);
 
-    /* ── 1. Create the Professional row (critical) ────────── */
+    /* ── 1. Create the Professional row ──────────────────── */
     try {
       await onboardingService.createProfessional({
         ...form,
@@ -190,7 +104,6 @@ export default function ProfessionalWizardPage() {
         city: form.city || locationData?.city || undefined,
       });
     } catch (err: any) {
-      // 409 = user already has a Professional row — treat as success
       if (err?.status === 409) {
         toast.info("You already have a professional profile.");
       } else {
@@ -202,12 +115,7 @@ export default function ProfessionalWizardPage() {
       }
     }
 
-    /* ── 2. Sync local auth state IMMEDIATELY ──────────────
-     * The backend has just flipped account_type to "professional".
-     * React holds the OLD user object in memory, so if we navigate
-     * to /home right now, HomePage still thinks we're a regular user
-     * and renders stale UI. Patch the local user first.
-     */
+    /* ── 2. Sync local auth state ────────────────────────── */
     try {
       if (typeof updateUser === "function") {
         updateUser({ account_type: "professional" });
@@ -240,7 +148,7 @@ export default function ProfessionalWizardPage() {
       }
     }
 
-    /* ── 4. Refresh from server (best effort) ────────────── */
+    /* ── 4. Refresh from server ─────────────────────────── */
     try {
       if (typeof refreshUser === "function") {
         await refreshUser();
@@ -255,7 +163,6 @@ export default function ProfessionalWizardPage() {
       position: "top-center",
     });
 
-    // Small delay so the toast is visible before the route swap.
     window.setTimeout(() => {
       navigate("/home", { replace: true });
     }, 700);
@@ -264,7 +171,7 @@ export default function ProfessionalWizardPage() {
   };
 
   return (
-    <OnboardingLayout maxWidth="max-w-2xl">
+    <OnboardingLayout maxWidth="max-w-xl">
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -274,14 +181,15 @@ export default function ProfessionalWizardPage() {
         <div className="text-center mb-6 sm:mb-8">
           <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400 mb-4">
             <Sparkles size={12} />
-            Professional setup
+            Quick setup · 30 seconds
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-            Build your professional profile
+            {step === 1 ? "What do you do?" : "Where do you work?"}
           </h1>
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
-            Just a few details and you'll be ready to get discovered. You can
-            edit everything later from your dashboard.
+            {step === 1
+              ? "Two quick questions and you're done. You can add more later."
+              : "So clients near you can find you. Pick your base on the map."}
           </p>
         </div>
 
@@ -348,27 +256,17 @@ export default function ProfessionalWizardPage() {
               transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
               className="space-y-5"
             >
-              {/* STEP 1 */}
+              {/* ─────────────── STEP 1 · PROFESSION ─────────────── */}
               {step === 1 && (
                 <>
-                  <div className="mb-2">
-                    <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                      Tell us what you do
-                    </h2>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                      This is the first thing clients will see when they find
-                      you.
-                    </p>
-                  </div>
-
                   <div>
                     <label className={LABEL}>
-                      Profession <span className="text-rose-500">*</span>
+                      Your profession <span className="text-rose-500">*</span>
                     </label>
                     <input
                       value={form.profession}
                       onChange={(e) => update({ profession: e.target.value })}
-                      placeholder="e.g. Electrician, Plumber, Graphic Designer"
+                      placeholder="e.g. Electrician, Plumber, Welder"
                       className={FIELD}
                       autoFocus
                     />
@@ -378,161 +276,58 @@ export default function ProfessionalWizardPage() {
                   </div>
 
                   <div>
-                    <label className={LABEL}>Experience level</label>
-                    <div className="grid grid-cols-4 gap-2">
-                      {EXPERIENCE_LEVELS.map((lvl) => (
-                        <button
-                          key={lvl.value}
-                          type="button"
-                          onClick={() =>
-                            update({
-                              experience_level: lvl.value as ExperienceLevel,
-                            })
-                          }
-                          className={`rounded-2xl border-2 px-2 py-2.5 text-xs font-semibold transition-all duration-200 ${
-                            form.experience_level === lvl.value
-                              ? "border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-600/25"
-                              : "border-slate-200/70 dark:border-slate-800/70 bg-white/50 dark:bg-slate-950/30 text-slate-600 dark:text-slate-400 hover:border-blue-500/40"
-                          }`}
-                        >
-                          {lvl.label}
-                        </button>
-                      ))}
+                    <label className={LABEL}>How experienced are you?</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {EXPERIENCE_LEVELS.map((lvl) => {
+                        const active = form.experience_level === lvl.value;
+                        return (
+                          <button
+                            key={lvl.value}
+                            type="button"
+                            onClick={() =>
+                              update({
+                                experience_level: lvl.value as ExperienceLevel,
+                              })
+                            }
+                            className={`text-left rounded-2xl border-2 px-3.5 py-3 transition-all duration-200 ${
+                              active
+                                ? "border-blue-600 bg-blue-600/10 text-blue-700 dark:text-blue-300"
+                                : "border-slate-200/70 dark:border-slate-800/70 bg-white/50 dark:bg-slate-950/30 text-slate-600 dark:text-slate-400 hover:border-blue-500/40"
+                            }`}
+                          >
+                            <div className="text-sm font-bold">
+                              {lvl.label}
+                            </div>
+                            <div className="mt-0.5 text-[10px] text-slate-400 dark:text-slate-500">
+                              {lvl.desc}
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
-                  <div>
-                    <label className={LABEL}>Years of experience</label>
+                  <div className="flex items-center gap-3 rounded-2xl border border-slate-200/70 dark:border-slate-800/70 bg-white/50 dark:bg-slate-950/30 px-4 py-3">
                     <input
-                      type="number"
-                      min={0}
-                      max={80}
-                      value={form.years_of_experience ?? ""}
-                      onChange={(e) =>
-                        update({
-                          years_of_experience:
-                            e.target.value === ""
-                              ? undefined
-                              : Number(e.target.value),
-                        })
-                      }
-                      placeholder="e.g. 5"
-                      className={FIELD}
+                      id="available-toggle"
+                      type="checkbox"
+                      checked={form.available ?? true}
+                      onChange={(e) => update({ available: e.target.checked })}
+                      className="h-4 w-4 accent-blue-600"
                     />
-                  </div>
-
-                  <div>
-                    <label className={LABEL}>Short headline</label>
-                    <input
-                      value={form.headline ?? ""}
-                      onChange={(e) => update({ headline: e.target.value })}
-                      placeholder="e.g. Emergency electrician available 24/7 in Douala"
-                      className={FIELD}
-                    />
-                    <p className="mt-1.5 text-[11px] text-slate-500 dark:text-slate-400">
-                      A one-line pitch — keep it under 80 characters.
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className={LABEL}>About you</label>
-                    <textarea
-                      rows={4}
-                      value={form.bio ?? ""}
-                      onChange={(e) => update({ bio: e.target.value })}
-                      placeholder="Tell clients a bit about your background, what you love about your craft, and what makes you different…"
-                      className={`${FIELD} resize-none`}
-                    />
+                    <label
+                      htmlFor="available-toggle"
+                      className="text-sm font-semibold text-slate-800 dark:text-slate-100 cursor-pointer"
+                    >
+                      I'm available for work
+                    </label>
                   </div>
                 </>
               )}
 
-              {/* STEP 2 */}
+              {/* ─────────────── STEP 2 · LOCATION ─────────────── */}
               {step === 2 && (
                 <>
-                  <div className="mb-2">
-                    <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                      Showcase your expertise
-                    </h2>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                      Skills and rate help clients pick you over others.
-                    </p>
-                  </div>
-
-                  <ChipInput
-                    label="Skills"
-                    hint="Add skills one at a time, then press Enter."
-                    values={form.skills ?? []}
-                    onChange={(v) => update({ skills: v })}
-                    placeholder="e.g. Wiring, Troubleshooting, Solar Install"
-                  />
-
-                  <ChipInput
-                    label="Services you offer"
-                    hint="Concrete services clients can hire you for."
-                    values={form.services ?? []}
-                    onChange={(v) => update({ services: v })}
-                    placeholder="e.g. Home electrical audit, Panel upgrade"
-                  />
-
-                  <ChipInput
-                    label="Languages you speak"
-                    values={form.languages ?? []}
-                    onChange={(v) => update({ languages: v })}
-                    placeholder="e.g. English, French"
-                  />
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className={LABEL}>Hourly rate</label>
-                      <input
-                        type="number"
-                        min={0}
-                        step={500}
-                        value={form.hourly_rate ?? ""}
-                        onChange={(e) =>
-                          update({
-                            hourly_rate:
-                              e.target.value === ""
-                                ? undefined
-                                : Number(e.target.value),
-                          })
-                        }
-                        placeholder="e.g. 5000"
-                        className={FIELD}
-                      />
-                    </div>
-                    <div>
-                      <label className={LABEL}>Currency</label>
-                      <select
-                        value={form.currency}
-                        onChange={(e) => update({ currency: e.target.value })}
-                        className={FIELD}
-                      >
-                        <option value="XAF">XAF — Central African Franc</option>
-                        <option value="USD">USD — US Dollar</option>
-                        <option value="EUR">EUR — Euro</option>
-                        <option value="GBP">GBP — British Pound</option>
-                        <option value="NGN">NGN — Nigerian Naira</option>
-                      </select>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* STEP 3 */}
-              {step === 3 && (
-                <>
-                  <div className="mb-2">
-                    <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                      Where can clients find you?
-                    </h2>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                      Optional, but recommended — it makes you discoverable in
-                      nearby searches and on the map.
-                    </p>
-                  </div>
-
                   <LocationPicker
                     live
                     showRadius
@@ -549,7 +344,7 @@ export default function ProfessionalWizardPage() {
                     }}
                   />
 
-                  {locationData && (
+                  {locationData ? (
                     <div className="flex items-start gap-2.5 rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.06] px-4 py-3">
                       <MapPin
                         size={14}
@@ -564,69 +359,12 @@ export default function ProfessionalWizardPage() {
                         </p>
                       </div>
                     </div>
+                  ) : (
+                    <p className="text-center text-[11px] italic text-slate-500 dark:text-slate-400">
+                      Tap the map to set your base. You can also skip this
+                      step — clients will just have a harder time finding you.
+                    </p>
                   )}
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                    <div>
-                      <label className={LABEL}>
-                        <span className="inline-flex items-center gap-1.5">
-                          <Clock size={12} className="text-blue-500" />
-                          Average response time (hours)
-                        </span>
-                      </label>
-                      <input
-                        type="number"
-                        min={0}
-                        max={168}
-                        value={form.response_time_hours ?? ""}
-                        onChange={(e) =>
-                          update({
-                            response_time_hours:
-                              e.target.value === ""
-                                ? undefined
-                                : Number(e.target.value),
-                          })
-                        }
-                        placeholder="e.g. 2"
-                        className={FIELD}
-                      />
-                    </div>
-                    <div>
-                      <label className={LABEL}>Are you available now?</label>
-                      <button
-                        type="button"
-                        onClick={() => update({ available: !form.available })}
-                        className={`w-full rounded-2xl border-2 px-4 py-3 text-sm font-semibold transition-all duration-200 ${
-                          form.available
-                            ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                            : "border-slate-200/70 dark:border-slate-800/70 bg-white/50 dark:bg-slate-950/30 text-slate-500 dark:text-slate-400"
-                        }`}
-                      >
-                        {form.available
-                          ? "✓ Accepting work now"
-                          : "Not available right now"}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className={LABEL}>Availability notes</label>
-                    <textarea
-                      rows={2}
-                      value={form.availability_notes ?? ""}
-                      onChange={(e) =>
-                        update({ availability_notes: e.target.value })
-                      }
-                      placeholder="e.g. Weekdays 8am–6pm, weekends by appointment"
-                      className={`${FIELD} resize-none`}
-                    />
-                  </div>
-
-                  <div className="rounded-2xl border border-blue-500/20 bg-blue-500/5 px-4 py-3 text-[11px] text-blue-800 dark:text-blue-300 leading-relaxed">
-                    <strong className="font-semibold">Almost there!</strong>{" "}
-                    Once you submit, your professional profile goes live and
-                    clients can start finding and messaging you.
-                  </div>
                 </>
               )}
             </motion.div>
@@ -648,7 +386,8 @@ export default function ProfessionalWizardPage() {
               <button
                 type="button"
                 onClick={next}
-                className="inline-flex items-center gap-1.5 rounded-2xl bg-blue-600 px-5 py-2.5 text-xs font-semibold text-white shadow-md shadow-blue-500/25 hover:bg-blue-500 active:scale-[0.98] transition-all cursor-pointer"
+                disabled={!form.profession.trim()}
+                className="inline-flex items-center gap-1.5 rounded-2xl bg-blue-600 px-5 py-2.5 text-xs font-semibold text-white shadow-md shadow-blue-500/25 hover:bg-blue-500 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
               >
                 Continue
                 <ArrowRight size={14} />
@@ -665,11 +404,16 @@ export default function ProfessionalWizardPage() {
                 ) : (
                   <Check size={14} />
                 )}
-                {saving ? "Creating your profile…" : "Create my profile"}
+                {saving ? "Creating…" : "Finish setup"}
               </button>
             )}
           </div>
         </div>
+
+        <p className="mt-6 text-center text-[11px] text-slate-400 dark:text-slate-500">
+          You can add your bio, skills, rates and portfolio later from your
+          profile page.
+        </p>
       </motion.div>
     </OnboardingLayout>
   );
