@@ -16,6 +16,8 @@ from app.api.deps_payments import (
 from app.enums.ai_proposal import ProposalStatus
 from app.models.professional_ai_proposal import ProfessionalAIProposal
 from app.schemas.ai_features import (
+    AIUsageItem,
+    AIUsageResponse,
     AnalyzeImageRequest,
     DeepAnalysisResponse,
     ImageAnalysisResponse,
@@ -219,6 +221,44 @@ def portfolio_deep_analysis(
     )
 
     return DeepAnalysisResponse(**result)
+
+
+# ─── AI USAGE ────────────────────────────────────────────────────
+
+@router.get(
+    "/usage",
+    response_model=AIUsageResponse,
+    status_code=http_status.HTTP_200_OK,
+)
+def my_ai_usage(
+    professional: CurrentProfessional,
+    usage_service: AIUsageServiceDep,
+) -> AIUsageResponse:
+    """Current-period usage for every AI feature on the pro's tier.
+
+    Returns one row per ProfessionalAIUsage record. Empty list when
+    the pro hasn't run any AI feature this period yet.
+    """
+    rows, total = usage_service.list_for_professional(
+        professional.id,
+        period_start=None,
+        skip=0,
+        limit=50,
+    )
+
+    items = [
+        AIUsageItem(
+            feature_key=row.feature_key,
+            feature_name=row.feature_key,
+            usage_count=row.usage_count,
+            usage_limit=row.usage_limit,
+            remaining=max(0, row.usage_limit - row.usage_count),
+            period_start=row.period_start,
+            period_end=row.period_end,
+        )
+        for row in rows
+    ]
+    return AIUsageResponse(items=items, total=total)
 
 
 # ─── PROPOSAL LIFECYCLE ──────────────────────────────────────────

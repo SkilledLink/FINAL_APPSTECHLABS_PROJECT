@@ -21,6 +21,7 @@ import { usePortfolio, usePublicPortfolio } from '../hooks/usePortfolio';
 import {
   useSubscription,
   useProposals,
+  useAIUsage,
   SubscriptionCard,
   ProposalReview,
   DeepAnalysisPanel,
@@ -155,6 +156,11 @@ function OwnerDashboard() {
     loading: subLoading,
     refresh: refreshSub,
   } = useSubscription(isProfessional);
+
+  const { deepAnalysisUsage, refresh: refreshAIUsage } = useAIUsage(
+    isProfessional,
+    { entitlements },
+  );
 
   const {
     proposals,
@@ -329,7 +335,12 @@ function OwnerDashboard() {
           <DeepAnalysisPanel
             analysis={analysis}
             analyzing={analyzing}
-            onRun={runDeepAnalysis}
+            usage={deepAnalysisUsage}
+            onRun={async () => {
+              const result = await runDeepAnalysis();
+              await refreshAIUsage();
+              return result;
+            }}
           />
 
           <ProposalReview
@@ -687,7 +698,7 @@ function PublicView({ userId }: { userId: string }) {
                       availability={availability}
                       saving={false}
                       isOwner={false}
-                      onSave={async () => null}
+                      onSave={async () => {}}
                     />
                   )}
 

@@ -19,6 +19,7 @@ export { default as LoadingState } from './components/LoadingState';
 export { default as ErrorState } from './components/ErrorState';
 export { default as ProfessionalRequired } from './components/ProfessionalRequired';
 
+
 /* UI-only types — live with their components */
 export type { PortfolioTab } from './components/PortfolioTabs';
 
