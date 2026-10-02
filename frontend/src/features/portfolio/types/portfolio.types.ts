@@ -303,3 +303,21 @@ export interface PublicPortfolio {
   average_rating?: number | null;
   total_reviews: number;
 }
+
+/* ── AI usage ─────────────────────────────────────────────── */
+
+export interface AIUsageItem {
+  feature_key: string;
+  feature_name: string;
+  usage_count: number;
+  usage_limit: number;
+  remaining: number;
+  period_start: string;
+  period_end: string;
+}
+
+export interface AIUsageResponse {
+  items: AIUsageItem[];
+  total: number;
+}
+
