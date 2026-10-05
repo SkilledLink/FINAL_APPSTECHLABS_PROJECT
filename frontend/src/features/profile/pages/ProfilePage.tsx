@@ -41,7 +41,12 @@ export const ProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const { currentUser, updateUser: updateAuthUser } = useAuth();
+  // 1. Destructure authLoading if available in your AuthProvider
+  const { currentUser, updateUser: updateAuthUser /*, authLoading */ } = useAuth();
+
+  // 2. Determine the target user ID: URL param first, then fallback to logged-in user
+  const targetUserId = id || currentUser?.id;
+
   const { updateUser: updateUserAPI, fetchUser } = useUser();
   const { follow, unfollow, getFollowers } = useFollow();
   const { updateProfessional } = useProfessional();
@@ -51,6 +56,7 @@ export const ProfilePage: React.FC = () => {
     uploading,
   } = useProfileImage();
 
+  // 3. Pass targetUserId to useProfile
   const {
     profile,
     status,
@@ -60,7 +66,7 @@ export const ProfilePage: React.FC = () => {
     refetch,
     mutate,
     setViewerRelation,
-  } = useProfile(id);
+  } = useProfile(targetUserId);
 
   const [activeTab, setActiveTab] = useState<ProfileTab>('overview');
   const [isEditing, setIsEditing] = useState(false);
@@ -334,6 +340,12 @@ export const ProfilePage: React.FC = () => {
   }, [profile]);
 
   /* ── Loading / error state ───────────────────────────── */
+  // 4. Optional: If your AuthProvider has an authLoading state, use it here
+  // to prevent showing the "Sign in" screen while auth is initializing.
+  // if (authLoading) {
+  //   return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  // }
+
   if (status !== 'ready' || !profile) {
     return (
       <ProfileStateView
