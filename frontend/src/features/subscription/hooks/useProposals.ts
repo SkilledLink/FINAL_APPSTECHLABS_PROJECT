@@ -11,7 +11,6 @@ export function useProposals(enabled = true) {
   const [analysis, setAnalysis] = useState<DeepAnalysisResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Guards the initial fetch so it only runs once per mount.
   const fetchedRef = useRef(false);
 
   const refresh = useCallback(async () => {
@@ -43,6 +42,10 @@ export function useProposals(enabled = true) {
       await refresh();
     } catch (err: any) {
       setError(err?.message ?? 'Failed to generate proposals');
+      // ⬇️ IMPORTANT: re-throw so ProposalReview can detect 429
+      //    and start its own cooldown. Without this, the error
+      //    never escapes this hook.
+      throw err;
     } finally {
       setGenerating(false);
     }
@@ -51,7 +54,7 @@ export function useProposals(enabled = true) {
   const accept = useCallback(async (id: string, finalValue?: string) => {
     try {
       await subscriptionService.acceptProposal(id, finalValue);
-      setProposals(prev => prev.filter(p => p.id !== id));
+      setProposals((prev) => prev.filter((p) => p.id !== id));
     } catch (err: any) {
       setError(err?.message ?? 'Failed to accept');
       throw err;
@@ -61,7 +64,7 @@ export function useProposals(enabled = true) {
   const reject = useCallback(async (id: string, reason?: string) => {
     try {
       await subscriptionService.rejectProposal(id, reason);
-      setProposals(prev => prev.filter(p => p.id !== id));
+      setProposals((prev) => prev.filter((p) => p.id !== id));
     } catch (err: any) {
       setError(err?.message ?? 'Failed to reject');
       throw err;
@@ -95,7 +98,7 @@ export function useProposals(enabled = true) {
       return res;
     } catch (err: any) {
       setError(err?.message ?? 'Deep analysis failed');
-      throw err;
+      throw err; // already re-throws — keep it that way
     } finally {
       setAnalyzing(false);
     }

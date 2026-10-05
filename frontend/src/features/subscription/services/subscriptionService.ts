@@ -15,6 +15,36 @@ import type {
   TierListResponse,
 } from '../types/subscription.types';
 
+/* ── Typed API error ────────────────────────────────────
+ * Preserves the HTTP status (so callers can check `status === 429`)
+ * and the server-advertised retry window from the `Retry-After`
+ * header (seconds) so the UI can show an accurate countdown.
+ */
+export class SubscriptionApiError extends Error {
+  status?: number;
+  detail?: unknown;
+  retryAfter?: number; // seconds
+
+  constructor(
+    message: string,
+    options: {
+      status?: number;
+      detail?: unknown;
+      retryAfter?: number;
+    } = {}
+  ) {
+    super(message);
+    this.name = 'SubscriptionApiError';
+    this.status = options.status;
+    this.detail = options.detail;
+    this.retryAfter = options.retryAfter;
+  }
+
+  get isRateLimited(): boolean {
+    return this.status === 429;
+  }
+}
+
 function toMessage(err: any, fallback: string): string {
   const detail = err?.response?.data?.detail ?? err?.response?.data?.message;
   if (!detail) return err?.message || fallback;
@@ -25,80 +55,110 @@ function toMessage(err: any, fallback: string): string {
   return JSON.stringify(detail);
 }
 
+/**
+ * Parse `Retry-After`. The spec allows either a number of seconds
+ * or an HTTP-date. We support both, preferring seconds.
+ */
+function parseRetryAfter(raw: unknown): number | undefined {
+  if (raw == null) return undefined;
+  const str = String(raw).trim();
+
+  // Numeric seconds
+  const asNumber = Number(str);
+  if (Number.isFinite(asNumber) && asNumber >= 0) {
+    return Math.ceil(asNumber);
+  }
+
+  // HTTP-date
+  const asDate = Date.parse(str);
+  if (!Number.isNaN(asDate)) {
+    const seconds = Math.ceil((asDate - Date.now()) / 1000);
+    return seconds > 0 ? seconds : 0;
+  }
+
+  return undefined;
+}
+
+/** Centralized request wrapper: normalizes all errors into SubscriptionApiError. */
+async function request<T>(
+  fn: () => Promise<{ data: T }>,
+  fallbackMessage: string
+): Promise<T> {
+  try {
+    const { data } = await fn();
+    return data;
+  } catch (err: any) {
+    const status: number | undefined = err?.response?.status;
+    const headers = err?.response?.headers ?? {};
+    const retryAfter =
+      parseRetryAfter(headers['retry-after']) ??
+      parseRetryAfter(headers['Retry-After']) ??
+      parseRetryAfter(err?.response?.data?.retry_after);
+
+    throw new SubscriptionApiError(toMessage(err, fallbackMessage), {
+      status,
+      detail: err?.response?.data?.detail,
+      retryAfter,
+    });
+  }
+}
+
 export const subscriptionService = {
   /* ── Subscription + entitlements ────────────────────── */
 
-  async getActive(): Promise<ActiveSubscriptionResponse> {
-    try {
-      const { data } = await apiClient.get<ActiveSubscriptionResponse>(
+  getActive(): Promise<ActiveSubscriptionResponse> {
+    return request(
+      () => apiClient.get<ActiveSubscriptionResponse>(
         '/api/v1/professional-subscriptions/me'
-      );
-      return data;
-    } catch (err) {
-      throw new Error(toMessage(err, 'Failed to load subscription'));
-    }
+      ),
+      'Failed to load subscription'
+    );
   },
 
-  async getEntitlements(): Promise<Entitlements> {
-    try {
-      const { data } = await apiClient.get<Entitlements>(
+  getEntitlements(): Promise<Entitlements> {
+    return request(
+      () => apiClient.get<Entitlements>(
         '/api/v1/professional-subscriptions/me/entitlements'
-      );
-      return data;
-    } catch (err) {
-      throw new Error(toMessage(err, 'Failed to load entitlements'));
-    }
+      ),
+      'Failed to load entitlements'
+    );
   },
 
-  async getHistory() {
-    try {
-      const { data } = await apiClient.get(
-        '/api/v1/professional-subscriptions/me/history'
-      );
-      return data;
-    } catch (err) {
-      throw new Error(toMessage(err, 'Failed to load subscription history'));
-    }
+  getHistory() {
+    return request(
+      () => apiClient.get('/api/v1/professional-subscriptions/me/history'),
+      'Failed to load subscription history'
+    );
   },
 
   /* ── Tiers ─────────────────────────────────────────── */
 
-  async listTiers(): Promise<TierListResponse> {
-    try {
-      const { data } = await apiClient.get<TierListResponse>(
-        '/api/v1/professional-tiers'
-      );
-      return data;
-    } catch (err) {
-      throw new Error(toMessage(err, 'Failed to load tiers'));
-    }
+  listTiers(): Promise<TierListResponse> {
+    return request(
+      () => apiClient.get<TierListResponse>('/api/v1/professional-tiers'),
+      'Failed to load tiers'
+    );
   },
 
-  async getTier(tierId: string): Promise<TierDetail> {
-    try {
-      const { data } = await apiClient.get<TierDetail>(
-        `/api/v1/professional-tiers/${tierId}`
-      );
-      return data;
-    } catch (err) {
-      throw new Error(toMessage(err, 'Failed to load tier'));
-    }
+  getTier(tierId: string): Promise<TierDetail> {
+    return request(
+      () => apiClient.get<TierDetail>(`/api/v1/professional-tiers/${tierId}`),
+      'Failed to load tier'
+    );
   },
 
   /* ── Payments ──────────────────────────────────────── */
 
-  async initiatePayment(
+  initiatePayment(
     payload: PaymentInitiateRequest
   ): Promise<PaymentInitiateResponse> {
-    try {
-      const { data } = await apiClient.post<PaymentInitiateResponse>(
+    return request(
+      () => apiClient.post<PaymentInitiateResponse>(
         '/api/v1/professional-payments/initiate',
         payload
-      );
-      return data;
-    } catch (err) {
-      throw new Error(toMessage(err, 'Failed to initiate payment'));
-    }
+      ),
+      'Failed to initiate payment'
+    );
   },
 
   /**
@@ -106,125 +166,101 @@ export const subscriptionService = {
    *
    * `reference` is the value returned as `payment.reference` from
    * initiatePayment — for MTN this is the UUID sent as X-Reference-Id.
-   *
-   * Backend maps it to the provider's UUID via
-   * `payment.provider_transaction_id` before querying MTN.
    */
-  async getPaymentStatus(
-    reference: string
-  ): Promise<PaymentStatusResponse> {
-    try {
-      const { data } = await apiClient.get<PaymentStatusResponse>(
+  getPaymentStatus(reference: string): Promise<PaymentStatusResponse> {
+    return request(
+      () => apiClient.get<PaymentStatusResponse>(
         `/api/v1/professional-payments/status/${reference}`
-      );
-      return data;
-    } catch (err) {
-      throw new Error(toMessage(err, 'Failed to check payment status'));
-    }
+      ),
+      'Failed to check payment status'
+    );
   },
 
   /* ── AI Proposals ──────────────────────────────────── */
 
-  async generateProposals(): Promise<{ proposals: unknown[] }> {
-    try {
-      const { data } = await apiClient.post(
-        '/api/v1/ai/profile-proposals/generate'
-      );
-      return data;
-    } catch (err) {
-      throw new Error(toMessage(err, 'Failed to generate proposals'));
-    }
+  generateProposals(): Promise<{ proposals: unknown[] }> {
+    return request(
+      () => apiClient.post('/api/v1/ai/profile-proposals/generate'),
+      'Failed to generate proposals'
+    );
   },
 
-  async listProposals(
+  listProposals(
     status: 'pending' | 'accepted' | 'rejected' | 'expired' | 'superseded' = 'pending'
   ): Promise<ListProposalsResponse> {
-    try {
-      const { data } = await apiClient.get<ListProposalsResponse>(
+    return request(
+      () => apiClient.get<ListProposalsResponse>(
         '/api/v1/ai/profile-proposals',
         { params: { status } }
-      );
-      return data;
-    } catch (err) {
-      throw new Error(toMessage(err, 'Failed to load proposals'));
-    }
+      ),
+      'Failed to load proposals'
+    );
   },
 
-  async acceptProposal(id: string, finalValue?: string) {
-    try {
-      const { data } = await apiClient.post(
+  acceptProposal(id: string, finalValue?: string) {
+    return request(
+      () => apiClient.post(
         `/api/v1/ai/profile-proposals/${id}/accept`,
         finalValue ? { final_value: finalValue } : {}
-      );
-      return data;
-    } catch (err) {
-      throw new Error(toMessage(err, 'Failed to accept proposal'));
-    }
+      ),
+      'Failed to accept proposal'
+    );
   },
 
-  async rejectProposal(id: string, reason?: string) {
-    try {
-      const { data } = await apiClient.post(
+  rejectProposal(id: string, reason?: string) {
+    return request(
+      () => apiClient.post(
         `/api/v1/ai/profile-proposals/${id}/reject`,
         reason ? { reason } : {}
-      );
-      return data;
-    } catch (err) {
-      throw new Error(toMessage(err, 'Failed to reject proposal'));
-    }
+      ),
+      'Failed to reject proposal'
+    );
   },
 
-  async acceptBatch(
+  acceptBatch(
     ids: string[],
     finalValues?: Record<string, string>
   ): Promise<BatchAcceptResponse> {
-    try {
-      const { data } = await apiClient.post<BatchAcceptResponse>(
+    return request(
+      () => apiClient.post<BatchAcceptResponse>(
         '/api/v1/ai/profile-proposals/accept-batch',
         { ids, final_values: finalValues }
-      );
-      return data;
-    } catch (err) {
-      throw new Error(toMessage(err, 'Failed to accept proposals'));
-    }
+      ),
+      'Failed to accept proposals'
+    );
   },
 
-  async rejectBatch(ids: string[], reason?: string): Promise<BatchRejectResponse> {
-    try {
-      const { data } = await apiClient.post<BatchRejectResponse>(
+  rejectBatch(
+    ids: string[],
+    reason?: string
+  ): Promise<BatchRejectResponse> {
+    return request(
+      () => apiClient.post<BatchRejectResponse>(
         '/api/v1/ai/profile-proposals/reject-batch',
         { ids, reason }
-      );
-      return data;
-    } catch (err) {
-      throw new Error(toMessage(err, 'Failed to reject proposals'));
-    }
+      ),
+      'Failed to reject proposals'
+    );
   },
 
   /* ── AI usage ──────────────────────────────────────── */
 
-  async getAIUsage(): Promise<AIUsageResponse> {
-    try {
-      const { data } = await apiClient.get<AIUsageResponse>(
-        '/api/v1/ai/usage'
-      );
-      return data;
-    } catch (err) {
-      throw new Error(toMessage(err, 'Failed to load AI usage'));
-    }
+  getAIUsage(): Promise<AIUsageResponse> {
+    return request(
+      () => apiClient.get<AIUsageResponse>('/api/v1/ai/usage'),
+      'Failed to load AI usage'
+    );
   },
 
   /* ── Deep analysis ─────────────────────────────────── */
 
-  async runDeepAnalysis(): Promise<DeepAnalysisResponse> {
-    try {
-      const { data } = await apiClient.post<DeepAnalysisResponse>(
+  runDeepAnalysis(): Promise<DeepAnalysisResponse> {
+    return request(
+      () => apiClient.post<DeepAnalysisResponse>(
         '/api/v1/ai/portfolio-deep-analysis',
         {}
-      );
-      return data;
-    } catch (err) {
-      throw new Error(toMessage(err, 'Deep analysis failed'));
-    }
+      ),
+      'Deep analysis failed'
+    );
   },
 };

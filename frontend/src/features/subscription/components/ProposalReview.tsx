@@ -1,7 +1,15 @@
 // src/features/subscription/components/ProposalReview.tsx
 import { useState } from 'react';
-import { Sparkles, Loader2, CheckSquare, XSquare, RefreshCw } from 'lucide-react';
+import {
+  Sparkles,
+  Loader2,
+  CheckSquare,
+  XSquare,
+  RefreshCw,
+  AlertCircle,
+} from 'lucide-react';
 import type { AIProposal } from '../types/subscription.types';
+import { useRateLimitCooldown } from '../hooks/useRateLimitCooldown';
 import ProposalCard from './ProposalCard';
 
 interface ProposalReviewProps {
@@ -27,6 +35,32 @@ export default function ProposalReview({
 }: ProposalReviewProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState<'accept' | 'reject' | null>(null);
+  const [rateLimitError, setRateLimitError] = useState<string | null>(null);
+
+  // ⬇️ shared cooldown hook — one per unique key
+  const { cooldown, isLocked, start, handleError } = useRateLimitCooldown(
+    'proposals-generate',
+    60,
+  );
+
+  const handleGenerateClick = async () => {
+    if (generating || isLocked) return;
+
+    setRateLimitError(null);
+
+    try {
+      await onGenerate();
+      // Success → cool down so users don't spam
+      start();
+    } catch (err) {
+      const message = handleError(err);
+      setRateLimitError(
+        message ?? 'Failed to generate suggestions. Please try again.',
+      );
+    }
+  };
+
+  const generateDisabled = generating || isLocked;
 
   const allIds = proposals.map((p) => p.id);
   const allSelected = allIds.length > 0 && selected.size === allIds.length;
@@ -89,21 +123,34 @@ export default function ProposalReview({
 
         <button
           type="button"
-          onClick={onGenerate}
-          disabled={generating}
-          className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-[11px] font-semibold text-white shadow-sm shadow-blue-500/25 transition-colors hover:bg-blue-500 active:scale-[0.98] disabled:opacity-50"
+          onClick={handleGenerateClick}
+          disabled={generateDisabled}
+          title={isLocked ? `Available in ${cooldown}s` : 'Generate AI suggestions'}
+          className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-[11px] font-semibold text-white shadow-sm shadow-blue-500/25 transition-colors hover:bg-blue-500 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {generating ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
           ) : (
             <RefreshCw className="h-3.5 w-3.5" />
           )}
-          {generating ? 'Generating…' : 'Generate'}
+          {generating ? 'Generating…' : isLocked ? `Wait ${cooldown}s` : 'Generate'}
         </button>
       </div>
 
       {/* Body */}
       <div className="p-4 sm:p-5">
+        {rateLimitError && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
+            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span>
+              {rateLimitError}
+              {cooldown > 0 && (
+                <span className="ml-1 font-semibold">Retry in {cooldown}s.</span>
+              )}
+            </span>
+          </div>
+        )}
+
         {loading ? (
           <div className="flex items-center justify-center gap-2 py-10 text-sm text-slate-500 dark:text-slate-400">
             <Loader2 className="h-4 w-4 animate-spin" />

@@ -10,6 +10,7 @@ import {
   Play,
 } from 'lucide-react';
 import type { DeepAnalysisResponse } from '../types/subscription.types';
+import { useRateLimitCooldown } from '../hooks/useRateLimitCooldown';
 
 interface DeepAnalysisPanelProps {
   analysis: DeepAnalysisResponse | null;
@@ -60,14 +61,28 @@ export default function DeepAnalysisPanel({
 }: DeepAnalysisPanelProps) {
   const [error, setError] = useState<string | null>(null);
 
+  // ⬇️ separate cooldown key so proposals + deep analysis
+  //    don't share the same countdown
+  const { cooldown, isLocked, start, handleError } = useRateLimitCooldown(
+    'deep-analysis-run',
+    120,
+  );
+
   const handleRun = async () => {
+    if (analyzing || isLocked) return;
     setError(null);
+
     try {
       await onRun();
+      start();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Analysis failed');
+      setError(
+        handleError(err) ?? 'Analysis failed. Please try again.',
+      );
     }
   };
+
+  const runDisabled = analyzing || isLocked;
 
   return (
     <div className="rounded-xl border border-slate-200/70 bg-white/85 backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/60">
@@ -90,15 +105,22 @@ export default function DeepAnalysisPanel({
         <button
           type="button"
           onClick={handleRun}
-          disabled={analyzing}
-          className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-[11px] font-semibold text-white shadow-sm shadow-blue-500/25 transition-colors hover:bg-blue-500 active:scale-[0.98] disabled:opacity-50"
+          disabled={runDisabled}
+          title={isLocked ? `Available in ${cooldown}s` : 'Run deep analysis'}
+          className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-[11px] font-semibold text-white shadow-sm shadow-blue-500/25 transition-colors hover:bg-blue-500 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {analyzing ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
           ) : (
             <Play className="h-3.5 w-3.5" />
           )}
-          {analyzing ? 'Analyzing…' : analysis ? 'Re-analyze' : 'Run analysis'}
+          {analyzing
+            ? 'Analyzing…'
+            : isLocked
+              ? `Wait ${cooldown}s`
+              : analysis
+                ? 'Re-analyze'
+                : 'Run analysis'}
         </button>
       </div>
 
@@ -107,6 +129,11 @@ export default function DeepAnalysisPanel({
         {error && (
           <div className="mb-4 rounded-lg border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-xs font-medium text-rose-600 dark:text-rose-400">
             {error}
+            {cooldown > 0 && (
+              <span className="ml-1 font-semibold">
+                Retry in {cooldown}s.
+              </span>
+            )}
           </div>
         )}
 
@@ -117,8 +144,8 @@ export default function DeepAnalysisPanel({
               <span className="font-semibold text-slate-700 dark:text-slate-200">
                 Run analysis
               </span>{' '}
-              to get a full portfolio review — score, gaps, and
-              prioritized next actions.
+              to get a full portfolio review — score, gaps, and prioritized
+              next actions.
             </p>
           </div>
         )}
@@ -163,34 +190,32 @@ export default function DeepAnalysisPanel({
                 Section breakdown
               </div>
               <div className="space-y-2.5">
-                {Object.entries(analysis.section_scores).map(
-                  ([key, section]) => (
-                    <div key={key}>
-                      <div className="mb-1 flex items-center justify-between text-xs">
-                        <span className="font-medium text-slate-700 dark:text-slate-300">
-                          {SECTION_LABELS[key] ?? key}
+                {Object.entries(analysis.section_scores).map(([key, section]) => (
+                  <div key={key}>
+                    <div className="mb-1 flex items-center justify-between text-xs">
+                      <span className="font-medium text-slate-700 dark:text-slate-300">
+                        {SECTION_LABELS[key] ?? key}
+                      </span>
+                      <span className="font-semibold tabular-nums text-slate-600 dark:text-slate-400">
+                        {section.score}
+                        <span className="ml-1 text-[10px] font-normal text-slate-400">
+                          ({Math.round(section.weight * 100)}%)
                         </span>
-                        <span className="font-semibold tabular-nums text-slate-600 dark:text-slate-400">
-                          {section.score}
-                          <span className="ml-1 text-[10px] font-normal text-slate-400">
-                            ({Math.round(section.weight * 100)}%)
-                          </span>
-                        </span>
-                      </div>
-                      <div className="h-1.5 overflow-hidden rounded-full bg-slate-200/70 dark:bg-slate-800/60">
-                        <div
-                          className={`h-full rounded-full ${scoreBarColor(section.score)}`}
-                          style={{ width: `${section.score}%` }}
-                        />
-                      </div>
-                      {section.notes && (
-                        <p className="mt-1 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
-                          {section.notes}
-                        </p>
-                      )}
+                      </span>
                     </div>
-                  )
-                )}
+                    <div className="h-1.5 overflow-hidden rounded-full bg-slate-200/70 dark:bg-slate-800/60">
+                      <div
+                        className={`h-full rounded-full ${scoreBarColor(section.score)}`}
+                        style={{ width: `${section.score}%` }}
+                      />
+                    </div>
+                    {section.notes && (
+                      <p className="mt-1 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+                        {section.notes}
+                      </p>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
 

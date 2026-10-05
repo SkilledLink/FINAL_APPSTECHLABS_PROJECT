@@ -16,8 +16,13 @@ import {
 } from 'lucide-react';
 import type { Service } from '../../../types/portfolio';
 
+type PortfolioServiceItem = Service & {
+  banner_image_url?: string | null;
+  gallery?: string[];
+};
+
 interface PortfolioServiceCardProps {
-  service: Service;
+  service: PortfolioServiceItem;
   onEdit: () => void;
   onDelete: () => Promise<void> | void;
   isOwner?: boolean;
@@ -440,7 +445,7 @@ export default function PortfolioServiceCard({
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
-  const bannerUrl = service.banner_image_url ?? null;
+  const bannerUrl = (service as Service & { banner_image_url?: string | null }).banner_image_url ?? null;
   const gallery = service.gallery ?? [];
 
   const handleDelete = async () => {
