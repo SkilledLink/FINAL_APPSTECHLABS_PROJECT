@@ -215,3 +215,158 @@ body::-webkit-scrollbar {
 .animate-water-a { animation: water-drift-a 22s ease-in-out infinite; will-change: transform; }
 .animate-water-b { animation: water-drift-b 28s ease-in-out infinite; will-change: transform; }
 .animate-water-c { animation: water-drift-c 34s ease-in-out infinite; will-change: transform; }
+
+
+/* ══════════════════════════════════════════════════════════════
+   REVEAL SYSTEM — editorial motion (ported from Linville)
+   IntersectionObserver toggles `.is-visible`. Content cannot get
+   stuck hidden because the class is applied by native API.
+══════════════════════════════════════════════════════════════ */
+
+.reveal {
+  opacity: 0;
+  transform: translateY(var(--reveal-y, 28px));
+  transition:
+    opacity var(--reveal-duration, 850ms) cubic-bezier(0.22, 1, 0.36, 1),
+    transform var(--reveal-duration, 850ms) cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+.reveal.is-visible,
+.reveal-group.is-visible .reveal {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Image reveal — scale */
+.reveal-image {
+  transition:
+    clip-path 1200ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 850ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+.reveal-image-scale { opacity: 0; }
+.reveal-image-scale.is-visible { opacity: 1; }
+.reveal-image-scale .reveal-image-inner {
+  transform: scale(1.08);
+  transition: transform 1200ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+  will-change: transform;
+}
+.reveal-image-scale.is-visible .reveal-image-inner { transform: scale(1); }
+
+/* Image reveal — clip from bottom */
+.reveal-image-clip { clip-path: inset(100% 0 0 0); }
+.reveal-image-clip.is-visible { clip-path: inset(0 0 0 0); }
+
+/* Image reveal — horizontal */
+.reveal-image-horizontal { clip-path: inset(0 100% 0 0); }
+.reveal-image-horizontal.is-visible { clip-path: inset(0 0 0 0); }
+
+/* Image reveal — fade */
+.reveal-image-fade { opacity: 0; }
+.reveal-image-fade.is-visible { opacity: 1; }
+
+/* Line reveal — big headings, lines rise in sequence */
+.reveal-line-wrapper {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.08em;
+  margin-bottom: -0.08em;
+}
+.reveal-line {
+  display: block;
+  transform: translateY(110%);
+  transition: transform 900ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+  will-change: transform;
+}
+.reveal-lines.is-visible .reveal-line { transform: translateY(0); }
+
+/* Hero stagger — mount-driven sequence */
+.hero-stagger > * {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 1200ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 1200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.hero-stagger.is-ready > * {
+  opacity: 1;
+  transform: translateY(0);
+}
+.hero-stagger > *:nth-child(1) { transition-delay: 0.35s; }
+.hero-stagger > *:nth-child(2) { transition-delay: 0.5s; }
+.hero-stagger > *:nth-child(3) { transition-delay: 0.65s; }
+.hero-stagger > *:nth-child(4) { transition-delay: 0.8s; }
+.hero-stagger > *:nth-child(5) { transition-delay: 0.95s; }
+
+/* Hero image very slow drift */
+@keyframes heroDrift {
+  from { transform: scale(1.04); }
+  to   { transform: scale(1); }
+}
+.hero-media {
+  animation: heroDrift 14s linear forwards;
+  will-change: transform;
+}
+
+/* Mobile menu — stagger reveal for nav links */
+.mobile-menu { opacity: 0; pointer-events: none; transition: opacity 400ms cubic-bezier(0.22, 1, 0.36, 1); }
+.mobile-menu.is-open { opacity: 1; pointer-events: auto; }
+.mobile-menu-link {
+  opacity: 0; transform: translateY(20px);
+  transition: opacity 500ms cubic-bezier(0.22, 1, 0.36, 1), transform 500ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.mobile-menu.is-open .mobile-menu-link { opacity: 1; transform: translateY(0); }
+.mobile-menu.is-open .mobile-menu-link:nth-child(1) { transition-delay: 0.15s; }
+.mobile-menu.is-open .mobile-menu-link:nth-child(2) { transition-delay: 0.22s; }
+.mobile-menu.is-open .mobile-menu-link:nth-child(3) { transition-delay: 0.29s; }
+.mobile-menu.is-open .mobile-menu-link:nth-child(4) { transition-delay: 0.36s; }
+.mobile-menu.is-open .mobile-menu-link:nth-child(5) { transition-delay: 0.43s; }
+.mobile-menu.is-open .mobile-menu-footer { opacity: 1; transform: translateY(0); }
+.mobile-menu-footer {
+  opacity: 0; transform: translateY(20px);
+  transition: opacity 500ms cubic-bezier(0.22, 1, 0.36, 1) 0.45s, transform 500ms cubic-bezier(0.22, 1, 0.36, 1) 0.45s;
+}
+
+/* Editorial utilities */
+.text-balance { text-wrap: balance; }
+.text-pretty { text-wrap: pretty; }
+
+/* Reduced motion — everything becomes visible immediately */
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .reveal-group .reveal,
+  .reveal-image,
+  .reveal-image-inner,
+  .reveal-line,
+  .hero-stagger > *,
+  .mobile-menu,
+  .mobile-menu-link,
+  .mobile-menu-footer {
+    opacity: 1 !important;
+    transform: none !important;
+    clip-path: none !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   STAGGER SEQUENCING
+   When a parent has .reveal-group.is-visible, children animate in
+   sequence. Any inline --reveal-delay on a child overrides this.
+══════════════════════════════════════════════════════════════ */
+
+.reveal-group.is-visible .reveal:nth-child(1)  { --reveal-delay: 0ms; }
+.reveal-group.is-visible .reveal:nth-child(2)  { --reveal-delay: 80ms; }
+.reveal-group.is-visible .reveal:nth-child(3)  { --reveal-delay: 160ms; }
+.reveal-group.is-visible .reveal:nth-child(4)  { --reveal-delay: 240ms; }
+.reveal-group.is-visible .reveal:nth-child(5)  { --reveal-delay: 320ms; }
+.reveal-group.is-visible .reveal:nth-child(6)  { --reveal-delay: 400ms; }
+.reveal-group.is-visible .reveal:nth-child(7)  { --reveal-delay: 480ms; }
+.reveal-group.is-visible .reveal:nth-child(8)  { --reveal-delay: 560ms; }
+.reveal-group.is-visible .reveal:nth-child(9)  { --reveal-delay: 640ms; }
+.reveal-group.is-visible .reveal:nth-child(10) { --reveal-delay: 720ms; }
