@@ -4,14 +4,13 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.database.session import engine
 from app.models.notification import Notification
 from app.repositories.conversation_repository import ConversationRepository
 from app.schemas.message import MessageCreate, MessageResponse
 from app.services.message_service import MessageService
-from app.sockets.managers.connection_manager import connection_manager
 from app.sockets.managers.room_manager import conversation_room, user_room
 from app.sockets.server import sio
 
@@ -26,32 +25,44 @@ def _err(code: str, message: str) -> dict:
     return {"success": False, "error": {"code": code, "message": message}}
 
 
-def _build_message_notification(
+def _fetch_message_notifications(
     session: Session,
     *,
-    recipient_id: UUID,
-    sender_id: UUID,
-    conversation_id: UUID,
     message_id: UUID,
-    preview: str,
-) -> Notification:
+    recipient_ids: list[UUID],
+) -> list[dict]:
     """
-    Create a message notification using the existing Notification model.
-    ⚠️ If your Notification model uses different column names, adjust here only.
+    MessageService.create_message() already writes one Notification per
+    recipient (via NotificationService.notify_message). We just re-read
+    them here so we can push the exact same rows over the socket.
+
+    They're keyed by aggregation_key = "msg:<message_id>".
     """
-    notification = Notification(
-        user_id=recipient_id,
-        type="message",
-        title="New message",
-        body=preview[:140] if preview else "Sent an attachment",
-        data={
-            "conversation_id": str(conversation_id),
-            "message_id": str(message_id),
-            "sender_id": str(sender_id),
-        },
+    if not recipient_ids:
+        return []
+
+    stmt = select(Notification).where(
+        Notification.user_id.in_(recipient_ids),
+        Notification.aggregation_key == f"msg:{message_id}",
     )
-    session.add(notification)
-    return notification
+    rows = session.exec(stmt).all()
+
+    payloads: list[dict] = []
+    for n in rows:
+        payloads.append(
+            {
+                "id": str(n.id),
+                "user_id": str(n.user_id),
+                "type": n.type,
+                "title": n.title,
+                "body": n.body,
+                # The frontend expects `data.*` — we expose the DB
+                # `payload` column under that key.
+                "data": n.payload or {},
+                "created_at": n.created_at.isoformat() if n.created_at else None,
+            }
+        )
+    return payloads
 
 
 def _persist_message(
@@ -61,7 +72,8 @@ def _persist_message(
 ) -> dict:
     """
     Runs in a worker thread. Full send lifecycle:
-      validate membership -> persist message -> persist notifications -> return data.
+      validate conversation → persist message (which also fans out
+      notifications) → re-read those notifications → return everything.
     """
     sender_id = UUID(sender_id_str)
     conversation_id = UUID(conversation_id_str)
@@ -69,7 +81,7 @@ def _persist_message(
     with Session(engine) as session:
         conv_repo = ConversationRepository(session)
 
-        # ── NEW: block sending to pending / rejected conversations ──
+        # ── Guard: only ACTIVE conversations accept messages ──
         conv = conv_repo.get_by_id(conversation_id)
         if conv is None:
             raise PermissionError("CONVERSATION_NOT_FOUND")
@@ -78,73 +90,36 @@ def _persist_message(
         if not conv_repo.is_participant(conversation_id, sender_id):
             raise PermissionError("CONVERSATION_ACCESS_DENIED")
 
-        # Validate payload via Pydantic (raises on bad content)
+        # Validate payload via Pydantic
         data = MessageCreate.model_validate(payload)
 
+        # Persist. MessageService internally calls
+        # NotificationService.notify_message() for each unmuted recipient.
         msg_service = MessageService(session)
         message = msg_service.create_message(conversation_id, sender_id, data)
 
-        # Build notifications for every other participant
+        # Collect the recipient IDs so we can re-fetch notifications.
         participants = conv_repo.get_participants(conversation_id)
-        preview = message.content or ""
-        notifications: list[dict] = []
-        recipient_ids: list[str] = []
+        recipient_ids = [
+            p.user_id for p in participants if p.user_id != sender_id
+        ]
 
-        for p in participants:
-            if p.user_id == sender_id:
-                continue
-            recipient_ids.append(str(p.user_id))
-            n = _build_message_notification(
-                session,
-                recipient_id=p.user_id,
-                sender_id=sender_id,
-                conversation_id=conversation_id,
-                message_id=message.id,
-                preview=preview,
-            )
-            session.add(n)
-
-        session.commit()
-
-        # Serialize before session closes
+        # Serialize the message before session closes.
         msg_payload = MessageResponse.model_validate(message).model_dump(
             mode="json"
         )
 
-        # Re-fetch notifications to get IDs (simplest reliable way)
-        from sqlmodel import select
-
-        notification_payloads: list[dict] = []
-        for rid in recipient_ids:
-            stmt = (
-                select(Notification)
-                .where(Notification.user_id == UUID(rid))
-                .order_by(Notification.created_at.desc())
-                .limit(1)
-            )
-            n = session.exec(stmt).first()
-            if n is None:
-                continue
-            notification_payloads.append(
-                {
-                    "id": str(n.id),
-                    "user_id": rid,
-                    "type": getattr(n, "type", "message"),
-                    "title": getattr(n, "title", "New message"),
-                    "body": getattr(n, "body", ""),
-                    "data": getattr(n, "data", {}) or {},
-                    "created_at": (
-                        n.created_at.isoformat()
-                        if getattr(n, "created_at", None)
-                        else None
-                    ),
-                }
-            )
+        # Re-read the notifications that MessageService just created.
+        notification_payloads = _fetch_message_notifications(
+            session,
+            message_id=message.id,
+            recipient_ids=recipient_ids,
+        )
 
         return {
             "message": msg_payload,
             "conversation_id": str(conversation_id),
-            "recipient_ids": recipient_ids,
+            "recipient_ids": [str(rid) for rid in recipient_ids],
             "notifications": notification_payloads,
         }
 
@@ -153,7 +128,8 @@ def _persist_message(
 async def on_send_message(sid, data):
     """
     Event payload: { conversation_id, client_message_id, type, content, ... }
-    Ack: { success: true, data: { message: ... } } | { success: false, error: {...} }
+    Ack: { success: true, data: { message: ... } }
+       | { success: false, error: {...} }
     """
     session = await sio.get_session(sid)
     sender_id = session.get("user_id")
@@ -192,14 +168,14 @@ async def on_send_message(sid, data):
         logger.exception("send_message failed")
         return _err("INTERNAL_ERROR", "Message could not be sent.")
 
-    # Broadcast persisted message to the conversation room (including sender tabs).
+    # Broadcast the persisted message to everyone in the conversation room.
     await sio.emit(
         "new_message",
         result["message"],
         room=conversation_room(result["conversation_id"]),
     )
 
-    # Emit each notification to the corresponding recipient's personal room.
+    # Push each freshly-created notification to its recipient's user room.
     for notif in result["notifications"]:
         await sio.emit(
             "new_notification", notif, room=user_room(notif["user_id"])
@@ -211,7 +187,8 @@ async def on_send_message(sid, data):
 @sio.on("message_read")
 async def on_message_read(sid, data):
     """
-    Mark a conversation read for the current user, emit message_read to the conversation room.
+    Mark a conversation read for the current user, emit message_read
+    to the conversation room.
     Payload: { conversation_id }
     """
     session = await sio.get_session(sid)

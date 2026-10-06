@@ -45,12 +45,10 @@ class ConversationService:
 
         is_direct = data.type == "direct" and len(data.participant_ids) == 2
 
-        # A 1-to-1 "direct" create goes through the request flow.
         if is_direct:
             other_id = next(uid for uid in data.participant_ids if uid != user_id)
             return self.get_or_create_direct_conversation(user_id, other_id)
 
-        # Groups are active immediately.
         conv_data = data.model_dump(exclude={"participant_ids"})
         conv_data["created_by"] = user_id
         conv_data["status"] = "active"
@@ -77,10 +75,7 @@ class ConversationService:
         pending = self.repo.find_pending_between(user_id, other_user_id)
         if pending:
             if pending.created_by == user_id:
-                # Caller is just re-sending — return the same pending one.
                 return self._build_conversation_response(pending, user_id)
-            # The other user already sent *me* a request → mutual interest,
-            # auto-accept and turn it into an active conversation.
             return self.accept_request(pending.id, user_id)
 
         # 3) Fresh pending request.
@@ -142,6 +137,9 @@ class ConversationService:
         return conv
 
     # ── notifications ──────────────────────────────────────
+    # NOTE: the DB column is `payload`, not `data`. The socket payload
+    # intentionally uses the key `data` because the frontend contract
+    # expects `notification.data.*` for deep-linking.
     def _notify_request_received(
         self, conv: Conversation, *, sender_id: UUID, recipient_id: UUID
     ) -> None:
@@ -155,29 +153,32 @@ class ConversationService:
             type="conversation_request",
             title="New conversation request",
             body=f"{sender_name} wants to start a conversation with you.",
-            data={
+            payload={
                 "conversation_id": str(conv.id),
                 "sender_id": str(sender_id),
                 "sender_name": sender_name,
-                "sender_image": sender.profile_image_url,
+                "sender_image": getattr(sender, "profile_image_url", None),
             },
         )
         self.session.add(notif)
         self.session.commit()
         self.session.refresh(notif)
 
-        payload = {
-            "id": str(notif.id),
-            "user_id": str(recipient_id),
-            "type": "conversation_request",
-            "title": notif.title,
-            "body": notif.body,
-            "data": notif.data or {},
-            "created_at": (
-                notif.created_at.isoformat() if notif.created_at else None
-            ),
-        }
-        emit_to_user_sync(str(recipient_id), "new_notification", payload)
+        emit_to_user_sync(
+            str(recipient_id),
+            "new_notification",
+            {
+                "id": str(notif.id),
+                "user_id": str(recipient_id),
+                "type": notif.type,
+                "title": notif.title,
+                "body": notif.body,
+                "data": notif.payload or {},
+                "created_at": (
+                    notif.created_at.isoformat() if notif.created_at else None
+                ),
+            },
+        )
         emit_to_user_sync(
             str(recipient_id),
             "conversation_request_received",
@@ -203,7 +204,7 @@ class ConversationService:
             type="conversation_request_accepted",
             title="Request accepted",
             body=f"{accepter_name} accepted your conversation request.",
-            data={
+            payload={
                 "conversation_id": str(conv.id),
                 "accepter_id": str(accepter_id),
                 "accepter_name": accepter_name,
@@ -227,10 +228,10 @@ class ConversationService:
             {
                 "id": str(notif.id),
                 "user_id": str(sender_id),
-                "type": "conversation_request_accepted",
+                "type": notif.type,
                 "title": notif.title,
                 "body": notif.body,
-                "data": notif.data or {},
+                "data": notif.payload or {},
                 "created_at": (
                     notif.created_at.isoformat() if notif.created_at else None
                 ),
@@ -262,7 +263,7 @@ class ConversationService:
                     id=user.id,
                     first_name=user.first_name,
                     last_name=user.last_name,
-                    profile_image_url=user.profile_image_url,
+                    profile_image_url=getattr(user, "profile_image_url", None),
                     username=(
                         f"{user.first_name} {user.last_name}".strip()
                         or user.email
