@@ -1,3 +1,4 @@
+// src/features/messages/hooks/useMessages.ts
 import { useState, useEffect, useCallback } from 'react';
 import { messagesApi } from '../api/messages';
 import type { Message } from '../types/message.types';
@@ -7,8 +8,8 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 export const mapBackendMessage = (backendMsg: any): Message => {
   const isVoice = backendMsg.type === 'voice';
-  const isFile = backendMsg.type === 'file' || backendMsg.type === 'image';
-  const isImage = backendMsg.type === 'image';
+  const isFile =
+    backendMsg.type === 'file' || backendMsg.type === 'image';
 
   return {
     id: backendMsg.id,
@@ -27,45 +28,59 @@ export const mapBackendMessage = (backendMsg: any): Message => {
     edited_at: backendMsg.edited_at,
     deleted_at: backendMsg.deleted_at,
     status: 'sent',
-    audioDetails: isVoice ? {
-      url: backendMsg.attachment_path?.startsWith('http')
-        ? backendMsg.attachment_path
-        : backendMsg.attachment_path ? `${SUPABASE_URL}/storage/v1/object/public/messages/${backendMsg.attachment_path}` : '',
-      duration: backendMsg.duration_seconds ? `${Math.floor(backendMsg.duration_seconds)}s` : '0s',
-      waveform: Array.from({ length: 15 }, () => Math.floor(Math.random() * 75 + 25)),
-    } : undefined,
-    fileDetails: isFile ? {
-      name: backendMsg.attachment_name || 'file',
-      size: formatFileSize(backendMsg.attachment_size || 0),
-      type: backendMsg.attachment_type || 'application/octet-stream',
-      icon: getFileIcon(backendMsg.attachment_type || ''),
-      extension: backendMsg.attachment_name?.split('.').pop() || '',
-    } : undefined,
+    audioDetails: isVoice
+      ? {
+          url: backendMsg.attachment_path?.startsWith('http')
+            ? backendMsg.attachment_path
+            : backendMsg.attachment_path
+            ? `${SUPABASE_URL}/storage/v1/object/public/messages/${backendMsg.attachment_path}`
+            : '',
+          duration: backendMsg.duration_seconds
+            ? `${Math.floor(backendMsg.duration_seconds)}s`
+            : '0s',
+          waveform: Array.from(
+            { length: 15 },
+            () => Math.floor(Math.random() * 75 + 25)
+          ),
+        }
+      : undefined,
+    fileDetails: isFile
+      ? {
+          name: backendMsg.attachment_name || 'file',
+          size: formatFileSize(backendMsg.attachment_size || 0),
+          type: backendMsg.attachment_type || 'application/octet-stream',
+          icon: getFileIcon(backendMsg.attachment_type || ''),
+          extension: backendMsg.attachment_name?.split('.').pop() || '',
+        }
+      : undefined,
   };
 };
 
-// ✅ NAMED export — matches `import { useMessages } from '...'` in MessagesPage
+// Named export — matches `import { useMessages } from '...'` in MessagesPage.
 export function useMessages(conversationId: string | null) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  const loadMessages = useCallback(async (before?: string) => {
-    if (!conversationId) return;
-    try {
-      setLoading(true);
-      const data = await messagesApi.get(conversationId, before, 50);
-      const mapped = data.map(mapBackendMessage).reverse();
-      setMessages((prev) => (before ? [...mapped, ...prev] : mapped));
-      if (data.length < 50) setHasMore(false);
-      setError(null);
-    } catch (err) {
-      setError(err as Error);
-    } finally {
-      setLoading(false);
-    }
-  }, [conversationId]);
+  const loadMessages = useCallback(
+    async (before?: string) => {
+      if (!conversationId) return;
+      try {
+        setLoading(true);
+        const data = await messagesApi.get(conversationId, before, 50);
+        const mapped = data.map(mapBackendMessage).reverse();
+        setMessages((prev) => (before ? [...mapped, ...prev] : mapped));
+        if (data.length < 50) setHasMore(false);
+        setError(null);
+      } catch (err) {
+        setError(err as Error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [conversationId]
+  );
 
   useEffect(() => {
     if (conversationId) {
@@ -81,14 +96,16 @@ export function useMessages(conversationId: string | null) {
 
   const confirmMessage = useCallback((real: Message) => {
     setMessages((prev) => {
-      const tempIdx = prev.findIndex(m => m.client_message_id === real.client_message_id);
+      const tempIdx = prev.findIndex(
+        (m) => m.client_message_id === real.client_message_id
+      );
       if (tempIdx !== -1) {
         const next = [...prev];
         next[tempIdx] = { ...real, status: 'sent' };
         return next;
       }
       // Broadcast already arrived — don't duplicate.
-      if (prev.some(m => m.id === real.id)) return prev;
+      if (prev.some((m) => m.id === real.id)) return prev;
       return [...prev, { ...real, status: 'sent' }];
     });
   }, []);

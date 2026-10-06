@@ -34,13 +34,15 @@ export interface BackendMessage {
 }
 
 export const conversationsApi = {
+  /** GET /conversations — active conversations only. */
   list: async (): Promise<BackendConversation[]> => {
-    const { data } =
-      await apiClient.get<BackendConversation[]>('/conversations');
+    const { data } = await apiClient.get<BackendConversation[]>(
+      '/conversations'
+    );
     return data;
   },
 
-  /** Pending requests sent TO the current user. */
+  /** GET /conversations/requests — pending requests sent TO me. */
   listRequests: async (): Promise<BackendConversation[]> => {
     const { data } = await apiClient.get<BackendConversation[]>(
       '/conversations/requests'
@@ -48,6 +50,15 @@ export const conversationsApi = {
     return data;
   },
 
+  /** GET /conversations/sent-requests — pending requests I SENT. */
+  listSentRequests: async (): Promise<BackendConversation[]> => {
+    const { data } = await apiClient.get<BackendConversation[]>(
+      '/conversations/sent-requests'
+    );
+    return data;
+  },
+
+  /** GET /conversations/:id */
   get: async (id: string): Promise<BackendConversation> => {
     const { data } = await apiClient.get<BackendConversation>(
       `/conversations/${id}`
@@ -55,6 +66,7 @@ export const conversationsApi = {
     return data;
   },
 
+  /** POST /conversations — generic (group) create. */
   create: async (payload: {
     participant_ids: string[];
     title?: string;
@@ -67,7 +79,10 @@ export const conversationsApi = {
     return data;
   },
 
-  getOrCreateDirect: async (userId: string): Promise<BackendConversation> => {
+  /** POST /conversations/direct — send request / return active. */
+  getOrCreateDirect: async (
+    userId: string
+  ): Promise<BackendConversation> => {
     const { data } = await apiClient.post<BackendConversation>(
       '/conversations/direct',
       { user_id: userId }
@@ -75,6 +90,7 @@ export const conversationsApi = {
     return data;
   },
 
+  /** POST /conversations/:id/accept */
   acceptRequest: async (
     conversationId: string
   ): Promise<BackendConversation> => {
@@ -84,6 +100,7 @@ export const conversationsApi = {
     return data;
   },
 
+  /** POST /conversations/:id/reject */
   rejectRequest: async (conversationId: string): Promise<void> => {
     await apiClient.post(`/conversations/${conversationId}/reject`);
   },

@@ -36,6 +36,11 @@ class ConversationService:
         requests = self.repo.get_incoming_requests(user_id)
         return [self._build_conversation_response(c, user_id) for c in requests]
 
+    def get_sent_requests(self, user_id: UUID) -> List[ConversationResponse]:
+        """Requests I sent that are still awaiting acceptance."""
+        sent = self.repo.get_sent_requests(user_id)
+        return [self._build_conversation_response(c, user_id) for c in sent]
+
     # ── create ──────────────────────────────────────────────
     def create_conversation(
         self, user_id: UUID, data: ConversationCreate
@@ -64,7 +69,7 @@ class ConversationService:
                 detail="Cannot start a conversation with yourself.",
             )
 
-        # 1) Active conversation already exists → return it.
+        # 1) Active direct already exists → return it.
         active = self.repo.find_direct_conversation(
             user_id, other_user_id, statuses=("active",)
         )
@@ -116,9 +121,7 @@ class ConversationService:
     ) -> Conversation:
         conv = self.repo.get_by_id(conversation_id)
         if not conv:
-            raise HTTPException(
-                status_code=404, detail="Conversation not found."
-            )
+            raise HTTPException(status_code=404, detail="Conversation not found.")
         if conv.status != "pending":
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -137,9 +140,8 @@ class ConversationService:
         return conv
 
     # ── notifications ──────────────────────────────────────
-    # NOTE: the DB column is `payload`, not `data`. The socket payload
-    # intentionally uses the key `data` because the frontend contract
-    # expects `notification.data.*` for deep-linking.
+    # The DB column is `payload`. The socket payload uses key `data`
+    # because the frontend expects `notification.data.*`.
     def _notify_request_received(
         self, conv: Conversation, *, sender_id: UUID, recipient_id: UUID
     ) -> None:
@@ -268,6 +270,7 @@ class ConversationService:
                         f"{user.first_name} {user.last_name}".strip()
                         or user.email
                     ),
+                    account_type=getattr(user, "account_type", None),
                 )
                 break
 

@@ -1,12 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Paperclip, Send, Mic, Square, Trash2, X, File } from 'lucide-react';
+import {
+  Paperclip,
+  Send,
+  Mic,
+  Square,
+  Trash2,
+  X,
+  File,
+  MapPin,
+} from 'lucide-react';
 
 interface MessageInputProps {
   onSendMessage: (text: string) => void;
   onSendVoiceNote: (duration: string) => void;
   onSendFile?: (file: File) => void;
   onSendImage?: (file: File) => void;
+  /** Opens the location-picker modal. If omitted, the button is hidden. */
+  onShareLocation?: () => void;
   uploading?: boolean;
   uploadProgress?: number;
   onTypingChange?: (isTyping: boolean) => void;
@@ -17,6 +28,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   onSendVoiceNote,
   onSendFile,
   onSendImage,
+  onShareLocation,
   uploading = false,
   uploadProgress = 0,
   onTypingChange,
@@ -26,11 +38,11 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTypingRef = useRef(false);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (isRecording) {
       interval = setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
     } else {
@@ -111,9 +123,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-    }
+    if (file) setSelectedFile(file);
     e.target.value = '';
   };
 
@@ -202,28 +212,6 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                     {formatTimer(recordingSeconds)}
                   </span>
                 </div>
-                <div className="hidden sm:flex items-center gap-1 h-5 flex-1 max-w-xs pl-4">
-                  {[40, 70, 25, 90, 60, 30, 85, 100, 45, 65, 80, 35, 50, 95, 20].map(
-                    (h, i) => (
-                      <motion.span
-                        key={i}
-                        animate={{
-                          height: [
-                            `${h}%`,
-                            `${Math.max(15, (h + 50) % 100)}%`,
-                            `${h}%`,
-                          ],
-                        }}
-                        transition={{
-                          repeat: Infinity,
-                          duration: 0.5,
-                          delay: i * 0.03,
-                        }}
-                        className="w-1 rounded-full bg-red-500/60 dark:bg-red-400/70"
-                      />
-                    )
-                  )}
-                </div>
               </div>
 
               <div className="flex items-center gap-2">
@@ -264,6 +252,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="p-2.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100/80 dark:hover:bg-slate-800/70 rounded-2xl transition ml-1"
+                  title="Attach file"
                 >
                   <Paperclip className="w-5 h-5" />
                 </motion.button>
@@ -273,13 +262,24 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                   className="hidden"
                   onChange={handleFileSelect}
                 />
+
+                {onShareLocation && (
+                  <motion.button
+                    whileHover={{ scale: 1.08 }}
+                    whileTap={{ scale: 0.92 }}
+                    type="button"
+                    onClick={onShareLocation}
+                    className="p-2.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50/80 dark:hover:bg-blue-950/40 rounded-2xl transition"
+                    title="Share location"
+                  >
+                    <MapPin className="w-5 h-5" />
+                  </motion.button>
+                )}
               </div>
 
               <input
                 type="text"
-                placeholder={
-                  selectedFile ? 'File selected…' : 'Write a message…'
-                }
+                placeholder={selectedFile ? 'File selected…' : 'Write a message…'}
                 value={text}
                 onChange={handleTextChange}
                 disabled={!!selectedFile}
@@ -293,18 +293,18 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                   type="button"
                   onClick={() => setIsRecording(true)}
                   className="p-2.5 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 bg-slate-100/70 dark:bg-slate-800/60 hover:bg-slate-200/80 dark:hover:bg-slate-700/60 rounded-2xl transition"
+                  title="Record voice note"
                 >
                   <Mic className="w-4 h-4" />
                 </motion.button>
 
                 <motion.button
-                  whileHover={
-                    text.trim() || selectedFile ? { scale: 1.05 } : {}
-                  }
+                  whileHover={text.trim() || selectedFile ? { scale: 1.05 } : {}}
                   whileTap={text.trim() || selectedFile ? { scale: 0.95 } : {}}
                   type="submit"
                   disabled={!text.trim() && !selectedFile}
                   className="p-2.5 bg-gradient-to-br from-slate-900 to-slate-800 dark:from-slate-100 dark:to-slate-200 text-white dark:text-slate-900 hover:opacity-95 rounded-2xl disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_4px_12px_-4px_rgba(15,23,42,0.3)] dark:shadow-[0_4px_12px_-4px_rgba(255,255,255,0.15)] transition-all"
+                  title="Send"
                 >
                   {uploading ? (
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white dark:border-slate-900/30 dark:border-t-slate-900 rounded-full animate-spin" />

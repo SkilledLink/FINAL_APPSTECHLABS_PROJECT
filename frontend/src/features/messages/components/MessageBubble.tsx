@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import type { Message } from '../types/message.types';
+import { LocationCard } from './LocationCard';
+import { decodeLocationMessage } from '../../../utils/locationMessage';
 
 interface MessageBubbleProps {
   message: Message;
@@ -42,8 +44,11 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   const [previewImageUrl, setPreviewImageUrl] = useState('');
   const [copied, setCopied] = useState(false);
 
+  // ── Location messages render a completely different card ──
+  const location = decodeLocationMessage(message.content);
+
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    let timer: ReturnType<typeof setInterval>;
     if (isPlaying) {
       timer = setInterval(() => {
         setPlaybackProgress((prev) => (prev >= 100 ? 0 : prev + 2.5));
@@ -78,7 +83,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     }
   };
 
-  // Format timestamp
   const timestamp = new Date(
     message.created_at || Date.now()
   ).toLocaleTimeString([], {
@@ -86,7 +90,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     minute: '2-digit',
   });
 
-  // Refined pill bubble corner rounding logic
   const getBubbleRadius = () => {
     if (isSender) {
       if (isFirstInGroup && isLastInGroup)
@@ -105,7 +108,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     }
   };
 
-  // Render Status Checkmarks
   const renderStatus = () => {
     if (!isSender) return null;
 
@@ -129,10 +131,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     );
   };
 
-  // Hover Quick Actions Menu
   const renderActionMenu = () => (
     <div className="flex items-center gap-0.5 rounded-full border border-slate-200/70 bg-white/95 p-1 shadow-[0_8px_20px_-8px_rgba(15,23,42,0.25)] backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-800/95 text-slate-600 dark:text-slate-300">
-      {onReply && (
+      {onReply && !location && (
         <button
           type="button"
           onClick={() => onReply(message)}
@@ -142,7 +143,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           <Reply className="h-3.5 w-3.5" />
         </button>
       )}
-      {(message.text || message.content) && (
+      {!location && (message.text || message.content) && (
         <button
           type="button"
           onClick={handleCopyText}
@@ -188,8 +189,21 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           {renderActionMenu()}
         </div>
 
-        {/* ─── IMAGE MESSAGE TYPE ────────────────────────────── */}
-        {message.type === 'image' && imageUrl ? (
+        {/* ── LOCATION MESSAGE ────────────────────────────── */}
+        {location ? (
+          <div className="space-y-1">
+            <LocationCard location={location} isSender={isSender} />
+            <div
+              className={`flex items-center gap-1 px-1 text-[10px] font-medium ${
+                isSender ? 'flex-row-reverse text-slate-400' : 'text-slate-400'
+              }`}
+            >
+              <span className="tabular-nums">{timestamp}</span>
+              {renderStatus()}
+            </div>
+          </div>
+        ) : message.type === 'image' && imageUrl ? (
+          /* ─── IMAGE MESSAGE TYPE ─────────────────────────── */
           <div className="max-w-[280px] space-y-1 sm:max-w-[340px]">
             <div
               className={`group/image relative overflow-hidden border border-slate-200/70 bg-slate-100 shadow-[0_4px_16px_-8px_rgba(15,23,42,0.15)] cursor-pointer dark:border-slate-700/60 dark:bg-slate-800 ${getBubbleRadius()}`}
@@ -212,16 +226,13 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               </div>
             </div>
 
-            {/* Image Meta & Timestamp */}
             <div
               className={`flex items-center justify-between px-1 text-[10px] font-medium ${
                 isSender ? 'flex-row-reverse' : ''
               } text-slate-400 dark:text-slate-500`}
             >
               <span className="max-w-[180px] truncate">
-                {message.fileDetails?.name ||
-                  message.attachment_name ||
-                  'Image'}
+                {message.fileDetails?.name || message.attachment_name || 'Image'}
               </span>
               <div className="flex items-center gap-1 shrink-0">
                 <span className="tabular-nums">{timestamp}</span>
@@ -230,7 +241,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             </div>
           </div>
         ) : (
-          /* ─── TEXT / FILE / AUDIO BUBBLE TYPE ──────────────── */
+          /* ─── TEXT / FILE / AUDIO BUBBLE TYPE ───────────── */
           <div
             className={`relative max-w-[85%] px-3.5 py-2.5 text-[13.5px] leading-relaxed transition-all duration-200 sm:max-w-[75%] ${getBubbleRadius()} ${
               isSender
@@ -337,11 +348,10 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                     </span>
                   </div>
 
-                  {/* Waveform Bars */}
                   <div className="flex h-5 items-center gap-[3px] cursor-pointer">
-                    {message.audioDetails.waveform.map((height, i) => {
+                    {message.audioDetails!.waveform.map((height, i) => {
                       const barPercentage =
-                        ((i + 1) / message.audioDetails.waveform.length) * 100;
+                        ((i + 1) / message.audioDetails!.waveform.length) * 100;
                       const isPassed = barPercentage <= playbackProgress;
                       return (
                         <button
@@ -375,7 +385,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
               </p>
             )}
 
-            {/* TIMESTAMP AND STATUS INLINE FOOTER */}
+            {/* TIMESTAMP */}
             <div
               className={`mt-1 flex items-center justify-end gap-1 text-[10px] font-medium ${
                 isSender
@@ -390,7 +400,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         )}
       </motion.div>
 
-      {/* ─── FULL-SCREEN IMAGE PREVIEW MODAL ───────────────────────── */}
+      {/* IMAGE MODAL */}
       <AnimatePresence>
         {imageModalOpen && previewImageUrl && (
           <motion.div

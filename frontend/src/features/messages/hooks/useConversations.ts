@@ -22,8 +22,13 @@ function mapBackendConversation(
       id: p.id,
       name: `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'User',
       avatar: p.profile_image_url || '/default-avatar.png',
-      role: p.account_type || 'User',
-      isOnline: false,
+      role:
+        p.account_type === 'professional'
+          ? 'Professional'
+          : p.account_type === 'business'
+          ? 'Business'
+          : 'Client',
+      isOnline: p.is_online || false,
       lastSeen: p.last_seen || undefined,
     };
   }
@@ -83,11 +88,18 @@ function mapBackendConversation(
     | 'pending'
     | 'rejected';
 
-  const isIncomingRequest =
+  const isIncomingRequest = Boolean(
     status === 'pending' &&
-    !!currentUserId &&
-    backend.created_by &&
-    backend.created_by !== currentUserId;
+      !!currentUserId &&
+      backend.created_by &&
+      backend.created_by !== currentUserId
+  );
+
+  const isOutgoingRequest = Boolean(
+    status === 'pending' &&
+      !!currentUserId &&
+      backend.created_by === currentUserId
+  );
 
   return {
     id: backend.id,
@@ -101,6 +113,7 @@ function mapBackendConversation(
     participant,
     lastMessage,
     isIncomingRequest,
+    isOutgoingRequest,
   };
 }
 
@@ -108,6 +121,7 @@ export function useConversations() {
   const { user, isAuthenticated } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [requests, setRequests] = useState<Conversation[]>([]);
+  const [sentRequests, setSentRequests] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const fetchingRef = useRef(false);
@@ -130,16 +144,24 @@ export function useConversations() {
       fetchingRef.current = true;
       setLoading(true);
 
-      const [activeRaw, requestsRaw] = await Promise.all([
+      // Three parallel calls — each returns its own slice:
+      //   /conversations                → active conversations
+      //   /conversations/requests       → pending requests sent TO me
+      //   /conversations/sent-requests  → pending requests I sent
+      const [activeRaw, incomingRaw, sentRaw] = await Promise.all([
         conversationsApi.list(),
         conversationsApi.listRequests().catch(() => [] as any[]),
+        conversationsApi.listSentRequests().catch(() => [] as any[]),
       ]);
 
       setConversations(
         activeRaw.map((c: any) => mapBackendConversation(c, userId))
       );
       setRequests(
-        requestsRaw.map((c: any) => mapBackendConversation(c, userId))
+        incomingRaw.map((c: any) => mapBackendConversation(c, userId))
+      );
+      setSentRequests(
+        sentRaw.map((c: any) => mapBackendConversation(c, userId))
       );
       setError(null);
     } catch (err) {
@@ -158,10 +180,21 @@ export function useConversations() {
     async (otherUserId: string) => {
       const raw = await conversationsApi.getOrCreateDirect(otherUserId);
       const mapped = mapBackendConversation(raw, userId);
+
       if (mapped.status === 'active') {
         setConversations((prev) => {
           const exists = prev.some((c) => c.id === mapped.id);
-          return exists ? prev : [mapped, ...prev];
+          return exists
+            ? prev.map((c) => (c.id === mapped.id ? mapped : c))
+            : [mapped, ...prev];
+        });
+      } else if (mapped.status === 'pending') {
+        // Newly-sent request → appears in Sent tab immediately.
+        setSentRequests((prev) => {
+          const exists = prev.some((c) => c.id === mapped.id);
+          return exists
+            ? prev.map((c) => (c.id === mapped.id ? mapped : c))
+            : [mapped, ...prev];
         });
       }
       return mapped;
@@ -240,7 +273,9 @@ export function useConversations() {
   return {
     conversations,
     requests,
+    sentRequests,
     requestCount: requests.length,
+    sentRequestCount: sentRequests.length,
     loading,
     error,
     refetch: fetchConversations,
