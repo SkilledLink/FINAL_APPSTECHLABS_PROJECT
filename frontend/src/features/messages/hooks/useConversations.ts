@@ -88,16 +88,18 @@ function mapBackendConversation(
     | 'pending'
     | 'rejected';
 
-  const isIncomingRequest =
+  const isIncomingRequest = Boolean(
     status === 'pending' &&
-    !!currentUserId &&
-    backend.created_by &&
-    backend.created_by !== currentUserId;
+      !!currentUserId &&
+      backend.created_by &&
+      backend.created_by !== currentUserId
+  );
 
-  const isOutgoingRequest =
+  const isOutgoingRequest = Boolean(
     status === 'pending' &&
-    !!currentUserId &&
-    backend.created_by === currentUserId;
+      !!currentUserId &&
+      backend.created_by === currentUserId
+  );
 
   return {
     id: backend.id,
@@ -142,7 +144,11 @@ export function useConversations() {
       fetchingRef.current = true;
       setLoading(true);
 
-      const [activeRaw, requestsRaw, sentRaw] = await Promise.all([
+      // Three parallel calls — each returns its own slice:
+      //   /conversations                → active conversations
+      //   /conversations/requests       → pending requests sent TO me
+      //   /conversations/sent-requests  → pending requests I sent
+      const [activeRaw, incomingRaw, sentRaw] = await Promise.all([
         conversationsApi.list(),
         conversationsApi.listRequests().catch(() => [] as any[]),
         conversationsApi.listSentRequests().catch(() => [] as any[]),
@@ -152,7 +158,7 @@ export function useConversations() {
         activeRaw.map((c: any) => mapBackendConversation(c, userId))
       );
       setRequests(
-        requestsRaw.map((c: any) => mapBackendConversation(c, userId))
+        incomingRaw.map((c: any) => mapBackendConversation(c, userId))
       );
       setSentRequests(
         sentRaw.map((c: any) => mapBackendConversation(c, userId))

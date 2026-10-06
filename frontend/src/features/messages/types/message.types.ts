@@ -1,3 +1,5 @@
+// src/features/messages/types/message.types.ts
+
 export type ConversationStatus = 'active' | 'pending' | 'rejected';
 
 export interface MessageUser {
@@ -57,8 +59,10 @@ export interface Conversation {
   lastMessage?: Message;
   unreadCount: number;
   participant?: MessageUser | null;
-  /** Convenience flag set by the hook when the current user is the recipient of a pending request. */
+  /** True when the current user is the recipient of a pending request. */
   isIncomingRequest?: boolean;
+  /** True when the current user is the sender of a pending request. */
+  isOutgoingRequest?: boolean;
 }
 
 export interface MessageCreate {

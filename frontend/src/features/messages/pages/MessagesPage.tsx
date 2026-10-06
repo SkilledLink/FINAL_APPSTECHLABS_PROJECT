@@ -7,7 +7,7 @@ import { ChatWindow } from '../components/ChatWindow';
 import { LocationPickerModal } from '../components/LocationPickerModal';
 import { useCall } from '../context/CallProvider';
 import { useConversations } from '../hooks/useConversations';
-import { useMessages } from '../../../hooks/useMessages';
+import { useMessages } from '../hooks/useMessages';
 import { useRealtimeMessages } from '../hooks/useRealtimeMessages';
 import { useSendMessage } from '../hooks/useSendMessage';
 import { useVoiceUpload } from '../hooks/useVoiceUpload';
@@ -585,7 +585,6 @@ export const MessagesPage: React.FC = () => {
         <ConversationList
           conversations={conversationsWithPresence as any}
           requests={requests as any}
-          sentRequests={sentRequests as any}
           activeId={activeConversationId}
           onSelectConversation={handleSelectConversation}
           onAcceptRequest={handleAcceptRequest}
