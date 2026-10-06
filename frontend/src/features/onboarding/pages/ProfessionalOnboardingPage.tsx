@@ -264,23 +264,34 @@ export default function ProfessionalOnboardingPage() {
       setSaving(true);
       setError(null);
 
+      // 1) Create the Professional row on the server.
       await onboardingService.createProfessional({
         ...state,
         profession: state.profession.trim(),
-        city: state.city?.trim() || "",
+        city: state.city.trim(),
         region: state.region?.trim() || undefined,
         country: state.country?.trim() || "Cameroon",
         headline: state.headline?.trim() || undefined,
         bio: state.bio?.trim() || undefined,
       });
 
-      // Refresh from server so `user.account_type` is up to date.
+      // 2) Refresh `/users/me` so `localStorage.user` reflects
+      //    account_type="professional" before we reload.
       await refreshUser();
 
-      toast.success("Professional profile created 🎉");
+      toast.success("Professional profile created 🎉", {
+        position: "top-center",
+        autoClose: 3000,
+      });
 
-      // Go straight to the profile page instead of /home.
-      navigate("/profile", { replace: true });
+      // 3) HARD REDIRECT. This forces a full page reload:
+      //    - reads the fresh token + user from localStorage
+      //    - rebuilds the sidebar, avatar, account-type badge
+      //    - lands on /home/profile with all state consistent
+      //
+      //    A soft navigate() would leave the old layout in memory
+      //    and the user would have to hit F5 to see the change.
+      window.location.replace("/home/profile");
     } catch (err) {
       const msg =
         err instanceof OnboardingError
@@ -288,8 +299,7 @@ export default function ProfessionalOnboardingPage() {
           : "Couldn't create your profile. Please try again.";
       setError(msg);
       toast.error(msg);
-    } finally {
-      setSaving(false);
+      setSaving(false); // only reset on error — success leaves button disabled during redirect
     }
   };
 
@@ -698,14 +708,6 @@ export default function ProfessionalOnboardingPage() {
             </div>
 
             <div className="flex-1 min-h-0">
-              {/*
-                We cast to `any` for the props because MapLocationPicker
-                may use a different prop signature per project. If yours
-                is well-typed, feel free to replace this with the exact
-                interface — the callback contract we rely on is:
-                  onSelect({ country?, region?, city? })
-                  onCancel()
-              */}
               {React.createElement(MapLocationPicker as any, {
                 initialLocation: null,
                 onSelect: handleLocationPick,

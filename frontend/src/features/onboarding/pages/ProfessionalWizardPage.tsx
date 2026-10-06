@@ -105,9 +105,11 @@ export default function ProfessionalWizardPage() {
       });
     } catch (err: any) {
       if (err?.status === 409) {
+        // Profile already exists — treat as success and continue.
         toast.info("You already have a professional profile.");
       } else {
-        const msg = err?.message ?? "Something went wrong. Please try again.";
+        const msg =
+          err?.message ?? "Something went wrong. Please try again.";
         setError(msg);
         toast.error(msg, { autoClose: 5000 });
         setSaving(false);
@@ -148,7 +150,9 @@ export default function ProfessionalWizardPage() {
       }
     }
 
-    /* ── 4. Refresh from server ─────────────────────────── */
+    /* ── 4. Refresh user from server ─────────────────────── */
+    // This rewrites localStorage.user with account_type="professional"
+    // so the very first render after the reload below is consistent.
     try {
       if (typeof refreshUser === "function") {
         await refreshUser();
@@ -157,17 +161,22 @@ export default function ProfessionalWizardPage() {
       console.warn("refreshUser failed:", refreshErr);
     }
 
-    /* ── 5. Success + navigate to profile ────────────────── */
+    /* ── 5. HARD redirect to /home/profile ───────────────── */
     toast.success("🎉 Professional profile created!", {
-      autoClose: 4000,
+      autoClose: 2500,
       position: "top-center",
     });
 
-    window.setTimeout(() => {
-      navigate("/profile", { replace: true });
-    }, 700);
+    // IMPORTANT: use window.location.replace, NOT navigate().
+    //
+    // A soft navigate() leaves stale React state in memory (sidebar,
+    // header, account-type badge) and the user would have to press F5
+    // to see their new professional profile. A full reload re-reads
+    // localStorage (which refreshUser just updated) and rebuilds the
+    // entire app tree with the correct user.
+    window.location.replace("/home/profile");
 
-    setSaving(false);
+    // No setSaving(false) — the page is being replaced.
   };
 
   return (
