@@ -30,7 +30,7 @@ from app.services.professional_ai_usage_service import (
 
 logger = logging.getLogger(__name__)
 
-FEATURE_KEY = "ai_portfolio_suggestions"
+FEATURE_KEY = "ai_portfoliou_sggestions"
 
 
 # ─── PUBLIC ENTRY ────────────────────────────────────────────────
