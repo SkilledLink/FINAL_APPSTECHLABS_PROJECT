@@ -3,10 +3,12 @@ import { apiClient } from '../../../api/client';
 import type {
   ActiveSubscriptionResponse,
   AIUsageResponse,
+  AnalyzeImageRequest,
   BatchAcceptResponse,
   BatchRejectResponse,
   DeepAnalysisResponse,
   Entitlements,
+  ImageAnalysisResponse,
   ListProposalsResponse,
   PaymentInitiateRequest,
   PaymentInitiateResponse,
@@ -15,11 +17,8 @@ import type {
   TierListResponse,
 } from '../types/subscription.types';
 
-/* ── Typed API error ────────────────────────────────────
- * Preserves the HTTP status (so callers can check `status === 429`)
- * and the server-advertised retry window from the `Retry-After`
- * header (seconds) so the UI can show an accurate countdown.
- */
+/* ── Typed API error ──────────────────────────────────── */
+
 export class SubscriptionApiError extends Error {
   status?: number;
   detail?: unknown;
@@ -55,21 +54,15 @@ function toMessage(err: any, fallback: string): string {
   return JSON.stringify(detail);
 }
 
-/**
- * Parse `Retry-After`. The spec allows either a number of seconds
- * or an HTTP-date. We support both, preferring seconds.
- */
 function parseRetryAfter(raw: unknown): number | undefined {
   if (raw == null) return undefined;
   const str = String(raw).trim();
 
-  // Numeric seconds
   const asNumber = Number(str);
   if (Number.isFinite(asNumber) && asNumber >= 0) {
     return Math.ceil(asNumber);
   }
 
-  // HTTP-date
   const asDate = Date.parse(str);
   if (!Number.isNaN(asDate)) {
     const seconds = Math.ceil((asDate - Date.now()) / 1000);
@@ -79,7 +72,6 @@ function parseRetryAfter(raw: unknown): number | undefined {
   return undefined;
 }
 
-/** Centralized request wrapper: normalizes all errors into SubscriptionApiError. */
 async function request<T>(
   fn: () => Promise<{ data: T }>,
   fallbackMessage: string
@@ -108,25 +100,30 @@ export const subscriptionService = {
 
   getActive(): Promise<ActiveSubscriptionResponse> {
     return request(
-      () => apiClient.get<ActiveSubscriptionResponse>(
-        '/api/v1/professional-subscriptions/me'
-      ),
+      () =>
+        apiClient.get<ActiveSubscriptionResponse>(
+          '/api/v1/professional-subscriptions/me'
+        ),
       'Failed to load subscription'
     );
   },
 
   getEntitlements(): Promise<Entitlements> {
     return request(
-      () => apiClient.get<Entitlements>(
-        '/api/v1/professional-subscriptions/me/entitlements'
-      ),
+      () =>
+        apiClient.get<Entitlements>(
+          '/api/v1/professional-subscriptions/me/entitlements'
+        ),
       'Failed to load entitlements'
     );
   },
 
   getHistory() {
     return request(
-      () => apiClient.get('/api/v1/professional-subscriptions/me/history'),
+      () =>
+        apiClient.get(
+          '/api/v1/professional-subscriptions/me/history'
+        ),
       'Failed to load subscription history'
     );
   },
@@ -142,7 +139,8 @@ export const subscriptionService = {
 
   getTier(tierId: string): Promise<TierDetail> {
     return request(
-      () => apiClient.get<TierDetail>(`/api/v1/professional-tiers/${tierId}`),
+      () =>
+        apiClient.get<TierDetail>(`/api/v1/professional-tiers/${tierId}`),
       'Failed to load tier'
     );
   },
@@ -153,25 +151,21 @@ export const subscriptionService = {
     payload: PaymentInitiateRequest
   ): Promise<PaymentInitiateResponse> {
     return request(
-      () => apiClient.post<PaymentInitiateResponse>(
-        '/api/v1/professional-payments/initiate',
-        payload
-      ),
+      () =>
+        apiClient.post<PaymentInitiateResponse>(
+          '/api/v1/professional-payments/initiate',
+          payload
+        ),
       'Failed to initiate payment'
     );
   },
 
-  /**
-   * Poll MTN MoMo (via our backend) for the current status of a payment.
-   *
-   * `reference` is the value returned as `payment.reference` from
-   * initiatePayment — for MTN this is the UUID sent as X-Reference-Id.
-   */
   getPaymentStatus(reference: string): Promise<PaymentStatusResponse> {
     return request(
-      () => apiClient.get<PaymentStatusResponse>(
-        `/api/v1/professional-payments/status/${reference}`
-      ),
+      () =>
+        apiClient.get<PaymentStatusResponse>(
+          `/api/v1/professional-payments/status/${reference}`
+        ),
       'Failed to check payment status'
     );
   },
@@ -180,39 +174,48 @@ export const subscriptionService = {
 
   generateProposals(): Promise<{ proposals: unknown[] }> {
     return request(
-      () => apiClient.post('/api/v1/ai/profile-proposals/generate'),
+      () =>
+        apiClient.post('/api/v1/ai/profile-proposals/generate'),
       'Failed to generate proposals'
     );
   },
 
   listProposals(
-    status: 'pending' | 'accepted' | 'rejected' | 'expired' | 'superseded' = 'pending'
+    status:
+      | 'pending'
+      | 'accepted'
+      | 'rejected'
+      | 'expired'
+      | 'superseded' = 'pending'
   ): Promise<ListProposalsResponse> {
     return request(
-      () => apiClient.get<ListProposalsResponse>(
-        '/api/v1/ai/profile-proposals',
-        { params: { status } }
-      ),
+      () =>
+        apiClient.get<ListProposalsResponse>(
+          '/api/v1/ai/profile-proposals',
+          { params: { status } }
+        ),
       'Failed to load proposals'
     );
   },
 
   acceptProposal(id: string, finalValue?: string) {
     return request(
-      () => apiClient.post(
-        `/api/v1/ai/profile-proposals/${id}/accept`,
-        finalValue ? { final_value: finalValue } : {}
-      ),
+      () =>
+        apiClient.post(
+          `/api/v1/ai/profile-proposals/${id}/accept`,
+          finalValue ? { final_value: finalValue } : {}
+        ),
       'Failed to accept proposal'
     );
   },
 
   rejectProposal(id: string, reason?: string) {
     return request(
-      () => apiClient.post(
-        `/api/v1/ai/profile-proposals/${id}/reject`,
-        reason ? { reason } : {}
-      ),
+      () =>
+        apiClient.post(
+          `/api/v1/ai/profile-proposals/${id}/reject`,
+          reason ? { reason } : {}
+        ),
       'Failed to reject proposal'
     );
   },
@@ -222,10 +225,11 @@ export const subscriptionService = {
     finalValues?: Record<string, string>
   ): Promise<BatchAcceptResponse> {
     return request(
-      () => apiClient.post<BatchAcceptResponse>(
-        '/api/v1/ai/profile-proposals/accept-batch',
-        { ids, final_values: finalValues }
-      ),
+      () =>
+        apiClient.post<BatchAcceptResponse>(
+          '/api/v1/ai/profile-proposals/accept-batch',
+          { ids, final_values: finalValues }
+        ),
       'Failed to accept proposals'
     );
   },
@@ -235,10 +239,11 @@ export const subscriptionService = {
     reason?: string
   ): Promise<BatchRejectResponse> {
     return request(
-      () => apiClient.post<BatchRejectResponse>(
-        '/api/v1/ai/profile-proposals/reject-batch',
-        { ids, reason }
-      ),
+      () =>
+        apiClient.post<BatchRejectResponse>(
+          '/api/v1/ai/profile-proposals/reject-batch',
+          { ids, reason }
+        ),
       'Failed to reject proposals'
     );
   },
@@ -256,11 +261,27 @@ export const subscriptionService = {
 
   runDeepAnalysis(): Promise<DeepAnalysisResponse> {
     return request(
-      () => apiClient.post<DeepAnalysisResponse>(
-        '/api/v1/ai/portfolio-deep-analysis',
-        {}
-      ),
+      () =>
+        apiClient.post<DeepAnalysisResponse>(
+          '/api/v1/ai/portfolio-deep-analysis',
+          {}
+        ),
       'Deep analysis failed'
+    );
+  },
+
+  /* ── Image analysis ────────────────────────────────── */
+
+  analyzeImage(
+    payload: AnalyzeImageRequest
+  ): Promise<ImageAnalysisResponse> {
+    return request(
+      () =>
+        apiClient.post<ImageAnalysisResponse>(
+          '/api/v1/ai/analyze-portfolio-image',
+          payload
+        ),
+      'Image analysis failed'
     );
   },
 };

@@ -161,6 +161,34 @@ export interface DeepAnalysisResponse {
   completion_tokens: number | null;
 }
 
+/* ── Image analysis ───────────────────────────────────────── */
+
+export interface AnalyzeImageRequest {
+  /** Send ONE of: work_id, image_url, or image_base64 + mime type */
+  work_id?: string;
+  image_url?: string;
+  image_base64?: string;
+  image_mime_type?: string;
+  /** Optional hints so Gemini knows what it's looking at */
+  context?: {
+    work_title?: string;
+    service_title?: string;
+    profession?: string;
+    location?: string;
+  };
+}
+
+export interface ImageAnalysisResponse {
+  description: string;
+  quality_score: number; // 1-10
+  suggested_caption: string;
+  suggestions: string[];
+  provider: string;
+  model: string;
+  prompt_tokens: number | null;
+  completion_tokens: number | null;
+}
+
 /* ── AI usage ─────────────────────────────────────────────── */
 
 export interface AIUsageItem {

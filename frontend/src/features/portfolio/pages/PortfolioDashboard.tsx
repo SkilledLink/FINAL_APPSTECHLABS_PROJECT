@@ -25,6 +25,7 @@ import {
   SubscriptionCard,
   ProposalReview,
   DeepAnalysisPanel,
+  ImageAnalysisPanel,
   UpgradeModal,
 } from '../../subscription';
 import LoadingState from '../components/LoadingState';
@@ -121,9 +122,7 @@ function StatusPill({ isPublic }: { isPublic: boolean }) {
 
 function OwnerDashboard() {
   const { user } = useAuth();
-  const isProfessional =
-    user?.account_type === 'professional' ||
-    user?.account_type === 'PROFESSIONAL';
+  const isProfessional = user?.account_type === 'professional';
 
   const {
     portfolio,
@@ -157,10 +156,9 @@ function OwnerDashboard() {
     refresh: refreshSub,
   } = useSubscription(isProfessional);
 
-  const { deepAnalysisUsage, refresh: refreshAIUsage } = useAIUsage(
-    isProfessional,
-    { entitlements },
-  );
+  const { deepAnalysisUsage, refresh: refreshAIUsage } = useAIUsage(isProfessional, {
+    entitlements,
+  });
 
   const {
     proposals,
@@ -181,10 +179,8 @@ function OwnerDashboard() {
   const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   if (!isProfessional) return <ProfessionalRequired />;
-  if (loading && !portfolio)
-    return <LoadingState label="Loading workspace portfolio…" />;
-  if (error && !portfolio)
-    return <ErrorState message={error} onRetry={refresh} />;
+  if (loading && !portfolio) return <LoadingState label="Loading workspace portfolio…" />;
+  if (error && !portfolio) return <ErrorState message={error} onRetry={refresh} />;
 
   if (!portfolio) {
     return (
@@ -194,7 +190,7 @@ function OwnerDashboard() {
           <PortfolioCreateForm
             categories={categories}
             saving={saving}
-            onCreate={async (input) => {
+            onCreate={async input => {
               const created = await createPortfolio(input);
               if (created) {
                 toast.success('Portfolio created');
@@ -208,11 +204,20 @@ function OwnerDashboard() {
     );
   }
 
-  const publicHref = portfolio.user?.username
-    ? `/profile/${portfolio.user.username}`
-    : null;
+  const publicHref = portfolio.user?.username ? `/profile/${portfolio.user.username}` : null;
 
-  const liveCount = availability.filter((a) => a.is_available).length;
+  const liveCount = availability.filter(a => a.is_available).length;
+
+  /* Build the list of images available for AI analysis. */
+  const analyzableImages = works
+    .filter(w => w.after_image_url || w.before_image_url)
+    .map(w => ({
+      id: w.id,
+      title: w.title,
+      imageUrl: (w.after_image_url || w.before_image_url) as string,
+      serviceTitle: w.service_category ?? undefined,
+      location: w.location ?? undefined,
+    }));
 
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-slate-50 text-slate-900 transition-colors dark:bg-slate-950 dark:text-slate-100">
@@ -225,16 +230,11 @@ function OwnerDashboard() {
               <LayoutDashboard className="h-4 w-4" />
             </div>
 
-            <nav
-              aria-label="Breadcrumb"
-              className="flex min-w-0 items-center gap-2"
-            >
+            <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2">
               <span className="hidden text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500 sm:inline">
                 Workspace
               </span>
-              <span className="hidden text-slate-300 sm:inline dark:text-slate-700">
-                /
-              </span>
+              <span className="hidden text-slate-300 sm:inline dark:text-slate-700">/</span>
               <h1 className="truncate text-[13px] font-semibold tracking-tight text-slate-900 dark:text-white">
                 Portfolio Studio
               </h1>
@@ -283,16 +283,8 @@ function OwnerDashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: EASE }}
         >
-          <SectionHeader
-            index="01"
-            title="Profile"
-            subtitle="How clients see you on SkilledLink"
-          />
-          <PortfolioHeader
-            portfolio={portfolio}
-            isOwner
-            onEdit={() => setEditOpen(true)}
-          />
+          <SectionHeader index="01" title="Profile" subtitle="How clients see you on SkilledLink" />
+          <PortfolioHeader portfolio={portfolio} isOwner onEdit={() => setEditOpen(true)} />
         </motion.section>
 
         <motion.section
@@ -301,16 +293,8 @@ function OwnerDashboard() {
           transition={{ duration: 0.35, delay: 0.05, ease: EASE }}
           className="mt-8 sm:mt-6"
         >
-          <SectionHeader
-            index="02"
-            title="At a glance"
-            subtitle="Your key performance signals"
-          />
-          <PortfolioStats
-            portfolio={portfolio}
-            services={services}
-            works={works}
-          />
+          <SectionHeader index="02" title="At a glance" subtitle="Your key performance signals" />
+          <PortfolioStats portfolio={portfolio} services={services} works={works} />
         </motion.section>
 
         <motion.section
@@ -335,12 +319,17 @@ function OwnerDashboard() {
           <DeepAnalysisPanel
             analysis={analysis}
             analyzing={analyzing}
-            usage={deepAnalysisUsage}
             onRun={async () => {
               const result = await runDeepAnalysis();
               await refreshAIUsage();
               return result;
             }}
+          />
+
+          <ImageAnalysisPanel
+            images={analyzableImages}
+            profession={portfolio.headline ?? undefined}
+            tierLevel={active?.subscription?.tier?.level ?? 0}
           />
 
           <ProposalReview
@@ -350,10 +339,10 @@ function OwnerDashboard() {
             onGenerate={generate}
             onAccept={accept}
             onReject={reject}
-            onAcceptBatch={async (ids) => {
+            onAcceptBatch={async ids => {
               await acceptBatch(ids);
             }}
-            onRejectBatch={async (ids) => {
+            onRejectBatch={async ids => {
               await rejectBatch(ids);
             }}
           />
@@ -398,9 +387,9 @@ function OwnerDashboard() {
                       services={services}
                       saving={saving}
                       isOwner
-                      onCreate={async (input) => await createService(input)}
+                      onCreate={async input => await createService(input)}
                       onUpdate={async (id, input) => await updateService(id, input)}
-                      onDelete={async (id) => {
+                      onDelete={async id => {
                         await deleteService(id);
                       }}
                       onUploadBanner={async (id, file) => {
@@ -418,14 +407,12 @@ function OwnerDashboard() {
                       services={services}
                       saving={saving}
                       isOwner
-                      onCreate={async (input) => await createWork(input)}
+                      onCreate={async input => await createWork(input)}
                       onUpdate={async (id, input) => await updateWork(id, input)}
-                      onDelete={async (id) => {
+                      onDelete={async id => {
                         await deleteWork(id);
                       }}
-                      onUploadImages={async (id, files) =>
-                        await uploadWorkImages(id, files)
-                      }
+                      onUploadImages={async (id, files) => await uploadWorkImages(id, files)}
                     />
                   )}
 
@@ -433,16 +420,13 @@ function OwnerDashboard() {
                     <PortfolioAvailability
                       availability={availability}
                       saving={saving}
-                      isOwner
-                      onSave={async (items) => {
+                      onSave={async items => {
                         await setAvailability(items);
                       }}
                     />
                   )}
 
-                  {tab === 'about' && (
-                    <PortfolioAboutTab portfolio={portfolio} />
-                  )}
+                  {tab === 'about' && <PortfolioAboutTab portfolio={portfolio} />}
                 </motion.div>
               </AnimatePresence>
             </div>
@@ -473,7 +457,7 @@ function OwnerDashboard() {
         portfolio={portfolio}
         saving={saving}
         onClose={() => setEditOpen(false)}
-        onSubmit={async (input) => {
+        onSubmit={async input => {
           const updated = await updatePortfolio(input);
           if (updated) {
             toast.success('Portfolio updated');
@@ -488,7 +472,7 @@ function OwnerDashboard() {
         currentLevel={active?.subscription?.tier?.level ?? 0}
         onClose={() => setUpgradeOpen(false)}
         onSuccess={async () => {
-          await new Promise((r) => setTimeout(r, 800));
+          await new Promise(r => setTimeout(r, 800));
           await refreshSub();
         }}
       />
@@ -533,15 +517,13 @@ function PublicView({ userId }: { userId: string }) {
   if (error || !data || !portfolio) {
     return (
       <ErrorState
-        message={
-          error ?? "This professional hasn't published a portfolio yet."
-        }
+        message={error ?? "This professional hasn't published a portfolio yet."}
         onRetry={refresh}
       />
     );
   }
 
-  const liveCount = availability.filter((a) => a.is_available).length;
+  const liveCount = availability.filter(a => a.is_available).length;
 
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-slate-50 text-slate-900 transition-colors dark:bg-slate-950 dark:text-slate-100">
@@ -563,16 +545,11 @@ function PublicView({ userId }: { userId: string }) {
               <LayoutDashboard className="h-4 w-4" />
             </div>
 
-            <nav
-              aria-label="Breadcrumb"
-              className="flex min-w-0 items-center gap-2"
-            >
+            <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2">
               <span className="hidden text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500 sm:inline">
                 Portfolio
               </span>
-              <span className="hidden text-slate-300 sm:inline dark:text-slate-700">
-                /
-              </span>
+              <span className="hidden text-slate-300 sm:inline dark:text-slate-700">/</span>
               <h1 className="truncate text-[13px] font-semibold tracking-tight text-slate-900 dark:text-white">
                 {portfolio.business_name || fullName}
               </h1>
@@ -623,16 +600,8 @@ function PublicView({ userId }: { userId: string }) {
           transition={{ duration: 0.35, delay: 0.05, ease: EASE }}
           className="mt-8 sm:mt-6"
         >
-          <SectionHeader
-            index="02"
-            title="At a glance"
-            subtitle="Key performance signals"
-          />
-          <PortfolioStats
-            portfolio={portfolio}
-            services={services}
-            works={works}
-          />
+          <SectionHeader index="02" title="At a glance" subtitle="Key performance signals" />
+          <PortfolioStats portfolio={portfolio} services={services} works={works} />
         </motion.section>
 
         <motion.section
@@ -697,14 +666,11 @@ function PublicView({ userId }: { userId: string }) {
                     <PortfolioAvailability
                       availability={availability}
                       saving={false}
-                      isOwner={false}
                       onSave={async () => {}}
                     />
                   )}
 
-                  {tab === 'about' && (
-                    <PortfolioAboutTab portfolio={portfolio} />
-                  )}
+                  {tab === 'about' && <PortfolioAboutTab portfolio={portfolio} />}
                 </motion.div>
               </AnimatePresence>
             </div>
@@ -719,9 +685,7 @@ interface PortfolioDashboardProps {
   userId?: string;
 }
 
-export default function PortfolioDashboard({
-  userId: propUserId,
-}: PortfolioDashboardProps = {}) {
+export default function PortfolioDashboard({ userId: propUserId }: PortfolioDashboardProps = {}) {
   const { user } = useAuth();
   const { userId: routeUserId } = useParams<{ userId: string }>();
 
