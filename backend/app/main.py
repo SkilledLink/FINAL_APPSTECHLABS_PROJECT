@@ -1,5 +1,6 @@
 # app/main.py
 
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -128,6 +129,11 @@ except ImportError:
 # ─── Lifespan ──────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # 0) Bind the socket emit bridge to the running loop so sync FastAPI
+    #    endpoints can push Socket.IO events via asyncio.run_coroutine_threadsafe.
+    from app.sockets.emit_bridge import set_main_loop
+    set_main_loop(asyncio.get_running_loop())
+
     print("⏳ Attempting to connect to the database...")
 
     # 1) Verify connectivity
@@ -156,8 +162,6 @@ async def lifespan(app: FastAPI):
         raise e
 
     # 3) Create any missing tables (idempotent).
-    #    All models are imported above, so SQLModel.metadata is fully populated.
-    #    Fails loudly on error — no silent swallowing.
     try:
         SQLModel.metadata.create_all(engine)
         print("✅ Database tables are ready.")

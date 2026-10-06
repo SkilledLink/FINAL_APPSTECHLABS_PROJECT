@@ -2,7 +2,7 @@
 
 import { forwardRef, useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, MessageSquare } from 'lucide-react';
+import { CheckCircle2, Clock, Loader2, MessageSquare } from 'lucide-react';
 import { conversationApi } from '../../../api/conversationApi';
 import { useAuth } from '../hooks/useAuth';
 import { normalizeId } from '../utils/idUtils';
@@ -12,41 +12,21 @@ export interface MessageUserButtonProps
     React.ButtonHTMLAttributes<HTMLButtonElement>,
     'onClick' | 'children'
   > {
-  /** Target user's id. If falsy, or if it matches the current user, the button is disabled. */
   userId?: string | null;
-
-  /** Optional custom content. Defaults to a MessageSquare icon + "Message". */
   children?: React.ReactNode;
-
   className?: string;
-
-  /** Force-disable (e.g. viewer can't message this user). */
   disabled?: boolean;
-
-  /** Called when the direct-conversation lookup fails. */
   onError?: (error: unknown) => void;
-
-  /** Veto hook — return `false` to cancel opening the conversation. */
   onBeforeOpen?: () => boolean | void;
-
-  /** Fired after a conversation id has been resolved, before navigation. */
-  onAfterOpen?: (conversationId: string) => void;
+  /** Fired after a conversation id has been resolved. `status` tells you whether it's active or pending. */
+  onAfterOpen?: (
+    conversationId: string,
+    status: 'active' | 'pending'
+  ) => void;
 }
 
-/**
- * Renders a button that opens (or creates) a direct conversation with `userId`
- * and navigates to `/home/messages/:conversationId`.
- *
- * Reusable anywhere you have a user id: profile headers, comment lists,
- * job cards, follower lists, etc.
- *
- * Behaviour:
- *   - Disabled when `userId` is missing, equals the current user, or
- *     `disabled` is true.
- *   - Shows a spinner + "Opening…" while the backend resolves the conversation.
- *   - Errors surface via `onError`; the button returns to idle so the user
- *     can retry.
- */
+type ButtonState = 'idle' | 'loading' | 'pending' | 'active';
+
 export const MessageUserButton = forwardRef<
   HTMLButtonElement,
   MessageUserButtonProps
@@ -66,7 +46,7 @@ export const MessageUserButton = forwardRef<
   ) => {
     const navigate = useNavigate();
     const { user } = useAuth();
-    const [loading, setLoading] = useState(false);
+    const [state, setState] = useState<ButtonState>('idle');
 
     const currentUserId = normalizeId(user?.id);
     const targetId = normalizeId(userId);
@@ -76,31 +56,39 @@ export const MessageUserButton = forwardRef<
 
     const handleClick = useCallback(
       async (event: React.MouseEvent<HTMLButtonElement>) => {
-        if (isInactive || loading) return;
+        if (isInactive || state === 'loading' || state === 'pending') return;
 
         if (onBeforeOpen && onBeforeOpen() === false) return;
 
         event.preventDefault();
         event.stopPropagation();
 
-        setLoading(true);
+        setState('loading');
         try {
-          const conversation = await conversationApi.getOrCreateDirect(targetId);
-          onAfterOpen?.(conversation.id);
+          const conversation = await conversationApi.getOrCreateDirect(
+            targetId
+          );
 
-          // Route lives under AppLayout at /home/messages/:conversationId
-          navigate(`/home/messages/${conversation.id}`);
+          const status: 'active' | 'pending' =
+            conversation.status === 'pending' ? 'pending' : 'active';
 
-          // Note: we don't reset `loading` on success — the component unmounts
-          // as soon as navigation commits, and resetting would cause a flash.
+          onAfterOpen?.(conversation.id, status);
+
+          if (status === 'active') {
+            setState('active');
+            navigate(`/home/messages/${conversation.id}`);
+          } else {
+            // Pending — we've sent the request. Show "Request sent" and stay put.
+            setState('pending');
+          }
         } catch (err) {
           onError?.(err);
-          setLoading(false);
+          setState('idle');
         }
       },
       [
         isInactive,
-        loading,
+        state,
         onBeforeOpen,
         onAfterOpen,
         onError,
@@ -109,30 +97,55 @@ export const MessageUserButton = forwardRef<
       ]
     );
 
+    const renderContent = () => {
+      if (state === 'loading') {
+        return (
+          <>
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            <span>Opening…</span>
+          </>
+        );
+      }
+      if (state === 'pending') {
+        return (
+          <>
+            <Clock className="w-3.5 h-3.5" />
+            <span>Request sent</span>
+          </>
+        );
+      }
+      if (state === 'active') {
+        return (
+          <>
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span>Open</span>
+          </>
+        );
+      }
+      return (
+        children ?? (
+          <>
+            <MessageSquare className="w-3.5 h-3.5" />
+            <span>Message</span>
+          </>
+        )
+      );
+    };
+
+    const disabledForClick = isInactive || state === 'loading' || state === 'pending';
+
     return (
       <button
         ref={ref}
         type="button"
         onClick={handleClick}
-        disabled={isInactive || loading}
-        aria-busy={loading}
-        aria-disabled={isInactive || loading}
+        disabled={disabledForClick}
+        aria-busy={state === 'loading'}
+        aria-disabled={disabledForClick}
         className={className}
         {...rest}
       >
-        {loading ? (
-          <>
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            <span>Opening…</span>
-          </>
-        ) : (
-          children ?? (
-            <>
-              <MessageSquare className="w-3.5 h-3.5" />
-              <span>Message</span>
-            </>
-          )
-        )}
+        {renderContent()}
       </button>
     );
   }

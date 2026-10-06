@@ -68,6 +68,13 @@ def _persist_message(
 
     with Session(engine) as session:
         conv_repo = ConversationRepository(session)
+
+        # ── NEW: block sending to pending / rejected conversations ──
+        conv = conv_repo.get_by_id(conversation_id)
+        if conv is None:
+            raise PermissionError("CONVERSATION_NOT_FOUND")
+        if conv.status != "active":
+            raise PermissionError("CONVERSATION_NOT_ACTIVE")
         if not conv_repo.is_participant(conversation_id, sender_id):
             raise PermissionError("CONVERSATION_ACCESS_DENIED")
 
@@ -100,16 +107,19 @@ def _persist_message(
         session.commit()
 
         # Serialize before session closes
-        msg_payload = MessageResponse.model_validate(message).model_dump(mode="json")
+        msg_payload = MessageResponse.model_validate(message).model_dump(
+            mode="json"
+        )
 
         # Re-fetch notifications to get IDs (simplest reliable way)
         from sqlmodel import select
+
         notification_payloads: list[dict] = []
         for rid in recipient_ids:
             stmt = (
                 select(Notification)
                 .where(Notification.user_id == UUID(rid))
-                .order_by(Notification.created_at.desc())  # adjust if no created_at
+                .order_by(Notification.created_at.desc())
                 .limit(1)
             )
             n = session.exec(stmt).first()
@@ -161,11 +171,24 @@ async def on_send_message(sid, data):
         result = await asyncio.to_thread(
             _persist_message, sender_id, str(conversation_id), data
         )
-    except PermissionError:
-        return _err("CONVERSATION_ACCESS_DENIED", "You are not a member of this conversation.")
+    except PermissionError as exc:
+        code = str(exc)
+        if code == "CONVERSATION_NOT_FOUND":
+            return _err(
+                "CONVERSATION_NOT_FOUND", "This conversation does not exist."
+            )
+        if code == "CONVERSATION_NOT_ACTIVE":
+            return _err(
+                "CONVERSATION_NOT_ACTIVE",
+                "This conversation is still pending acceptance.",
+            )
+        return _err(
+            "CONVERSATION_ACCESS_DENIED",
+            "You are not a member of this conversation.",
+        )
     except ValueError as exc:
         return _err("VALIDATION_ERROR", str(exc))
-    except Exception as exc:
+    except Exception:
         logger.exception("send_message failed")
         return _err("INTERNAL_ERROR", "Message could not be sent.")
 
@@ -178,7 +201,9 @@ async def on_send_message(sid, data):
 
     # Emit each notification to the corresponding recipient's personal room.
     for notif in result["notifications"]:
-        await sio.emit("new_notification", notif, room=user_room(notif["user_id"]))
+        await sio.emit(
+            "new_notification", notif, room=user_room(notif["user_id"])
+        )
 
     return _ok({"message": result["message"]})
 
@@ -201,13 +226,18 @@ async def on_message_read(sid, data):
     def _do():
         from app.services.message_service import MessageService
         with Session(engine) as s:
-            MessageService(s).mark_read(UUID(str(conversation_id)), UUID(user_id))
+            MessageService(s).mark_read(
+                UUID(str(conversation_id)), UUID(user_id)
+            )
             return True
 
     try:
         await asyncio.to_thread(_do)
     except PermissionError:
-        return _err("CONVERSATION_ACCESS_DENIED", "You are not a member of this conversation.")
+        return _err(
+            "CONVERSATION_ACCESS_DENIED",
+            "You are not a member of this conversation.",
+        )
     except Exception:
         logger.exception("message_read failed")
         return _err("INTERNAL_ERROR", "Could not update read state.")

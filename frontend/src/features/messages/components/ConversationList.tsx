@@ -6,48 +6,66 @@ import {
   X,
   MessageSquare,
   Plus,
+  UserPlus,
 } from 'lucide-react';
 import type { Conversation } from '../types/message.types';
 import { ConversationItem } from './ConversationItem';
 
 interface ConversationListProps {
   conversations: Conversation[];
+  /** Pending incoming requests. Optional — if omitted, no Requests tab is rendered. */
+  requests?: Conversation[];
   activeId: string | null;
   onSelectConversation: (id: string) => void;
   onNewChat?: () => void;
+  onAcceptRequest?: (id: string) => Promise<void> | void;
+  onRejectRequest?: (id: string) => Promise<void> | void;
 }
+
+type TabId = 'all' | 'unread' | 'requests';
 
 export const ConversationList: React.FC<ConversationListProps> = ({
   conversations,
+  requests = [],
   activeId,
   onSelectConversation,
   onNewChat,
+  onAcceptRequest,
+  onRejectRequest,
 }) => {
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  const [filter, setFilter] = useState<TabId>('all');
 
   const totalUnread = conversations.reduce(
     (acc, item) => acc + (item.unreadCount || 0),
     0
   );
+  const requestCount = requests.length;
 
-  const filteredConversations = conversations.filter((item) => {
-    const participantName = item.participant?.name?.toLowerCase() || '';
-    const lastMessageText =
-      (item.lastMessage?.text || item.lastMessage?.content || '')?.toLowerCase() ||
-      '';
-    const matchesSearch =
-      participantName.includes(search.toLowerCase()) ||
-      lastMessageText.includes(search.toLowerCase());
-    const matchesFilter =
-      filter === 'unread' ? (item.unreadCount || 0) > 0 : true;
-    return matchesSearch && matchesFilter;
-  });
+  const filteredConversations = (filter === 'requests' ? requests : conversations).filter(
+    (item) => {
+      const participantName = item.participant?.name?.toLowerCase() || '';
+      const lastMessageText =
+        (item.lastMessage?.text || item.lastMessage?.content || '')?.toLowerCase() ||
+        '';
+      const matchesSearch =
+        participantName.includes(search.toLowerCase()) ||
+        lastMessageText.includes(search.toLowerCase());
+      const matchesFilter =
+        filter === 'unread' ? (item.unreadCount || 0) > 0 : true;
+      return matchesSearch && matchesFilter;
+    }
+  );
 
-  const filterTabs = [
-    { id: 'all' as const, label: 'All', count: conversations.length },
-    { id: 'unread' as const, label: 'Unread', count: totalUnread },
+  const filterTabs: Array<{ id: TabId; label: string; count: number }> = [
+    { id: 'all', label: 'All', count: conversations.length },
+    { id: 'unread', label: 'Unread', count: totalUnread },
   ];
+  if (onAcceptRequest && onRejectRequest) {
+    filterTabs.push({ id: 'requests', label: 'Requests', count: requestCount });
+  }
+
+  const isRequestView = filter === 'requests';
 
   return (
     <div className="w-full lg:w-[340px] xl:w-[380px] flex flex-col h-full border-r border-slate-200/60 dark:border-slate-800/60 bg-white/40 dark:bg-slate-950/40 backdrop-blur-2xl">
@@ -58,7 +76,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
             <h2 className="text-[22px] font-bold tracking-tight text-slate-900 dark:text-slate-100">
               Messages
             </h2>
-            {totalUnread > 0 && (
+            {totalUnread > 0 && !isRequestView && (
               <motion.span
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
@@ -95,7 +113,9 @@ export const ConversationList: React.FC<ConversationListProps> = ({
           <Search className="w-4 h-4 absolute left-3.5 text-slate-400 group-focus-within:text-slate-600 dark:group-focus-within:text-slate-300 transition-colors" />
           <input
             type="text"
-            placeholder="Search conversations…"
+            placeholder={
+              isRequestView ? 'Search requests…' : 'Search conversations…'
+            }
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-10 py-2.5 bg-slate-100/70 dark:bg-slate-900/70 border border-transparent focus:border-slate-300/80 dark:focus:border-slate-700/80 rounded-2xl text-[13px] font-medium text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:bg-white dark:focus:bg-slate-900 transition-all"
@@ -137,7 +157,9 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                 {tab.count > 0 && (
                   <span
                     className={`relative z-10 font-mono text-[10px] px-1.5 py-0.5 rounded-md transition-colors ${
-                      isActive
+                      tab.id === 'requests' && isActive
+                        ? 'bg-amber-500 text-white'
+                        : isActive
                         ? 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
                         : 'bg-slate-300/50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400'
                     }`}
@@ -168,6 +190,9 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                   conversation={item}
                   isActive={item.id === activeId}
                   onSelect={onSelectConversation}
+                  isRequest={isRequestView}
+                  onAccept={onAcceptRequest}
+                  onReject={onRejectRequest}
                 />
               </motion.div>
             ))
@@ -178,14 +203,20 @@ export const ConversationList: React.FC<ConversationListProps> = ({
               className="flex flex-col items-center justify-center py-20 px-4 text-center"
             >
               <div className="p-4 bg-slate-100/70 dark:bg-slate-900/60 border border-slate-200/70 dark:border-slate-800/70 rounded-2xl mb-3 text-slate-400">
-                <MessageSquare className="w-6 h-6 stroke-[1.5]" />
+                {isRequestView ? (
+                  <UserPlus className="w-6 h-6 stroke-[1.5]" />
+                ) : (
+                  <MessageSquare className="w-6 h-6 stroke-[1.5]" />
+                )}
               </div>
               <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                No conversations found
+                {isRequestView ? 'No pending requests' : 'No conversations found'}
               </p>
               <p className="text-xs text-slate-400 dark:text-slate-500 max-w-[220px] mt-1 leading-relaxed">
                 {search
                   ? `No results matching "${search}"`
+                  : isRequestView
+                  ? "You're all caught up."
                   : 'You have no unread messages right now.'}
               </p>
             </motion.div>

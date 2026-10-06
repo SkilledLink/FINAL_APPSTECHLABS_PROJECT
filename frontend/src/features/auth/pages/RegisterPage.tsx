@@ -43,8 +43,16 @@ export default function RegisterPage() {
       password,
     });
 
-    if (result.success) {
-      navigate(`/verify-email?email=${encodeURIComponent(email)}`);
+    if (!result.success) return;
+
+    if (result.autoLoggedIn) {
+      // Backend already issued tokens → skip verify-email, go straight to onboarding.
+      navigate("/onboarding", { replace: true });
+    } else {
+      // Backend requires email verification first.
+      navigate(`/verify-email?email=${encodeURIComponent(email)}`, {
+        replace: true,
+      });
     }
   };
 

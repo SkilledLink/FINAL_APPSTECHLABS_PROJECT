@@ -1,3 +1,5 @@
+export type ConversationStatus = 'active' | 'pending' | 'rejected';
+
 export interface MessageUser {
   id: string;
   name: string;
@@ -47,12 +49,16 @@ export interface Conversation {
   id: string;
   type: 'direct' | 'group';
   title?: string;
+  /** active = normal chat; pending = direct request awaiting acceptance */
+  status?: ConversationStatus;
   created_by: string;
   created_at: string;
   updated_at: string;
   lastMessage?: Message;
   unreadCount: number;
   participant?: MessageUser | null;
+  /** Convenience flag set by the hook when the current user is the recipient of a pending request. */
+  isIncomingRequest?: boolean;
 }
 
 export interface MessageCreate {

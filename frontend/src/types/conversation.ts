@@ -1,3 +1,5 @@
+export type ConversationStatus = 'active' | 'pending' | 'rejected';
+
 export interface ParticipantInfo {
   id: string;
   first_name: string;
@@ -10,6 +12,7 @@ export interface Conversation {
   id: string;
   type: string;
   title?: string | null;
+  status: ConversationStatus;
   created_by: string;
   created_at: string;
   updated_at: string;

@@ -157,14 +157,14 @@ export default function ProfessionalWizardPage() {
       console.warn("refreshUser failed:", refreshErr);
     }
 
-    /* ── 5. Success + navigate ───────────────────────────── */
+    /* ── 5. Success + navigate to profile ────────────────── */
     toast.success("🎉 Professional profile created!", {
       autoClose: 4000,
       position: "top-center",
     });
 
     window.setTimeout(() => {
-      navigate("/home", { replace: true });
+      navigate("/profile", { replace: true });
     }, 700);
 
     setSaving(false);

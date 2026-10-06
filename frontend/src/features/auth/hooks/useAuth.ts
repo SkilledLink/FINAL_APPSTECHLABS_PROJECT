@@ -30,29 +30,43 @@ export function useAuth() {
 
   const clearError = () => setError(null);
 
+  /* ── helper: persist tokens + fetch /users/me ───────────── */
+  const persistSession = async (
+    access_token: string,
+    refresh_token?: string,
+  ): Promise<AuthUser | null> => {
+    localStorage.setItem("access_token", access_token);
+    if (refresh_token) localStorage.setItem("refresh_token", refresh_token);
+
+    try {
+      const { data } = await apiClient.get<AuthUser>("/users/me");
+      localStorage.setItem("user", JSON.stringify(data));
+      setUser(data);
+      return data;
+    } catch {
+      return null;
+    }
+  };
+
+  /* ── LOGIN ──────────────────────────────────────────────── */
   const login = async (
     credentials: LoginCredentials,
   ): Promise<{ success: boolean; unverified?: boolean }> => {
     setLoading(true);
     setError(null);
     try {
-      const loginResponse = await apiClient.post("/auth/login", {
+      const { data: loginData } = await apiClient.post("/auth/login", {
         email: credentials.email,
         password: credentials.password,
       });
-      const loginData = loginResponse.data;
 
-      localStorage.setItem("access_token", loginData.access_token);
-      localStorage.setItem("refresh_token", loginData.refresh_token);
-
-      const userResponse = await apiClient.get("/users/me");
-      const userData = userResponse.data as AuthUser;
-
-      localStorage.setItem("user", JSON.stringify(userData));
-      setUser(userData);
+      const userData = await persistSession(
+        loginData.access_token,
+        loginData.refresh_token,
+      );
 
       toast.success("Welcome back! 🎉");
-      return { success: true };
+      return { success: !!userData };
     } catch (err: any) {
       const statusCode = err.response?.status;
       const msg =
@@ -72,50 +86,77 @@ export function useAuth() {
     }
   };
 
+  /* ── REGISTER ───────────────────────────────────────────── */
   const register = async (
     data: RegisterData,
-  ): Promise<{ success: boolean; user_id?: string }> => {
+  ): Promise<{
+    success: boolean;
+    user_id?: string;
+    /** True when register returned tokens and we stored them (no verify-email needed). */
+    autoLoggedIn?: boolean;
+  }> => {
     setLoading(true);
     setError(null);
     try {
-      const response = await apiClient.post("/auth/register", {
+      const { data: payload } = await apiClient.post("/auth/register", {
         email: data.email,
         first_name: data.first_name,
         last_name: data.last_name,
         password: data.password,
       });
+
+      // Case A — backend returned tokens on register → we're already logged in.
+      if (payload?.access_token) {
+        const userData = await persistSession(
+          payload.access_token,
+          payload.refresh_token,
+        );
+        toast.success("Account created! 🎉");
+        return {
+          success: true,
+          user_id: payload.user_id ?? userData?.id,
+          autoLoggedIn: true,
+        };
+      }
+
+      // Case B — backend requires email verification first.
+      // Nothing to persist yet. VerifyEmailPage will handle token storage.
       toast.success("Account created! Please verify your email.");
-      return { success: true, user_id: response.data.user_id };
+      return {
+        success: true,
+        user_id: payload?.user_id,
+        autoLoggedIn: false,
+      };
     } catch (err: any) {
       const msg = err.response?.data?.detail || "Registration failed.";
       setError(msg);
       toast.error(msg);
-      return { success: false };
+      return { success: false, autoLoggedIn: false };
     } finally {
       setLoading(false);
     }
   };
 
-  const verifyEmail = async (email: string, code: string): Promise<boolean> => {
+  /* ── VERIFY EMAIL ───────────────────────────────────────── */
+  const verifyEmail = async (
+    email: string,
+    code: string,
+  ): Promise<boolean> => {
     setLoading(true);
     setError(null);
     try {
-      const response = await apiClient.post("/auth/verify-email", {
+      const { data } = await apiClient.post("/auth/verify-email", {
         email,
         code,
       });
-      const { access_token, refresh_token } = response.data;
 
-      localStorage.setItem("access_token", access_token);
-      localStorage.setItem("refresh_token", refresh_token);
-
-      const userResponse = await apiClient.get("/users/me");
-      const userData = userResponse.data as AuthUser;
-      localStorage.setItem("user", JSON.stringify(userData));
-      setUser(userData);
+      const userData = await persistSession(
+        data.access_token,
+        data.refresh_token,
+      );
 
       toast.success("Email verified! 🎉");
-      return true;
+      return !!userData;
     } catch (err: any) {
       const msg =
         err.response?.data?.detail ||
@@ -128,6 +169,7 @@ export function useAuth() {
     }
   };
 
+  /* ── RESEND VERIFICATION ────────────────────────────────── */
   const resendVerification = async (email: string): Promise<boolean> => {
     setLoading(true);
     setError(null);
@@ -147,6 +189,7 @@ export function useAuth() {
     }
   };
 
+  /* ── FORGOT PASSWORD ────────────────────────────────────── */
   const forgotPassword = async (
     data: ForgotPasswordData,
   ): Promise<boolean> => {
@@ -168,6 +211,7 @@ export function useAuth() {
     }
   };
 
+  /* ── RESET PASSWORD ─────────────────────────────────────── */
   const resetPassword = async (
     data: ResetPasswordData,
   ): Promise<boolean> => {
@@ -191,6 +235,7 @@ export function useAuth() {
     }
   };
 
+  /* ── LOGOUT ─────────────────────────────────────────────── */
   const logout = () => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
@@ -199,13 +244,13 @@ export function useAuth() {
     toast.info("Logged out.");
   };
 
+  /* ── REFRESH USER ───────────────────────────────────────── */
   const refreshUser = async (): Promise<AuthUser | null> => {
     try {
-      const res = await apiClient.get("/users/me");
-      const userData = res.data as AuthUser;
-      localStorage.setItem("user", JSON.stringify(userData));
-      setUser(userData);
-      return userData;
+      const { data } = await apiClient.get<AuthUser>("/users/me");
+      localStorage.setItem("user", JSON.stringify(data));
+      setUser(data);
+      return data;
     } catch {
       return null;
     }

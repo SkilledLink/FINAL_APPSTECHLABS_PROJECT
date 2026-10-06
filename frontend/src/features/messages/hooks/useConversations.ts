@@ -1,13 +1,20 @@
 // src/hooks/useConversations.ts
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { conversationsApi } from '../api/conversations';
-import type { Conversation, Message, MessageUser } from '../types/message.types';
+import type {
+  Conversation,
+  Message,
+  MessageUser,
+} from '../types/message.types';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { formatFileSize, getFileIcon } from '../utils/fileUtils';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
-function mapBackendConversation(backend: any): Conversation {
+function mapBackendConversation(
+  backend: any,
+  currentUserId?: string | null
+): Conversation {
   const p = backend.participant;
   let participant: MessageUser | null = null;
   if (p) {
@@ -28,8 +35,8 @@ function mapBackendConversation(backend: any): Conversation {
     const attachmentUrl = lm.attachment_path?.startsWith('http')
       ? lm.attachment_path
       : lm.attachment_path
-        ? `${SUPABASE_URL}/storage/v1/object/public/messages/${lm.attachment_path}`
-        : '';
+      ? `${SUPABASE_URL}/storage/v1/object/public/messages/${lm.attachment_path}`
+      : '';
 
     lastMessage = {
       id: lm.id,
@@ -50,8 +57,13 @@ function mapBackendConversation(backend: any): Conversation {
       audioDetails: isVoice
         ? {
             url: attachmentUrl,
-            duration: lm.duration_seconds ? `${Math.floor(lm.duration_seconds)}s` : '0s',
-            waveform: Array.from({ length: 15 }, () => Math.floor(Math.random() * 75 + 25)),
+            duration: lm.duration_seconds
+              ? `${Math.floor(lm.duration_seconds)}s`
+              : '0s',
+            waveform: Array.from(
+              { length: 15 },
+              () => Math.floor(Math.random() * 75 + 25)
+            ),
           }
         : undefined,
       fileDetails: lm.attachment_name
@@ -66,30 +78,40 @@ function mapBackendConversation(backend: any): Conversation {
     };
   }
 
+  const status = (backend.status || 'active') as
+    | 'active'
+    | 'pending'
+    | 'rejected';
+
+  const isIncomingRequest =
+    status === 'pending' &&
+    !!currentUserId &&
+    backend.created_by &&
+    backend.created_by !== currentUserId;
+
   return {
     id: backend.id,
     type: backend.type,
     title: backend.title,
+    status,
     created_by: backend.created_by,
     created_at: backend.created_at,
     updated_at: backend.updated_at,
     unreadCount: backend.unread_count || 0,
     participant,
     lastMessage,
+    isIncomingRequest,
   };
 }
 
 export function useConversations() {
   const { user, isAuthenticated } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [requests, setRequests] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const fetchingRef = useRef(false);
 
-  // Stable refs — these must NOT be in fetchConversations' dep array,
-  // otherwise an unstable isAuthenticated / user identity from useAuth()
-  // will rebuild the callback on every render and trigger an infinite
-  // fetch loop via the useEffect below.
   const isAuthedRef = useRef(isAuthenticated);
   isAuthedRef.current = isAuthenticated;
 
@@ -107,8 +129,18 @@ export function useConversations() {
     try {
       fetchingRef.current = true;
       setLoading(true);
-      const data = await conversationsApi.list();
-      setConversations(data.map(mapBackendConversation));
+
+      const [activeRaw, requestsRaw] = await Promise.all([
+        conversationsApi.list(),
+        conversationsApi.listRequests().catch(() => [] as any[]),
+      ]);
+
+      setConversations(
+        activeRaw.map((c: any) => mapBackendConversation(c, userId))
+      );
+      setRequests(
+        requestsRaw.map((c: any) => mapBackendConversation(c, userId))
+      );
       setError(null);
     } catch (err) {
       setError(err as Error);
@@ -122,24 +154,59 @@ export function useConversations() {
     fetchConversations();
   }, [fetchConversations]);
 
-  const getOrCreateDirect = useCallback(async (userId: string) => {
-    const raw = await conversationsApi.getOrCreateDirect(userId);
-    const mapped = mapBackendConversation(raw);
-    setConversations(prev => {
-      const exists = prev.some(c => c.id === mapped.id);
-      return exists ? prev : [mapped, ...prev];
-    });
-    return mapped;
+  const getOrCreateDirect = useCallback(
+    async (otherUserId: string) => {
+      const raw = await conversationsApi.getOrCreateDirect(otherUserId);
+      const mapped = mapBackendConversation(raw, userId);
+      if (mapped.status === 'active') {
+        setConversations((prev) => {
+          const exists = prev.some((c) => c.id === mapped.id);
+          return exists ? prev : [mapped, ...prev];
+        });
+      }
+      return mapped;
+    },
+    [userId]
+  );
+
+  const acceptRequest = useCallback(
+    async (conversationId: string) => {
+      const raw = await conversationsApi.acceptRequest(conversationId);
+      const mapped = mapBackendConversation(raw, userId);
+      setRequests((prev) => prev.filter((r) => r.id !== conversationId));
+      setConversations((prev) => {
+        const exists = prev.some((c) => c.id === mapped.id);
+        return exists
+          ? prev.map((c) => (c.id === mapped.id ? mapped : c))
+          : [mapped, ...prev];
+      });
+      return mapped;
+    },
+    [userId]
+  );
+
+  const rejectRequest = useCallback(async (conversationId: string) => {
+    await conversationsApi.rejectRequest(conversationId);
+    setRequests((prev) => prev.filter((r) => r.id !== conversationId));
   }, []);
 
-  const updateConversation = useCallback((id: string, updates: Partial<Conversation>) => {
-    setConversations(prev => prev.map(c => (c.id === id ? { ...c, ...updates } : c)));
-  }, []);
+  const updateConversation = useCallback(
+    (id: string, updates: Partial<Conversation>) => {
+      setConversations((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, ...updates } : c))
+      );
+    },
+    []
+  );
 
   const applyIncomingMessage = useCallback(
-    (message: Message, isActiveConversation: boolean, currentUserId: string) => {
-      setConversations(prev => {
-        const idx = prev.findIndex(c => c.id === message.conversation_id);
+    (
+      message: Message,
+      isActiveConversation: boolean,
+      currentUserId: string
+    ) => {
+      setConversations((prev) => {
+        const idx = prev.findIndex((c) => c.id === message.conversation_id);
         if (idx === -1) return prev;
 
         const conv = prev[idx];
@@ -150,7 +217,9 @@ export function useConversations() {
           lastMessage: message,
           updated_at: message.created_at,
           unreadCount:
-            isActiveConversation || isFromSelf ? conv.unreadCount : (conv.unreadCount || 0) + 1,
+            isActiveConversation || isFromSelf
+              ? conv.unreadCount
+              : (conv.unreadCount || 0) + 1,
         };
 
         const next = [...prev];
@@ -159,20 +228,26 @@ export function useConversations() {
         return next;
       });
     },
-    [],
+    []
   );
 
   const clearUnread = useCallback((id: string) => {
-    setConversations(prev => prev.map(c => (c.id === id ? { ...c, unreadCount: 0 } : c)));
+    setConversations((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c))
+    );
   }, []);
 
   return {
     conversations,
+    requests,
+    requestCount: requests.length,
     loading,
     error,
     refetch: fetchConversations,
     fetchConversations,
     getOrCreateDirect,
+    acceptRequest,
+    rejectRequest,
     updateConversation,
     applyIncomingMessage,
     clearUnread,
