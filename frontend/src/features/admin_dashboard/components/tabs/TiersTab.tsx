@@ -18,11 +18,20 @@ import {
   Trash2,
   TrendingUp,
   X,
+  Wand2,
+  Settings2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { useTiers } from '../../hooks/useTiers';
 import QuickAdminTools from '../tiers/QuickAdminTools';
+import {
+  AI_FEATURE_CATALOG,
+  PERIOD_OPTIONS,
+  findAIFeature,
+  type AIFeatureDef,
+  type FeaturePeriod,
+} from '../../constants/aiFeatures';
 import type {
   ProfessionalTierDetail,
   TierCreatePayload,
@@ -31,15 +40,7 @@ import type {
   TierFeatureType,
 } from '../../types/admin.types';
 
-/* ───────────────────────── AI feature contract ─────────────────────────
- * Backend: app/services/ai/features/portfolio_deep_analysis.py
- *   FEATURE_KEY = "ai_portfolio_deep_analysis"
- *
- * Backend: app/services/professional_ai_usage_service.py
- *   Reads feature.feature_value.get("limit") and .get("period")
- *
- * The admin UI writes exactly that shape.
- * ────────────────────────────────────────────────────────────────────── */
+/* ───────────────────────── AI feature contract ───────────────────────── */
 const AI_DEEP_ANALYSIS_KEY = 'ai_portfolio_deep_analysis';
 const AI_VALUE_KEY = 'limit';
 const AI_PERIOD = 'monthly';
@@ -47,13 +48,7 @@ const AI_DEFAULT_LIMIT = 6;
 
 /* ───────────────────────── Constants ───────────────────────── */
 
-const FEATURE_TYPES: TierFeatureType[] = [
-  'boolean',
-  'numeric',
-  'text',
-  'json',
-];
-
+const FEATURE_TYPES: TierFeatureType[] = ['boolean', 'numeric', 'text', 'json'];
 const CURRENCIES = ['XAF', 'USD', 'EUR', 'GBP', 'NGN'];
 
 const FEATURE_ICON: Record<TierFeatureType, React.ReactNode> = {
@@ -79,14 +74,12 @@ const formatPrice = (amount: number, currency: string) => {
 
 const hexToRgba = (hex: string, alpha: number) => {
   const h = hex.replace('#', '');
-  const expanded =
-    h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+  const expanded = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
   const n = parseInt(expanded, 16);
   if (Number.isNaN(n)) return `rgba(59, 130, 246, ${alpha})`;
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 };
 
-/** Read the AI deep-analysis limit from a tier's features array. */
 const readAiLimit = (features: TierFeature[] | undefined): number => {
   const row = features?.find((f) => f.featureKey === AI_DEEP_ANALYSIS_KEY);
   if (!row) return AI_DEFAULT_LIMIT;
@@ -95,6 +88,573 @@ const readAiLimit = (features: TierFeature[] | undefined): number => {
     return Math.floor(raw);
   }
   return AI_DEFAULT_LIMIT;
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   Feature Modal — NEW: catalog-driven
+   ═══════════════════════════════════════════════════════════════ */
+
+interface FeatureModalProps {
+  open: boolean;
+  initial?: TierFeature | null;
+  saving: boolean;
+  onClose: () => void;
+  onSubmit: (payload: TierFeatureCreatePayload) => Promise<void>;
+}
+
+const EMPTY_FEATURE: TierFeatureCreatePayload = {
+  feature_key: '',
+  feature_name: '',
+  feature_description: '',
+  feature_type: 'boolean',
+  feature_value: null,
+  is_enabled: true,
+};
+
+type Mode = 'ai' | 'custom';
+
+const FeatureModal: React.FC<FeatureModalProps> = ({
+  open,
+  initial,
+  saving,
+  onClose,
+  onSubmit,
+}) => {
+  /* ── state ────────────────────────────────────────── */
+  const [mode, setMode] = useState<Mode>('ai');
+
+  // AI mode
+  const [aiKey, setAiKey] = useState<string>('');
+  const [limit, setLimit] = useState<string>('10');
+  const [period, setPeriod] = useState<FeaturePeriod>('monthly');
+
+  // Custom mode
+  const [custom, setCustom] = useState<TierFeatureCreatePayload>(EMPTY_FEATURE);
+  const [customValueText, setCustomValueText] = useState('');
+
+  const [isEnabled, setIsEnabled] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  /* ── hydrate on open ──────────────────────────────── */
+  useEffect(() => {
+    if (!open) return;
+    setError(null);
+
+    if (initial) {
+      const aiDef = findAIFeature(initial.featureKey);
+      if (aiDef) {
+        setMode('ai');
+        setAiKey(initial.featureKey);
+        const value = initial.featureValue ?? {};
+        const rawLimit = value[AI_VALUE_KEY];
+        setLimit(
+          typeof rawLimit === 'number' && rawLimit > 0
+            ? String(rawLimit)
+            : String(aiDef.defaultLimit),
+        );
+        const rawPeriod = value.period;
+        setPeriod(
+          rawPeriod === 'daily' || rawPeriod === 'weekly' || rawPeriod === 'monthly'
+            ? rawPeriod
+            : aiDef.defaultPeriod,
+        );
+        setIsEnabled(initial.isEnabled);
+      } else {
+        setMode('custom');
+        setCustom({
+          feature_key: initial.featureKey,
+          feature_name: initial.featureName,
+          feature_description: initial.featureDescription ?? '',
+          feature_type: initial.featureType,
+          feature_value: initial.featureValue ?? null,
+          is_enabled: initial.isEnabled,
+        });
+        setCustomValueText(
+          initial.featureValue ? JSON.stringify(initial.featureValue) : '',
+        );
+        setIsEnabled(initial.isEnabled);
+      }
+    } else {
+      // Fresh: default to AI mode with first feature
+      setMode('ai');
+      const first = AI_FEATURE_CATALOG[0];
+      setAiKey(first.key);
+      setLimit(String(first.defaultLimit));
+      setPeriod(first.defaultPeriod);
+      setCustom(EMPTY_FEATURE);
+      setCustomValueText('');
+      setIsEnabled(true);
+    }
+  }, [open, initial]);
+
+  /* ── close-on-escape ──────────────────────────────── */
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !saving) onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, saving, onClose]);
+
+  if (!open) return null;
+
+  const selectedAi: AIFeatureDef | undefined = aiKey
+    ? findAIFeature(aiKey)
+    : undefined;
+
+  /* ── submit ───────────────────────────────────────── */
+  const handleSubmit = async () => {
+    setError(null);
+
+    if (mode === 'ai') {
+      if (!selectedAi) {
+        setError('Pick a feature from the library.');
+        return;
+      }
+      const qty = parseInt(limit, 10);
+      if (!Number.isFinite(qty) || qty < 1) {
+        setError('Quantity must be a whole number of 1 or more.');
+        return;
+      }
+      try {
+        await onSubmit({
+          feature_key: selectedAi.key,
+          feature_name: selectedAi.name,
+          feature_description: selectedAi.description,
+          feature_type: 'json',
+          feature_value: { [AI_VALUE_KEY]: qty, period },
+          is_enabled: isEnabled,
+        });
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to save feature');
+      }
+      return;
+    }
+
+    /* Custom mode — original validation */
+    if (!custom.feature_key.trim() || custom.feature_key.trim().length < 2) {
+      setError('Feature key must be at least 2 characters.');
+      return;
+    }
+    if (!custom.feature_name.trim() || custom.feature_name.trim().length < 2) {
+      setError('Feature name must be at least 2 characters.');
+      return;
+    }
+    let parsedValue: Record<string, unknown> | null = null;
+    if (custom.feature_type === 'json' && customValueText.trim()) {
+      try {
+        const parsed = JSON.parse(customValueText);
+        if (typeof parsed !== 'object' || parsed === null) {
+          setError('Feature value must be a JSON object.');
+          return;
+        }
+        parsedValue = parsed;
+      } catch {
+        setError('Feature value must be valid JSON.');
+        return;
+      }
+    } else if (custom.feature_type !== 'json' && customValueText.trim()) {
+      parsedValue = { value: customValueText.trim() };
+    }
+    try {
+      await onSubmit({
+        ...custom,
+        feature_key: custom.feature_key.trim(),
+        feature_name: custom.feature_name.trim(),
+        feature_description: custom.feature_description?.trim() || undefined,
+        feature_value: parsedValue,
+        is_enabled: isEnabled,
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to save feature');
+    }
+  };
+
+  /* ── render ───────────────────────────────────────── */
+  const modal = (
+    <div className="fixed inset-0 z-[99999] flex items-start justify-center overflow-y-auto bg-slate-950/70 p-4 backdrop-blur-md sm:items-center">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+        className="relative my-auto w-full max-w-xl overflow-hidden rounded-3xl border border-white/60 bg-white/95 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.5)] backdrop-blur-3xl dark:border-white/10 dark:bg-slate-900/95"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-slate-800/60">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-md shadow-violet-500/25">
+              {mode === 'ai' ? <Wand2 size={18} /> : <Settings2 size={18} />}
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-gray-900 dark:text-slate-100">
+                {initial ? 'Edit feature' : 'Add feature'}
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-slate-400">
+                {mode === 'ai'
+                  ? 'Pick an AI capability and set its quota'
+                  : 'Define a custom feature flag'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            disabled={saving}
+            className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800"
+            aria-label="Close"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Mode toggle (hidden when editing an existing feature) */}
+        {!initial && (
+          <div className="px-6 pt-4">
+            <div className="grid grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1 dark:bg-slate-950">
+              <button
+                type="button"
+                onClick={() => setMode('ai')}
+                className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-all ${
+                  mode === 'ai'
+                    ? 'bg-white text-violet-700 shadow-sm dark:bg-slate-800 dark:text-violet-300'
+                    : 'text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200'
+                }`}
+              >
+                <Wand2 size={13} />
+                AI Feature
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('custom')}
+                className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition-all ${
+                  mode === 'custom'
+                    ? 'bg-white text-gray-900 shadow-sm dark:bg-slate-800 dark:text-slate-100'
+                    : 'text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200'
+                }`}
+              >
+                <Settings2 size={13} />
+                Custom
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Body */}
+        <div className="space-y-4 p-6">
+          {error && (
+            <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-xs font-medium text-rose-600 dark:text-rose-400">
+              {error}
+            </div>
+          )}
+
+          {/* ═══════ AI MODE ═══════ */}
+          {mode === 'ai' && (
+            <>
+              {/* Feature picker */}
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-slate-300">
+                  AI feature <span className="text-rose-500">*</span>
+                </label>
+                <div className="space-y-2">
+                  {AI_FEATURE_CATALOG.map((feat) => {
+                    const active = aiKey === feat.key;
+                    return (
+                      <button
+                        key={feat.key}
+                        type="button"
+                        disabled={saving || !!initial}
+                        onClick={() => {
+                          setAiKey(feat.key);
+                          setLimit(String(feat.defaultLimit));
+                          setPeriod(feat.defaultPeriod);
+                        }}
+                        className={`w-full rounded-xl border p-3 text-left transition-all ${
+                          active
+                            ? 'border-violet-500 bg-violet-500/[0.05] ring-2 ring-violet-500/25 dark:border-violet-400'
+                            : 'border-gray-200 bg-white hover:border-violet-400/50 dark:border-slate-800 dark:bg-slate-900'
+                        } disabled:cursor-not-allowed disabled:opacity-70`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="text-sm font-semibold text-gray-900 dark:text-slate-100">
+                                {feat.name}
+                              </span>
+                              <span
+                                className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                                  feat.provider === 'gemini'
+                                    ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300'
+                                    : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                                }`}
+                              >
+                                {feat.provider}
+                              </span>
+                              <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-gray-600 dark:bg-slate-800 dark:text-slate-400">
+                                L{feat.minTierLevel}+
+                              </span>
+                            </div>
+                            <p className="mt-1 text-[11px] leading-relaxed text-gray-500 dark:text-slate-400">
+                              {feat.description}
+                            </p>
+                          </div>
+                          {active && (
+                            <Check
+                              size={16}
+                              className="mt-0.5 shrink-0 text-violet-600 dark:text-violet-400"
+                            />
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                {initial && (
+                  <p className="mt-2 text-[10px] italic text-gray-400 dark:text-slate-500">
+                    Feature type is locked after creation — pick the right one
+                    when you first add it.
+                  </p>
+                )}
+              </div>
+
+              {/* Quantity + period */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label
+                    htmlFor="ai-limit-quantity"
+                    className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-slate-300"
+                  >
+                    Quantity <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    id="ai-limit-quantity"
+                    type="number"
+                    min={1}
+                    step={1}
+                    inputMode="numeric"
+                    value={limit}
+                    onChange={(e) => setLimit(e.target.value)}
+                    disabled={saving}
+                    placeholder="e.g. 10"
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm tabular-nums text-gray-900 outline-none transition-all focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-500/10 disabled:opacity-60 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:bg-slate-900"
+                  />
+                  <p className="mt-1 text-[10px] text-gray-400 dark:text-slate-500">
+                    How many times the pro can run it
+                  </p>
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-slate-300">
+                    Resets
+                  </label>
+                  <div className="grid grid-cols-3 gap-1 rounded-xl bg-gray-100 p-1 dark:bg-slate-950">
+                    {PERIOD_OPTIONS.map((p) => (
+                      <button
+                        key={p.value}
+                        type="button"
+                        disabled={saving}
+                        onClick={() => setPeriod(p.value)}
+                        className={`rounded-lg px-2 py-2 text-[11px] font-semibold transition-all ${
+                          period === p.value
+                            ? 'bg-white text-violet-700 shadow-sm dark:bg-slate-800 dark:text-violet-300'
+                            : 'text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200'
+                        } disabled:opacity-60`}
+                      >
+                        {p.label.replace('per ', '')}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-1 text-[10px] text-gray-400 dark:text-slate-500">
+                    Quota resets automatically
+                  </p>
+                </div>
+              </div>
+
+              {/* Preview */}
+              {selectedAi && (
+                <div className="rounded-xl border border-dashed border-violet-300/60 bg-violet-500/[0.04] px-4 py-3 dark:border-violet-500/30">
+                  <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-violet-700 dark:text-violet-300">
+                    What gets saved
+                  </p>
+                  <p className="text-xs text-gray-700 dark:text-slate-300">
+                    <span className="font-semibold">{limit || '?'} </span>
+                    uses
+                    <span className="font-semibold">
+                      {' '}
+                      {PERIOD_OPTIONS.find((p) => p.value === period)?.label}
+                    </span>
+                  </p>
+                  <code className="mt-1 block break-all rounded bg-white/70 px-1.5 py-0.5 font-mono text-[10px] text-gray-600 dark:bg-slate-900/60 dark:text-slate-400">
+                    {`{ key: "${selectedAi.key}", limit: ${limit || 0}, period: "${period}" }`}
+                  </code>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ═══════ CUSTOM MODE ═══════ */}
+          {mode === 'custom' && (
+            <>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-slate-300">
+                    Feature key *
+                  </label>
+                  <input
+                    value={custom.feature_key}
+                    onChange={(e) =>
+                      setCustom((p) => ({ ...p, feature_key: e.target.value }))
+                    }
+                    disabled={saving || !!initial}
+                    placeholder="e.g. max_portfolio_items"
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 font-mono text-sm text-gray-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 disabled:opacity-60 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:bg-slate-900"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-slate-300">
+                    Feature name *
+                  </label>
+                  <input
+                    value={custom.feature_name}
+                    onChange={(e) =>
+                      setCustom((p) => ({ ...p, feature_name: e.target.value }))
+                    }
+                    disabled={saving}
+                    placeholder="e.g. Portfolio items"
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm text-gray-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:bg-slate-900"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-slate-300">
+                  Description
+                </label>
+                <textarea
+                  value={custom.feature_description ?? ''}
+                  onChange={(e) =>
+                    setCustom((p) => ({
+                      ...p,
+                      feature_description: e.target.value,
+                    }))
+                  }
+                  disabled={saving}
+                  rows={2}
+                  className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm text-gray-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:bg-slate-900"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-slate-300">
+                    Type
+                  </label>
+                  <select
+                    value={custom.feature_type}
+                    onChange={(e) =>
+                      setCustom((p) => ({
+                        ...p,
+                        feature_type: e.target.value as TierFeatureType,
+                      }))
+                    }
+                    disabled={saving}
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm text-gray-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:bg-slate-900"
+                  >
+                    {FEATURE_TYPES.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {custom.feature_type === 'json' ? (
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-slate-300">
+                    Value (JSON object)
+                  </label>
+                  <textarea
+                    value={customValueText}
+                    onChange={(e) => setCustomValueText(e.target.value)}
+                    disabled={saving}
+                    rows={4}
+                    placeholder='{"limit": 10}'
+                    className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 font-mono text-xs text-gray-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:bg-slate-900"
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-slate-300">
+                    Value
+                  </label>
+                  <input
+                    value={customValueText}
+                    onChange={(e) => setCustomValueText(e.target.value)}
+                    disabled={saving}
+                    placeholder={
+                      custom.feature_type === 'numeric'
+                        ? 'e.g. 25'
+                        : custom.feature_type === 'boolean'
+                          ? 'e.g. true'
+                          : 'e.g. some text'
+                    }
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm text-gray-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:bg-slate-900"
+                  />
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Enabled toggle */}
+          <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2.5 dark:border-slate-800 dark:bg-slate-900">
+            <input
+              type="checkbox"
+              checked={isEnabled}
+              onChange={(e) => setIsEnabled(e.target.checked)}
+              disabled={saving}
+              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950"
+            />
+            <span className="text-xs font-semibold text-gray-700 dark:text-slate-300">
+              Enabled — pros on this tier can use it
+            </span>
+          </label>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-2 border-t border-gray-100 bg-gray-50/60 px-6 py-4 dark:border-slate-800/60 dark:bg-slate-950/40">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={saving}
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 px-5 py-2 text-sm font-semibold text-white shadow-md shadow-violet-500/25 transition-all hover:from-violet-500 hover:to-purple-500 active:scale-[0.98] disabled:opacity-50"
+          >
+            {saving ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Save size={14} />
+            )}
+            {saving
+              ? 'Saving…'
+              : initial
+                ? 'Save feature'
+                : mode === 'ai'
+                  ? 'Add AI feature'
+                  : 'Add feature'}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+
+  return createPortal(modal, document.body);
 };
 
 /* ───────────────────────── Tier Modal ───────────────────────── */
@@ -294,7 +854,6 @@ const TierModal: React.FC<TierModalProps> = ({
             </div>
           )}
 
-          {/* Identity */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="sm:col-span-2">
               <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-slate-300">
@@ -338,7 +897,6 @@ const TierModal: React.FC<TierModalProps> = ({
             />
           </div>
 
-          {/* Pricing */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-slate-300">
@@ -390,7 +948,6 @@ const TierModal: React.FC<TierModalProps> = ({
             </div>
           </div>
 
-          {/* AI Portfolio Analysis Limit */}
           <div className="space-y-3 rounded-2xl border border-violet-200/70 bg-gradient-to-br from-violet-50/60 to-white p-4 dark:border-violet-900/40 dark:from-violet-950/20 dark:to-slate-900">
             <div className="flex items-center gap-2.5">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-sm shadow-violet-500/25">
@@ -456,7 +1013,6 @@ const TierModal: React.FC<TierModalProps> = ({
             </div>
           </div>
 
-          {/* Badge */}
           <div className="space-y-4 rounded-2xl border border-gray-100 bg-gradient-to-br from-white to-gray-50/60 p-4 dark:border-slate-800/60 dark:from-slate-900 dark:to-slate-950/60">
             <div className="flex items-center gap-2">
               <Award size={14} className="text-blue-500" />
@@ -563,7 +1119,6 @@ const TierModal: React.FC<TierModalProps> = ({
             </div>
           </div>
 
-          {/* Visibility */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2.5 dark:border-slate-800 dark:bg-slate-900">
               <input
@@ -634,284 +1189,6 @@ const TierModal: React.FC<TierModalProps> = ({
   return createPortal(modal, document.body);
 };
 
-/* ───────────────────────── Feature Modal ───────────────────────── */
-
-interface FeatureModalProps {
-  open: boolean;
-  initial?: TierFeature | null;
-  saving: boolean;
-  onClose: () => void;
-  onSubmit: (payload: TierFeatureCreatePayload) => Promise<void>;
-}
-
-const EMPTY_FEATURE: TierFeatureCreatePayload = {
-  feature_key: '',
-  feature_name: '',
-  feature_description: '',
-  feature_type: 'boolean',
-  feature_value: null,
-  is_enabled: true,
-};
-
-const FeatureModal: React.FC<FeatureModalProps> = ({
-  open,
-  initial,
-  saving,
-  onClose,
-  onSubmit,
-}) => {
-  const [form, setForm] = useState<TierFeatureCreatePayload>(EMPTY_FEATURE);
-  const [valueText, setValueText] = useState('');
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    if (initial) {
-      setForm({
-        feature_key: initial.featureKey,
-        feature_name: initial.featureName,
-        feature_description: initial.featureDescription ?? '',
-        feature_type: initial.featureType,
-        feature_value: initial.featureValue ?? null,
-        is_enabled: initial.isEnabled,
-      });
-      setValueText(
-        initial.featureValue ? JSON.stringify(initial.featureValue) : '',
-      );
-    } else {
-      setForm(EMPTY_FEATURE);
-      setValueText('');
-    }
-    setError(null);
-  }, [open, initial]);
-
-  if (!open) return null;
-
-  const update = (patch: Partial<TierFeatureCreatePayload>) =>
-    setForm((prev) => ({ ...prev, ...patch }));
-
-  const handleSubmit = async () => {
-    setError(null);
-    if (!form.feature_key.trim() || form.feature_key.trim().length < 2) {
-      setError('Feature key must be at least 2 characters.');
-      return;
-    }
-    if (!form.feature_name.trim() || form.feature_name.trim().length < 2) {
-      setError('Feature name must be at least 2 characters.');
-      return;
-    }
-    let parsedValue: Record<string, unknown> | null = null;
-    if (form.feature_type === 'json' && valueText.trim()) {
-      try {
-        const parsed = JSON.parse(valueText);
-        if (typeof parsed !== 'object' || parsed === null) {
-          setError('Feature value must be a JSON object.');
-          return;
-        }
-        parsedValue = parsed;
-      } catch {
-        setError('Feature value must be valid JSON.');
-        return;
-      }
-    } else if (form.feature_type !== 'json' && valueText.trim()) {
-      parsedValue = { value: valueText.trim() };
-    }
-    try {
-      await onSubmit({
-        ...form,
-        feature_key: form.feature_key.trim(),
-        feature_name: form.feature_name.trim(),
-        feature_description: form.feature_description?.trim() || undefined,
-        feature_value: parsedValue,
-      });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to save feature');
-    }
-  };
-
-  const modal = (
-    <div className="fixed inset-0 z-[99999] flex items-start justify-center overflow-y-auto bg-slate-950/70 p-4 backdrop-blur-md sm:items-center">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.96, y: 12 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-        className="relative my-auto w-full max-w-lg overflow-hidden rounded-3xl border border-white/60 bg-white/95 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.5)] backdrop-blur-3xl dark:border-white/10 dark:bg-slate-900/95"
-      >
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4 dark:border-slate-800/60">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-md shadow-violet-500/25">
-              <Sparkles size={18} />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-gray-900 dark:text-slate-100">
-                {initial ? 'Edit feature' : 'Add feature'}
-              </h3>
-              <p className="text-xs text-gray-500 dark:text-slate-400">
-                Defines a capability unlocked by this tier
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            disabled={saving}
-            className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800"
-            aria-label="Close"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="space-y-4 p-6">
-          {error && (
-            <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-xs font-medium text-rose-600 dark:text-rose-400">
-              {error}
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-slate-300">
-                Feature key *
-              </label>
-              <input
-                value={form.feature_key}
-                onChange={(e) => update({ feature_key: e.target.value })}
-                disabled={saving || !!initial}
-                placeholder="e.g. max_portfolio_items"
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 font-mono text-sm text-gray-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 disabled:opacity-60 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:bg-slate-900"
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-slate-300">
-                Feature name *
-              </label>
-              <input
-                value={form.feature_name}
-                onChange={(e) => update({ feature_name: e.target.value })}
-                disabled={saving}
-                placeholder="e.g. Portfolio items"
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm text-gray-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:bg-slate-900"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-slate-300">
-              Description
-            </label>
-            <textarea
-              value={form.feature_description ?? ''}
-              onChange={(e) =>
-                update({ feature_description: e.target.value })
-              }
-              disabled={saving}
-              rows={2}
-              className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm text-gray-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:bg-slate-900"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-slate-300">
-                Type
-              </label>
-              <select
-                value={form.feature_type}
-                onChange={(e) =>
-                  update({
-                    feature_type: e.target.value as TierFeatureType,
-                  })
-                }
-                disabled={saving}
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm text-gray-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:bg-slate-900"
-              >
-                {FEATURE_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <label className="flex cursor-pointer items-end gap-2 pb-1">
-              <input
-                type="checkbox"
-                checked={form.is_enabled ?? true}
-                onChange={(e) => update({ is_enabled: e.target.checked })}
-                disabled={saving}
-                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950"
-              />
-              <span className="text-xs font-semibold text-gray-700 dark:text-slate-300">
-                Enabled
-              </span>
-            </label>
-          </div>
-
-          {form.feature_type === 'json' ? (
-            <div>
-              <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-slate-300">
-                Value (JSON object)
-              </label>
-              <textarea
-                value={valueText}
-                onChange={(e) => setValueText(e.target.value)}
-                disabled={saving}
-                rows={4}
-                placeholder='{"limit": 10}'
-                className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 font-mono text-xs text-gray-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:bg-slate-900"
-              />
-            </div>
-          ) : (
-            <div>
-              <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-slate-300">
-                Value
-              </label>
-              <input
-                value={valueText}
-                onChange={(e) => setValueText(e.target.value)}
-                disabled={saving}
-                placeholder={
-                  form.feature_type === 'numeric'
-                    ? 'e.g. 25'
-                    : form.feature_type === 'boolean'
-                      ? 'e.g. true'
-                      : 'e.g. some text'
-                }
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm text-gray-900 outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:bg-slate-900"
-              />
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center justify-end gap-2 border-t border-gray-100 bg-gray-50/60 px-6 py-4 dark:border-slate-800/60 dark:bg-slate-950/40">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={saving}
-            className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={saving}
-            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 px-5 py-2 text-sm font-semibold text-white shadow-md shadow-blue-500/25 transition-all hover:from-blue-500 hover:to-blue-400 active:scale-[0.98] disabled:opacity-50"
-          >
-            {saving ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <Save size={14} />
-            )}
-            {saving ? 'Saving…' : initial ? 'Save feature' : 'Add feature'}
-          </button>
-        </div>
-      </motion.div>
-    </div>
-  );
-
-  return createPortal(modal, document.body);
-};
-
 /* ───────────────────────── Tier Card ───────────────────────── */
 
 interface TierCardProps {
@@ -942,12 +1219,10 @@ const TierCard: React.FC<TierCardProps> = ({
           background: `linear-gradient(90deg, ${color}, ${secondary})`,
         }}
       />
-
       <div
         className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full opacity-40 blur-3xl transition-opacity group-hover:opacity-70"
         style={{ background: hexToRgba(color, 0.4) }}
       />
-
       <div className="relative p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -1070,41 +1345,53 @@ const TierCard: React.FC<TierCardProps> = ({
             </p>
           ) : (
             <div className="flex flex-wrap gap-1.5">
-              {tier.features.map((f) => (
-                <span
-                  key={f.id}
-                  className={`group/feat inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[11px] font-medium transition-colors ${
-                    f.isEnabled
-                      ? 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-400'
-                      : 'border-gray-200 bg-gray-50 text-gray-500 line-through dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-500'
-                  }`}
-                >
-                  {FEATURE_ICON[f.featureType]}
-                  <span className="max-w-[140px] truncate">
-                    {f.featureName}
+              {tier.features.map((f) => {
+                const aiDef = findAIFeature(f.featureKey);
+                const limit = (f.featureValue ?? {})[AI_VALUE_KEY];
+                const period = (f.featureValue ?? {}).period;
+                const quota =
+                  aiDef && typeof limit === 'number'
+                    ? ` · ${limit}/${period === 'daily' ? 'd' : period === 'weekly' ? 'w' : 'mo'}`
+                    : '';
+                return (
+                  <span
+                    key={f.id}
+                    className={`group/feat inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[11px] font-medium transition-colors ${
+                      f.isEnabled
+                        ? aiDef
+                          ? 'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-900/60 dark:bg-violet-950/40 dark:text-violet-300'
+                          : 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-400'
+                        : 'border-gray-200 bg-gray-50 text-gray-500 line-through dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-500'
+                    }`}
+                  >
+                    {aiDef ? <Wand2 size={11} /> : FEATURE_ICON[f.featureType]}
+                    <span className="max-w-[160px] truncate">
+                      {aiDef?.name ?? f.featureName}
+                      {quota}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditFeature(f);
+                      }}
+                      className="ml-0.5 text-current opacity-60 transition-opacity hover:opacity-100"
+                      title="Edit feature"
+                    >
+                      <Pencil size={10} />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteFeature(f);
+                      }}
+                      className="text-current opacity-60 transition-opacity hover:opacity-100 hover:text-rose-500"
+                      title="Delete feature"
+                    >
+                      <X size={10} />
+                    </button>
                   </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEditFeature(f);
-                    }}
-                    className="ml-0.5 text-current opacity-60 transition-opacity hover:opacity-100"
-                    title="Edit feature"
-                  >
-                    <Pencil size={10} />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteFeature(f);
-                    }}
-                    className="text-current opacity-60 transition-opacity hover:opacity-100 hover:text-rose-500"
-                    title="Delete feature"
-                  >
-                    <X size={10} />
-                  </button>
-                </span>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -1168,10 +1455,7 @@ const TiersTab: React.FC = () => {
         existing?.featureDescription ??
         'Monthly quota for AI portfolio deep analysis',
       feature_type: 'json',
-      feature_value: {
-        [AI_VALUE_KEY]: aiLimit,
-        period: AI_PERIOD,
-      },
+      feature_value: { [AI_VALUE_KEY]: aiLimit, period: AI_PERIOD },
       is_enabled: true,
     };
 
@@ -1232,10 +1516,7 @@ const TiersTab: React.FC = () => {
         await deleteTier(confirmDelete.tier.id);
         toast.success('Tier deleted');
       } else {
-        await deleteFeature(
-          confirmDelete.tierId,
-          confirmDelete.feature.id,
-        );
+        await deleteFeature(confirmDelete.tierId, confirmDelete.feature.id);
         toast.success('Feature deleted');
       }
     } catch (e) {
@@ -1290,7 +1571,6 @@ const TiersTab: React.FC = () => {
         </button>
       </div>
 
-      {/* ───────── Quick setup tools ───────── */}
       <QuickAdminTools
         tiers={tiers}
         loading={loading}
@@ -1422,7 +1702,6 @@ const TiersTab: React.FC = () => {
         </div>
       )}
 
-      {/* Tier modal */}
       <TierModal
         open={tierModalOpen}
         initial={editingTier}
@@ -1434,7 +1713,6 @@ const TiersTab: React.FC = () => {
         onSubmit={handleTierSubmit}
       />
 
-      {/* Feature modal */}
       <FeatureModal
         open={featureTierId !== null}
         initial={editingFeature}
@@ -1446,7 +1724,6 @@ const TiersTab: React.FC = () => {
         onSubmit={handleFeatureSubmit}
       />
 
-      {/* Delete confirmation */}
       <AnimatePresence>
         {confirmDelete && (
           <>
