@@ -35,9 +35,7 @@ interface NetworkInfo {
   id: PaymentProvider;
   label: string;
   short: string;
-  /** Tailwind classes for the badge */
   badge: string;
-  /** Gradient for the accent bar */
   accent: string;
 }
 
@@ -59,7 +57,6 @@ const ORANGE: NetworkInfo = {
   accent: 'from-orange-400 to-orange-500',
 };
 
-/** Returns the network info for a given phone, or null if undetermined. */
 function detectNetwork(phone: string): NetworkInfo | null {
   const digits = phone.replace(/\D/g, '');
   const local = digits.startsWith('237') ? digits.slice(3) : digits;
@@ -68,20 +65,10 @@ function detectNetwork(phone: string): NetworkInfo | null {
   const p3 = parseInt(local.slice(0, 3), 10);
   const p2 = local.slice(0, 2);
 
-  // MTN: 67x, 650-654, 680-684
-  if (
-    p2 === '67' ||
-    (p3 >= 650 && p3 <= 654) ||
-    (p3 >= 680 && p3 <= 684)
-  ) {
+  if (p2 === '67' || (p3 >= 650 && p3 <= 654) || (p3 >= 680 && p3 <= 684)) {
     return MTN;
   }
-  // Orange: 69x, 655-659, 685-689
-  if (
-    p2 === '69' ||
-    (p3 >= 655 && p3 <= 659) ||
-    (p3 >= 685 && p3 <= 689)
-  ) {
+  if (p2 === '69' || (p3 >= 655 && p3 <= 659) || (p3 >= 685 && p3 <= 689)) {
     return ORANGE;
   }
   return null;
@@ -102,6 +89,10 @@ export default function UpgradeModal({
   onClose,
   onSuccess,
 }: UpgradeModalProps) {
+  /* ═══════════════════════════════════════════════════════
+     ALL HOOKS FIRST — before any early return
+     ═══════════════════════════════════════════════════════ */
+
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null);
   const [phone, setPhone] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -118,7 +109,7 @@ export default function UpgradeModal({
 
   const detected = useMemo(() => detectNetwork(phone), [phone]);
 
-  /* Reset on open */
+  /* ── Reset on open ───────────────────────────────────── */
   useEffect(() => {
     if (!open) return;
     setSelectedTierId(null);
@@ -140,7 +131,7 @@ export default function UpgradeModal({
     }
   }, [open]);
 
-  /* Body scroll lock + ESC */
+  /* ── Body scroll lock + ESC ──────────────────────────── */
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -155,7 +146,7 @@ export default function UpgradeModal({
     };
   }, [open, submitting, phase, onClose]);
 
-  /* Cleanup */
+  /* ── Cleanup timers on unmount ───────────────────────── */
   useEffect(
     () => () => {
       if (pollTimerRef.current) window.clearInterval(pollTimerRef.current);
@@ -164,12 +155,26 @@ export default function UpgradeModal({
     []
   );
 
+  /* ── Wait timer (cosmetic countdown) ─────────────────── */
+  useEffect(() => {
+    if (phase !== 'waiting') return;
+    setWaitSeconds(0);
+    const t = window.setInterval(() => {
+      setWaitSeconds((s) => s + 1);
+    }, 1000);
+    return () => window.clearInterval(t);
+  }, [phase]);
+
+  /* ═══════════════════════════════════════════════════════
+     EARLY RETURN — safe now that every hook has run
+     ═══════════════════════════════════════════════════════ */
+
   if (!open) return null;
 
+  /* ── derived values ──────────────────────────────────── */
   const selectedTier = tiers.find((t) => t.id === selectedTierId) ?? null;
 
   /* ── polling ─────────────────────────────────────────── */
-
   const stopPolling = () => {
     if (pollTimerRef.current) {
       window.clearInterval(pollTimerRef.current);
@@ -185,12 +190,10 @@ export default function UpgradeModal({
         const s = await subscriptionService.getPaymentStatus(ref);
         const status = (s.status || '').toUpperCase();
 
-        if (status === 'SUCCESSFUL' || status === 'SUCCESS' || status === 'SUCCESS') {
+        if (status === 'SUCCESSFUL' || status === 'SUCCESS') {
           stopPolling();
           setPhase('success');
           onSuccess?.();
-          // Auto-close shortly after success so the user isn't left
-          // staring at a screen they've already read.
           autoCloseRef.current = window.setTimeout(() => {
             onClose();
           }, AUTO_CLOSE_MS);
@@ -222,19 +225,7 @@ export default function UpgradeModal({
     pollTimerRef.current = window.setInterval(tick, POLL_INTERVAL_MS);
   };
 
-  /* ── wait timer (cosmetic only) ──────────────────────── */
-
-  useEffect(() => {
-    if (phase !== 'waiting') return;
-    setWaitSeconds(0);
-    const t = window.setInterval(() => {
-      setWaitSeconds((s) => s + 1);
-    }, 1000);
-    return () => window.clearInterval(t);
-  }, [phase]);
-
   /* ── submit ──────────────────────────────────────────── */
-
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     setError(null);
@@ -276,7 +267,9 @@ export default function UpgradeModal({
     }
   };
 
-  /* ── render ──────────────────────────────────────────── */
+  /* ═══════════════════════════════════════════════════════
+     RENDER
+     ═══════════════════════════════════════════════════════ */
 
   const modal = (
     <div className="fixed inset-0 z-[99999] flex items-start justify-center overflow-y-auto bg-blue-950/75 p-3 pt-4 pb-4 backdrop-blur-2xl sm:items-center sm:p-6">
@@ -399,7 +392,6 @@ export default function UpgradeModal({
                 </p>
               </div>
 
-              {/* Network chip */}
               <div className="flex justify-center">
                 <span
                   className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${detected.badge}`}
@@ -416,9 +408,7 @@ export default function UpgradeModal({
                 <ol className="ml-4 list-decimal space-y-1 text-xs text-slate-700 dark:text-slate-300">
                   <li>Open the mobile money prompt on your phone</li>
                   <li>Enter your PIN to approve</li>
-                  <li>
-                    Wait a moment — this screen updates automatically
-                  </li>
+                  <li>Wait a moment — this screen updates automatically</li>
                 </ol>
               </div>
 
@@ -497,7 +487,6 @@ export default function UpgradeModal({
                 </div>
               </div>
 
-              {/* Phone + network badge */}
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">
                   Mobile money number
