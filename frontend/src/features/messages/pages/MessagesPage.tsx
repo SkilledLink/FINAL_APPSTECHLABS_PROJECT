@@ -5,7 +5,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ConversationList } from '../components/ConversationList';
 import { ChatWindow } from '../components/ChatWindow';
 import { useCall } from '../context/CallProvider';
-import { useConversations } from '../../../hooks/useConversations';
+import { useConversations } from '../hooks/useConversations';
 import { useMessages } from '../../../hooks/useMessages';
 import { useRealtimeMessages } from '../hooks/useRealtimeMessages';
 import { useSendMessage } from '../hooks/useSendMessage';
@@ -15,6 +15,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useTyping } from '../hooks/useTyping';
 import { usePresence } from '../hooks/usePresence';
 import { useSocketContext } from '../../../contexts/SocketContext';
+import { SocketEvents } from '../../../Service/socket/socketEvents';
 import { formatFileSize, getFileIcon } from '../utils/fileUtils';
 import { normalizeId } from '../utils/idUtils';
 import { generateUUID } from '../../../utils/uuid';
@@ -30,14 +31,22 @@ export const MessagesPage: React.FC = () => {
 
   const normalizedUrlId = normalizeId(urlConversationId);
 
-  const [activeConversationId, setActiveConversationId] = useState<
-    string | null
-  >(normalizedUrlId ?? null);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(
+    normalizedUrlId ?? null,
+  );
 
   const [displayConversations, setDisplayConversations] = useState<any[]>([]);
 
-  const { conversations, loading: convLoading, error: convError } =
-    useConversations();
+  /* ── Conversations + requests ──────────────────────────── */
+  const {
+    conversations,
+    requests,
+    loading: convLoading,
+    error: convError,
+    acceptRequest,
+    rejectRequest,
+    refetch: refetchConversations,
+  } = useConversations();
 
   useEffect(() => {
     setDisplayConversations(conversations);
@@ -56,29 +65,58 @@ export const MessagesPage: React.FC = () => {
     useMessages(activeConversationId);
   const { send } = useSendMessage(activeConversationId);
   const { uploadVoice, uploading: voiceUploading } = useVoiceUpload();
-  const { uploadFile, uploading: fileUploading, progress: uploadProgress } =
-    useFileUpload();
+  const { uploadFile, uploading: fileUploading, progress: uploadProgress } = useFileUpload();
 
   const isUploading = voiceUploading || fileUploading;
   const currentUserId = normalizeId(user?.id);
 
   const { onlineUsers } = usePresence(currentUserId);
-  const { typingUsers, sendTyping } = useTyping(
-    activeConversationId,
-    currentUserId
-  );
+  const { typingUsers, sendTyping } = useTyping(activeConversationId, currentUserId);
 
   const callApi = useCall();
   const { setCallParticipant } = callApi;
 
+  /* ── Socket: conversation request events ─────────────────── */
+  useEffect(() => {
+    if (!socket) return;
+
+    const onRequestReceived = () => {
+      refetchConversations();
+    };
+
+    const onRequestAccepted = (p: { conversation_id: string }) => {
+      refetchConversations();
+      // Join the newly-active conversation room so messages flow
+      // without needing a page reload.
+      if (p?.conversation_id) {
+        socket.emit(SocketEvents.CONVERSATION_JOIN, {
+          conversation_id: p.conversation_id,
+        });
+      }
+    };
+
+    const onRequestRejected = () => {
+      refetchConversations();
+    };
+
+    socket.on(SocketEvents.CONVERSATION_REQUEST_RECEIVED, onRequestReceived);
+    socket.on(SocketEvents.CONVERSATION_REQUEST_ACCEPTED, onRequestAccepted);
+    socket.on(SocketEvents.CONVERSATION_REQUEST_REJECTED, onRequestRejected);
+
+    return () => {
+      socket.off(SocketEvents.CONVERSATION_REQUEST_RECEIVED, onRequestReceived);
+      socket.off(SocketEvents.CONVERSATION_REQUEST_ACCEPTED, onRequestAccepted);
+      socket.off(SocketEvents.CONVERSATION_REQUEST_REJECTED, onRequestRejected);
+    };
+  }, [socket, refetchConversations]);
+
+  /* ── Global new-message handler ─────────────────────────── */
   const handleGlobalNewMessage = useCallback(
     (newMsg: any) => {
       const isActive = newMsg.conversation_id === activeConversationId;
 
-      setDisplayConversations((prev) => {
-        const index = prev.findIndex(
-          (conversation) => conversation.id === newMsg.conversation_id
-        );
+      setDisplayConversations(prev => {
+        const index = prev.findIndex(conversation => conversation.id === newMsg.conversation_id);
         if (index < 0) return prev;
 
         const updated = {
@@ -92,23 +130,20 @@ export const MessagesPage: React.FC = () => {
             ? 0
             : (prev[index].unread_count ?? prev[index].unreadCount ?? 0) + 1,
         };
-        return [
-          updated,
-          ...prev.filter((_, itemIndex) => itemIndex !== index),
-        ];
+        return [updated, ...prev.filter((_, itemIndex) => itemIndex !== index)];
       });
 
       if (isActive) {
-        setMessages((prev) => {
-          if (prev.some((m) => m.id === newMsg.id)) return prev;
+        setMessages(prev => {
+          if (prev.some(m => m.id === newMsg.id)) return prev;
           const withoutTemp = prev.filter(
-            (m) =>
+            m =>
               m.id !== newMsg.id &&
               !(
                 typeof m.id === 'string' &&
                 m.id.startsWith('temp-') &&
                 m.client_message_id === newMsg.client_message_id
-              )
+              ),
           );
           return [...withoutTemp, newMsg];
         });
@@ -120,19 +155,19 @@ export const MessagesPage: React.FC = () => {
         }
       }
     },
-    [activeConversationId, setMessages, socket]
+    [activeConversationId, setMessages, socket],
   );
 
   useRealtimeMessages(handleGlobalNewMessage);
 
   useEffect(() => {
     if (!activeConversationId || !socket) return;
-    setDisplayConversations((prev) =>
-      prev.map((conversation) =>
+    setDisplayConversations(prev =>
+      prev.map(conversation =>
         conversation.id === activeConversationId
           ? { ...conversation, unreadCount: 0, unread_count: 0 }
-          : conversation
-      )
+          : conversation,
+      ),
     );
     socket.emit('message_read', { conversation_id: activeConversationId });
   }, [activeConversationId, socket]);
@@ -143,14 +178,49 @@ export const MessagesPage: React.FC = () => {
       setActiveConversationId(normalizedId);
       navigate(`/home/messages/${normalizedId}`);
     },
-    [navigate]
+    [navigate],
+  );
+
+  /* ── Accept / Reject request ─────────────────────────────── */
+  const handleAcceptRequest = useCallback(
+    async (conversationId: string) => {
+      try {
+        const accepted = await acceptRequest(conversationId);
+
+        // Join the new conversation room immediately so both sides
+        // receive messages in real time without a refresh.
+        if (socket && accepted?.id) {
+          socket.emit(SocketEvents.CONVERSATION_JOIN, {
+            conversation_id: accepted.id,
+          });
+        }
+
+        // Navigate the accepter straight into the chat.
+        if (accepted?.id) {
+          handleSelectConversation(accepted.id);
+        }
+      } catch (err) {
+        console.error('[accept request] failed:', err);
+      }
+    },
+    [acceptRequest, socket, handleSelectConversation],
+  );
+
+  const handleRejectRequest = useCallback(
+    async (conversationId: string) => {
+      try {
+        await rejectRequest(conversationId);
+      } catch (err) {
+        console.error('[reject request] failed:', err);
+      }
+    },
+    [rejectRequest],
   );
 
   /* ── Send Text ──────────────────────────────────────────── */
   const handleSendMessage = useCallback(
     async (text: string) => {
       if (!activeConversationId) return;
-
       try {
         const clientMessageId = generateUUID();
         const tempId = `temp-${clientMessageId}`;
@@ -169,17 +239,13 @@ export const MessagesPage: React.FC = () => {
         };
         addOptimistic(tempMessage);
 
-        const { realMessage, error } = await send(
-          clientMessageId,
-          text,
-          'text'
-        );
+        const { realMessage, error } = await send(clientMessageId, text, 'text');
 
         if (realMessage) {
           confirmMessage(realMessage);
         } else if (error) {
-          setMessages((prev) =>
-            prev.map((m) =>
+          setMessages(prev =>
+            prev.map(m =>
               m.id === tempId
                 ? {
                     ...m,
@@ -187,22 +253,15 @@ export const MessagesPage: React.FC = () => {
                     text: `❌ ${error}`,
                     status: 'failed',
                   }
-                : m
-            )
+                : m,
+            ),
           );
         }
       } catch (err) {
         console.error('[send text] failed:', err);
       }
     },
-    [
-      activeConversationId,
-      send,
-      confirmMessage,
-      setMessages,
-      addOptimistic,
-      currentUserId,
-    ]
+    [activeConversationId, send, confirmMessage, setMessages, addOptimistic, currentUserId],
   );
 
   /* ── Send File / Image ──────────────────────────────────── */
@@ -246,18 +305,16 @@ export const MessagesPage: React.FC = () => {
           undefined,
           name,
           type,
-          size
+          size,
         );
 
         if (realMessage) {
           confirmMessage(realMessage);
         } else if (error) {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === tempId
-                ? { ...m, attachment_path: undefined, status: 'failed' }
-                : m
-            )
+          setMessages(prev =>
+            prev.map(m =>
+              m.id === tempId ? { ...m, attachment_path: undefined, status: 'failed' } : m,
+            ),
           );
         }
       } catch (err) {
@@ -272,14 +329,14 @@ export const MessagesPage: React.FC = () => {
       setMessages,
       addOptimistic,
       currentUserId,
-    ]
+    ],
   );
 
   const handleSendImage = useCallback(
     async (file: File) => {
       await handleSendFile(file);
     },
-    [handleSendFile]
+    [handleSendFile],
   );
 
   /* ── Send Voice Note ────────────────────────────────────── */
@@ -311,9 +368,7 @@ export const MessagesPage: React.FC = () => {
           audioDetails: {
             url: publicUrl,
             duration: `${durationNum}s`,
-            waveform: Array.from({ length: 15 }, () =>
-              Math.floor(Math.random() * 75 + 25)
-            ),
+            waveform: Array.from({ length: 15 }, () => Math.floor(Math.random() * 75 + 25)),
           },
         };
         addOptimistic(tempMessage);
@@ -323,18 +378,16 @@ export const MessagesPage: React.FC = () => {
           null,
           'voice',
           publicUrl,
-          durationNum
+          durationNum,
         );
 
         if (realMessage) {
           confirmMessage(realMessage);
         } else if (error) {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === tempId
-                ? { ...m, attachment_path: undefined, status: 'failed' }
-                : m
-            )
+          setMessages(prev =>
+            prev.map(m =>
+              m.id === tempId ? { ...m, attachment_path: undefined, status: 'failed' } : m,
+            ),
           );
         }
       } catch (err) {
@@ -349,11 +402,11 @@ export const MessagesPage: React.FC = () => {
       setMessages,
       addOptimistic,
       currentUserId,
-    ]
+    ],
   );
 
   const conversationsWithPresence = useMemo(() => {
-    return displayConversations.map((c) => {
+    return displayConversations.map(c => {
       if (!c.participant) return c;
       const isOnline = onlineUsers.includes(c.participant.id);
       return { ...c, participant: { ...c.participant, isOnline } };
@@ -361,7 +414,7 @@ export const MessagesPage: React.FC = () => {
   }, [displayConversations, onlineUsers]);
 
   useEffect(() => {
-    conversationsWithPresence.forEach((c) => {
+    conversationsWithPresence.forEach(c => {
       if (c.participant?.id) {
         setCallParticipant(c.id, {
           name: c.participant.name,
@@ -374,27 +427,19 @@ export const MessagesPage: React.FC = () => {
   const activeConversation = useMemo(
     () =>
       conversationsWithPresence.find(
-        (c) => normalizeId(c.id) === normalizeId(activeConversationId)
+        c => normalizeId(c.id) === normalizeId(activeConversationId),
       ) || null,
-    [conversationsWithPresence, activeConversationId]
+    [conversationsWithPresence, activeConversationId],
   );
 
   const handleStartCall = useCallback(() => {
     if (!activeConversationId || !activeConversation?.participant?.id) return;
-    callApi.startCall(
-      activeConversationId,
-      activeConversation.participant.id,
-      'audio'
-    );
+    callApi.startCall(activeConversationId, activeConversation.participant.id, 'audio');
   }, [activeConversationId, activeConversation, callApi]);
 
   const handleStartVideoCall = useCallback(() => {
     if (!activeConversationId || !activeConversation?.participant?.id) return;
-    callApi.startCall(
-      activeConversationId,
-      activeConversation.participant.id,
-      'video'
-    );
+    callApi.startCall(activeConversationId, activeConversation.participant.id, 'video');
   }, [activeConversationId, activeConversation, callApi]);
 
   /* ── Loading state ──────────────────────────────────────── */
@@ -416,7 +461,7 @@ export const MessagesPage: React.FC = () => {
     return (
       <div className="absolute inset-0 flex items-center justify-center bg-transparent">
         <div className="rounded-2xl border border-rose-200/60 dark:border-rose-900/40 bg-rose-50/70 dark:bg-rose-950/30 px-6 py-4 text-sm font-medium text-rose-600 dark:text-rose-400 backdrop-blur-xl">
-          Error: {convError}
+          Error: {convError instanceof Error ? convError.message : String(convError)}
         </div>
       </div>
     );
@@ -432,8 +477,11 @@ export const MessagesPage: React.FC = () => {
       >
         <ConversationList
           conversations={conversationsWithPresence as any}
+          requests={requests as any}
           activeId={activeConversationId}
           onSelectConversation={handleSelectConversation}
+          onAcceptRequest={handleAcceptRequest}
+          onRejectRequest={handleRejectRequest}
         />
       </div>
 
@@ -467,9 +515,7 @@ export const MessagesPage: React.FC = () => {
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center h-full p-8 text-center bg-transparent">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900 dark:border-slate-100 mb-4"></div>
-            <p className="text-slate-500 dark:text-slate-400 font-medium">
-              Loading conversation…
-            </p>
+            <p className="text-slate-500 dark:text-slate-400 font-medium">Loading conversation…</p>
           </div>
         )}
       </div>

@@ -20,7 +20,8 @@ class Settings(BaseSettings):
     # Two ways to configure (pick one):
     #
     #   A) Set DATABASE_URL directly (must be a fully-formed,
-    #      properly URL-encoded Postgres URL).
+    #      properly URL-encoded Postgres URL, INCLUDING
+    #      ?sslmode=require for Render/remote databases).
     #
     #   B) Set the individual DB_* fields below. The validator
     #      will assemble DATABASE_URL from them, no encoding
@@ -34,6 +35,9 @@ class Settings(BaseSettings):
     DB_HOST: Optional[str] = None
     DB_PORT: int = 5432
     DB_NAME: Optional[str] = None
+    # Set to "" for local Postgres that doesn't use SSL.
+    # Render's EXTERNAL hostname always requires "require".
+    DB_SSLMODE: Optional[str] = "require"
 
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
@@ -214,6 +218,9 @@ class Settings(BaseSettings):
         We do NOT percent-encode here. session.py rebuilds the URL
         via URL.create(), so raw special characters (%, @, :, #, $)
         in the password survive the round-trip intact.
+
+        sslmode is appended when DB_SSLMODE is set (Render external
+        hostnames require "require").
         """
         if self.DATABASE_URL:
             return self
@@ -235,9 +242,11 @@ class Settings(BaseSettings):
                 f"Missing: {', '.join(missing)}"
             )
 
+        query = f"?sslmode={self.DB_SSLMODE}" if self.DB_SSLMODE else ""
+
         self.DATABASE_URL = (
             f"postgresql+psycopg://{self.DB_USER}:{self.DB_PASSWORD}"
-            f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+            f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}{query}"
         )
         return self
 

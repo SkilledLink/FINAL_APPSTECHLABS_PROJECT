@@ -19,6 +19,7 @@ import {
   Wrench,
   X,
 } from "lucide-react";
+
 import { OnboardingLayout } from "../components/OnboardingLayout";
 import {
   DEFAULT_WIZARD_STATE,
@@ -27,7 +28,10 @@ import {
   type PickedLocation,
   type ProfessionalCreateInput,
 } from "../types/onboarding.types";
-import { onboardingService, OnboardingError } from "../services/onboardingService";
+import {
+  onboardingService,
+  OnboardingError,
+} from "../services/onboardingService";
 import { MapLocationPicker } from "../../profile/components/MapLocationPicker";
 import { useAuth } from "../../auth/hooks/useAuth";
 
@@ -44,7 +48,7 @@ const STEPS: { id: StepId; label: string; icon: React.ReactNode }[] = [
 ];
 
 /* ═══════════════════════════════════════════════════════════
-   GLASS STYLE TOKENS
+   STYLE TOKENS
 ═══════════════════════════════════════════════════════════ */
 
 const INPUT =
@@ -176,7 +180,7 @@ const TagInput: React.FC<TagInputProps> = ({
 
 export default function ProfessionalOnboardingPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { refreshUser } = useAuth();
 
   const [stepIndex, setStepIndex] = useState(0);
   const [state, setState] = useState<ProfessionalCreateInput>(
@@ -196,7 +200,7 @@ export default function ProfessionalOnboardingPage() {
     [],
   );
 
-  /* ── Location picked from map ────────────────────────── */
+  /* ── Location picked from the map modal ─────────────── */
   const handleLocationPick = useCallback(
     (loc: PickedLocation) => {
       patch({
@@ -210,13 +214,13 @@ export default function ProfessionalOnboardingPage() {
     [patch, state.country, state.region, state.city],
   );
 
-  /* ── Validation ──────────────────────────────────────── */
+  /* ── Step validation ─────────────────────────────────── */
   const canAdvance = useMemo(() => {
     if (currentStep.id === "trade") {
       return state.profession.trim().length >= 2;
     }
     if (currentStep.id === "location") {
-      return state.city.trim().length >= 2;
+      return (state.city ?? "").trim().length >= 2;
     }
     return true;
   }, [currentStep.id, state.profession, state.city]);
@@ -250,7 +254,7 @@ export default function ProfessionalOnboardingPage() {
       setStepIndex(0);
       return;
     }
-    if (!state.city.trim()) {
+    if (!state.city?.trim()) {
       setError("Add your city to continue.");
       setStepIndex(1);
       return;
@@ -263,15 +267,20 @@ export default function ProfessionalOnboardingPage() {
       await onboardingService.createProfessional({
         ...state,
         profession: state.profession.trim(),
-        city: state.city.trim(),
+        city: state.city?.trim() || "",
         region: state.region?.trim() || undefined,
         country: state.country?.trim() || "Cameroon",
         headline: state.headline?.trim() || undefined,
         bio: state.bio?.trim() || undefined,
       });
 
+      // Refresh from server so `user.account_type` is up to date.
+      await refreshUser();
+
       toast.success("Professional profile created 🎉");
-      navigate("/home", { replace: true });
+
+      // Go straight to the profile page instead of /home.
+      navigate("/profile", { replace: true });
     } catch (err) {
       const msg =
         err instanceof OnboardingError
@@ -284,6 +293,9 @@ export default function ProfessionalOnboardingPage() {
     }
   };
 
+  /* ═══════════════════════════════════════════════════════
+     RENDER
+  ═══════════════════════════════════════════════════════ */
   return (
     <OnboardingLayout maxWidth="max-w-2xl">
       <motion.div
@@ -291,7 +303,7 @@ export default function ProfessionalOnboardingPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
       >
-        {/* ══════════════ HEADER ══════════════ */}
+        {/* ── HEADER ─────────────────────────────────────── */}
         <div className="text-center mb-6">
           <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400 mb-3">
             <Briefcase size={12} />
@@ -312,7 +324,7 @@ export default function ProfessionalOnboardingPage() {
           </p>
         </div>
 
-        {/* ══════════════ PROGRESS ══════════════ */}
+        {/* ── PROGRESS ───────────────────────────────────── */}
         <div className="mb-6">
           <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
             <span>
@@ -353,14 +365,14 @@ export default function ProfessionalOnboardingPage() {
           </div>
         </div>
 
-        {/* ══════════════ ERROR ══════════════ */}
+        {/* ── ERROR ──────────────────────────────────────── */}
         {error && (
           <div className="mb-5 rounded-xl border border-rose-200/70 dark:border-rose-900/60 bg-rose-50/80 dark:bg-rose-950/40 px-4 py-3 text-sm text-rose-700 dark:text-rose-300">
             {error}
           </div>
         )}
 
-        {/* ══════════════ STEP CONTENT ══════════════ */}
+        {/* ── FORM CARD ──────────────────────────────────── */}
         <div className="rounded-3xl border border-white/60 dark:border-slate-800/70 bg-white/60 dark:bg-slate-900/50 backdrop-blur-2xl shadow-[0_20px_60px_-25px_rgba(15,23,42,0.35)] p-5 sm:p-7">
           <AnimatePresence mode="wait">
             <motion.div
@@ -412,7 +424,9 @@ export default function ProfessionalOnboardingPage() {
                             key={lvl.value}
                             type="button"
                             onClick={() =>
-                              patch({ experience_level: lvl.value as ExperienceLevel })
+                              patch({
+                                experience_level: lvl.value as ExperienceLevel,
+                              })
                             }
                             className={`text-left rounded-xl border px-3 py-2.5 transition ${
                               active
@@ -499,9 +513,7 @@ export default function ProfessionalOnboardingPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
-                      <label className={LABEL}>
-                        Country
-                      </label>
+                      <label className={LABEL}>Country</label>
                       <input
                         type="text"
                         value={state.country ?? ""}
@@ -622,7 +634,7 @@ export default function ProfessionalOnboardingPage() {
           </AnimatePresence>
         </div>
 
-        {/* ══════════════ FOOTER CONTROLS ══════════════ */}
+        {/* ── FOOTER CONTROLS ────────────────────────────── */}
         <div className="mt-6 flex items-center justify-between gap-3">
           <button
             type="button"
@@ -659,16 +671,13 @@ export default function ProfessionalOnboardingPage() {
           </button>
         </div>
 
-        {/* ══════════════ FOOTER HINT ══════════════ */}
         <div className="mt-6 flex items-center justify-center gap-2 text-[11px] text-slate-400 dark:text-slate-500">
           <ChevronRight size={12} />
-          <span>
-            You can add more details any time from your profile page.
-          </span>
+          <span>You can add more details any time from your profile page.</span>
         </div>
       </motion.div>
 
-      {/* ══════════════ MAP MODAL ══════════════ */}
+      {/* ── MAP MODAL ─────────────────────────────────────── */}
       {showMap && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-blue-950/70 backdrop-blur-2xl p-3 sm:p-6">
           <div className="w-full max-w-4xl h-[85vh] sm:h-[80vh] flex flex-col overflow-hidden rounded-2xl border border-white/60 dark:border-slate-800/70 bg-white/95 dark:bg-slate-900/95 backdrop-blur-3xl shadow-2xl">
@@ -689,11 +698,19 @@ export default function ProfessionalOnboardingPage() {
             </div>
 
             <div className="flex-1 min-h-0">
-              <MapLocationPicker
-                initialLocation={null}
-                onSelect={handleLocationPick}
-                onCancel={() => setShowMap(false)}
-              />
+              {/*
+                We cast to `any` for the props because MapLocationPicker
+                may use a different prop signature per project. If yours
+                is well-typed, feel free to replace this with the exact
+                interface — the callback contract we rely on is:
+                  onSelect({ country?, region?, city? })
+                  onCancel()
+              */}
+              {React.createElement(MapLocationPicker as any, {
+                initialLocation: null,
+                onSelect: handleLocationPick,
+                onCancel: () => setShowMap(false),
+              })}
             </div>
           </div>
         </div>

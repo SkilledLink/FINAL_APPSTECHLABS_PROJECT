@@ -28,7 +28,6 @@ interface ChatWindowProps {
 }
 
 const UniverseBackground: React.FC = () => {
-  // ... keep your existing implementation ...
   return null;
 };
 
@@ -62,17 +61,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
 
-  /* ────────────────────────────────────────────────────────────
-     THE FIX — no more scrollIntoView()
-     ────────────────────────────────────────────────────────────
-     scrollIntoView() walks up the DOM and scrolls EVERY scrollable
-     ancestor, which was shifting the whole AppLayout <main>. Setting
-     scrollTop directly only touches the inner messages container.
-
-     `instant` vs `smooth`:
-       - On conversation switch → instant (no visible jump)
-       - On new message         → smooth (nice UX)
-  */
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     const container = scrollContainerRef.current;
     if (!container) return;
@@ -83,18 +71,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     setIsUserScrolling(false);
   };
 
-  /* Conversation changed → jump to bottom instantly */
   useEffect(() => {
     if (!conversation?.id) return;
-    // Wait one frame so the new messages have rendered and the
-    // container has its final scrollHeight.
     const id = window.requestAnimationFrame(() => {
       scrollToBottom('instant' as ScrollBehavior);
     });
     return () => window.cancelAnimationFrame(id);
   }, [conversation?.id]);
 
-  /* New message arrived → smooth scroll (unless user is reading older) */
   useEffect(() => {
     if (isUserScrolling) return;
     const id = window.requestAnimationFrame(() => {
@@ -186,6 +170,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     );
   }
 
+  const isPending = conversation.status === 'pending';
+
   /* ── ACTIVE CONVERSATION ── */
   return (
     <div className="flex flex-col h-full max-h-full w-full min-h-0 overflow-hidden bg-transparent text-slate-900 dark:text-slate-100 relative">
@@ -194,7 +180,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
       <header className="flex-none shrink-0 w-full relative z-30 bg-white/70 dark:bg-slate-950/60 backdrop-blur-2xl border-b border-slate-200/70 dark:border-slate-800/70 pt-safe shadow-[0_1px_0_0_rgba(15,23,42,0.02)]">
         <ChatHeader
-          user={conversation.participant}
+          user={conversation.participant ?? { id: '', name: 'User', isOnline: false }}
           onBack={onBack}
           onCall={onCall}
           onVideoCall={onVideoCall}
@@ -214,8 +200,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         </div>
       </header>
 
-      {/* ⚠️ Note the added `overscroll-contain` — stops inner scroll
-          from bleeding into outer scroll containers. */}
       <main
         ref={scrollContainerRef}
         onScroll={handleScroll}
@@ -285,21 +269,32 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           )}
         </AnimatePresence>
 
-        {/* Bottom anchor — kept for future use, but no longer
-            triggers scrollIntoView. */}
         <div id="messages-end-anchor" />
       </main>
 
       <footer className="flex-none shrink-0 w-full relative z-30 bg-white/70 dark:bg-slate-950/60 backdrop-blur-2xl border-t border-slate-200/70 dark:border-slate-800/70 pb-safe">
-        <MessageInput
-          onSendMessage={onSendMessage}
-          onSendVoiceNote={onSendVoiceNote}
-          onSendFile={onSendFile}
-          onSendImage={onSendImage}
-          uploading={uploading}
-          uploadProgress={uploadProgress}
-          onTypingChange={onTypingChange}
-        />
+        {isPending ? (
+          <div className="flex flex-col items-center justify-center gap-2 px-6 py-5 text-center">
+            <div className="flex items-center gap-2 text-[12px] font-semibold text-amber-600 dark:text-amber-400">
+              <ShieldCheck className="w-4 h-4" />
+              <span>Waiting for acceptance</span>
+            </div>
+            <p className="text-[11.5px] text-slate-500 dark:text-slate-400 max-w-md leading-relaxed">
+              This conversation is pending — you'll be able to send messages as
+              soon as the request is accepted.
+            </p>
+          </div>
+        ) : (
+          <MessageInput
+            onSendMessage={onSendMessage}
+            onSendVoiceNote={onSendVoiceNote}
+            onSendFile={onSendFile}
+            onSendImage={onSendImage}
+            uploading={uploading}
+            uploadProgress={uploadProgress}
+            onTypingChange={onTypingChange}
+          />
+        )}
       </footer>
     </div>
   );

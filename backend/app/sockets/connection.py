@@ -4,6 +4,7 @@ import logging
 from sqlmodel import Session, select
 
 from app.database.session import engine
+from app.models.conversation import Conversation
 from app.models.conversation_participant import ConversationParticipant
 from app.sockets.authentication import authenticate_socket
 from app.sockets.managers.connection_manager import connection_manager
@@ -14,14 +15,26 @@ logger = logging.getLogger(__name__)
 
 
 def _load_user_conversation_ids(user_id: str) -> list[str]:
+    """
+    Only ACTIVE conversations get socket rooms — pending requests must
+    not be joined until the recipient accepts.
+    """
     with Session(engine) as session:
-        stmt = select(ConversationParticipant.conversation_id).where(
-            ConversationParticipant.user_id == user_id
+        stmt = (
+            select(ConversationParticipant.conversation_id)
+            .join(
+                Conversation,
+                Conversation.id == ConversationParticipant.conversation_id,
+            )
+            .where(ConversationParticipant.user_id == user_id)
+            .where(Conversation.status == "active")
         )
         return [str(cid) for cid in session.exec(stmt).all()]
 
 
-def _find_online_peers(my_conv_ids: list[str], exclude_user_id: str) -> list[str]:
+def _find_online_peers(
+    my_conv_ids: list[str], exclude_user_id: str
+) -> list[str]:
     """
     Return the user_ids of everyone currently online who shares at least
     one conversation with the connecting user.

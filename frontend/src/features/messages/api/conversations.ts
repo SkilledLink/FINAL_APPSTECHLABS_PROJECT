@@ -1,10 +1,13 @@
 // src/api/conversations.ts
 import { apiClient } from '../../../api/client';
 
+export type BackendConversationStatus = 'active' | 'pending' | 'rejected';
+
 export interface BackendConversation {
   id: string;
   type: string;
   title?: string | null;
+  status?: BackendConversationStatus;
   created_by?: string;
   created_at: string;
   updated_at: string;
@@ -31,33 +34,57 @@ export interface BackendMessage {
 }
 
 export const conversationsApi = {
-  // GET /conversations
   list: async (): Promise<BackendConversation[]> => {
-    const { data } = await apiClient.get<BackendConversation[]>('/conversations');
+    const { data } =
+      await apiClient.get<BackendConversation[]>('/conversations');
     return data;
   },
 
-  // GET /conversations/:id
+  /** Pending requests sent TO the current user. */
+  listRequests: async (): Promise<BackendConversation[]> => {
+    const { data } = await apiClient.get<BackendConversation[]>(
+      '/conversations/requests'
+    );
+    return data;
+  },
+
   get: async (id: string): Promise<BackendConversation> => {
-    const { data } = await apiClient.get<BackendConversation>(`/conversations/${id}`);
+    const { data } = await apiClient.get<BackendConversation>(
+      `/conversations/${id}`
+    );
     return data;
   },
 
-  // POST /conversations
   create: async (payload: {
     participant_ids: string[];
     title?: string;
     type?: string;
   }): Promise<BackendConversation> => {
-    const { data } = await apiClient.post<BackendConversation>('/conversations', payload);
+    const { data } = await apiClient.post<BackendConversation>(
+      '/conversations',
+      payload
+    );
     return data;
   },
 
-  // POST /conversations/direct   ← this is what was missing
   getOrCreateDirect: async (userId: string): Promise<BackendConversation> => {
-    const { data } = await apiClient.post<BackendConversation>('/conversations/direct', {
-      user_id: userId,
-    });
+    const { data } = await apiClient.post<BackendConversation>(
+      '/conversations/direct',
+      { user_id: userId }
+    );
     return data;
+  },
+
+  acceptRequest: async (
+    conversationId: string
+  ): Promise<BackendConversation> => {
+    const { data } = await apiClient.post<BackendConversation>(
+      `/conversations/${conversationId}/accept`
+    );
+    return data;
+  },
+
+  rejectRequest: async (conversationId: string): Promise<void> => {
+    await apiClient.post(`/conversations/${conversationId}/reject`);
   },
 };

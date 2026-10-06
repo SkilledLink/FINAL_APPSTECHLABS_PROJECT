@@ -2,15 +2,20 @@
 from sqlmodel import Session, select, func
 from uuid import UUID
 from typing import List, Optional
+from datetime import datetime
+
 from app.models.conversation import Conversation
 from app.models.conversation_participant import ConversationParticipant
 from app.models.message import Message
-from datetime import datetime
 
 
 class ConversationRepository:
     def __init__(self, session: Session):
         self.session = session
+
+    # ── basic lookups ──────────────────────────────────────
+    def get_by_id(self, conversation_id: UUID) -> Optional[Conversation]:
+        return self.session.get(Conversation, conversation_id)
 
     def is_participant(self, conversation_id: UUID, user_id: UUID) -> bool:
         stmt = select(ConversationParticipant).where(
@@ -19,29 +24,75 @@ class ConversationRepository:
         )
         return self.session.exec(stmt).first() is not None
 
-    def get_user_conversations(self, user_id: UUID) -> List[Conversation]:
-        subq = select(ConversationParticipant.conversation_id).where(
-            ConversationParticipant.user_id == user_id
-        ).subquery()
+    def is_active_participant(self, conversation_id: UUID, user_id: UUID) -> bool:
+        conv = self.session.get(Conversation, conversation_id)
+        if not conv or conv.status != "active":
+            return False
+        return self.is_participant(conversation_id, user_id)
+
+    # ── lists ──────────────────────────────────────────────
+    def get_user_conversations(
+        self, user_id: UUID, statuses: tuple[str, ...] = ("active",)
+    ) -> List[Conversation]:
+        subq = (
+            select(ConversationParticipant.conversation_id)
+            .where(ConversationParticipant.user_id == user_id)
+            .subquery()
+        )
         stmt = (
             select(Conversation)
             .where(Conversation.id.in_(subq))
+            .where(Conversation.status.in_(statuses))
             .order_by(Conversation.updated_at.desc())
         )
         return self.session.exec(stmt).all()
 
-    def create_conversation(self, conv_data: dict, participant_ids: List[UUID]) -> Conversation:
+    def get_incoming_requests(self, user_id: UUID) -> List[Conversation]:
+        """Direct conversations where I'm a participant, status pending,
+        and I did NOT create it (so it's a request to *me*)."""
+        subq = (
+            select(ConversationParticipant.conversation_id)
+            .where(ConversationParticipant.user_id == user_id)
+            .subquery()
+        )
+        stmt = (
+            select(Conversation)
+            .where(Conversation.id.in_(subq))
+            .where(Conversation.status == "pending")
+            .where(Conversation.created_by != user_id)
+            .order_by(Conversation.created_at.desc())
+        )
+        return self.session.exec(stmt).all()
+
+    # ── writes ─────────────────────────────────────────────
+    def create_conversation(
+        self, conv_data: dict, participant_ids: List[UUID]
+    ) -> Conversation:
         conv = Conversation(**conv_data)
         self.session.add(conv)
         self.session.flush()
 
         for uid in participant_ids:
-            participant = ConversationParticipant(
-                conversation_id=conv.id,
-                user_id=uid,
-                last_read_at=None,
+            self.session.add(
+                ConversationParticipant(
+                    conversation_id=conv.id,
+                    user_id=uid,
+                    last_read_at=None,
+                )
             )
-            self.session.add(participant)
+        self.session.commit()
+        self.session.refresh(conv)
+        return conv
+
+    def update_status(
+        self, conversation_id: UUID, status: str
+    ) -> Optional[Conversation]:
+        conv = self.session.get(Conversation, conversation_id)
+        if not conv:
+            return None
+        conv.status = status
+        conv.updated_at = datetime.utcnow()
+        self.session.add(conv)
         self.session.commit()
         self.session.refresh(conv)
         return conv
@@ -56,11 +107,15 @@ class ConversationRepository:
             participant.last_read_at = datetime.utcnow()
             self.session.commit()
 
-    # ---------- NEW METHODS ----------
-    def find_direct_conversation(self, user_id1: UUID, user_id2: UUID) -> Optional[Conversation]:
-        """
-        Find a direct conversation (type='direct') between exactly these two users.
-        """
+    # ── direct-conversation helpers ────────────────────────
+    def find_direct_conversation(
+        self,
+        user_id1: UUID,
+        user_id2: UUID,
+        statuses: tuple[str, ...] = ("active",),
+    ) -> Optional[Conversation]:
+        """Find a direct conversation between exactly these two users,
+        restricted to the given statuses."""
         stmt = (
             select(ConversationParticipant.conversation_id)
             .where(ConversationParticipant.user_id.in_([user_id1, user_id2]))
@@ -68,15 +123,23 @@ class ConversationRepository:
             .having(func.count() == 2)
         )
         conv_ids = self.session.exec(stmt).all()
-        if not conv_ids:
-            return None
-        conv_id = conv_ids[0]
-        conv = self.session.get(Conversation, conv_id)
-        if conv and conv.type == "direct":
-            return conv
+        for conv_id in conv_ids:
+            conv = self.session.get(Conversation, conv_id)
+            if conv and conv.type == "direct" and conv.status in statuses:
+                return conv
         return None
 
-    def get_participants(self, conversation_id: UUID) -> List[ConversationParticipant]:
+    def find_pending_between(
+        self, user_id1: UUID, user_id2: UUID
+    ) -> Optional[Conversation]:
+        return self.find_direct_conversation(
+            user_id1, user_id2, statuses=("pending",)
+        )
+
+    # ── aggregates ─────────────────────────────────────────
+    def get_participants(
+        self, conversation_id: UUID
+    ) -> List[ConversationParticipant]:
         stmt = select(ConversationParticipant).where(
             ConversationParticipant.conversation_id == conversation_id
         )
@@ -101,13 +164,6 @@ class ConversationRepository:
         return None
 
     def count_unread(self, conversation_id: UUID, user_id: UUID) -> int:
-        """
-        Count messages the user hasn't read yet.
-
-        - Excludes messages the user themselves sent.
-        - Uses `last_read_at` if set; otherwise falls back to `joined_at`,
-          so messages that existed before the user joined don't count.
-        """
         participant = self.session.exec(
             select(ConversationParticipant).where(
                 ConversationParticipant.conversation_id == conversation_id,
