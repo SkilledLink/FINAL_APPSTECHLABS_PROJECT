@@ -1,4 +1,7 @@
+// src/features/portfolio/types/portfolio.types.ts
 // Mirrors the backend Pydantic schemas exactly.
+
+/* ───────────────────────── enums ───────────────────────── */
 
 export type PricingType =
   | 'fixed'
@@ -8,24 +11,68 @@ export type PricingType =
   | 'starting_from'
   | 'negotiable';
 
-export type DurationUnit = 'hours' | 'days' | 'weeks' | 'months';
-export type ClientType = 'individual' | 'business' | 'household' | 'government' | 'ngo';
+export type DurationUnit = 'minutes' | 'hours' | 'days' | 'weeks' | 'months';
+
+export type ClientType =
+  | 'individual'
+  | 'household'
+  | 'business'
+  | 'organization'
+  | 'government'
+  | 'professional'
+  | 'contractor'
+  | 'ngo';
+
 export type AvailabilityDay =
-  | 'monday' | 'tuesday' | 'wednesday' | 'thursday'
-  | 'friday' | 'saturday' | 'sunday';
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+  | 'sunday';
+
+/* ───────────────────────── enum constants ───────────────────────── */
 
 export const PRICING_TYPES: PricingType[] = [
-  'fixed', 'hourly', 'daily', 'monthly', 'starting_from', 'negotiable',
-];
-export const DURATION_UNITS: DurationUnit[] = ['hours', 'days', 'weeks', 'months'];
-export const CLIENT_TYPES: ClientType[] = [
-  'individual', 'business', 'household', 'government', 'ngo',
-];
-export const AVAILABILITY_DAYS: AvailabilityDay[] = [
-  'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
+  'fixed',
+  'hourly',
+  'daily',
+  'monthly',
+  'starting_from',
+  'negotiable',
 ];
 
-/* ── Portfolio ─────────────────────────────────────── */
+export const DURATION_UNITS: DurationUnit[] = [
+  'minutes',
+  'hours',
+  'days',
+  'weeks',
+  'months',
+];
+
+export const CLIENT_TYPES: ClientType[] = [
+  'individual',
+  'household',
+  'business',
+  'organization',
+  'government',
+  'professional',
+  'contractor',
+  'ngo',
+];
+
+export const AVAILABILITY_DAYS: AvailabilityDay[] = [
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+  'sunday',
+];
+
+/* ───────────────────────── portfolio ───────────────────────── */
 
 export interface Portfolio {
   id: string;
@@ -151,7 +198,7 @@ export interface PortfolioCreateInput {
 
 export type PortfolioUpdateInput = Partial<PortfolioCreateInput>;
 
-/* ── Services ───────────────────────────────────────── */
+/* ───────────────────────── services ───────────────────────── */
 
 export interface ServiceFAQ {
   question: string;
@@ -206,7 +253,7 @@ export interface ServiceCreateInput {
 
 export type ServiceUpdateInput = Partial<ServiceCreateInput>;
 
-/* ── Works ──────────────────────────────────────────── */
+/* ───────────────────────── works ───────────────────────── */
 
 export interface Work {
   id: string;
@@ -252,7 +299,7 @@ export interface WorkCreateInput {
 
 export type WorkUpdateInput = Partial<WorkCreateInput>;
 
-/* ── Availability ───────────────────────────────────── */
+/* ───────────────────────── availability ───────────────────────── */
 
 export interface Availability {
   id: string;
@@ -277,7 +324,7 @@ export interface AvailabilityInput {
   notes?: string;
 }
 
-/* ── Categories & Specialties ───────────────────────── */
+/* ───────────────────────── categories & specialties ───────────────────────── */
 
 export interface Specialty {
   id: string;
@@ -292,7 +339,7 @@ export interface Category {
   specialties: Specialty[];
 }
 
-/* ── Public portfolio ───────────────────────────────── */
+/* ───────────────────────── public portfolio ───────────────────────── */
 
 export interface PublicPortfolio {
   professional: PortfolioAuthor;
@@ -304,7 +351,7 @@ export interface PublicPortfolio {
   total_reviews: number;
 }
 
-/* ── AI usage ─────────────────────────────────────────────── */
+/* ───────────────────────── AI usage ───────────────────────── */
 
 export interface AIUsageItem {
   feature_key: string;
@@ -320,4 +367,3 @@ export interface AIUsageResponse {
   items: AIUsageItem[];
   total: number;
 }
-
