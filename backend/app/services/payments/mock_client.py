@@ -1,17 +1,19 @@
 # app/services/payments/mock_client.py
-"""Mock mobile-money client for local development and demos.
+"""Mock mobile-money client for local development.
 
-Implements PaymentProviderClient so the payment service layer never
-knows the difference. No network calls; state lives in an in-process
-dict and resets when the process restarts.
+Accepts BOTH networks (MTN MoMo + Orange Money). No network calls.
+State is process-local; wipes on restart.
 
-Simulated outcomes by MSISDN (mirrors MTN sandbox stubs):
+Auto-success time is intentionally short (1.5 s) so the frontend's
+1.5-second poll loop sees the flip on the second poll.
+
+Simulated outcomes by MSISDN suffix (overrides the default timing):
     46733123450 → SUCCESSFUL immediately
-    46733123451 → FAILED (user rejected)
-    46733123452 → FAILED (timeout)
+    46733123451 → FAILED  (user rejected)
+    46733123452 → FAILED  (timeout)
     46733123453 → PENDING (never resolves)
-    46733123454 → SUCCESSFUL after ~15 s
-    any other number → SUCCESSFUL after ~3 s (nicer for demos)
+    46733123454 → SUCCESSFUL after 8 s
+    any other number → SUCCESSFUL after 1.5 s
 """
 
 import logging
@@ -24,10 +26,22 @@ from app.services.payments.base import ChargeInitResult, WebhookEvent
 
 logger = logging.getLogger(__name__)
 
+# Recognised network names (case-insensitive). The mock treats both
+# identically — everything that isn't None ends up SUCCESSFUL.
+_MTN = {"mtn", "mtn_momo", "mtn_mobile_money"}
+_ORANGE = {"orange", "orange_money", "orange_mobile_money"}
+
+
+def _network_label(network: str) -> str:
+    n = (network or "").strip().lower()
+    if n in _MTN:
+        return "MTN MoMo"
+    if n in _ORANGE:
+        return "Orange Money"
+    return network or "unknown"
+
 
 class _MockStore:
-    """Process-local transaction store."""
-
     def __init__(self) -> None:
         self._rows: dict[str, dict] = {}
 
@@ -55,7 +69,6 @@ _store = _MockStore()
 
 
 def _decide_outcome(phone: str) -> tuple[str, float]:
-    """Return (final_status, delay_seconds) based on the phone number."""
     digits = "".join(c for c in phone if c.isdigit())
 
     if digits.endswith("46733123450"):
@@ -67,13 +80,13 @@ def _decide_outcome(phone: str) -> tuple[str, float]:
     if digits.endswith("46733123453"):
         return "PENDING", 10_000_000.0
     if digits.endswith("46733123454"):
-        return "SUCCESSFUL", 15.0
+        return "SUCCESSFUL", 8.0
 
-    # Any other number — auto-approve after a short delay so the UI
-    # can show the "waiting" phase before flipping to success.
-    return "SUCCESSFUL", 3.0
+    # The user-facing happy path: succeed fast enough that the
+    # frontend's second poll (at t≈3s) sees SUCCESSFUL.
+    return "SUCCESSFUL", 1.5
 
-  
+
 class MockMomoClient:
     """PaymentProviderClient implementation that never leaves the process."""
 
@@ -102,6 +115,7 @@ class MockMomoClient:
     ) -> ChargeInitResult:
         mtn_ref = str(uuid.uuid4())
         outcome, delay = _decide_outcome(phone_number)
+        label = _network_label(network)
 
         _store.put(
             reference,
@@ -113,23 +127,25 @@ class MockMomoClient:
             delay_seconds=delay,
             created_at=time.time(),
             description=description or "Subscription",
+            network=network,
         )
 
         logger.info(
-            "[MOCK] initiate ref=%s phone=%s amount=%s %s → %s (delay %.1fs)",
-            reference, phone_number, amount, currency, outcome, delay,
+            "[MOCK] initiate ref=%s network=%s phone=%s amount=%s %s "
+            "→ %s (delay %.1fs)",
+            reference, label, phone_number, amount, currency, outcome, delay,
         )
 
         return ChargeInitResult(
             status="pending",
-            raw={"reference_id": mtn_ref, "mock": True},
+            raw={"reference_id": mtn_ref, "mock": True, "network": network},
             provider_reference=mtn_ref,
             checkout_url=None,
             instructions=(
-                "This is a mock payment. No real prompt was sent. "
-                "The status will resolve automatically for demos."
+                f"A {label} prompt has been sent to {phone_number}. "
+                "Enter your PIN to approve the payment."
             ),
-            message="Mock payment initiated",
+            message=f"{label} payment initiated",
         )
 
     def verify_webhook_signature(self, raw_body: bytes, headers: dict) -> bool:
@@ -155,21 +171,26 @@ class MockMomoClient:
     # ───────────────────── status lookup ─────────────────────
 
     def get_status(self, provider_reference: str) -> dict:
-        """Resolve the current status based on elapsed time."""
         data = _store.find_by_provider_reference(provider_reference)
         if data is None:
-            raise RuntimeError(f"Mock: unknown reference {provider_reference}")
+            raise RuntimeError(
+                f"Mock: unknown reference {provider_reference}"
+            )
 
         elapsed = time.time() - data["created_at"]
         outcome = data["outcome"]
         delay = data["delay_seconds"]
 
         if outcome == "PENDING" or elapsed < delay:
-            status = "PENDING"
-        else:
-            status = outcome
+            return {
+                "status": "PENDING",
+                "reason": None,
+                "financialTransactionId": None,
+                "amount": data["amount"],
+                "currency": data["currency"],
+            }
 
-        if status == "SUCCESSFUL":
+        if outcome == "SUCCESSFUL":
             return {
                 "status": "SUCCESSFUL",
                 "reason": None,
@@ -177,22 +198,17 @@ class MockMomoClient:
                 "amount": data["amount"],
                 "currency": data["currency"],
             }
-        if status == "FAILED":
-            reason = (
-                "Mock: user rejected the payment"
-                if data["phone"].endswith("451")
-                else "Mock: payment timed out"
-            )
-            return {
-                "status": "FAILED",
-                "reason": reason,
-                "financialTransactionId": None,
-                "amount": data["amount"],
-                "currency": data["currency"],
-            }
+
+        # FAILED
+        phone = data.get("phone", "")
+        reason = (
+            "Mock: user rejected the payment"
+            if phone.endswith("451")
+            else "Mock: payment timed out"
+        )
         return {
-            "status": "PENDING",
-            "reason": None,
+            "status": "FAILED",
+            "reason": reason,
             "financialTransactionId": None,
             "amount": data["amount"],
             "currency": data["currency"],

@@ -1,5 +1,5 @@
 // src/features/subscription/components/UpgradeModal.tsx
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   X,
@@ -9,6 +9,8 @@ import {
   Sparkles,
   ArrowRight,
   AlertCircle,
+  Smartphone,
+  ShieldCheck,
 } from 'lucide-react';
 import { subscriptionService } from '../services/subscriptionService';
 import type {
@@ -27,24 +29,71 @@ interface UpgradeModalProps {
 
 type Phase = 'select' | 'waiting' | 'success' | 'failed';
 
-function detectProvider(phone: string): PaymentProvider {
-  const digits = phone.replace(/\D/g, '');
-  const local = digits.startsWith('237') ? digits.slice(3) : digits;
-  // Orange: 69x, 655-659, 685-689
-  if (
-    local.startsWith('69') ||
-    (parseInt(local.slice(0, 3), 10) >= 655 &&
-      parseInt(local.slice(0, 3), 10) <= 659) ||
-    (parseInt(local.slice(0, 3), 10) >= 685 &&
-      parseInt(local.slice(0, 3), 10) <= 689)
-  ) {
-    return 'orange_money';
-  }
-  return 'mtn_momo';
+/* ── network detection ─────────────────────────────────── */
+
+interface NetworkInfo {
+  id: PaymentProvider;
+  label: string;
+  short: string;
+  /** Tailwind classes for the badge */
+  badge: string;
+  /** Gradient for the accent bar */
+  accent: string;
 }
 
-const POLL_INTERVAL_MS = 3000;
-const POLL_TIMEOUT_MS = 90_000;
+const MTN: NetworkInfo = {
+  id: 'mtn_momo',
+  label: 'MTN Mobile Money',
+  short: 'MTN',
+  badge:
+    'border-yellow-400/40 bg-yellow-400/15 text-yellow-700 dark:text-yellow-300',
+  accent: 'from-yellow-400 to-yellow-500',
+};
+
+const ORANGE: NetworkInfo = {
+  id: 'orange_money',
+  label: 'Orange Money',
+  short: 'Orange',
+  badge:
+    'border-orange-400/40 bg-orange-400/15 text-orange-700 dark:text-orange-300',
+  accent: 'from-orange-400 to-orange-500',
+};
+
+/** Returns the network info for a given phone, or null if undetermined. */
+function detectNetwork(phone: string): NetworkInfo | null {
+  const digits = phone.replace(/\D/g, '');
+  const local = digits.startsWith('237') ? digits.slice(3) : digits;
+  if (local.length < 2) return null;
+
+  const p3 = parseInt(local.slice(0, 3), 10);
+  const p2 = local.slice(0, 2);
+
+  // MTN: 67x, 650-654, 680-684
+  if (
+    p2 === '67' ||
+    (p3 >= 650 && p3 <= 654) ||
+    (p3 >= 680 && p3 <= 684)
+  ) {
+    return MTN;
+  }
+  // Orange: 69x, 655-659, 685-689
+  if (
+    p2 === '69' ||
+    (p3 >= 655 && p3 <= 659) ||
+    (p3 >= 685 && p3 <= 689)
+  ) {
+    return ORANGE;
+  }
+  return null;
+}
+
+/* ── polling config ────────────────────────────────────── */
+
+const POLL_INTERVAL_MS = 1500;
+const POLL_TIMEOUT_MS = 60_000;
+const AUTO_CLOSE_MS = 2000;
+
+/* ── component ─────────────────────────────────────────── */
 
 export default function UpgradeModal({
   open,
@@ -62,10 +111,14 @@ export default function UpgradeModal({
   const [reference, setReference] = useState<string | null>(null);
   const [instructions, setInstructions] = useState<string | null>(null);
   const [failureReason, setFailureReason] = useState<string | null>(null);
+  const [waitSeconds, setWaitSeconds] = useState(0);
 
   const pollTimerRef = useRef<number | null>(null);
+  const autoCloseRef = useRef<number | null>(null);
 
-  /* Reset every time the modal opens */
+  const detected = useMemo(() => detectNetwork(phone), [phone]);
+
+  /* Reset on open */
   useEffect(() => {
     if (!open) return;
     setSelectedTierId(null);
@@ -76,13 +129,18 @@ export default function UpgradeModal({
     setReference(null);
     setInstructions(null);
     setFailureReason(null);
+    setWaitSeconds(0);
     if (pollTimerRef.current) {
       window.clearInterval(pollTimerRef.current);
       pollTimerRef.current = null;
     }
+    if (autoCloseRef.current) {
+      window.clearTimeout(autoCloseRef.current);
+      autoCloseRef.current = null;
+    }
   }, [open]);
 
-  /* ESC to close + body scroll lock */
+  /* Body scroll lock + ESC */
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -97,20 +155,27 @@ export default function UpgradeModal({
     };
   }, [open, submitting, phase, onClose]);
 
-  /* Clear polling on unmount */
-  useEffect(() => {
-    return () => {
-      if (pollTimerRef.current) {
-        window.clearInterval(pollTimerRef.current);
-      }
-    };
-  }, []);
+  /* Cleanup */
+  useEffect(
+    () => () => {
+      if (pollTimerRef.current) window.clearInterval(pollTimerRef.current);
+      if (autoCloseRef.current) window.clearTimeout(autoCloseRef.current);
+    },
+    []
+  );
 
   if (!open) return null;
 
   const selectedTier = tiers.find((t) => t.id === selectedTierId) ?? null;
 
-  /* ── Polling ─────────────────────────────────────────── */
+  /* ── polling ─────────────────────────────────────────── */
+
+  const stopPolling = () => {
+    if (pollTimerRef.current) {
+      window.clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  };
 
   const startPolling = (ref: string) => {
     const startedAt = Date.now();
@@ -120,13 +185,22 @@ export default function UpgradeModal({
         const s = await subscriptionService.getPaymentStatus(ref);
         const status = (s.status || '').toUpperCase();
 
-        if (status === 'SUCCESSFUL' || status === 'SUCCESS') {
+        if (status === 'SUCCESSFUL' || status === 'SUCCESS' || status === 'SUCCESS') {
           stopPolling();
           setPhase('success');
           onSuccess?.();
+          // Auto-close shortly after success so the user isn't left
+          // staring at a screen they've already read.
+          autoCloseRef.current = window.setTimeout(() => {
+            onClose();
+          }, AUTO_CLOSE_MS);
           return;
         }
-        if (status === 'FAILED' || status === 'CANCELLED' || status === 'EXPIRED') {
+        if (
+          status === 'FAILED' ||
+          status === 'CANCELLED' ||
+          status === 'EXPIRED'
+        ) {
           stopPolling();
           setFailureReason(s.reason ?? 'Payment was not completed.');
           setPhase('failed');
@@ -140,30 +214,33 @@ export default function UpgradeModal({
           setPhase('failed');
         }
       } catch {
-        // network hiccup — keep polling until timeout
+        /* transient network hiccup — keep polling */
       }
     };
 
-    // Fire immediately, then at intervals
     tick();
     pollTimerRef.current = window.setInterval(tick, POLL_INTERVAL_MS);
   };
 
-  const stopPolling = () => {
-    if (pollTimerRef.current) {
-      window.clearInterval(pollTimerRef.current);
-      pollTimerRef.current = null;
-    }
-  };
+  /* ── wait timer (cosmetic only) ──────────────────────── */
 
-  /* ── Submit ─────────────────────────────────────────── */
+  useEffect(() => {
+    if (phase !== 'waiting') return;
+    setWaitSeconds(0);
+    const t = window.setInterval(() => {
+      setWaitSeconds((s) => s + 1);
+    }, 1000);
+    return () => window.clearInterval(t);
+  }, [phase]);
+
+  /* ── submit ──────────────────────────────────────────── */
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     setError(null);
 
     if (!selectedTier) {
-      setError('Please select a tier.');
+      setError('Please select a plan.');
       return;
     }
     const cleanPhone = phone.replace(/\D/g, '');
@@ -171,12 +248,18 @@ export default function UpgradeModal({
       setError('Enter a valid phone number (min 8 digits).');
       return;
     }
+    if (!detected) {
+      setError(
+        'Could not detect MTN or Orange from this number. Use an MTN (67/68) or Orange (69) number.'
+      );
+      return;
+    }
 
     setSubmitting(true);
     try {
       const res = await subscriptionService.initiatePayment({
         tier_id: selectedTier.id,
-        provider: detectProvider(cleanPhone),
+        provider: detected.id,
         payment_method: 'mobile_money',
         phone_number: cleanPhone,
         description: `Upgrade to ${selectedTier.name}`,
@@ -193,7 +276,7 @@ export default function UpgradeModal({
     }
   };
 
-  /* ── Modal ──────────────────────────────────────────── */
+  /* ── render ──────────────────────────────────────────── */
 
   const modal = (
     <div className="fixed inset-0 z-[99999] flex items-start justify-center overflow-y-auto bg-blue-950/75 p-3 pt-4 pb-4 backdrop-blur-2xl sm:items-center sm:p-6">
@@ -251,76 +334,97 @@ export default function UpgradeModal({
             </div>
           )}
 
-          {/* ── Phase: SUCCESS ── */}
+          {/* SUCCESS */}
           {phase === 'success' && (
-            <div className="space-y-4">
-              <div className="flex flex-col items-center gap-3 py-6 text-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-                  <Check className="h-7 w-7" />
-                </div>
-                <h4 className="text-lg font-bold text-slate-900 dark:text-white">
-                  Payment confirmed
-                </h4>
-                <p className="max-w-sm text-sm text-slate-600 dark:text-slate-400">
-                  Your subscription is active. All AI features and
-                  priority placement are now unlocked.
-                </p>
-                {reference && (
-                  <p className="font-mono text-[11px] text-slate-400 dark:text-slate-500">
-                    {reference}
-                  </p>
-                )}
+            <div className="flex flex-col items-center gap-3 py-6 text-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                <Check className="h-8 w-8" />
               </div>
+              <h4 className="text-lg font-bold text-slate-900 dark:text-white">
+                Payment confirmed
+              </h4>
+              <p className="max-w-sm text-sm text-slate-600 dark:text-slate-400">
+                Your subscription is active. All AI features and priority
+                placement are now unlocked.
+              </p>
+              {reference && (
+                <p className="font-mono text-[11px] text-slate-400 dark:text-slate-500">
+                  {reference}
+                </p>
+              )}
             </div>
           )}
 
-          {/* ── Phase: FAILED ── */}
+          {/* FAILED */}
           {phase === 'failed' && (
-            <div className="space-y-4">
-              <div className="flex flex-col items-center gap-3 py-6 text-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-400">
-                  <AlertCircle className="h-7 w-7" />
-                </div>
-                <h4 className="text-lg font-bold text-slate-900 dark:text-white">
-                  Payment not completed
-                </h4>
-                <p className="max-w-sm text-sm text-slate-600 dark:text-slate-400">
-                  {failureReason ?? 'Please try again.'}
-                </p>
-                {reference && (
-                  <p className="font-mono text-[11px] text-slate-400 dark:text-slate-500">
-                    Ref: {reference}
-                  </p>
-                )}
+            <div className="flex flex-col items-center gap-3 py-6 text-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-400">
+                <AlertCircle className="h-8 w-8" />
               </div>
+              <h4 className="text-lg font-bold text-slate-900 dark:text-white">
+                Payment not completed
+              </h4>
+              <p className="max-w-sm text-sm text-slate-600 dark:text-slate-400">
+                {failureReason ?? 'Please try again.'}
+              </p>
+              {reference && (
+                <p className="font-mono text-[11px] text-slate-400 dark:text-slate-500">
+                  Ref: {reference}
+                </p>
+              )}
             </div>
           )}
 
-          {/* ── Phase: WAITING ── */}
-          {phase === 'waiting' && (
+          {/* WAITING */}
+          {phase === 'waiting' && detected && (
             <div className="space-y-4">
-              <div className="flex flex-col items-center gap-3 py-4 text-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400">
-                  <Loader2 className="h-7 w-7 animate-spin" />
+              <div className="flex flex-col items-center gap-3 py-2 text-center">
+                <div className="relative">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400">
+                    <Smartphone className="h-8 w-8" />
+                  </div>
+                  <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-500 opacity-60" />
+                    <span className="relative inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-white text-[10px] font-bold">
+                      {waitSeconds}
+                    </span>
+                  </span>
                 </div>
                 <h4 className="text-base font-bold text-slate-900 dark:text-white">
                   Check your phone
                 </h4>
                 <p className="max-w-sm text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
                   {instructions ??
-                    'Approve the mobile money prompt on your phone to complete payment.'}
+                    `A ${detected.label} prompt has been sent to your phone.`}
                 </p>
               </div>
 
+              {/* Network chip */}
+              <div className="flex justify-center">
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${detected.badge}`}
+                >
+                  <Smartphone className="h-3 w-3" />
+                  {detected.label}
+                </span>
+              </div>
+
               <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
-                <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300">
+                <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300">
                   What to do
                 </div>
                 <ol className="ml-4 list-decimal space-y-1 text-xs text-slate-700 dark:text-slate-300">
                   <li>Open the mobile money prompt on your phone</li>
                   <li>Enter your PIN to approve</li>
-                  <li>Wait a few seconds — this modal updates automatically</li>
+                  <li>
+                    Wait a moment — this screen updates automatically
+                  </li>
                 </ol>
+              </div>
+
+              <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400 dark:text-slate-500">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                <span>Checking payment status…</span>
               </div>
 
               {reference && (
@@ -331,7 +435,7 @@ export default function UpgradeModal({
             </div>
           )}
 
-          {/* ── Phase: SELECT ── */}
+          {/* SELECT */}
           {phase === 'select' && (
             <>
               <div>
@@ -393,19 +497,37 @@ export default function UpgradeModal({
                 </div>
               </div>
 
+              {/* Phone + network badge */}
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">
                   Mobile money number
                 </label>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="e.g. 237655123456"
-                  className="w-full rounded-lg border border-white/50 bg-white/60 px-3.5 py-2.5 text-sm text-slate-900 outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-500/25 dark:border-white/10 dark:bg-slate-800/40 dark:text-white"
-                />
-                <p className="mt-1.5 text-[11px] text-slate-500 dark:text-slate-400">
-                  We'll detect MTN or Orange automatically from the number.
+                <div className="relative">
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="e.g. 237 6 71 23 45 67"
+                    className="w-full rounded-lg border border-white/50 bg-white/60 pl-3.5 pr-24 py-2.5 text-sm text-slate-900 outline-none transition-all focus:border-blue-600 focus:ring-2 focus:ring-blue-500/25 dark:border-white/10 dark:bg-slate-800/40 dark:text-white"
+                  />
+                  {detected && (
+                    <span
+                      className={`absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${detected.badge}`}
+                    >
+                      <Smartphone className="h-3 w-3" />
+                      {detected.short}
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                  {detected ? (
+                    <>
+                      <ShieldCheck className="h-3 w-3 text-emerald-500" />
+                      Detected {detected.label}
+                    </>
+                  ) : (
+                    "We'll detect MTN or Orange from your number."
+                  )}
                 </p>
               </div>
 
@@ -449,7 +571,7 @@ export default function UpgradeModal({
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={submitting || !selectedTier}
+                disabled={submitting || !selectedTier || !detected}
                 className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-xs font-semibold text-white shadow-md shadow-blue-500/25 transition-all hover:bg-blue-500 active:scale-[0.98] disabled:opacity-50"
               >
                 {submitting ? (

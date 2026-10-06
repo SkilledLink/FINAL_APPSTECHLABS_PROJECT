@@ -22,6 +22,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { useTiers } from '../../hooks/useTiers';
+import QuickAdminTools from '../tiers/QuickAdminTools';
 import type {
   ProfessionalTierDetail,
   TierCreatePayload,
@@ -207,7 +208,6 @@ const TierModal: React.FC<TierModalProps> = ({
       return;
     }
 
-    // ── AI limit validation (required, positive integer) ──
     const trimmed = aiLimit.trim();
     if (trimmed === '') {
       setAiError('AI analyses per month is required.');
@@ -390,7 +390,7 @@ const TierModal: React.FC<TierModalProps> = ({
             </div>
           </div>
 
-          {/* ───────── AI Portfolio Analysis Limit ───────── */}
+          {/* AI Portfolio Analysis Limit */}
           <div className="space-y-3 rounded-2xl border border-violet-200/70 bg-gradient-to-br from-violet-50/60 to-white p-4 dark:border-violet-900/40 dark:from-violet-950/20 dark:to-slate-900">
             <div className="flex items-center gap-2.5">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-sm shadow-violet-500/25">
@@ -936,7 +936,6 @@ const TierCard: React.FC<TierCardProps> = ({
 
   return (
     <div className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg dark:border-slate-800 dark:bg-slate-900">
-      {/* Accent top bar */}
       <div
         className="h-1.5 w-full"
         style={{
@@ -944,14 +943,12 @@ const TierCard: React.FC<TierCardProps> = ({
         }}
       />
 
-      {/* Corner glow */}
       <div
         className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full opacity-40 blur-3xl transition-opacity group-hover:opacity-70"
         style={{ background: hexToRgba(color, 0.4) }}
       />
 
       <div className="relative p-5">
-        {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             <div
@@ -991,7 +988,6 @@ const TierCard: React.FC<TierCardProps> = ({
           </div>
         </div>
 
-        {/* Badges */}
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
           {tier.isActive ? (
             <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-400">
@@ -1032,7 +1028,6 @@ const TierCard: React.FC<TierCardProps> = ({
           </p>
         )}
 
-        {/* Pricing */}
         <div className="mt-4 flex items-baseline justify-between gap-3 border-t border-gray-100 pt-3 dark:border-slate-800/60">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-slate-500">
@@ -1055,7 +1050,6 @@ const TierCard: React.FC<TierCardProps> = ({
           </div>
         </div>
 
-        {/* Features */}
         <div className="mt-4 border-t border-gray-100 pt-3 dark:border-slate-800/60">
           <div className="mb-2 flex items-center justify-between">
             <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-slate-500">
@@ -1132,6 +1126,7 @@ const TiersTab: React.FC = () => {
     createFeature,
     updateFeature,
     deleteFeature,
+    refetch,
   } = useTiers();
 
   const [tierModalOpen, setTierModalOpen] = useState(false);
@@ -1158,12 +1153,6 @@ const TiersTab: React.FC = () => {
     return { total: tiers.length, active, public: publicCount, features };
   }, [tiers]);
 
-  /**
-   * Ensure the tier has an "ai_portfolio_deep_analysis" feature row
-   * with feature_value = { limit: N, period: "monthly" }.
-   *
-   * Creates it if missing, updates it if present.
-   */
   const reconcileAiFeature = async (
     tier: ProfessionalTierDetail,
     aiLimit: number,
@@ -1300,6 +1289,17 @@ const TiersTab: React.FC = () => {
           Create tier
         </button>
       </div>
+
+      {/* ───────── Quick setup tools ───────── */}
+      <QuickAdminTools
+        tiers={tiers}
+        loading={loading}
+        createTier={createTier}
+        updateTier={updateTier}
+        createFeature={createFeature}
+        updateFeature={updateFeature}
+        onDone={refetch}
+      />
 
       {/* Stats */}
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
