@@ -10,6 +10,14 @@ from app.repositories.notification_repository import NotificationRepository
 
 logger = logging.getLogger(__name__)
 
+# Prefix used by the frontend to encode a shared location inside a
+# regular text message. Keep in sync with `src/utils/locationMessage.ts`.
+_LOCATION_PREFIX = "__LOC__"
+
+
+def _is_location_content(content: Optional[str]) -> bool:
+    return bool(content) and content.startswith(_LOCATION_PREFIX)
+
 
 class NotificationService:
     def __init__(self, session: Session):
@@ -205,7 +213,19 @@ class NotificationService:
         content: Optional[str],
         attachment_name: Optional[str],
     ) -> str:
+        """
+        Human-readable one-liner shown in notification bodies.
+
+        Detects the frontend's `__LOC__` marker (a shared location
+        encoded inside a text message) so we render a friendly label
+        instead of the raw JSON payload.
+        """
         mt = (message_type or "").lower()
+
+        # Shared location — content is a `__LOC__{...}` string
+        if _is_location_content(content):
+            return "📍 Shared a location"
+
         if mt == "text":
             text = (content or "").strip()
             if len(text) > 120:

@@ -11,6 +11,8 @@ class ParticipantInfo(BaseModel):
     last_name: str
     profile_image_url: Optional[str] = None
     username: Optional[str] = None
+    account_type: Optional[str] = None
+    is_online: Optional[bool] = None
 
 
 class ConversationCreate(BaseModel):

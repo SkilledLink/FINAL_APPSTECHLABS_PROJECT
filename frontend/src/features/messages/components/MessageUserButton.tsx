@@ -2,6 +2,7 @@
 
 import { forwardRef, useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { CheckCircle2, Clock, Loader2, MessageSquare } from 'lucide-react';
 import { conversationApi } from '../../../api/conversationApi';
 import { useAuth } from '../hooks/useAuth';
@@ -18,7 +19,6 @@ export interface MessageUserButtonProps
   disabled?: boolean;
   onError?: (error: unknown) => void;
   onBeforeOpen?: () => boolean | void;
-  /** Fired after a conversation id has been resolved. `status` tells you whether it's active or pending. */
   onAfterOpen?: (
     conversationId: string,
     status: 'active' | 'pending'
@@ -47,6 +47,7 @@ export const MessageUserButton = forwardRef<
     const navigate = useNavigate();
     const { user } = useAuth();
     const [state, setState] = useState<ButtonState>('idle');
+    const [pendingConvId, setPendingConvId] = useState<string | null>(null);
 
     const currentUserId = normalizeId(user?.id);
     const targetId = normalizeId(userId);
@@ -56,7 +57,16 @@ export const MessageUserButton = forwardRef<
 
     const handleClick = useCallback(
       async (event: React.MouseEvent<HTMLButtonElement>) => {
-        if (isInactive || state === 'loading' || state === 'pending') return;
+        if (isInactive || state === 'loading') return;
+
+        // Second click while pending → navigate to the pending conversation
+        // so the user can see the "waiting for acceptance" state in chat.
+        if (state === 'pending' && pendingConvId) {
+          event.preventDefault();
+          event.stopPropagation();
+          navigate(`/home/messages/${pendingConvId}`);
+          return;
+        }
 
         if (onBeforeOpen && onBeforeOpen() === false) return;
 
@@ -78,17 +88,23 @@ export const MessageUserButton = forwardRef<
             setState('active');
             navigate(`/home/messages/${conversation.id}`);
           } else {
-            // Pending — we've sent the request. Show "Request sent" and stay put.
             setState('pending');
+            setPendingConvId(conversation.id);
+            toast.success(
+              'Message request sent — waiting for them to accept.',
+              { autoClose: 3000 }
+            );
           }
         } catch (err) {
           onError?.(err);
           setState('idle');
+          toast.error('Could not send the request. Please try again.');
         }
       },
       [
         isInactive,
         state,
+        pendingConvId,
         onBeforeOpen,
         onAfterOpen,
         onError,
@@ -110,7 +126,7 @@ export const MessageUserButton = forwardRef<
         return (
           <>
             <Clock className="w-3.5 h-3.5" />
-            <span>Request sent</span>
+            <span>Request sent · View</span>
           </>
         );
       }
@@ -132,7 +148,7 @@ export const MessageUserButton = forwardRef<
       );
     };
 
-    const disabledForClick = isInactive || state === 'loading' || state === 'pending';
+    const disabledForClick = isInactive || state === 'loading';
 
     return (
       <button

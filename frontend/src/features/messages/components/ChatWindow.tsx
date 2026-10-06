@@ -15,6 +15,7 @@ interface ChatWindowProps {
   onSendVoiceNote: (duration: string) => void;
   onSendFile?: (file: File) => void;
   onSendImage?: (file: File) => void;
+  onShareLocation?: () => void;
   uploading?: boolean;
   uploadProgress?: number;
   onBack?: () => void;
@@ -26,10 +27,6 @@ interface ChatWindowProps {
   onVideoCall?: () => void;
   callDisabled?: boolean;
 }
-
-const UniverseBackground: React.FC = () => {
-  return null;
-};
 
 const LightAmbientGlow: React.FC = () => (
   <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 dark:hidden">
@@ -47,6 +44,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   onSendVoiceNote,
   onSendFile,
   onSendImage,
+  onShareLocation,
   uploading = false,
   uploadProgress = 0,
   onBack,
@@ -117,7 +115,6 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     return (
       <div className="flex flex-1 flex-col items-center justify-center relative overflow-hidden bg-transparent p-8 text-center select-none h-full">
         <LightAmbientGlow />
-        <UniverseBackground />
 
         <motion.div
           initial={{ opacity: 0, scale: 0.94, y: 20 }}
@@ -171,20 +168,18 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   }
 
   const isPending = conversation.status === 'pending';
+  const chatUser = conversation.participant ?? {
+    id: '',
+    name: 'User',
+    isOnline: false,
+  };
 
-  /* ── ACTIVE CONVERSATION ── */
   return (
     <div className="flex flex-col h-full max-h-full w-full min-h-0 overflow-hidden bg-transparent text-slate-900 dark:text-slate-100 relative">
       <LightAmbientGlow />
-      <UniverseBackground />
 
       <header className="flex-none shrink-0 w-full relative z-30 bg-white/70 dark:bg-slate-950/60 backdrop-blur-2xl border-b border-slate-200/70 dark:border-slate-800/70 pt-safe shadow-[0_1px_0_0_rgba(15,23,42,0.02)]">
-        <ChatHeader
-          user={conversation.participant ?? { id: '', name: 'User', isOnline: false }}
-          onBack={onBack}
-          onCall={onCall}
-          onVideoCall={onVideoCall}
-        />
+        <ChatHeader user={chatUser} onBack={onBack} onCall={onCall} onVideoCall={onVideoCall} />
 
         <div className="flex items-center justify-center gap-2 py-1.5 px-4 bg-slate-50/60 dark:bg-slate-900/40 border-t border-slate-200/50 dark:border-slate-800/50 text-[11px] font-medium text-slate-500 dark:text-slate-400 backdrop-blur-sm">
           <motion.div
@@ -280,8 +275,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               <span>Waiting for acceptance</span>
             </div>
             <p className="text-[11.5px] text-slate-500 dark:text-slate-400 max-w-md leading-relaxed">
-              This conversation is pending — you'll be able to send messages as
-              soon as the request is accepted.
+              This conversation is pending — you'll be able to send messages as soon as the request
+              is accepted.
             </p>
           </div>
         ) : (
@@ -290,6 +285,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             onSendVoiceNote={onSendVoiceNote}
             onSendFile={onSendFile}
             onSendImage={onSendImage}
+            onShareLocation={onShareLocation}
             uploading={uploading}
             uploadProgress={uploadProgress}
             onTypingChange={onTypingChange}
