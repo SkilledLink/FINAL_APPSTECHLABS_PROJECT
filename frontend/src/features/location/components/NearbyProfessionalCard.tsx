@@ -1,14 +1,18 @@
 // src/features/location/components/NearbyProfessionalCard.tsx
 import {
   ArrowUpRight,
-  BadgeCheck,
   Clock,
   Globe,
   MapPin,
+  ShieldAlert,
+  ShieldCheck,
   Star,
 } from 'lucide-react';
 import Avatar from '../../../components/ui/Avatar';
 import ProfileLink from '../../profile/components/ProfileLink';
+import VerifiedBadge from '../../subscription/components/VerifiedBadge';
+import { readTierBadge } from '../../subscription/tierCache';
+import type { TierInfo } from '../../subscription/types/subscription.types';
 import type { DiscoverProfessional } from '../types/location.types';
 
 interface NearbyProfessionalCardProps {
@@ -21,6 +25,23 @@ function formatDistance(km: number): string {
   if (km < 1) return `${Math.round(km * 1000)} m away`;
   if (km < 10) return `${km.toFixed(1)} km away`;
   return `${Math.round(km)} km away`;
+}
+
+function tierFromCache(id: string | undefined): TierInfo | null {
+  if (!id) return null;
+  const cached = readTierBadge(id);
+  if (!cached) return null;
+  return {
+    id: cached.tier_id,
+    name: cached.name,
+    level: cached.level,
+    badge_name: cached.badge_name ?? null,
+    badge_code: cached.badge_code ?? null,
+    badge_icon: cached.badge_icon ?? null,
+    badge_color: cached.badge_color ?? null,
+    badge_secondary_color: cached.badge_secondary_color ?? null,
+    badge_shape: cached.badge_shape ?? null,
+  } as TierInfo;
 }
 
 export default function NearbyProfessionalCard({
@@ -44,13 +65,14 @@ export default function NearbyProfessionalCard({
 
   const hasDistance = typeof distance_km === 'number' && distance_km >= 0;
 
+  const tier = tierFromCache(user.id);
+
   return (
     <div className="group relative overflow-hidden rounded-md border border-slate-200/70 bg-white/85 backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-500/40 hover:shadow-[0_8px_24px_-12px_rgba(59,130,246,0.25)] dark:border-white/10 dark:bg-slate-900/60 dark:hover:border-blue-500/30">
       <span className="absolute inset-x-0 top-0 h-[2px] origin-left scale-x-0 bg-gradient-to-r from-blue-500 to-blue-700 transition-transform duration-300 group-hover:scale-x-100" />
 
       <div className="p-5">
         <div className="flex items-start gap-4">
-          {/* ── Avatar → ProfileLink ── */}
           <ProfileLink
             userId={user.id}
             ariaLabel={`View ${fullName}'s profile`}
@@ -72,20 +94,14 @@ export default function NearbyProfessionalCard({
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  {/* ── Name → ProfileLink ── */}
+                <div className="flex items-center gap-1.5 flex-wrap">
                   <ProfileLink
                     userId={user.id}
                     className="truncate text-[15px] font-semibold tracking-tight text-slate-900 transition-colors hover:text-blue-700 dark:text-white dark:hover:text-blue-400"
                   >
                     {fullName}
                   </ProfileLink>
-                  {professional.is_verified && (
-                    <BadgeCheck
-                      className="h-4 w-4 shrink-0 fill-blue-600 text-white dark:fill-blue-500 dark:text-slate-900"
-                      aria-label="Verified professional"
-                    />
-                  )}
+                  {tier && <VerifiedBadge tier={tier} size="sm" />}
                 </div>
 
                 <p className="mt-0.5 truncate text-sm font-medium text-slate-600 dark:text-slate-400">
@@ -104,6 +120,21 @@ export default function NearbyProfessionalCard({
               </div>
 
               <ArrowUpRight className="h-4 w-4 shrink-0 text-slate-400 opacity-0 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:opacity-100" />
+            </div>
+
+            {/* Identity chip — always visible */}
+            <div className="mt-2">
+              {professional.is_verified ? (
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-900/60 text-[10px] font-bold uppercase tracking-wide">
+                  <ShieldCheck size={10} />
+                  Identity verified
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/70 dark:border-amber-900/60 text-[10px] font-bold uppercase tracking-wide">
+                  <ShieldAlert size={10} />
+                  Unverified identity
+                </span>
+              )}
             </div>
 
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
@@ -127,9 +158,7 @@ export default function NearbyProfessionalCard({
               {professional.years_of_experience != null &&
                 professional.years_of_experience > 0 && (
                   <>
-                    <span className="text-slate-300 dark:text-slate-700">
-                      ·
-                    </span>
+                    <span className="text-slate-300 dark:text-slate-700">·</span>
                     <span className="inline-flex items-center gap-1 font-medium text-slate-500 dark:text-slate-400">
                       <Clock className="h-3 w-3" />
                       {professional.years_of_experience}{' '}
@@ -226,7 +255,6 @@ export default function NearbyProfessionalCard({
           )}
         </div>
 
-        {/* ── View Profile button ── */}
         <ProfileLink
           userId={user.id}
           ariaLabel={`View ${fullName}'s profile`}

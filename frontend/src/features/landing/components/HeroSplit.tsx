@@ -1,182 +1,155 @@
-import React, { useEffect, useMemo, useState } from 'react';
+// src/features/landing/components/HeroSplit.tsx
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, ShieldCheck, Star, MapPin } from 'lucide-react';
 import LineReveal from '../../../components/motion/LineReveal';
+import Reveal from '../../../components/motion/Reveal';
+import HeroProductVisual from './HeroProductVisual';
+import { heroImage } from '../landingData';
 
-/* ── embers ── */
-
-type Ember = {
-  id: number;
-  left: number;
-  size: number;
-  duration: number;
-  delay: number;
-  drift: number;
-  opacity: number;
-  rise: number;
-};
-
-const buildEmbers = (count: number): Ember[] => {
-  const embers: Ember[] = [];
-  for (let i = 0; i < count; i += 1) {
-    embers.push({
-      id: i,
-      left: Math.random() * 100,
-      size: 1 + Math.random() * 2.5,
-      duration: 9 + Math.random() * 8,
-      delay: Math.random() * 10,
-      drift: -60 + Math.random() * 120,
-      opacity: 0.35 + Math.random() * 0.45,
-      rise: 220 + Math.random() * 180,
-    });
-  }
-  return embers;
-};
-
-const EmberField: React.FC<{ count?: number }> = ({ count = 22 }) => {
-  const [reduced, setReduced] = useState(false);
-  const embers = useMemo(() => buildEmbers(count), [count]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    setReduced(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  }, []);
-
-  if (reduced) return null;
-
-  return (
-    <div
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-0 z-[3] overflow-hidden"
-    >
-      {embers.map((ember) => (
-        <span
-          key={ember.id}
-          className="absolute bottom-0 rounded-full"
-          style={{
-            left: `${ember.left}%`,
-            width: ember.size,
-            height: ember.size,
-            background:
-              'radial-gradient(circle, #FFD27A 0%, #F97316 45%, rgba(249,115,22,0) 75%)',
-            boxShadow: '0 0 8px 1px rgba(249,115,22,0.55)',
-            animation: `emberRise ${ember.duration}s ease-out ${ember.delay}s infinite`,
-            ['--ember-drift' as never]: `${ember.drift}px`,
-            ['--ember-rise' as never]: `${ember.rise}px`,
-            ['--ember-opacity' as never]: ember.opacity,
-          }}
-        />
-      ))}
-      <style>{`
-        @keyframes emberRise {
-          0%   { transform: translate3d(0, 0, 0); opacity: 0; }
-          15%  { opacity: var(--ember-opacity); }
-          70%  { opacity: calc(var(--ember-opacity) * 0.8); }
-          100% { transform: translate3d(var(--ember-drift), calc(var(--ember-rise) * -1), 0); opacity: 0; }
-        }
-      `}</style>
-    </div>
-  );
-};
-
-/* ── hero ── */
+/** Matches TopNav's floating pill: top offset + pill height + breathing room */
+const SCROLL_ANCHOR = 12 + 60 + 16;
 
 const HeroSplit: React.FC = () => {
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    const t = setTimeout(() => setReady(true), 100);
-    return () => clearTimeout(t);
-  }, []);
+  const scrollToHow = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    const el = document.getElementById('how');
+    if (!el) return;
+    const top =
+      el.getBoundingClientRect().top + window.scrollY - SCROLL_ANCHOR;
+    window.scrollTo({ top, behavior: 'smooth' });
+  };
 
   return (
-    <section id="home" className="relative">
-      <div className="relative flex min-h-[92vh] w-full overflow-hidden bg-[#06142e]">
-        {/* Background image with slow drift */}
-        <div className="hero-media absolute inset-0">
-          <img
-            src="https://thumbs.dreamstime.com/b/african-welder-mask-11110766.jpg"
-            alt="A welder at work in Cameroon"
-            className="h-full w-full object-cover object-center"
-            loading="eager"
-          />
-        </div>
+    <section
+      id="home"
+      className="relative overflow-hidden bg-[#fafafa] dark:bg-[#011c44]"
+    >
+      {/* ── Background image ─────────────────────────── */}
+      <div aria-hidden className="pointer-events-none absolute inset-0">
+        <img
+          src={heroImage}
+          alt=""
+          className="h-full w-full object-cover object-center"
+          loading="eager"
+          fetchPriority="high"
+          draggable={false}
+        />
+      </div>
 
-        {/* Scrim */}
-        <div className="absolute inset-0 z-[1] bg-[#06142e]/72" aria-hidden="true" />
+      {/* ── Branded wash ─────────────────────────────── */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[linear-gradient(115deg,rgba(250,250,250,0.90)_0%,rgba(250,250,250,0.72)_38%,rgba(250,250,250,0.55)_65%,rgba(250,250,250,0.68)_100%)] dark:bg-[linear-gradient(115deg,rgba(1,28,68,0.94)_0%,rgba(1,28,68,0.82)_38%,rgba(1,28,68,0.62)_65%,rgba(1,28,68,0.78)_100%)]"
+      />
 
-        {/* Ambient */}
-        <EmberField count={22} />
+      {/* Soft brand atmosphere */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(ellipse 55% 45% at 12% 8%, rgba(37,99,235,0.10), transparent 60%), radial-gradient(ellipse 50% 42% at 92% 96%, rgba(79,142,255,0.10), transparent 65%)',
+        }}
+      />
 
-        {/* Content */}
-        <div
-          className={`hero-stagger relative z-10 mx-auto flex w-full max-w-[1280px] flex-col justify-center px-6 pb-24 pt-32 sm:px-10 sm:pb-32 sm:pt-40 lg:px-16 ${ready ? 'is-ready' : ''}`}
-        >
+      {/* Hairline grid */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-[0.35] dark:opacity-[0.10]"
+        style={{
+          backgroundImage:
+            'linear-gradient(rgba(15,23,42,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,0.035) 1px, transparent 1px)',
+          backgroundSize: '56px 56px',
+          maskImage:
+            'radial-gradient(ellipse 70% 70% at 50% 40%, black 20%, transparent 85%)',
+          WebkitMaskImage:
+            'radial-gradient(ellipse 70% 70% at 50% 40%, black 20%, transparent 85%)',
+        }}
+      />
+
+      <div className="relative mx-auto flex w-full max-w-[1320px] flex-col-reverse gap-14 px-5 pt-32 pb-20 sm:px-8 sm:pt-36 sm:pb-24 lg:grid lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-16 lg:px-12 lg:pt-44 lg:pb-32">
+        {/* ── LEFT · Copy ───────────────────────────────── */}
+        <div className="max-w-[640px]">
           {/* Eyebrow */}
-          <div className="mb-8 inline-flex w-fit items-center gap-2.5 rounded-full border border-white/15 bg-white/[0.06] px-3.5 py-1.5 backdrop-blur-md">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#4F8EFF] shadow-[0_0_10px_rgba(79,142,255,0.9)]" />
-            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/85">
-              Now live in Cameroon
-            </span>
-          </div>
+          <Reveal>
+            <div className="inline-flex items-center gap-2.5 rounded-full border border-slate-200/80 bg-white/70 px-3.5 py-1.5 backdrop-blur-sm dark:border-white/[0.10] dark:bg-white/[0.06]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#2563EB] shadow-[0_0_10px_rgba(37,99,235,0.6)] dark:bg-[#4F8EFF]" />
+              <span className="text-[10.5px] font-bold uppercase tracking-[0.22em] text-slate-600 dark:text-slate-300">
+                Skilled people. Real services.
+              </span>
+            </div>
+          </Reveal>
 
-          {/* Headline — line reveal */}
+          {/* Headline */}
           <LineReveal
             trigger="mount"
-            delay={0.5}
-            lines={['Find someone who', 'actually shows up.']}
-            className="max-w-[16ch] font-normal leading-[0.98] tracking-[-0.035em] text-white text-[clamp(2.5rem,7.5vw,5.75rem)]"
+            delay={0.15}
+            lines={[
+              'Find the right',
+              'professional for the job.',
+            ]}
+            className="mt-8 font-normal leading-[1.02] tracking-[-0.035em] text-[#06142e] dark:text-white text-[clamp(2.25rem,5.6vw,4.25rem)]"
           />
 
           {/* Subtext */}
-          <p className="mt-8 max-w-[52ch] text-[17px] leading-8 text-white/80">
-            SkilledLink connects you with electricians, plumbers, carpenters,
-            welders and mechanics across Cameroon. Find someone near you who
-            knows the work — and get it done.
-          </p>
+          <Reveal delay={0.35}>
+            <p className="mt-7 max-w-[52ch] text-[16.5px] leading-8 text-slate-700 dark:text-slate-300">
+              SkilledLink helps you discover, evaluate, and connect with
+              skilled professionals — from electricians and plumbers to
+              carpenters and welders — across Cameroon.
+            </p>
+          </Reveal>
 
           {/* CTAs */}
-          <div className="mt-12 flex flex-wrap items-center gap-3">
-            <Link
-              to="/home/professionals"
-              className="group inline-flex items-center gap-2 rounded-full bg-white px-6 py-3.5 text-[15px] font-bold text-[#06142e] shadow-lg shadow-black/20 transition-all hover:bg-[#eef3ff] active:scale-[0.98]"
-            >
-              Find a pro near you
-              <ArrowRight
-                size={16}
-                className="transition-transform duration-200 group-hover:translate-x-0.5"
-              />
-            </Link>
+          <Reveal delay={0.5}>
+            <div className="mt-10 flex flex-wrap items-center gap-3">
+              <Link
+                to="/home/professionals"
+                className="group inline-flex items-center gap-2 rounded-full bg-[#2563EB] px-6 py-3.5 text-[14.5px] font-semibold text-white shadow-[0_10px_28px_-12px_rgba(37,99,235,0.7)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#1d4ed8] hover:shadow-[0_16px_36px_-14px_rgba(37,99,235,0.85)] active:translate-y-0 active:scale-[0.985] dark:bg-[#4F8EFF] dark:hover:bg-[#3d7df5]"
+              >
+                Find a professional
+                <ArrowRight
+                  size={16}
+                  className="transition-transform duration-300 group-hover:translate-x-0.5"
+                />
+              </Link>
 
-            <Link
-              to="/onboarding"
-              className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/[0.06] px-6 py-3.5 text-[15px] font-bold text-white backdrop-blur-md transition-all hover:border-white/40 hover:bg-white/[0.12] active:scale-[0.98]"
-            >
-              I&apos;m a professional
-            </Link>
-          </div>
+              {/* Working "How it works" — smooth scrolls to #how */}
+              <a
+                href="#how"
+                onClick={scrollToHow}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/85 px-6 py-3.5 text-[14.5px] font-semibold text-slate-800 backdrop-blur-sm transition-all duration-300 hover:border-slate-300 hover:bg-white active:scale-[0.985] dark:border-white/[0.10] dark:bg-white/[0.06] dark:text-slate-100 dark:hover:border-white/[0.18] dark:hover:bg-white/[0.10]"
+              >
+                How it works
+              </a>
+            </div>
+          </Reveal>
 
-          {/* Trust strip */}
-          <div className="mt-14 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-white/10 pt-6 text-[12.5px] font-medium text-white/65">
-            <span className="flex items-center gap-2">
-              <ShieldCheck size={14} className="text-[#4F8EFF]" />
-              <span>Identity-verified pros</span>
-            </span>
+          {/* Trust row */}
+          <Reveal delay={0.65}>
+            <div className="mt-14 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-slate-300/60 pt-6 text-[12.5px] font-medium text-slate-600 dark:border-white/[0.10] dark:text-slate-400">
+              <span className="flex items-center gap-2">
+                <ShieldCheck size={14} className="text-[#2563EB] dark:text-[#4F8EFF]" />
+                Identity-verified pros
+              </span>
+              <span aria-hidden className="hidden h-3 w-px bg-slate-300/80 sm:block dark:bg-white/10" />
+              <span className="flex items-center gap-1.5">
+                <Star size={13} className="fill-amber-400 text-amber-400" />
+                4.9 average rating
+              </span>
+              <span aria-hidden className="hidden h-3 w-px bg-slate-300/80 sm:block dark:bg-white/10" />
+              <span className="flex items-center gap-2">
+                <MapPin size={13} className="text-[#2563EB] dark:text-[#4F8EFF]" />
+                Across 6 major cities
+              </span>
+            </div>
+          </Reveal>
+        </div>
 
-            <span className="hidden h-3 w-px bg-white/15 sm:block" aria-hidden="true" />
-
-            <span className="flex items-center gap-1.5">
-              <Star size={13} className="fill-amber-400 text-amber-400" />
-              <span>4.9 average rating</span>
-            </span>
-
-            <span className="hidden h-3 w-px bg-white/15 sm:block" aria-hidden="true" />
-
-            <span className="flex items-center gap-2">
-              <MapPin size={13} className="text-[#4F8EFF]" />
-              <span>Across 6 major cities</span>
-            </span>
-          </div>
+        {/* ── RIGHT · Product visual ───────────────────── */}
+        <div className="relative">
+          <HeroProductVisual />
         </div>
       </div>
     </section>

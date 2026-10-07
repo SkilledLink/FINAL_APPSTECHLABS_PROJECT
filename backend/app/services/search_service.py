@@ -1,3 +1,4 @@
+# app/services/search_service.py
 import logging
 from typing import List, Optional
 from uuid import UUID
@@ -25,6 +26,22 @@ class SearchService:
         self.tier_repo = ProfessionalTierRepository(session)
         self.embedding_service = EmbeddingService()
 
+    # ─── profession resolution (public passthrough) ─────────
+    def resolve_profession(self, query: str) -> Optional[str]:
+        """
+        Public passthrough to the repository's profession resolver.
+        Used by the HTTP endpoint to set the X-Resolved-Profession
+        header so the frontend can show "Showing only Electrician".
+        """
+        if not query:
+            return None
+        try:
+            return self.repo.resolve_profession(query)
+        except Exception as e:
+            logger.warning("resolve_profession failed for %r: %s", query, e)
+            return None
+
+    # ─── main search ────────────────────────────────────────
     def search_professionals(
         self,
         query: str,
@@ -33,22 +50,35 @@ class SearchService:
         limit: int = 20,
         verified: Optional[bool] = None,
         min_tier_level: Optional[int] = None,
+        profession: Optional[str] = None,
     ) -> List[SearchResultResponse]:
+        """
+        Run the hybrid search.
 
-        query = query.strip()
-        if not query:
+        `profession` — optional canonical profession to force strict
+        filtering. When provided, takes precedence over internal
+        resolution. Used by the AI / chat layer when the intent
+        classifier already knows what the user asked for.
+        """
+        query = (query or "").strip()
+
+        # Nothing to search by — return empty rather than the whole table.
+        if not query and not profession:
             return []
 
-        # Embedding is the only thing protected here. If it fails, keyword-only.
-        try:
-            query_vector = self.embedding_service.generate_embedding(query)
-        except Exception as e:
-            logger.warning(
-                "Embedding failed for %r, falling back to keyword-only: %s",
-                query,
-                e,
-            )
-            query_vector = None
+        # Embedding is protected — if it fails, keyword-only path runs.
+        # In strict mode (profession is set), embeddings only contribute
+        # to ranking inside the strict set; they never widen it.
+        query_vector: Optional[List[float]] = None
+        if query:
+            try:
+                query_vector = self.embedding_service.generate_embedding(query)
+            except Exception as e:
+                logger.warning(
+                    "Embedding failed for %r, falling back to keyword-only: %s",
+                    query, e,
+                )
+                query_vector = None
 
         results = self.repo.hybrid_search(
             query=query,
@@ -59,29 +89,31 @@ class SearchService:
             min_relevance=0.45,
             verified=verified,
             min_tier_level=min_tier_level,
+            profession=profession,
         )
 
         self._attach_tier_badges(results)
 
-        logger.info("Search for %r returned %d results", query, len(results))
+        logger.info(
+            "Search q=%r profession=%r city=%r returned %d results",
+            query, profession, city, len(results),
+        )
 
         return [SearchResultResponse.model_validate(r) for r in results]
 
     # ─── batched tier badge attachment ──────────────────────
     def _attach_tier_badges(self, rows: List[dict]) -> None:
         """
-        Mutates each row dict in place, adding a `tier_badge` key when the
-        professional has an active subscription.
+        Mutates each row dict in place, adding a `tier_badge` key when
+        the professional has an active subscription.
 
-        Two DB queries total, regardless of result count — replaces the
-        per-professional N+1 pattern used elsewhere.
+        Two DB queries total, regardless of result count.
         """
         if not rows:
             return
 
         professional_ids: List[UUID] = [row["id"] for row in rows]
 
-        # {professional_id: tier_id}
         sub_map = self.subscription_repo.list_active_for_professionals(
             professional_ids
         )

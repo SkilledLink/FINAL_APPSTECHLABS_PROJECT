@@ -55,14 +55,24 @@ class ProfessionalRepository:
         city: Optional[str] = None,
         country: Optional[str] = None,
         verified_only: bool = False,
-        available_only: bool = True,
+        available_only: bool = False,
         search: Optional[str] = None,
         sort: str = "rating_desc",
     ) -> Tuple[list[Professional], int]:
+        # ── Status filter ───────────────────────────────────
+        # Only deleted / suspended accounts are hidden from browse.
+        # Pending pros (created but not yet KYC-verified) are shown
+        # — they rank below verified ones via the sort below.
         conditions = [
             Professional.deleted_at.is_(None),
-            Professional.status == ProfessionalAccountStatus.ACTIVE,
+            Professional.status.notin_(
+                [
+                    ProfessionalAccountStatus.DELETED,
+                    ProfessionalAccountStatus.SUSPENDED,
+                ]
+            ),
         ]
+
         if available_only:
             conditions.append(Professional.available.is_(True))
         if verified_only:
@@ -92,16 +102,39 @@ class ProfessionalRepository:
         )
 
         stmt = select(Professional).where(*conditions)
+
+        # Order priority:
+        #   1. available = true    (can take work now)
+        #   2. is_verified = true  (KYC completed)
+        #   3. the requested sort
+        available_priority = Professional.available.desc()
+        verified_priority = Professional.is_verified.desc()
+
         if sort == "rating_desc":
             stmt = stmt.order_by(
-                Professional.rating.desc(), Professional.total_reviews.desc()
+                available_priority,
+                verified_priority,
+                Professional.rating.desc(),
+                Professional.total_reviews.desc(),
             )
         elif sort == "newest":
-            stmt = stmt.order_by(Professional.created_at.desc())
+            stmt = stmt.order_by(
+                available_priority,
+                verified_priority,
+                Professional.created_at.desc(),
+            )
         elif sort == "completed_desc":
-            stmt = stmt.order_by(Professional.completed_jobs.desc())
+            stmt = stmt.order_by(
+                available_priority,
+                verified_priority,
+                Professional.completed_jobs.desc(),
+            )
         else:
-            stmt = stmt.order_by(Professional.rating.desc())
+            stmt = stmt.order_by(
+                available_priority,
+                verified_priority,
+                Professional.rating.desc(),
+            )
 
         items = self.session.exec(stmt.offset(skip).limit(limit)).all()
         return items, total
@@ -231,7 +264,10 @@ class ProfessionalRepository:
             VerificationStatus.APPROVED,
             VerificationStatus.MANUAL_APPROVED,
         )
-        if professional.is_verified and professional.status == ProfessionalAccountStatus.PENDING:
+        if (
+            professional.is_verified
+            and professional.status == ProfessionalAccountStatus.PENDING
+        ):
             professional.status = ProfessionalAccountStatus.ACTIVE
         professional.updated_at = now
         self.session.add(professional)

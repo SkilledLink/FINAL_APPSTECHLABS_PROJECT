@@ -1,28 +1,103 @@
+# app/repositories/search_repository.py
 import logging
 import re
+import time
 from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
 from uuid import UUID
 
 from sqlmodel import Session, text
 
+from app.ai.profession_inference import infer_profession
+
 logger = logging.getLogger(__name__)
 
 _LIKE_SPECIALS = re.compile(r"([\\%_])")
 
-# Hard cap on the ranking bonus a paid tier can contribute.
-# 0.05 is visible as a tiebreaker but never beats a strictly higher
-# keyword tier. Raise with caution — see notes.
-MAX_TIER_BOOST = 0.05
 
-# The feature_key whose feature_value carries the boost weight,
-# e.g. feature_value = {"weight": 0.03}. Read from
-# app.enums.professional_tier.TierFeatureKey.AI_SEARCH_PRIORITY.
-_SEARCH_PRIORITY_KEY = "ai_search_priority"
+# ─── Priority ranking configuration ─────────────────────────────
+MAX_PRIORITY_BOOST = 0.50
+
+W_TIER         = 0.20
+W_VERIFIED     = 0.15
+W_REVIEWS      = 0.08
+W_COMPLETENESS = 0.05
+W_JOBS         = 0.02
+
+TIER_LEVEL_CEILING = 5.0
+REVIEWS_CEILING    = 50.0
+JOBS_CEILING       = 100.0
+COMPLETENESS_FACTORS = 7
+
+
+# ─── Profession detection cache ─────────────────────────────────
+_PROFESSION_CACHE: Dict[str, Any] = {"at": 0.0, "values": []}
+_PROFESSION_CACHE_TTL = 300.0
+
+
+def _known_professions(session: Session) -> List[str]:
+    now = time.time()
+    if (
+        now - _PROFESSION_CACHE["at"] < _PROFESSION_CACHE_TTL
+        and _PROFESSION_CACHE["values"]
+    ):
+        return _PROFESSION_CACHE["values"]
+
+    try:
+        rows = session.execute(
+            text(
+                "SELECT DISTINCT profession FROM professionals "
+                "WHERE profession IS NOT NULL AND profession <> ''"
+            )
+        ).all()
+        values = [r[0] for r in rows]
+    except Exception as e:
+        logger.warning("Failed to load known professions: %s", e)
+        values = []
+
+    _PROFESSION_CACHE["at"] = now
+    _PROFESSION_CACHE["values"] = values
+    return values
+
+
+def _match_profession(query: str, known: List[str]) -> Optional[str]:
+    """
+    Literal match — the query names a profession that exists in the DB.
+
+    Returns the canonical profession string, or None.
+    """
+    if not known:
+        return None
+
+    tokens = _tokenize(query)
+    if not tokens:
+        return None
+
+    candidates = list(tokens)
+    candidates += [f"{a} {b}" for a, b in zip(tokens, tokens[1:])]
+
+    lowered = [(orig, orig.lower()) for orig in known]
+
+    # Pass 1 — exact match
+    for cand in candidates:
+        c = cand.lower()
+        for orig, low in lowered:
+            if c == low:
+                return orig
+
+    # Pass 2 — substring match (>= 4 chars to avoid noise)
+    for cand in candidates:
+        c = cand.lower()
+        if len(c) < 4:
+            continue
+        for orig, low in lowered:
+            if c in low or low in c:
+                return orig
+
+    return None
 
 
 def _escape_like(value: str) -> str:
-    """Escape LIKE metacharacters so user input is treated literally."""
     return _LIKE_SPECIALS.sub(r"\\\1", value)
 
 
@@ -37,11 +112,6 @@ def _bind_tokens(params: Dict[str, Any], tokens: List[str]) -> None:
 
 
 def _token_match_clause(n_tokens: int) -> str:
-    """
-    Every token must match at least one searchable field (AND across tokens).
-    Each token ORs across fields. Makes multi-word skills like
-    'python django' work against an array-as-text column.
-    """
     parts = []
     for i in range(n_tokens):
         parts.append(
@@ -77,7 +147,6 @@ def _any_eq(columns: List[str], n_tokens: int) -> str:
 
 
 def _keyword_case_clause(n_tokens: int) -> str:
-    """Single source of truth for the keyword scoring CASE expression."""
     first_last = "LOWER(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')))"
     last_first = "LOWER(CONCAT(COALESCE(u.last_name, ''), ' ', COALESCE(u.first_name, '')))"
 
@@ -97,7 +166,6 @@ def _keyword_case_clause(n_tokens: int) -> str:
     """
 
 
-# Columns we actually need. Notably NOT p.embedding / p.embedding_stale.
 _PROJECTION = """
     p.id,
     p.user_id,
@@ -123,9 +191,7 @@ _PROJECTION = """
 """
 
 
-# Lateral join that resolves the professional's single "current" active
-# subscription. At most one row per professional — never multiplies results.
-_ACTIVE_SUB_LATERAL = """
+_TIER_JOINS = """
     LEFT JOIN LATERAL (
         SELECT s.tier_id
         FROM professional_tier_subscriptions s
@@ -135,29 +201,49 @@ _ACTIVE_SUB_LATERAL = """
         ORDER BY s.starts_at DESC NULLS LAST
         LIMIT 1
     ) sub ON true
-"""
-
-
-# Joins the resolved tier, then its search-priority feature row (at most
-# one — enforced by unique constraint on (tier_id, feature_key)).
-_TIER_JOINS = f"""
-    {_ACTIVE_SUB_LATERAL}
     LEFT JOIN professional_tiers t ON t.id = sub.tier_id
-    LEFT JOIN professional_tier_features f
-        ON f.tier_id = t.id
-       AND f.feature_key = :priority_key
-       AND f.is_enabled = true
 """
 
 
-def _tier_boost_expr() -> str:
-    """The tier-contributed bonus, clamped to [0, MAX_TIER_BOOST]."""
+def _priority_score_expr() -> str:
     return f"""
-        LEAST(
-            :max_tier_boost,
-            COALESCE((f.feature_value->>'weight')::float, 0)
+        (
+            :w_tier * LEAST(
+                1.0,
+                COALESCE(t.level, 0)::float / :tier_ceiling
+            )
+            + :w_verified * CASE WHEN p.is_verified THEN 1.0 ELSE 0.0 END
+            + :w_reviews * LEAST(
+                1.0,
+                LN(1 + COALESCE(p.total_reviews, 0))
+                / LN(1 + :reviews_ceiling)
+            )
+            + :w_completeness * (
+                (
+                    (CASE WHEN p.bio IS NOT NULL AND LENGTH(p.bio) > 50 THEN 1 ELSE 0 END)
+                    + (CASE WHEN p.skills IS NOT NULL AND LENGTH(p.skills::text) > 2 THEN 1 ELSE 0 END)
+                    + (CASE WHEN p.services IS NOT NULL AND LENGTH(p.services::text) > 2 THEN 1 ELSE 0 END)
+                    + (CASE WHEN p.years_of_experience IS NOT NULL THEN 1 ELSE 0 END)
+                    + (CASE WHEN p.hourly_rate IS NOT NULL THEN 1 ELSE 0 END)
+                    + (CASE WHEN u.profile_image_url IS NOT NULL THEN 1 ELSE 0 END)
+                    + (CASE WHEN p.city IS NOT NULL THEN 1 ELSE 0 END)
+                )::float / :completeness_factors
+            )
+            + :w_jobs * LEAST(
+                1.0,
+                LN(1 + COALESCE(p.completed_jobs, 0))
+                / LN(1 + :jobs_ceiling)
+            )
         )
     """
+
+
+def _relevance_expr() -> str:
+    return "(keyword_score * 0.70 + vector_score * 0.30)"
+
+
+def _final_score_expr() -> str:
+    return f"LEAST(1.0, {_relevance_expr()} * (1.0 + priority_score))"
 
 
 class SearchRepository:
@@ -186,14 +272,6 @@ class SearchRepository:
         verified: Optional[bool],
         min_tier_level: Optional[int],
     ) -> str:
-        """
-        Additional AND'd predicates:
-          - verified=True → only KYC-verified professionals
-          - min_tier_level → only professionals whose *current* active
-            subscription's tier level meets or exceeds the threshold.
-            Uses the lateral join (t.level) rather than a separate EXISTS
-            so the filter and the boost agree on which tier is "current".
-        """
         parts: List[str] = []
 
         if verified:
@@ -205,10 +283,84 @@ class SearchRepository:
 
         return (" AND " + " AND ".join(parts)) if parts else ""
 
-    def _bind_boost_params(self, params: Dict[str, Any]) -> None:
+    def _bind_ranking_params(self, params: Dict[str, Any]) -> None:
         params["now"] = datetime.now(timezone.utc)
-        params["max_tier_boost"] = MAX_TIER_BOOST
-        params["priority_key"] = _SEARCH_PRIORITY_KEY
+        params["w_tier"] = W_TIER
+        params["w_verified"] = W_VERIFIED
+        params["w_reviews"] = W_REVIEWS
+        params["w_completeness"] = W_COMPLETENESS
+        params["w_jobs"] = W_JOBS
+        params["tier_ceiling"] = TIER_LEVEL_CEILING
+        params["reviews_ceiling"] = REVIEWS_CEILING
+        params["jobs_ceiling"] = JOBS_CEILING
+        params["completeness_factors"] = COMPLETENESS_FACTORS
+
+    # ─── profession detection ───────────────────────────────
+    def resolve_profession(self, query: str) -> Optional[str]:
+        """
+        Detect the canonical profession this query is asking about.
+
+        Two-stage:
+          1. Literal match — the query names a profession that exists
+             in the DB ("electrician", "plumber", "hairdresser", …).
+          2. Service inference — the query describes a service
+             ("wire my house", "fix my sink", "braid my hair"). This
+             returns a canonical profession name even if the exact
+             word isn't present in the query.
+
+        Whatever is returned here is used as a STRICT filter — the
+        query is narrowed to professionals whose profession / skills /
+        services match that name, and nothing else. If no rows match,
+        the caller gets an empty list. Never widens back to flexible
+        mode when this returns a value.
+        """
+        if not query:
+            return None
+
+        known = _known_professions(self.session)
+
+        # 1. Literal match against real DB professions
+        matched = _match_profession(query, known)
+        if matched:
+            return matched
+
+        # 2. Service-language inference
+        inferred = infer_profession(query)
+        if inferred:
+            return inferred
+
+        return None
+
+    # ─── query helpers ─────────────────────────────────────
+    def _prepare_query_parts(
+        self,
+        query: str,
+        params: Dict[str, Any],
+    ) -> tuple[str, str, int]:
+        """
+        Returns (keyword_match_sql, keyword_score_sql, n_tokens).
+
+        Binds token params into `params` as a side effect.
+
+        When the query has no tokens (profession-only search),
+        returns a never-matching clause and a literal `0` score so
+        the SQL is still valid — no unbound `:tok0` references.
+        """
+        tokens = _tokenize(query)
+
+        if tokens:
+            _bind_tokens(params, tokens)
+            n = len(tokens)
+            return (
+                _token_match_clause(n),
+                _keyword_case_clause(n),
+                n,
+            )
+
+        # No tokens. Bind a never-matching exact_query so the
+        # `WHEN first_last = LOWER(:exact_query)` clause has a value.
+        params["exact_query"] = "__no_query_tokens__"
+        return ("false", "0", 0)
 
     # ─── hybrid search ──────────────────────────────────────
     def hybrid_search(
@@ -221,53 +373,93 @@ class SearchRepository:
         min_relevance: float = 0.45,
         verified: Optional[bool] = None,
         min_tier_level: Optional[int] = None,
+        profession: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
-        query = query.strip()
-        if not query:
+        """
+        If `profession` is provided by the caller, it takes precedence
+        over internal resolution and forces strict mode. Use this from
+        the chat / AI layer when the intent classifier has already
+        determined the canonical profession.
+        """
+        query = (query or "").strip()
+        if not query and not profession:
             return []
 
-        tokens = _tokenize(query)
-        if not tokens:
-            return []
+        params: Dict[str, Any] = {"limit": limit}
+        self._bind_ranking_params(params)
 
-        n = len(tokens)
-        params: Dict[str, Any] = {"exact_query": query, "limit": limit}
-        _bind_tokens(params, tokens)
-        self._bind_boost_params(params)
+        keyword_match, keyword_score_expr, _n = self._prepare_query_parts(
+            query, params
+        )
+        # Only override exact_query if tokens weren't bound above.
+        params.setdefault("exact_query", query or "__empty__")
 
         location_filter = self._build_location_filter(params, city, region)
         extra_filter = self._build_extra_filters(
             params, verified, min_tier_level
         )
-        keyword_match = _token_match_clause(n)
 
-        if query_vector is not None:
-            # Index-friendly: distance operator compared directly against value.
-            params["query_vector"] = query_vector
-            params["max_distance"] = 1.0 - min_relevance
+        # ── Decide strict vs flexible ────────────────────────
+        resolved_profession = profession or self.resolve_profession(query)
 
-            vector_filter = """
+        if resolved_profession:
+            # STRICT — restrict to the profession. Bio is excluded
+            # (bios name-drop other professions and would leak in).
+            # Vector does NOT widen the result set here; it only
+            # contributes to ranking inside the strict set.
+            logger.info(
+                "search.strict query=%r resolved_profession=%r source=%s",
+                query, resolved_profession,
+                "explicit" if profession else "inferred",
+            )
+            params["resolved_prof"] = f"%{_escape_like(resolved_profession)}%"
+            search_condition = """
                 (
-                    p.embedding IS NOT NULL
-                    AND COALESCE(p.embedding_stale, false) = false
-                    AND p.embedding <=> CAST(:query_vector AS vector) <= :max_distance
+                    p.profession ILIKE :resolved_prof
+                    OR p.skills::text ILIKE :resolved_prof
+                    OR p.services::text ILIKE :resolved_prof
                 )
             """
-            vector_score_expr = """
-                CASE
-                    WHEN p.embedding IS NOT NULL
-                         AND COALESCE(p.embedding_stale, false) = false
-                    THEN 1 - (p.embedding <=> CAST(:query_vector AS vector))
-                    ELSE 0
-                END
-            """
-            search_condition = f"({keyword_match} OR {vector_filter})"
+            if query_vector is not None:
+                params["query_vector"] = query_vector
+                vector_score_expr = """
+                    CASE
+                        WHEN p.embedding IS NOT NULL
+                             AND COALESCE(p.embedding_stale, false) = false
+                        THEN 1 - (p.embedding <=> CAST(:query_vector AS vector))
+                        ELSE 0
+                    END
+                """
+            else:
+                vector_score_expr = "0"
         else:
-            vector_score_expr = "0"
-            search_condition = keyword_match
+            # FLEXIBLE — natural language, no profession signal.
+            if query_vector is not None:
+                params["query_vector"] = query_vector
+                params["max_distance"] = 1.0 - min_relevance
+                vector_filter = """
+                    (
+                        p.embedding IS NOT NULL
+                        AND COALESCE(p.embedding_stale, false) = false
+                        AND p.embedding <=> CAST(:query_vector AS vector) <= :max_distance
+                    )
+                """
+                vector_score_expr = """
+                    CASE
+                        WHEN p.embedding IS NOT NULL
+                             AND COALESCE(p.embedding_stale, false) = false
+                        THEN 1 - (p.embedding <=> CAST(:query_vector AS vector))
+                        ELSE 0
+                    END
+                """
+                search_condition = f"({keyword_match} OR {vector_filter})"
+            else:
+                vector_score_expr = "0"
+                search_condition = keyword_match
 
-        keyword_score_expr = _keyword_case_clause(n)
-        tier_boost_expr = _tier_boost_expr()
+        priority_expr = _priority_score_expr()
+        relevance_expr = _relevance_expr()
+        final_expr = _final_score_expr()
 
         sql = text(f"""
             WITH scored AS (
@@ -275,7 +467,7 @@ class SearchRepository:
                     {_PROJECTION},
                     ({keyword_score_expr}) AS keyword_score,
                     ({vector_score_expr}) AS vector_score,
-                    ({tier_boost_expr}) AS tier_boost
+                    {priority_expr} AS priority_score
                 FROM professionals p
                 JOIN users u ON u.id = p.user_id
                 {_TIER_JOINS}
@@ -286,16 +478,14 @@ class SearchRepository:
             )
             SELECT
                 *,
-                LEAST(
-                    1.0,
-                    keyword_score * 0.70
-                    + vector_score * 0.30
-                    + tier_boost
-                ) AS relevance_score
+                {relevance_expr} AS relevance_score,
+                {final_expr} AS final_score
             FROM scored
             ORDER BY
+                final_score DESC,
                 relevance_score DESC,
                 rating DESC,
+                total_reviews DESC,
                 completed_jobs DESC
             LIMIT :limit
         """)
@@ -308,6 +498,7 @@ class SearchRepository:
             return self.keyword_search(
                 query, city, region, limit,
                 verified=verified, min_tier_level=min_tier_level,
+                profession=profession,
             )
 
     # ─── keyword-only fallback ──────────────────────────────
@@ -319,27 +510,41 @@ class SearchRepository:
         limit: int = 20,
         verified: Optional[bool] = None,
         min_tier_level: Optional[int] = None,
+        profession: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
-        query = query.strip()
-        if not query:
+        query = (query or "").strip()
+        if not query and not profession:
             return []
 
-        tokens = _tokenize(query)
-        if not tokens:
-            return []
+        params: Dict[str, Any] = {"limit": limit}
+        self._bind_ranking_params(params)
 
-        n = len(tokens)
-        params: Dict[str, Any] = {"exact_query": query, "limit": limit}
-        _bind_tokens(params, tokens)
-        self._bind_boost_params(params)
+        keyword_match, keyword_score_expr, _n = self._prepare_query_parts(
+            query, params
+        )
+        params.setdefault("exact_query", query or "__empty__")
 
         location_filter = self._build_location_filter(params, city, region)
         extra_filter = self._build_extra_filters(
             params, verified, min_tier_level
         )
-        keyword_match = _token_match_clause(n)
-        keyword_score_expr = _keyword_case_clause(n)
-        tier_boost_expr = _tier_boost_expr()
+
+        resolved_profession = profession or self.resolve_profession(query)
+        if resolved_profession:
+            params["resolved_prof"] = f"%{_escape_like(resolved_profession)}%"
+            search_condition = """
+                (
+                    p.profession ILIKE :resolved_prof
+                    OR p.skills::text ILIKE :resolved_prof
+                    OR p.services::text ILIKE :resolved_prof
+                )
+            """
+        else:
+            search_condition = keyword_match
+
+        priority_expr = _priority_score_expr()
+        relevance_expr = _relevance_expr()
+        final_expr = _final_score_expr()
 
         sql = text(f"""
             WITH scored AS (
@@ -347,24 +552,22 @@ class SearchRepository:
                     {_PROJECTION},
                     0 AS vector_score,
                     ({keyword_score_expr}) AS keyword_score,
-                    ({tier_boost_expr}) AS tier_boost
+                    {priority_expr} AS priority_score
                 FROM professionals p
                 JOIN users u ON u.id = p.user_id
                 {_TIER_JOINS}
-                WHERE {keyword_match} {location_filter} {extra_filter}
+                WHERE {search_condition} {location_filter} {extra_filter}
             )
             SELECT
                 *,
-                LEAST(
-                    1.0,
-                    keyword_score * 0.70
-                    + vector_score * 0.30
-                    + tier_boost
-                ) AS relevance_score
+                {relevance_expr} AS relevance_score,
+                {final_expr} AS final_score
             FROM scored
             ORDER BY
+                final_score DESC,
                 relevance_score DESC,
                 rating DESC,
+                total_reviews DESC,
                 completed_jobs DESC
             LIMIT :limit
         """)

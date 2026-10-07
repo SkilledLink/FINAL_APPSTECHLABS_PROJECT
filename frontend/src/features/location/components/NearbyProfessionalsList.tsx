@@ -21,8 +21,6 @@ const SKEL_SOFT = 'animate-pulse bg-blue-500/5 dark:bg-white/[0.03]';
 const SKEL_BLOCK = 'animate-pulse bg-blue-500/8 dark:bg-white/5';
 const SKEL_STRONG = 'animate-pulse bg-blue-500/12 dark:bg-white/[0.07]';
 
-/* ───────────────────────── Skeleton ───────────────────────── */
-
 function CardSkeleton() {
   return (
     <div className="rounded-md border border-slate-200/70 bg-white/85 p-5 backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/60">
@@ -41,8 +39,6 @@ function CardSkeleton() {
     </div>
   );
 }
-
-/* ───────────────────────── Map hint ───────────────────────── */
 
 function MapHint({
   variant,
@@ -86,9 +82,7 @@ function MapHint({
         <div className="flex items-start gap-3">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm border border-blue-500/20 bg-blue-500/10 text-blue-600 dark:border-blue-400/20 dark:text-blue-400">
             <Icon
-              className={`h-4 w-4 ${
-                variant === 'loading' ? 'animate-spin' : ''
-              }`}
+              className={`h-4 w-4 ${variant === 'loading' ? 'animate-spin' : ''}`}
             />
           </div>
           <div className="min-w-0 flex-1">
@@ -105,8 +99,6 @@ function MapHint({
   );
 }
 
-/* ───────────────────────── Map panel ───────────────────────── */
-
 function MapPanel({
   searchCenter,
   markers,
@@ -120,10 +112,8 @@ function MapPanel({
   hint: 'no-search' | 'no-locations' | 'partial' | 'loading' | null;
   hintCount?: number;
 }) {
-  const lat =
-    searchCenter?.latitude != null ? searchCenter.latitude : undefined;
-  const lng =
-    searchCenter?.longitude != null ? searchCenter.longitude : undefined;
+  const lat = searchCenter?.latitude != null ? searchCenter.latitude : undefined;
+  const lng = searchCenter?.longitude != null ? searchCenter.longitude : undefined;
 
   return (
     <div className="overflow-hidden rounded-md border border-slate-200/70 bg-white/85 p-1.5 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-16px_rgba(15,23,42,0.12)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/60">
@@ -142,8 +132,6 @@ function MapPanel({
   );
 }
 
-/* ─────────────────────────────────────────────────────────── */
-
 export default function NearbyProfessionalsList({
   professionals = [],
   loading = false,
@@ -154,13 +142,9 @@ export default function NearbyProfessionalsList({
   onHover,
 }: NearbyProfessionalsListProps) {
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
-
   const list = Array.isArray(professionals) ? professionals : [];
 
-  /* Geocoded fallback for professionals without a public_location */
   const fallbacks = useFallbackGeocoding(list);
-
-  /* Profile navigation for map pins (imperative — links don't work in map portals) */
   const { href: buildProfileHref } = useProfileNavigation(undefined);
 
   useEffect(() => {
@@ -169,7 +153,6 @@ export default function NearbyProfessionalsList({
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [activeId]);
 
-  /* Merged markers: real location wins; fallback used when missing */
   const markers: MapMarker[] = useMemo(
     () =>
       list
@@ -183,12 +166,6 @@ export default function NearbyProfessionalsList({
           if (lat == null || lng == null) return null;
 
           const isApproximate = !real && !!fallback;
-
-          // Prefer the professional record's user id when present,
-          // otherwise fall back to the record's own id.
-          const profileUserId =
-            (p.user as { id?: string } | undefined)?.id ?? p.id;
-
           return {
             id: p.id,
             latitude: lat,
@@ -196,25 +173,19 @@ export default function NearbyProfessionalsList({
             highlighted: activeId === p.id,
             isApproximate,
             avatarUrl: p.user?.profile_image_url ?? null,
-            name: `${p.user?.first_name ?? ''} ${
-              p.user?.last_name ?? ''
-            }`.trim(),
+            name: `${p.user?.first_name ?? ''} ${p.user?.last_name ?? ''}`.trim(),
             onClick: () => {
-              // Keep hover state in sync for the highlighted card,
-              // then navigate to the profile.
               onHover?.(p.id);
-              const href = buildProfileHref(profileUserId);
-              if (href) window.location.assign(href);
+              if (buildProfileHref) window.location.assign(buildProfileHref);
             },
           } as MapMarker;
         })
         .filter((m): m is MapMarker => m !== null),
-    [list, fallbacks, activeId, onHover, buildProfileHref]
+    [list, fallbacks, activeId, onHover, buildProfileHref],
   );
 
   const missingCount = list.filter(
-    (p) =>
-      !p.public_location?.latitude && !fallbacks[p.id]?.latitude
+    (p) => !p.public_location?.latitude && !fallbacks[p.id]?.latitude,
   ).length;
 
   const approximateCount = markers.filter((m) => m.isApproximate).length;
@@ -222,7 +193,10 @@ export default function NearbyProfessionalsList({
   const hasSearchCenter =
     searchCenter?.latitude != null && searchCenter?.longitude != null;
 
-  /* ── Loading ── */
+  /* Verified / unverified split for the results header */
+  const verifiedInList = list.filter((p) => p.is_verified).length;
+  const unverifiedInList = list.length - verifiedInList;
+
   if (loading && list.length === 0) {
     return (
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_minmax(360px,42%)]">
@@ -238,7 +212,6 @@ export default function NearbyProfessionalsList({
     );
   }
 
-  /* ── Error ── */
   if (error) {
     return (
       <div className="flex items-center gap-3 rounded-md border border-rose-500/20 bg-rose-500/8 p-4 text-sm font-medium text-rose-700 backdrop-blur-md dark:text-rose-300">
@@ -248,7 +221,6 @@ export default function NearbyProfessionalsList({
     );
   }
 
-  /* ── Empty ── */
   if (list.length === 0) {
     const emptyCard = (
       <div className="relative overflow-hidden rounded-md border border-dashed border-blue-500/25 bg-blue-500/[0.03] px-6 py-12 text-center backdrop-blur-sm dark:border-blue-400/20 dark:bg-blue-500/[0.04]">
@@ -285,7 +257,6 @@ export default function NearbyProfessionalsList({
     );
   }
 
-  /* ── Results ── */
   const showMap = view === 'map';
 
   let hint: 'no-search' | 'no-locations' | 'partial' | 'loading' | null = null;
@@ -310,6 +281,22 @@ export default function NearbyProfessionalsList({
             </strong>{' '}
             {list.length === 1 ? 'professional' : 'professionals'}
             {searchCenter ? ' found nearby' : ' available'}
+            {verifiedInList > 0 && (
+              <>
+                {' · '}
+                <span className="text-emerald-700 dark:text-emerald-400">
+                  {verifiedInList} verified
+                </span>
+              </>
+            )}
+            {unverifiedInList > 0 && (
+              <>
+                {' · '}
+                <span className="text-amber-700 dark:text-amber-400">
+                  {unverifiedInList} unverified
+                </span>
+              </>
+            )}
             {approximateCount > 0 && (
               <>
                 {' · '}
@@ -358,8 +345,6 @@ export default function NearbyProfessionalsList({
                     : ''
                 }`}
               >
-                {/* NearbyProfessionalCard is responsible for wrapping the
-                    avatar + name in ProfileLink. See notes below. */}
                 <NearbyProfessionalCard professional={p} />
 
                 {hasReal && (

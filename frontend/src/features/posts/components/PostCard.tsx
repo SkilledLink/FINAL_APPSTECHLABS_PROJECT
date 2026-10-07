@@ -13,7 +13,6 @@ import {
   MessageCircle,
   Sparkles,
   Heart,
-  CheckCircle2,
   Smile,
   Globe,
   Loader2,
@@ -22,9 +21,14 @@ import {
   XCircle,
   Play,
   Share2,
+  ShieldCheck,
+  ShieldAlert,
 } from 'lucide-react';
 import ShareModal from './ShareModal';
 import ProfileLink from '../../profile/components/ProfileLink';
+import VerifiedBadge from '../../subscription/components/VerifiedBadge';
+import { readTierBadge } from '../../subscription/tierCache';
+import type { TierInfo } from '../../subscription/types/subscription.types';
 import type { Post } from '../types/post.types';
 
 interface PostCardProps {
@@ -47,8 +51,6 @@ type IdentityFields = {
   userId?: string | number;
 };
 
-/* ───────────────────── helpers ───────────────────── */
-
 function getVisualState(post: Post): VisualState {
   if (post._clientStatus === 'uploading') return 'uploading';
   if (post._clientStatus === 'failed') return 'failed';
@@ -64,27 +66,42 @@ function getVisualState(post: Post): VisualState {
   return 'normal';
 }
 
+function cachedTierToTierInfo(raw: {
+  tier_id: string;
+  level: number;
+  name: string;
+  badge_name?: string | null;
+  badge_code?: string | null;
+  badge_icon?: string | null;
+  badge_color?: string | null;
+  badge_secondary_color?: string | null;
+  badge_shape?: string | null;
+}): TierInfo {
+  return {
+    id: raw.tier_id,
+    name: raw.name,
+    level: raw.level,
+    badge_name: raw.badge_name ?? null,
+    badge_code: raw.badge_code ?? null,
+    badge_icon: raw.badge_icon ?? null,
+    badge_color: raw.badge_color ?? null,
+    badge_secondary_color: raw.badge_secondary_color ?? null,
+    badge_shape: raw.badge_shape ?? null,
+  } as TierInfo;
+}
+
 const readStoredUserId = (): string | null => {
   try {
-    for (const key of [
-      'current_user',
-      'currentUser',
-      'user',
-      'auth_user',
-      'authUser',
-    ]) {
+    for (const key of ['current_user', 'currentUser', 'user', 'auth_user', 'authUser']) {
       const raw = localStorage.getItem(key);
       if (raw) {
         try {
           const parsed = JSON.parse(raw);
           if (parsed?.id) return String(parsed.id);
           if (parsed?.user?.id) return String(parsed.user.id);
-        } catch {
-          /* not JSON, skip */
-        }
+        } catch { /* ignore */ }
       }
     }
-
     const token = localStorage.getItem('access_token');
     if (token) {
       const parts = token.split('.');
@@ -94,14 +111,10 @@ const readStoredUserId = (): string | null => {
           if (payload?.sub) return String(payload.sub);
           if (payload?.user_id) return String(payload.user_id);
           if (payload?.id) return String(payload.id);
-        } catch {
-          /* ignore */
-        }
+        } catch { /* ignore */ }
       }
     }
-  } catch {
-    /* ignore */
-  }
+  } catch { /* ignore */ }
   return null;
 };
 
@@ -124,9 +137,7 @@ const AVATAR_COLORS = [
 
 const getAvatarColor = (seed: string): string => {
   let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = seed.charCodeAt(i) + ((hash << 5) - hash);
-  }
+  for (let i = 0; i < seed.length; i++) hash = seed.charCodeAt(i) + ((hash << 5) - hash);
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 };
 
@@ -135,8 +146,6 @@ const formatCount = (n: number): string => {
   if (n < 1_000_000) return `${(n / 1000).toFixed(n < 10_000 ? 1 : 0)}k`;
   return `${(n / 1_000_000).toFixed(1)}M`;
 };
-
-/* ───────────────────── Auto-play video ───────────────────── */
 
 const AutoPlayVideo: React.FC<{
   src: string;
@@ -151,28 +160,15 @@ const AutoPlayVideo: React.FC<{
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            video
-              .play()
-              .then(() => {
-                setIsPlaying(true);
-                setHasStarted(true);
-              })
-              .catch(() => {
-                video.muted = true;
-                setIsMuted(true);
-                video
-                  .play()
-                  .then(() => {
-                    setIsPlaying(true);
-                    setHasStarted(true);
-                  })
-                  .catch(() => {});
-              });
+            video.play().then(() => { setIsPlaying(true); setHasStarted(true); }).catch(() => {
+              video.muted = true;
+              setIsMuted(true);
+              video.play().then(() => { setIsPlaying(true); setHasStarted(true); }).catch(() => {});
+            });
           } else {
             video.pause();
             setIsPlaying(false);
@@ -181,7 +177,6 @@ const AutoPlayVideo: React.FC<{
       },
       { threshold: 0.6 }
     );
-
     observer.observe(video);
     return () => observer.disconnect();
   }, []);
@@ -208,9 +203,7 @@ const AutoPlayVideo: React.FC<{
         playsInline
         className="w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover/video:scale-[1.02]"
       />
-
       <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-70 group-hover/video:opacity-100 transition-opacity duration-300 pointer-events-none" />
-
       {!isPlaying && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/15 backdrop-blur-md border border-white/25 shadow-2xl">
@@ -218,7 +211,6 @@ const AutoPlayVideo: React.FC<{
           </div>
         </div>
       )}
-
       <div className="absolute inset-x-0 bottom-3 flex items-center justify-between px-3 pointer-events-none">
         <div className="flex items-center gap-2">
           {hasStarted && isPlaying && (
@@ -228,7 +220,6 @@ const AutoPlayVideo: React.FC<{
             </span>
           )}
         </div>
-
         <div className="flex items-center gap-2 pointer-events-auto">
           <button
             type="button"
@@ -236,19 +227,13 @@ const AutoPlayVideo: React.FC<{
             aria-label={isMuted ? 'Unmute video' : 'Mute video'}
             className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900/70 text-white backdrop-blur-lg border border-white/15 hover:bg-slate-900 hover:scale-105 active:scale-95 transition-all z-10 shadow-lg"
           >
-            {isMuted ? (
-              <VolumeX className="w-4 h-4 text-rose-400" />
-            ) : (
-              <Volume2 className="w-4 h-4 text-emerald-400" />
-            )}
+            {isMuted ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
           </button>
         </div>
       </div>
     </div>
   );
 };
-
-/* ───────────────────── Action button ───────────────────── */
 
 interface ActionBtnProps {
   icon: React.ReactNode;
@@ -261,17 +246,9 @@ interface ActionBtnProps {
 }
 
 const ActionBtn: React.FC<ActionBtnProps> = ({
-  icon,
-  label,
-  onClick,
-  active = false,
-  activeColor = 'rose',
-  disabled = false,
-  ariaLabel,
+  icon, label, onClick, active = false, activeColor = 'rose', disabled = false, ariaLabel,
 }) => {
-  const activeText =
-    activeColor === 'rose' ? 'text-rose-500' : 'text-blue-500';
-
+  const activeText = activeColor === 'rose' ? 'text-rose-500' : 'text-blue-500';
   return (
     <motion.button
       type="button"
@@ -285,28 +262,14 @@ const ActionBtn: React.FC<ActionBtnProps> = ({
           : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60'
       }`}
     >
-      <span className="transition-transform duration-200 group-hover/action:scale-110">
-        {icon}
-      </span>
-      {label && (
-        <span className="tabular-nums tracking-tight">{label}</span>
-      )}
+      <span className="transition-transform duration-200 group-hover/action:scale-110">{icon}</span>
+      {label && <span className="tabular-nums tracking-tight">{label}</span>}
     </motion.button>
   );
 };
 
-/* ───────────────────── Main PostCard ───────────────────── */
-
 export const PostCard: React.FC<PostCardProps> = ({
-  post,
-  onLike,
-  onDelete,
-  onComment,
-  onDeleteComment,
-  onHashtagClick,
-  onRetry,
-  onDismiss,
-  canDelete = false,
+  post, onLike, onDelete, onComment, onDeleteComment, onHashtagClick, onRetry, onDismiss, canDelete = false,
 }) => {
   const [isMediaOpen, setIsMediaOpen] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -325,49 +288,51 @@ export const PostCard: React.FC<PostCardProps> = ({
     ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'User'
     : 'Unknown User';
   const username = user?.first_name
-    ? `@${user.first_name.toLowerCase()}${
-        user.last_name ? user.last_name.toLowerCase() : ''
-      }`
+    ? `@${user.first_name.toLowerCase()}${user.last_name ? user.last_name.toLowerCase() : ''}`
     : '@user';
+
+  const [authorTier, setAuthorTier] = useState<TierInfo | null>(null);
+  useEffect(() => {
+    if (!user?.id) { setAuthorTier(null); return; }
+    const cached = readTierBadge(String(user.id));
+    setAuthorTier(cached ? cachedTierToTierInfo(cached) : null);
+  }, [user?.id]);
+
+  /* ── Author KYC state — comes from user payload if present. ── */
+  const authorKyc = (() => {
+    const u = user as unknown as Record<string, unknown> | undefined;
+    if (!u) return null;
+    if (typeof u.is_verified === 'boolean') return u.is_verified;
+    if (typeof u.isVerified === 'boolean') return u.isVerified;
+    const prof = (u as any).professional;
+    if (prof && typeof prof.isVerified === 'boolean') return prof.isVerified;
+    if (prof && typeof prof.is_verified === 'boolean') return prof.is_verified;
+    return null;
+  })();
 
   const primaryMedia = post.media?.[0];
   const visualState = getVisualState(post);
   const isLocked = visualState !== 'normal';
 
-  /* ── Ownership ── */
   const storedUserId = readStoredUserId();
   const userIdentity = user as unknown as IdentityFields;
   const postIdentity = post as unknown as IdentityFields;
   const postAuthorId =
-    userIdentity.id ??
-    userIdentity.user_id ??
-    postIdentity.user_id ??
-    postIdentity.userId ??
-    null;
-
+    userIdentity.id ?? userIdentity.user_id ?? postIdentity.user_id ?? postIdentity.userId ?? null;
   const isOwner =
-    !!storedUserId &&
-    !!postAuthorId &&
-    String(storedUserId) === String(postAuthorId);
-
+    !!storedUserId && !!postAuthorId && String(storedUserId) === String(postAuthorId);
   const effectiveCanDelete = canDelete || isOwner;
   const showDelete = effectiveCanDelete && !isLocked && !!onDelete;
 
-  /* ── Like / comment counts ── */
   const p = post as unknown as Record<string, unknown>;
   const likesArr = Array.isArray(p.likes) ? (p.likes as unknown[]) : null;
 
   const isLiked = Boolean(
-    p.is_liked ??
-      p.liked_by_me ??
-      p.isLiked ??
-      p.has_liked ??
+    p.is_liked ?? p.liked_by_me ?? p.isLiked ?? p.has_liked ??
       (likesArr && storedUserId
         ? likesArr.some((l) => {
             const item = l as Record<string, unknown>;
-            return String(
-              item?.user_id ?? item?.userId ?? item?.id ?? ''
-            ) === String(storedUserId);
+            return String(item?.user_id ?? item?.userId ?? item?.id ?? '') === String(storedUserId);
           })
         : false)
   );
@@ -381,7 +346,6 @@ export const PostCard: React.FC<PostCardProps> = ({
     post.comments?.length ??
     (typeof p.comments_count === 'number' ? (p.comments_count as number) : 0);
 
-  /* ── Time ── */
   useEffect(() => {
     const updateCurrentTime = () => setCurrentTime(Date.now());
     updateCurrentTime();
@@ -390,9 +354,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   }, []);
 
   const formatTimeAgo = (dateStr: string) => {
-    const diff =
-      (currentTime ?? new Date(dateStr).getTime()) -
-      new Date(dateStr).getTime();
+    const diff = (currentTime ?? new Date(dateStr).getTime()) - new Date(dateStr).getTime();
     const mins = Math.floor(diff / 60000);
     if (mins < 1) return 'now';
     if (mins < 60) return `${mins}m`;
@@ -400,13 +362,9 @@ export const PostCard: React.FC<PostCardProps> = ({
     if (hours < 24) return `${hours}h`;
     const days = Math.floor(hours / 24);
     if (days < 7) return `${days}d`;
-    return new Date(dateStr).toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-    });
+    return new Date(dateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   };
 
-  /* ── Handlers ── */
   const handleDoubleTap = useCallback(
     (e: React.MouseEvent) => {
       if (isLocked) return;
@@ -426,9 +384,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   };
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isMediaOpen) setIsMediaOpen(false);
-    };
+    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape' && isMediaOpen) setIsMediaOpen(false); };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isMediaOpen]);
@@ -436,12 +392,10 @@ export const PostCard: React.FC<PostCardProps> = ({
   useEffect(() => {
     const el = descRef.current;
     if (!el) return;
-
     const check = () => {
       if (isDescExpanded) return;
       setIsDescOverflowing(el.scrollHeight > el.clientHeight + 1);
     };
-
     check();
     const ro = new ResizeObserver(check);
     ro.observe(el);
@@ -450,66 +404,38 @@ export const PostCard: React.FC<PostCardProps> = ({
 
   const containerCls = (() => {
     switch (visualState) {
-      case 'uploading':
-        return 'opacity-85';
-      case 'failed':
-        return 'border-rose-200/70 dark:border-rose-900/50 bg-rose-50/20 dark:bg-rose-950/10';
-      case 'rejected':
-        return 'border-rose-200/70 dark:border-rose-900/50 bg-rose-50/30 dark:bg-rose-950/15';
-      case 'pending':
-        return 'border-amber-200/70 dark:border-amber-900/50 bg-amber-50/30 dark:bg-amber-950/15';
-      default:
-        return '';
+      case 'uploading': return 'opacity-85';
+      case 'failed': return 'border-rose-200/70 dark:border-rose-900/50 bg-rose-50/20 dark:bg-rose-950/10';
+      case 'rejected': return 'border-rose-200/70 dark:border-rose-900/50 bg-rose-50/30 dark:bg-rose-950/15';
+      case 'pending': return 'border-amber-200/70 dark:border-amber-900/50 bg-amber-50/30 dark:bg-amber-950/15';
+      default: return '';
     }
   })();
 
   const statusBanner = (() => {
     switch (visualState) {
       case 'uploading':
-        return {
-          icon: <Loader2 className="w-3.5 h-3.5 animate-spin" />,
-          text: 'Posting…',
-          cls: 'text-blue-600 dark:text-blue-400',
-        };
+        return { icon: <Loader2 className="w-3.5 h-3.5 animate-spin" />, text: 'Posting…', cls: 'text-blue-600 dark:text-blue-400' };
       case 'failed':
-        return {
-          icon: <AlertTriangle className="w-3.5 h-3.5" />,
-          text: 'Failed to post',
-          cls: 'text-rose-600 dark:text-rose-400',
-        };
+        return { icon: <AlertTriangle className="w-3.5 h-3.5" />, text: 'Failed to post', cls: 'text-rose-600 dark:text-rose-400' };
       case 'rejected':
-        return {
-          icon: <XCircle className="w-3.5 h-3.5" />,
-          text: 'Post rejected',
-          cls: 'text-rose-600 dark:text-rose-400',
-        };
+        return { icon: <XCircle className="w-3.5 h-3.5" />, text: 'Post rejected', cls: 'text-rose-600 dark:text-rose-400' };
       case 'pending':
-        return {
-          icon: <AlertTriangle className="w-3.5 h-3.5" />,
-          text: 'Pending review',
-          cls: 'text-amber-600 dark:text-amber-400',
-        };
-      default:
-        return null;
+        return { icon: <AlertTriangle className="w-3.5 h-3.5" />, text: 'Pending review', cls: 'text-amber-600 dark:text-amber-400' };
+      default: return null;
     }
   })();
 
   return (
     <>
-      <article
-        className={`group/card relative w-full overflow-hidden rounded-2xl border border-slate-200/60 dark:border-slate-800/60 bg-white dark:bg-slate-900/70 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-300 hover:border-slate-300/80 dark:hover:border-slate-700/80 hover:shadow-[0_10px_40px_-12px_rgba(15,23,42,0.15)] dark:hover:shadow-[0_10px_40px_-12px_rgba(0,0,0,0.6)] mb-4 ${containerCls}`}
-      >
-        {/* Status banner */}
+      <article className={`group/card relative w-full overflow-hidden rounded-2xl border border-slate-200/60 dark:border-slate-800/60 bg-white dark:bg-slate-900/70 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-300 hover:border-slate-300/80 dark:hover:border-slate-700/80 hover:shadow-[0_10px_40px_-12px_rgba(15,23,42,0.15)] dark:hover:shadow-[0_10px_40px_-12px_rgba(0,0,0,0.6)] mb-4 ${containerCls}`}>
         {statusBanner && (
-          <div
-            className={`flex items-center gap-2 px-4 sm:px-5 py-2 text-[11px] font-bold tracking-wide uppercase border-b border-slate-100 dark:border-slate-800/60 ${statusBanner.cls}`}
-          >
+          <div className={`flex items-center gap-2 px-4 sm:px-5 py-2 text-[11px] font-bold tracking-wide uppercase border-b border-slate-100 dark:border-slate-800/60 ${statusBanner.cls}`}>
             {statusBanner.icon}
             <span>{statusBanner.text}</span>
           </div>
         )}
 
-        {/* HEADER */}
         <div className="flex items-start justify-between gap-3 px-4 sm:px-5 pt-4 pb-2">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <ProfileLink
@@ -524,11 +450,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                   className="h-10 w-10 rounded-full object-cover ring-1 ring-slate-200/70 dark:ring-slate-700/70 transition-transform duration-300 group-hover/avatar:scale-105"
                 />
               ) : (
-                <div
-                  className={`h-10 w-10 rounded-full bg-gradient-to-br ${getAvatarColor(
-                    user?.id || displayName
-                  )} flex items-center justify-center ring-1 ring-slate-200/70 dark:ring-slate-700/70 transition-transform duration-300 group-hover/avatar:scale-105`}
-                >
+                <div className={`h-10 w-10 rounded-full bg-gradient-to-br ${getAvatarColor(user?.id || displayName)} flex items-center justify-center ring-1 ring-slate-200/70 dark:ring-slate-700/70 transition-transform duration-300 group-hover/avatar:scale-105`}>
                   <span className="text-white font-bold text-[13px] tracking-tight select-none">
                     {getInitials(user?.first_name, user?.last_name)}
                   </span>
@@ -545,13 +467,14 @@ export const PostCard: React.FC<PostCardProps> = ({
                   {displayName}
                 </ProfileLink>
 
-                {user?.account_type === 'professional' ? (
+                {/* Tier badge from cache — only badge next to name. */}
+                {authorTier && <VerifiedBadge tier={authorTier} size="sm" />}
+
+                {user?.account_type === 'professional' && (
                   <span className="inline-flex items-center gap-1 rounded-md bg-gradient-to-r from-blue-600 to-indigo-600 px-1.5 py-[2px] text-[9px] font-bold text-white shadow-sm shrink-0 tracking-wide">
                     <Sparkles className="w-2.5 h-2.5" />
                     PRO
                   </span>
-                ) : (
-                  <CheckCircle2 className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                 )}
               </div>
 
@@ -563,16 +486,30 @@ export const PostCard: React.FC<PostCardProps> = ({
                   {username}
                 </ProfileLink>
                 <span className="text-slate-300 dark:text-slate-600">·</span>
-                <span className="shrink-0">
-                  {formatTimeAgo(post.created_at)}
-                </span>
+                <span className="shrink-0">{formatTimeAgo(post.created_at)}</span>
                 <span className="text-slate-300 dark:text-slate-600">·</span>
                 <Globe className="w-3 h-3 text-slate-400 dark:text-slate-500 shrink-0" />
               </div>
+
+              {/* Identity chip — shown when the author is a professional. */}
+              {authorKyc !== null && (
+                <div className="mt-1.5">
+                  {authorKyc ? (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-900/60 text-[9px] font-bold uppercase tracking-wide">
+                      <ShieldCheck size={9} />
+                      Identity verified
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/70 dark:border-amber-900/60 text-[9px] font-bold uppercase tracking-wide">
+                      <ShieldAlert size={9} />
+                      Unverified identity
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* 3-dots menu */}
           {showDelete && (
             <div className="relative shrink-0">
               <motion.button
@@ -590,10 +527,7 @@ export const PostCard: React.FC<PostCardProps> = ({
               <AnimatePresence>
                 {showMenu && (
                   <>
-                    <div
-                      className="fixed inset-0 z-20"
-                      onClick={() => setShowMenu(false)}
-                    />
+                    <div className="fixed inset-0 z-20" onClick={() => setShowMenu(false)} />
                     <motion.div
                       initial={{ opacity: 0, scale: 0.94, y: 4 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -603,10 +537,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                     >
                       <button
                         type="button"
-                        onClick={() => {
-                          setShowMenu(false);
-                          onDelete!(post.id);
-                        }}
+                        onClick={() => { setShowMenu(false); onDelete!(post.id); }}
                         className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -620,28 +551,18 @@ export const PostCard: React.FC<PostCardProps> = ({
           )}
         </div>
 
-        {/* CONTENT */}
-        {(post.title ||
-          post.description ||
-          (post.hashtags && post.hashtags.length > 0)) && (
+        {(post.title || post.description || (post.hashtags && post.hashtags.length > 0)) && (
           <div className="px-4 sm:px-5 pb-3 space-y-2">
             {post.title && post.title !== post.description && (
               <h2 className="text-[15px] font-bold text-slate-900 dark:text-slate-100 tracking-tight leading-snug break-words [overflow-wrap:anywhere]">
                 {post.title}
               </h2>
             )}
-
             {post.description && (
               <div>
-                <p
-                  ref={descRef}
-                  className={`text-[14.5px] text-slate-700 dark:text-slate-300 leading-[1.6] whitespace-pre-wrap break-words [overflow-wrap:anywhere] ${
-                    !isDescExpanded ? 'line-clamp-5' : ''
-                  }`}
-                >
+                <p ref={descRef} className={`text-[14.5px] text-slate-700 dark:text-slate-300 leading-[1.6] whitespace-pre-wrap break-words [overflow-wrap:anywhere] ${!isDescExpanded ? 'line-clamp-5' : ''}`}>
                   {post.description}
                 </p>
-
                 {isDescOverflowing && (
                   <button
                     type="button"
@@ -653,7 +574,6 @@ export const PostCard: React.FC<PostCardProps> = ({
                 )}
               </div>
             )}
-
             {post.hashtags && post.hashtags.length > 0 && (
               <div className="flex flex-wrap gap-1.5 pt-0.5">
                 {post.hashtags.map((tag) => (
@@ -671,14 +591,12 @@ export const PostCard: React.FC<PostCardProps> = ({
           </div>
         )}
 
-        {/* Moderation reason */}
         {visualState === 'rejected' && post.moderation?.reason && (
           <div className="mx-4 sm:mx-5 mb-3 text-[12px] text-rose-700 dark:text-rose-300 bg-rose-50/80 dark:bg-rose-950/30 rounded-lg px-3 py-2 break-words [overflow-wrap:anywhere] border border-rose-100 dark:border-rose-900/40">
             {post.moderation.reason}
           </div>
         )}
 
-        {/* MEDIA */}
         {primaryMedia && (
           <div className="relative w-full px-3 sm:px-4">
             {primaryMedia.media_type === 'video' ? (
@@ -698,9 +616,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                   alt={post.title || 'Post attachment'}
                   className="w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover/media:scale-[1.02]"
                 />
-
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover/media:opacity-100 transition-opacity duration-300 pointer-events-none" />
-
                 <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full bg-slate-900/70 px-3 py-1.5 text-[11px] font-semibold text-white backdrop-blur-lg opacity-0 group-hover/media:opacity-100 translate-y-1 group-hover/media:translate-y-0 transition-all duration-300 border border-white/10 shadow-lg">
                   <Maximize2 className="w-3.5 h-3.5 text-blue-400" />
                   <span>View full</span>
@@ -724,60 +640,46 @@ export const PostCard: React.FC<PostCardProps> = ({
           </div>
         )}
 
-        {/* ── ACTIONS ── */}
         <div className="flex items-center gap-0.5 px-2 sm:px-3 py-1.5 mt-1 border-t border-slate-100 dark:border-slate-800/60">
           <ActionBtn
             ariaLabel={isLiked ? 'Unlike' : 'Like'}
             icon={
               <Heart
                 className={`w-[18px] h-[18px] transition-all duration-200 ${
-                  isLiked
-                    ? 'fill-rose-500 text-rose-500'
-                    : 'text-slate-500 dark:text-slate-400'
+                  isLiked ? 'fill-rose-500 text-rose-500' : 'text-slate-500 dark:text-slate-400'
                 }`}
               />
             }
-            label={
-              likeCount > 0 ? formatCount(likeCount) : 'Like'
-            }
+            label={likeCount > 0 ? formatCount(likeCount) : 'Like'}
             onClick={() => !isLocked && onLike(post.id)}
             active={isLiked}
             activeColor="rose"
             disabled={isLocked}
           />
-
           <ActionBtn
             ariaLabel="Comments"
             icon={
               <MessageCircle
                 className={`w-[18px] h-[18px] transition-all duration-200 ${
-                  showComments
-                    ? 'text-blue-500'
-                    : 'text-slate-500 dark:text-slate-400'
+                  showComments ? 'text-blue-500' : 'text-slate-500 dark:text-slate-400'
                 }`}
               />
             }
-            label={
-              commentCount > 0 ? formatCount(commentCount) : 'Comment'
-            }
+            label={commentCount > 0 ? formatCount(commentCount) : 'Comment'}
             onClick={() => setShowComments((v) => !v)}
             active={showComments}
             activeColor="blue"
             disabled={isLocked}
           />
-
           <ActionBtn
             ariaLabel="Share"
-            icon={
-              <Share2 className="w-[18px] h-[18px] text-slate-500 dark:text-slate-400" />
-            }
+            icon={<Share2 className="w-[18px] h-[18px] text-slate-500 dark:text-slate-400" />}
             label="Share"
             onClick={() => setIsShareModalOpen(true)}
             disabled={isLocked}
           />
         </div>
 
-        {/* Retry / Dismiss */}
         {visualState === 'failed' && (
           <div className="flex gap-2 px-4 sm:px-5 py-3 border-t border-rose-100 dark:border-rose-900/40">
             <motion.button
@@ -801,7 +703,6 @@ export const PostCard: React.FC<PostCardProps> = ({
           </div>
         )}
 
-        {/* COMMENTS */}
         <AnimatePresence>
           {showComments && !isLocked && (
             <motion.div
@@ -822,9 +723,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                     <div className="flex items-start gap-2.5 min-w-0 flex-1">
                       <ProfileLink
                         userId={comment.user?.id}
-                        ariaLabel={`View ${
-                          comment.user?.first_name ?? ''
-                        } ${comment.user?.last_name ?? ''}'s profile`.trim()}
+                        ariaLabel={`View ${comment.user?.first_name ?? ''} ${comment.user?.last_name ?? ''}'s profile`.trim()}
                         className="mt-0.5 shrink-0 inline-block"
                       >
                         {comment.user?.profile_image_url ? (
@@ -834,16 +733,9 @@ export const PostCard: React.FC<PostCardProps> = ({
                             className="h-7 w-7 rounded-full object-cover ring-1 ring-slate-200/80 dark:ring-slate-700/80"
                           />
                         ) : (
-                          <div
-                            className={`h-7 w-7 rounded-full bg-gradient-to-br ${getAvatarColor(
-                              comment.user?.id || comment.id
-                            )} flex items-center justify-center ring-1 ring-slate-200/80 dark:ring-slate-700/80`}
-                          >
+                          <div className={`h-7 w-7 rounded-full bg-gradient-to-br ${getAvatarColor(comment.user?.id || comment.id)} flex items-center justify-center ring-1 ring-slate-200/80 dark:ring-slate-700/80`}>
                             <span className="text-white font-bold text-[10px] tracking-tight select-none">
-                              {getInitials(
-                                comment.user?.first_name,
-                                comment.user?.last_name
-                              )}
+                              {getInitials(comment.user?.first_name, comment.user?.last_name)}
                             </span>
                           </div>
                         )}
@@ -860,7 +752,6 @@ export const PostCard: React.FC<PostCardProps> = ({
                         </p>
                       </div>
                     </div>
-
                     {onDeleteComment && (
                       <button
                         type="button"
@@ -884,10 +775,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                 )}
               </div>
 
-              <form
-                onSubmit={handleCommentSubmit}
-                className="flex items-center gap-2 pt-1"
-              >
+              <form onSubmit={handleCommentSubmit} className="flex items-center gap-2 pt-1">
                 <div className="relative flex-1 flex items-center">
                   <input
                     type="text"
@@ -898,7 +786,6 @@ export const PostCard: React.FC<PostCardProps> = ({
                   />
                   <Smile className="absolute right-3 w-4 h-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer transition-colors" />
                 </div>
-
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -914,7 +801,6 @@ export const PostCard: React.FC<PostCardProps> = ({
         </AnimatePresence>
       </article>
 
-      {/* LIGHTBOX */}
       <AnimatePresence>
         {isMediaOpen && primaryMedia && (
           <motion.div
@@ -929,21 +815,16 @@ export const PostCard: React.FC<PostCardProps> = ({
               <span className="hidden sm:inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/10 px-2.5 py-1 text-[11px] font-medium text-white/70 backdrop-blur-md">
                 Press <kbd className="font-mono text-white">ESC</kbd>
               </span>
-
               <motion.button
                 whileHover={{ scale: 1.08 }}
                 whileTap={{ scale: 0.92 }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsMediaOpen(false);
-                }}
+                onClick={(e) => { e.stopPropagation(); setIsMediaOpen(false); }}
                 aria-label="Close lightbox"
                 className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white/90 shadow-xl backdrop-blur-xl hover:bg-white/20 hover:text-white transition-colors"
               >
                 <X className="h-5 w-5" />
               </motion.button>
             </div>
-
             <motion.div
               initial={{ scale: 0.92, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -971,7 +852,6 @@ export const PostCard: React.FC<PostCardProps> = ({
         )}
       </AnimatePresence>
 
-      {/* SHARE MODAL */}
       <ShareModal
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}

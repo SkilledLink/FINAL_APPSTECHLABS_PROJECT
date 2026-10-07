@@ -1,3 +1,4 @@
+// src/features/ai/components/AIAssistant.tsx
 import { Sparkles } from 'lucide-react';
 import { useAIChat } from '../hooks/useAIChat';
 import { AIChat } from './AIChat';
@@ -7,11 +8,28 @@ export function AIAssistant() {
   const chat = useAIChat();
 
   return (
-    <div className="relative w-full h-screen max-h-screen flex flex-col overflow-hidden bg-[#f0f4f8] font-sans text-slate-900 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100">
-
+    <div
+      className="
+        relative flex h-full max-h-full w-full flex-col overflow-hidden
+        bg-[#eef4fa] dark:bg-[#050b14]
+        font-sans text-slate-900 transition-colors duration-300
+        dark:text-slate-100
+      "
+    >
+      {/* Full decorative stack — grid, mesh, glows, SVG, grain,
+          vignette, particles. Sits above the opaque base color,
+          below the header and content. */}
       <AIBackground />
 
-      <header className="relative z-40 px-6 py-4 shrink-0 border-b border-slate-200/70 bg-white/70 backdrop-blur-xl dark:border-slate-800/70 dark:bg-slate-950/70 flex items-center justify-between">
+      <header
+        className="
+          relative z-40 flex shrink-0 items-center justify-between
+          border-b border-slate-900/[0.06] dark:border-white/[0.06]
+          bg-white/60 dark:bg-[#070b14]/60
+          backdrop-blur-xl
+          px-6 py-4
+        "
+      >
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 shadow-lg shadow-blue-500/30">
             <Sparkles className="h-5 w-5 text-white" />
@@ -26,7 +44,7 @@ export function AIAssistant() {
           </div>
         </div>
 
-        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-blue-700 dark:text-blue-300 bg-blue-100/70 dark:bg-blue-500/10 ring-1 ring-blue-500/20 px-2.5 py-1 rounded-full backdrop-blur">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100/70 px-2.5 py-1 text-[11px] font-semibold text-blue-700 ring-1 ring-blue-500/20 backdrop-blur dark:bg-blue-500/10 dark:text-blue-300">
           <span className="relative flex h-1.5 w-1.5">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-500 opacity-75" />
             <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-blue-600" />
@@ -35,7 +53,7 @@ export function AIAssistant() {
         </span>
       </header>
 
-      <main className="relative z-10 flex-1 min-h-0">
+      <main className="relative z-10 min-h-0 flex-1">
         <AIChat chat={chat} />
       </main>
     </div>

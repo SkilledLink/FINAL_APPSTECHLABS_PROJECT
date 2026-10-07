@@ -4,9 +4,6 @@ Intent routing foundation for SkilledLink AI.
 
 Deterministic regex-based classifier. No network calls, no DB calls,
 <1 ms per request. Returns a validated Pydantic AIIntent.
-
-Also classifies image presence, so ChatService can route multimodal
-requests correctly without a second pass.
 """
 
 import logging
@@ -15,6 +12,8 @@ from enum import Enum
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
+
+from app.ai.profession_inference import infer_profession_for_search
 
 logger = logging.getLogger(__name__)
 
@@ -150,11 +149,6 @@ _GENERAL_CONVERSATION_PATTERNS: List[tuple[re.Pattern, str]] = [
 ]
 
 
-# ── Bare profession ─────────────────────────────────────────
-# The entire message is essentially just a profession keyword,
-# optionally with a search verb and/or a city.
-# "electrician", "electricians", "plumber in Douala",
-# "show me electricians", "électricien".
 _BARE_PROFESSION_PATTERN = re.compile(
     r"^\s*(?:the\s+|a\s+|an\s+)?"
     r"(?:find\s+|search\s+|show\s+me\s+|show\s+|list\s+|get\s+)?"
@@ -171,7 +165,6 @@ _BARE_PROFESSION_PATTERN = re.compile(
 )
 
 
-# ── Platform how-to ─────────────────────────────────────────
 _PLATFORM_HOWTO = re.compile(
     r"\bhow\s+(do|does|can|should)\s+(i|we)\s+"
     r"(become|register|sign up|get verified|become verified|"
@@ -181,7 +174,6 @@ _PLATFORM_HOWTO = re.compile(
 )
 
 
-# ── Signals ─────────────────────────────────────────────────
 _NEAR_ME_SIGNAL = re.compile(
     r"\b(near me|nearby|around me|close to me|close by|"
     r"près de moi|proche de moi|autour de moi|à côté de moi)\b",
@@ -231,7 +223,6 @@ _STATIC_KNOWLEDGE_SIGNAL = re.compile(
     re.I,
 )
 
-# ── Image signals ───────────────────────────────────────────
 _IMAGE_UNDERSTAND_SIGNAL = re.compile(
     r"\b(what is this|what's this|what kind of|what type of|"
     r"can you (?:see|tell)|identify|describe (?:this|the) (?:image|photo|picture)|"
@@ -296,10 +287,6 @@ def classify(message: str, *, has_image: bool = False) -> AIIntent:
     """
     Classify a chat or search message into an AIIntent.
 
-    `has_image` is set by the caller when the request carries an
-    uploaded image. It changes the routing of otherwise ambiguous
-    messages.
-
     Never raises. Always returns a validated AIIntent.
     """
     text = (message or "").strip()
@@ -340,31 +327,39 @@ def classify(message: str, *, has_image: bool = False) -> AIIntent:
             if pattern.search(probe):
                 return _build(IntentType.GENERAL_CONVERSATION, 0.95, reason)
 
-        # ── 3. Bare profession → search ─────────────────────
-        # Must run AFTER greetings so "hi" doesn't accidentally
-        # match a profession, and BEFORE the platform how-to
-        # check so "electrician" doesn't become knowledge.
-        if _BARE_PROFESSION_PATTERN.search(probe):
-            profession = extract_profession(probe)
+        # ── 3. Canonical profession inference (run early) ───
+        # This is the single source of truth. It normalizes French
+        # keywords and covers "wire my house" → Electrician, etc.
+        inferred_profession = infer_profession_for_search(probe)
+
+        # ── 4. Bare profession → search ─────────────────────
+        if _BARE_PROFESSION_PATTERN.search(probe) or (
+            inferred_profession and len(probe.split()) <= 3
+        ):
+            # Prefer the canonical name from inference when present
+            profession = inferred_profession or extract_profession(probe)
             location = extract_city(probe)
             return _build(
-                IntentType.PROFESSIONAL_SEARCH, 0.80, "bare_profession",
+                IntentType.PROFESSIONAL_SEARCH, 0.85, "bare_profession",
                 profession=profession, location=location,
                 query=probe,
             )
 
-        # ── 4. Platform how-to → STATIC_KNOWLEDGE ───────────
+        # ── 5. Platform how-to → STATIC_KNOWLEDGE ───────────
         if _PLATFORM_HOWTO.search(probe):
             return _build(IntentType.STATIC_KNOWLEDGE, 0.80, "platform_howto")
 
-        # ── 5. Signal extraction ────────────────────────────
+        # ── 6. Signal extraction ────────────────────────────
         has_near_me = bool(_NEAR_ME_SIGNAL.search(probe))
         has_search_verb = bool(_SEARCH_VERB_SIGNAL.search(probe))
         has_profession = bool(_PROFESSION_SIGNAL.search(probe))
         has_service = bool(_SERVICE_SIGNAL.search(probe))
         has_job = bool(_JOB_SIGNAL.search(probe))
 
-        profession = extract_profession(probe) if has_profession else None
+        profession = inferred_profession or (
+            extract_profession(probe) if has_profession else None
+        )
+
         location = extract_city(probe)
         radius = _extract_radius(probe)
         verified_only = (
@@ -379,8 +374,8 @@ def classify(message: str, *, has_image: bool = False) -> AIIntent:
         )
         min_rating = _extract_min_rating(probe)
 
-        # ── 6. NEARBY_SEARCH ────────────────────────────────
-        if has_near_me and (has_search_verb or has_profession):
+        # ── 7. NEARBY_SEARCH ────────────────────────────────
+        if has_near_me and (has_search_verb or has_profession or profession):
             return _build(
                 IntentType.NEARBY_SEARCH, 0.88, "near_me_signal",
                 profession=profession, location=location,
@@ -390,10 +385,22 @@ def classify(message: str, *, has_image: bool = False) -> AIIntent:
                 min_rating=min_rating,
             )
 
-        # ── 7. PROFESSIONAL_SEARCH ──────────────────────────
-        if has_search_verb and has_profession:
+        # ── 8. PROFESSIONAL_SEARCH (with profession) ────────
+        if profession and (
+            has_search_verb
+            or has_service
+            or has_near_me
+            or len(probe.split()) >= 2
+        ):
+            reason = (
+                "inferred_profession:" + profession.lower()
+                if inferred_profession
+                else "search_verb_profession"
+            )
             return _build(
-                IntentType.PROFESSIONAL_SEARCH, 0.85, "search_verb_profession",
+                IntentType.PROFESSIONAL_SEARCH,
+                0.85 if inferred_profession else 0.85,
+                reason,
                 profession=profession, location=location,
                 radius_km=radius, query=text,
                 verified_only=verified_only,
@@ -401,29 +408,29 @@ def classify(message: str, *, has_image: bool = False) -> AIIntent:
                 min_rating=min_rating,
             )
 
-        # ── 8. SERVICE_SEARCH ───────────────────────────────
+        # ── 9. SERVICE_SEARCH ───────────────────────────────
         if has_service:
             return _build(
                 IntentType.SERVICE_SEARCH, 0.80, "service_query",
                 location=location, query=text,
             )
 
-        # ── 9. JOB_SEARCH ───────────────────────────────────
+        # ── 10. JOB_SEARCH ──────────────────────────────────
         if has_job:
             return _build(
                 IntentType.JOB_SEARCH, 0.75, "job_query",
                 location=location, query=text,
             )
 
-        # ── 10. GENERAL_GUIDANCE ────────────────────────────
+        # ── 11. GENERAL_GUIDANCE ────────────────────────────
         if _GENERAL_GUIDANCE_SIGNAL.search(probe):
             return _build(IntentType.GENERAL_GUIDANCE, 0.70, "guidance_signal")
 
-        # ── 11. STATIC_KNOWLEDGE ────────────────────────────
+        # ── 12. STATIC_KNOWLEDGE ────────────────────────────
         if _STATIC_KNOWLEDGE_SIGNAL.search(probe):
             return _build(IntentType.STATIC_KNOWLEDGE, 0.60, "knowledge_signal")
 
-        # ── 12. Safe default ────────────────────────────────
+        # ── 13. Safe default ────────────────────────────────
         return _build(IntentType.GENERAL_CONVERSATION, 0.30, "default")
 
     except Exception as e:

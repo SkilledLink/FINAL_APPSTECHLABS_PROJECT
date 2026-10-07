@@ -91,3 +91,17 @@ export const navLinks = [
   { id: "testimonials", label: "Reviews" },
   { id: "faq", label: "FAQ" },
 ] as const;
+
+// src/features/landing/landingData.ts  — APPEND these exports
+
+export const skillImages = {
+  electrician: wm("Ouvrier%20travaux%20publics%2019.jpg", 1200),
+  plumber:     wm("Cameroon%20male%20plumbier%20at%20work%2001.jpg", 1200),
+  carpenter:   wm("Carpenter%20at%20work%201.jpg", 1200),
+  mason:       wm("Cameroon%20male%20mason%20at%20work.jpg", 1200),
+  mechanic:    wm("Femme%20mecanicienne.jpg", 1200),
+  welder:      wm("Soudeur%20au%20travail1.jpg", 1200),
+  tailor:      wm("Couturi%C3%A8re%20dans%20son%20atelier.jpg", 1200),
+  leather:     wm("Cr%C3%A9ateur%20et%20cordonnier%20des%20chaussures%20en%20cuire.jpg", 1200),
+  builder:     wm("Construction%20Workers%20in%20Douala.jpg", 1400),
+} as const;

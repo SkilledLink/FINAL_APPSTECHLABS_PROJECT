@@ -20,9 +20,11 @@ from app.ai.scope_guard import (
 )
 from app.ai.schemas import (
     ImageAnalysis,
+    ProfessionalCard,
     ProfessionalSearchParams,
     ProfessionalSearchResult,
 )
+from app.repositories.search_repository import SearchRepository
 from app.services.knowledge_service import KnowledgeService
 from app.services.professional_search_service import ProfessionalSearchService
 from app.services.image_analysis_service import ImageAnalysisService
@@ -80,6 +82,7 @@ class ChatService:
         self.image_service = ImageAnalysisService()
         self.chat_log_repo = ChatLogRepository(session)
         self.gateway = AIGateway()
+        self.search_repo = SearchRepository(session)
 
     # ────────────────────────────────────────────────────────
     #  ENTRY POINT
@@ -107,7 +110,6 @@ class ChatService:
                     return self._finalize(
                         user_id, message, "Please type a message.",
                     )
-                # Off-topic → canned refusal, no LLM.
                 return self._finalize(
                     user_id, message, OFF_TOPIC_RESPONSE,
                 )
@@ -148,17 +150,6 @@ class ChatService:
                 return self._handle_database_pending(user_id, message, ai_intent)
 
             # ── Fallback: try RAG before refusing ────────
-            #
-            # RAG is SAFE by construction:
-            #   • If the query is off-topic, retrieval finds no
-            #     matching docs → canned SkilledLink-focused reply,
-            #     zero LLM tokens spent.
-            #   • If the query is on-topic, the docs ground the
-            #     answer and the strict SYSTEM_PROMPT keeps the
-            #     model from drifting to coding / homework / etc.
-            #
-            # Routing unknown intents here is what makes "how do I
-            # create an account?" actually reach the knowledge base.
             logger.info(
                 "chat.routing_to_rag intent=%s reason=fallback",
                 ai_intent.intent.value,
@@ -237,6 +228,32 @@ class ChatService:
         return result
 
     # ────────────────────────────────────────────────────────
+    #  PLURALIZATION
+    # ────────────────────────────────────────────────────────
+
+    def _pluralize(self, word: str) -> str:
+        """
+        Naive but correct-in-practice pluralization for trade names.
+
+        electrician → electricians
+        plumber     → plumbers
+        handyman    → handymen
+        tiler       → tilers
+        roofer      → roofers
+        """
+        w = (word or "").strip()
+        if not w:
+            return "professionals"
+        lower = w.lower()
+        if lower.endswith("man"):
+            return f"{w[:-3]}men"
+        if lower.endswith("y") and not lower.endswith(("ay", "ey", "oy", "uy")):
+            return f"{w[:-1]}ies"
+        if lower.endswith(("s", "x", "ch", "sh", "z")):
+            return f"{w}es"
+        return f"{w}s"
+
+    # ────────────────────────────────────────────────────────
     #  HANDLERS
     # ────────────────────────────────────────────────────────
 
@@ -251,8 +268,6 @@ class ChatService:
             len(context_docs), message[:80],
         )
 
-        # No context → canned reply. Don't burn tokens on an LLM
-        # call that would just say "I don't know".
         if not context_docs:
             return self._finalize(
                 user_id, message,
@@ -281,39 +296,89 @@ class ChatService:
     def _handle_search(
         self, user_id: UUID, message: str, ai_intent: AIIntent
     ) -> Dict[str, any]:
-        params = ProfessionalSearchParams(
-            query=ai_intent.query or message,
-            profession=ai_intent.profession,
-            location=None,
-            city=ai_intent.location,
-            radius_km=ai_intent.radius_km,
-            verified_only=bool(ai_intent.verified_only),
-            available_only=bool(ai_intent.available_only),
-            min_rating=ai_intent.min_rating,
-            limit=settings.AI_TOOL_PROFESSIONAL_LIMIT,
+        """
+        Run a strict profession-scoped search.
+
+        KEY FIX: when the classifier inferred a canonical profession,
+        search by that name — not by the raw user sentence. The raw
+        sentence contains filler tokens ("I", "someone", "my") that
+        the repository's token-AND matcher treats as required terms
+        and therefore returns zero rows.
+        """
+        profession = ai_intent.profession
+        raw_query = (ai_intent.query or message).strip()
+
+        # Search by canonical profession when we have one; fall back
+        # to the raw sentence otherwise.
+        search_query = profession or raw_query
+
+        logger.info(
+            "chat.search_start profession=%r search_query=%r raw_query=%r city=%r",
+            profession, search_query[:80], raw_query[:80], ai_intent.location,
         )
 
         with timed("search"):
-            result: ProfessionalSearchResult = self.search_service.search(params)
-
-        if result.metadata.total == 0:
-            return self._finalize(
-                user_id, message,
-                "I couldn't find any matching professionals. "
-                "Try a different profession, city, or a broader search.",
+            rows = self.search_repo.hybrid_search(
+                query=search_query,
+                city=ai_intent.location,
+                limit=settings.AI_TOOL_PROFESSIONAL_LIMIT,
+                verified=bool(ai_intent.verified_only) or None,
+                min_tier_level=None,
             )
 
-        # ── TEMPLATED lead-in — no LLM call. ──────────────
-        response = self._search_lead_in(result, ai_intent)
+        # Post-filter with the classifier's authoritative profession
+        # (the repo's own resolver is substring-based and looser).
+        if profession:
+            needle = profession.strip().lower()
+            rows = [r for r in rows if self._row_matches_profession(r, needle)]
+
+        # ── Empty state — honest, profession-aware ───────────
+        if not rows:
+            label = self._pluralize(profession or "professional")
+            where = f" in {ai_intent.location}" if ai_intent.location else ""
+            response = (
+                f"I couldn't find any {label.lower()}{where} available "
+                f"right now. Try a different city, or check back soon."
+            )
+            logger.info(
+                "chat.search_empty profession=%r city=%r",
+                profession, ai_intent.location,
+            )
+            return self._finalize(user_id, message, response)
+
+        # ── Map dict rows to ProfessionalCard objects ────────
+        cards: List[ProfessionalCard] = [
+            self._row_to_card(r) for r in rows
+        ]
+
+        # ── Templated lead-in — correct singular / plural ────
+        n = len(cards)
+        singular = profession or raw_query or "professional"
+        plural = self._pluralize(singular)
+        where = f" in {ai_intent.location}" if ai_intent.location else ""
+
+        if n == 1:
+            response = (
+                f"I found 1 {singular.lower()}{where} that matches your request."
+            )
+        else:
+            response = (
+                f"I found {n} {plural.lower()}{where} that match your request."
+            )
+
+        logger.info(
+            "chat.search_ok profession=%r hits=%d",
+            profession, n,
+        )
 
         return self._finalize(
             user_id,
             message,
             response,
-            results=[c.model_dump(mode="json") for c in result.professionals],
+            results=[c.model_dump(mode="json") for c in cards],
             redirect_url=self._build_redirect_url(
                 query=ai_intent.query or message,
-                profession=ai_intent.profession,
+                profession=profession,
                 city=ai_intent.location,
                 radius_km=ai_intent.radius_km,
                 verified_only=ai_intent.verified_only,
@@ -322,9 +387,71 @@ class ChatService:
             ),
         )
 
+    # ────────────────────────────────────────────────────────
+    #  row matching + mapping
+    # ────────────────────────────────────────────────────────
+
+    def _row_matches_profession(self, row: Dict[str, any], needle: str) -> bool:
+        """
+        True when a search row matches the classifier's profession.
+
+        Accepts:
+          • profession string equal to `needle`
+          • profession string contains `needle` (or vice versa)
+          • any skill or service contains `needle`
+        """
+        prof = (row.get("profession") or "").strip().lower()
+        if prof == needle or needle in prof or prof in needle:
+            return True
+        for field in ("skills", "services"):
+            values = row.get(field) or []
+            for s in values:
+                if isinstance(s, str) and needle in s.strip().lower():
+                    return True
+        return False
+
+    def _row_to_card(self, row: Dict[str, any]) -> ProfessionalCard:
+        """Convert a SearchRepository row dict into the public card."""
+        first = (row.get("first_name") or "").strip()
+        last = (row.get("last_name") or "").strip()
+        display = (
+            f"{first} {last}".strip()
+            or row.get("profession")
+            or "Professional"
+        )
+
+        return ProfessionalCard(
+            id=row["id"],
+            user_id=row["user_id"],
+            name=display,
+            first_name=first or None,
+            last_name=last or None,
+            username=None,
+            profession=row.get("profession") or "",
+            headline=row.get("bio"),
+            company_name=None,
+            city=row.get("city"),
+            region=row.get("region"),
+            country=row.get("country"),
+            distance_km=None,
+            years_of_experience=row.get("years_of_experience"),
+            skills=row.get("skills"),
+            services=row.get("services"),
+            hourly_rate=row.get("hourly_rate"),
+            currency="XAF",
+            rating=row.get("rating"),
+            total_reviews=row.get("total_reviews") or 0,
+            completed_jobs=row.get("completed_jobs") or 0,
+            is_verified=bool(row.get("is_verified")),
+            available=bool(row.get("available")),
+            profile_image_url=row.get("profile_image_url"),
+            profile_url=f"/profile/{row['user_id']}",
+        )
+
     def _search_lead_in(
         self, result: ProfessionalSearchResult, ai_intent: AIIntent
     ) -> str:
+        """Legacy helper — kept for compatibility with image handler."""
         n = result.metadata.total
         where = f" in {ai_intent.location}" if ai_intent.location else ""
         what = ai_intent.profession or ai_intent.query or "professionals"

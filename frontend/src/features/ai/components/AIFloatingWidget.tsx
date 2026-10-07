@@ -1,3 +1,4 @@
+// src/features/ai/components/AIFloatingWidget.tsx
 import {
   useEffect,
   useRef,
@@ -12,7 +13,7 @@ import { useAIChat } from '../hooks/useAIChat';
 /* ------------------------------------------------------------------ */
 /*  Floating button geometry / persistence helpers                    */
 /* ------------------------------------------------------------------ */
-const BUTTON_SIZE = 56; // matches w-14 h-14
+const BUTTON_SIZE = 56;
 const EDGE_PADDING = 8;
 const STORAGE_KEY = 'skilledlink:ai-widget-position';
 
@@ -26,7 +27,6 @@ function getDefaultPosition(): Point {
   const isMd = window.innerWidth >= 768;
   return {
     x: window.innerWidth - BUTTON_SIZE - 24,
-    // bottom-36 on mobile (144px), bottom-6 on md+ (24px)
     y: window.innerHeight - BUTTON_SIZE - (isMd ? 24 : 144),
   };
 }
@@ -62,22 +62,20 @@ export function AIFloatingWidget() {
   const [showTooltip, setShowTooltip] = useState(false);
   const chat = useAIChat();
 
-  /* ---------------- tooltip timers ---------------- */
+  /* tooltip timers */
   useEffect(() => {
     let fadeTimer: ReturnType<typeof setTimeout> | undefined;
-
     const popupTimer = setTimeout(() => {
       setShowTooltip(true);
       fadeTimer = setTimeout(() => setShowTooltip(false), 20000);
     }, 180000);
-
     return () => {
       clearTimeout(popupTimer);
       if (fadeTimer) clearTimeout(fadeTimer);
     };
   }, []);
 
-  /* ---------------- draggable position ---------------- */
+  /* draggable position */
   const [position, setPosition] = useState<Point>(loadPosition);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dragRef = useRef({
@@ -90,9 +88,8 @@ export function AIFloatingWidget() {
     originY: 0,
   });
 
-  // Keep the button inside the viewport when the window is resized
   useEffect(() => {
-    const handleResize = () => setPosition(prev => clampPosition(prev));
+    const handleResize = () => setPosition((prev) => clampPosition(prev));
     window.addEventListener('resize', handleResize);
     window.addEventListener('orientationchange', handleResize);
     return () => {
@@ -110,9 +107,7 @@ export function AIFloatingWidget() {
   };
 
   const handleButtonPointerDown = (e: ReactPointerEvent<HTMLButtonElement>) => {
-    // Only respond to primary button for mouse
     if (e.pointerType === 'mouse' && e.button !== 0) return;
-
     const drag = dragRef.current;
     drag.dragging = true;
     drag.moved = false;
@@ -121,20 +116,15 @@ export function AIFloatingWidget() {
     drag.startY = e.clientY;
     drag.originX = position.x;
     drag.originY = position.y;
-
     buttonRef.current?.setPointerCapture(e.pointerId);
   };
 
   const handleButtonPointerMove = (e: ReactPointerEvent<HTMLButtonElement>) => {
     const drag = dragRef.current;
     if (!drag.dragging || e.pointerId !== drag.pointerId) return;
-
     const dx = e.clientX - drag.startX;
     const dy = e.clientY - drag.startY;
-
-    // Small threshold so a normal tap/click isn't treated as a drag
     if (!drag.moved && Math.hypot(dx, dy) > 4) drag.moved = true;
-
     if (drag.moved) {
       setPosition(clampPosition({ x: drag.originX + dx, y: drag.originY + dy }));
     }
@@ -143,22 +133,16 @@ export function AIFloatingWidget() {
   const handleButtonPointerUp = (e: ReactPointerEvent<HTMLButtonElement>) => {
     const drag = dragRef.current;
     if (!drag.dragging) return;
-
     drag.dragging = false;
-
     if (buttonRef.current?.hasPointerCapture(e.pointerId)) {
       buttonRef.current.releasePointerCapture(e.pointerId);
     }
-
     if (drag.moved) {
-      // Persist the final resting position
-      setPosition(prev => {
+      setPosition((prev) => {
         const clamped = clampPosition(prev);
         persistPosition(clamped);
         return clamped;
       });
-
-      // Swallow the trailing click event
       window.setTimeout(() => {
         dragRef.current.moved = false;
       }, 250);
@@ -168,24 +152,36 @@ export function AIFloatingWidget() {
   };
 
   const handleOpen = () => {
-    // Ignore the click that follows a drag gesture
     if (dragRef.current.moved) return;
     setShowTooltip(false);
     setIsOpen(true);
   };
 
   const handleClose = () => setIsOpen(false);
-
-  // Show tooltip below the button when it's dragged near the top edge
   const tooltipBelow = position.y < 110;
 
   return (
     <>
       {isOpen ? (
-        <div className="fixed inset-0 z-50 flex h-screen w-screen flex-col overflow-hidden bg-[#f0f4f8] transition-colors dark:bg-slate-950">
+        <div
+          className="
+            fixed inset-0 z-50 flex h-screen w-screen flex-col overflow-hidden
+            bg-[#eef4fa] dark:bg-[#050b14]
+            font-sans text-slate-900 transition-colors
+            dark:text-slate-100
+          "
+        >
           <AIBackground />
 
-          <header className="relative z-40 flex shrink-0 items-center justify-between border-b border-slate-200/70 bg-white/70 px-4 py-3 shadow-sm backdrop-blur-xl dark:border-slate-800/70 dark:bg-slate-950/70">
+          <header
+            className="
+              relative z-40 flex shrink-0 items-center justify-between
+              border-b border-slate-900/[0.06] dark:border-white/[0.06]
+              bg-white/60 dark:bg-[#070b14]/60
+              backdrop-blur-xl
+              px-4 py-3 shadow-sm
+            "
+          >
             <div className="flex items-center gap-3">
               <button
                 type="button"

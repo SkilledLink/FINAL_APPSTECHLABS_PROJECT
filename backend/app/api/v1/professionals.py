@@ -103,7 +103,11 @@ def list_professionals(
     city: Optional[str] = None,
     country: Optional[str] = None,
     verified_only: bool = False,
-    available_only: bool = True,
+    # ── CHANGED ────────────────────────────────────────────
+    # Defaults to False so browse shows everyone active,
+    # regardless of their "available for work" toggle. Pass
+    # ?available_only=true to filter when you want.
+    available_only: bool = False,
     search: Optional[str] = None,
     sort: str = Query("rating_desc", pattern="^(rating_desc|newest|completed_desc)$"),
 ):

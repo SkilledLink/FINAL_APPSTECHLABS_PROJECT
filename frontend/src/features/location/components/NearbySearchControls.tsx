@@ -98,7 +98,10 @@ export default function NearbySearchControls({
 
         <div>
           <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
-            Location <span className="font-medium normal-case tracking-normal text-slate-400/80">(optional)</span>
+            Location{' '}
+            <span className="font-medium normal-case tracking-normal text-slate-400/80">
+              (optional)
+            </span>
           </label>
           <LocationSearch
             onSelect={handleLocationSelect}
