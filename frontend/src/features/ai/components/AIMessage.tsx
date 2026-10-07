@@ -1,4 +1,6 @@
+// src/features/ai/components/AIMessage.tsx
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bot, User, ArrowRight } from 'lucide-react';
 import type { ChatMessage, ActionCard } from '../types/ai.types';
 import { AIRecommendationCard } from './AIRecommendationCard';
@@ -7,9 +9,34 @@ import { AIActionCard } from './AIActionCard';
 interface AIMessageProps {
   message: ChatMessage;
   onActionClick: (card: ActionCard) => void;
+  /** Fired before any internal navigation. Widget uses this to close. */
+  onNavigate?: () => void;
 }
 
-function renderContent(content: string) {
+function normalizeInternalHref(href: string): string {
+  if (!href) return href;
+  if (href.startsWith('/profile/')) {
+    return `/home/profile/${href.slice('/profile/'.length)}`;
+  }
+  if (href === '/discovery' || href.startsWith('/discovery?')) {
+    return `/home/discover${href.slice('/discovery'.length)}`;
+  }
+  return href;
+}
+
+function isInternalHref(href: string): boolean {
+  return href.startsWith('/');
+}
+
+/**
+ * Renders the assistant's text with **bold** and [links](url) support.
+ * The `onInternalLink` callback fires for any internal link click so
+ * the parent can close the widget before navigation.
+ */
+function renderContent(
+  content: string,
+  onInternalLink?: () => void,
+) {
   const lines = content.split('\n');
 
   return lines.map((line, i) => {
@@ -23,48 +50,116 @@ function renderContent(content: string) {
       const boldMatch = remaining.match(/\*\*(.+?)\*\*/);
       const linkMatch = remaining.match(/\[([^\]]+)\]\(([^)]+)\)/);
 
-      if (boldMatch && (!linkMatch || (boldMatch.index ?? 0) < (linkMatch.index ?? 0))) {
+      if (
+        boldMatch &&
+        (!linkMatch || (boldMatch.index ?? 0) < (linkMatch.index ?? 0))
+      ) {
         const matchIndex = boldMatch.index ?? 0;
-        if (matchIndex > 0) parts.push(<span key={`t-${key}`}>{remaining.slice(0, matchIndex)}</span>);
+        if (matchIndex > 0) {
+          parts.push(
+            <span key={`t-${key++}`}>{remaining.slice(0, matchIndex)}</span>,
+          );
+        }
         parts.push(
-          <strong key={`b-${key++}`} className="font-semibold text-slate-900 dark:text-slate-50">
+          <strong
+            key={`b-${key++}`}
+            className="font-semibold text-slate-900 dark:text-slate-50"
+          >
             {boldMatch[1]}
           </strong>,
         );
         remaining = remaining.slice(matchIndex + boldMatch[0].length);
       } else if (linkMatch) {
         const matchIndex = linkMatch.index ?? 0;
-        if (matchIndex > 0) parts.push(<span key={`t-${key}`}>{remaining.slice(0, matchIndex)}</span>);
-        const href = linkMatch[2];
-        const isInternal = href.startsWith('/profile/') || href.startsWith('/');
+        if (matchIndex > 0) {
+          parts.push(
+            <span key={`t-${key++}`}>{remaining.slice(0, matchIndex)}</span>,
+          );
+        }
+        const rawHref = linkMatch[2];
 
-        parts.push(
-          <a
-            key={`l-${key++}`}
-            href={isInternal ? `#${href}` : href}
-            className="text-blue-600 dark:text-blue-400 font-semibold hover:text-blue-700 dark:hover:text-blue-300 hover:underline underline-offset-2"
-          >
-            {linkMatch[1]}
-          </a>,
-        );
+        if (isInternalHref(rawHref)) {
+          const to = normalizeInternalHref(rawHref);
+          parts.push(
+            <InternalLink key={`l-${key++}`} to={to} onClick={onInternalLink}>
+              {linkMatch[1]}
+            </InternalLink>,
+          );
+        } else {
+          parts.push(
+            <a
+              key={`l-${key++}`}
+              href={rawHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 dark:text-blue-400 font-semibold hover:text-blue-700 dark:hover:text-blue-300 hover:underline underline-offset-2"
+            >
+              {linkMatch[1]}
+            </a>,
+          );
+        }
+
         remaining = remaining.slice(matchIndex + linkMatch[0].length);
       } else {
-        parts.push(<span key={`t-${key}`}>{remaining}</span>);
+        parts.push(<span key={`t-${key++}`}>{remaining}</span>);
         remaining = '';
       }
     }
 
-    return <p key={i} className="leading-relaxed">{parts}</p>;
+    return (
+      <p key={i} className="leading-relaxed">
+        {parts}
+      </p>
+    );
   });
 }
 
-export function AIMessage({ message, onActionClick }: AIMessageProps) {
+/** Internal link that closes the widget before navigating. */
+function InternalLink({
+  to,
+  onClick,
+  children,
+}: {
+  to: string;
+  onClick?: () => void;
+  children: React.ReactNode;
+}) {
+  const navigate = useNavigate();
+
+  const handle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onClick?.();
+    navigate(to);
+  };
+
+  return (
+    <a
+      href={to}
+      onClick={handle}
+      className="text-blue-600 dark:text-blue-400 font-semibold hover:text-blue-700 dark:hover:text-blue-300 hover:underline underline-offset-2"
+    >
+      {children}
+    </a>
+  );
+}
+
+export function AIMessage({
+  message,
+  onActionClick,
+  onNavigate,
+}: AIMessageProps) {
   const isUser = message.sender === 'user';
-  const hasCards = !isUser && message.recommendations && message.recommendations.length > 0;
+  const hasCards =
+    !isUser && message.recommendations && message.recommendations.length > 0;
   const hasRedirect = !isUser && !!message.redirectUrl;
 
   return (
-    <div className={`flex gap-3 ${isUser ? 'flex-row-reverse' : 'flex-row'} w-full animate-in fade-in slide-in-from-bottom-1 duration-300`}>
+    <div
+      className={`flex gap-3 ${
+        isUser ? 'flex-row-reverse' : 'flex-row'
+      } w-full animate-in fade-in slide-in-from-bottom-1 duration-300`}
+    >
       <div
         className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg ${
           isUser
@@ -72,9 +167,11 @@ export function AIMessage({ message, onActionClick }: AIMessageProps) {
             : 'bg-gradient-to-br from-blue-600 to-cyan-500 shadow-blue-500/30'
         }`}
       >
-        {isUser
-          ? <User className="w-4 h-4 text-white" />
-          : <Bot className="w-4 h-4 text-white" />}
+        {isUser ? (
+          <User className="w-4 h-4 text-white" />
+        ) : (
+          <Bot className="w-4 h-4 text-white" />
+        )}
       </div>
 
       <div className={`flex-1 min-w-0 ${isUser ? 'flex flex-col items-end' : ''}`}>
@@ -86,26 +183,27 @@ export function AIMessage({ message, onActionClick }: AIMessageProps) {
           }`}
         >
           <div className={isUser ? '' : 'space-y-1'}>
-            {renderContent(message.content)}
+            {renderContent(message.content, onNavigate)}
           </div>
         </div>
 
         {hasCards && (
           <div className="mt-3 grid gap-3 grid-cols-1 sm:grid-cols-2 w-full">
             {message.recommendations!.map((rec) => (
-              <AIRecommendationCard key={rec.id} rec={rec} />
+              <AIRecommendationCard
+                key={rec.id}
+                rec={rec}
+                onClick={onNavigate}
+              />
             ))}
           </div>
         )}
 
         {hasRedirect && (
-          <a
-            href={`#${message.redirectUrl}`}
-            className="mt-3 inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white text-sm font-semibold rounded-xl shadow-lg shadow-blue-500/30 transition-all active:scale-[0.98]"
-          >
-            See all results
-            <ArrowRight className="w-4 h-4" />
-          </a>
+          <SeeAllResultsLink
+            to={normalizeInternalHref(message.redirectUrl!)}
+            onNavigate={onNavigate}
+          />
         )}
 
         {message.actionCards && message.actionCards.length > 0 && (
@@ -117,5 +215,33 @@ export function AIMessage({ message, onActionClick }: AIMessageProps) {
         )}
       </div>
     </div>
+  );
+}
+
+function SeeAllResultsLink({
+  to,
+  onNavigate,
+}: {
+  to: string;
+  onNavigate?: () => void;
+}) {
+  const navigate = useNavigate();
+
+  const handle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onNavigate?.();
+    navigate(to);
+  };
+
+  return (
+    <a
+      href={to}
+      onClick={handle}
+      className="mt-3 inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white text-sm font-semibold rounded-xl shadow-lg shadow-blue-500/30 transition-all active:scale-[0.98] no-underline"
+    >
+      See all results
+      <ArrowRight className="w-4 h-4" />
+    </a>
   );
 }

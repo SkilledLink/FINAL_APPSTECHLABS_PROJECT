@@ -3,7 +3,6 @@ import type { MatchRecommendation, ImageAnalysis } from '../types/ai.types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://192.168.68.67:8000';
 
-/** Raw shape returned by the backend /chat/ endpoint */
 interface BackendProfessionalCard {
   id: string;
   user_id: string;
@@ -53,6 +52,9 @@ function toRecommendation(card: BackendProfessionalCard): MatchRecommendation {
 
   return {
     id: card.id,
+    // ── NEW ── carry the user id so the card links to
+    // /home/profile/{userId}, which is the actual profile route.
+    userId: card.user_id,
     name: card.name,
     type: 'worker',
     trade: card.profession,

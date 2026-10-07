@@ -1,3 +1,4 @@
+// src/features/ai/components/AIChat.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Loader2, RotateCcw } from 'lucide-react';
 import type { ChatMessage, ActionCard } from '../types/ai.types';
@@ -6,9 +7,11 @@ import { useAIChat } from '../hooks/useAIChat';
 
 interface AIChatProps {
   chat: ReturnType<typeof useAIChat>;
+  /** Called when the user clicks a recommendation card or the "See all results" link. */
+  onNavigate?: () => void;
 }
 
-export function AIChat({ chat }: AIChatProps) {
+export function AIChat({ chat, onNavigate }: AIChatProps) {
   const { messages, isSearching, handleUserMessage, handleRoleSelection, resetChat } = chat;
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -34,8 +37,6 @@ export function AIChat({ chat }: AIChatProps) {
 
   return (
     <div className="flex flex-col h-full w-full overflow-hidden transition-colors">
-
-      {/* Messages scroller */}
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-5 scroll-smooth"
@@ -52,9 +53,18 @@ export function AIChat({ chat }: AIChatProps) {
               </div>
               <div className="rounded-2xl rounded-tl-md bg-white/80 dark:bg-slate-900/70 backdrop-blur-xl border border-white/60 dark:border-white/10 px-4 py-3 shadow-sm">
                 <div className="flex gap-1.5">
-                  <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <span
+                    className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
+                    style={{ animationDelay: '0ms' }}
+                  />
+                  <span
+                    className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
+                    style={{ animationDelay: '150ms' }}
+                  />
+                  <span
+                    className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"
+                    style={{ animationDelay: '300ms' }}
+                  />
                 </div>
               </div>
             </div>
@@ -62,11 +72,9 @@ export function AIChat({ chat }: AIChatProps) {
         </div>
       </div>
 
-      {/* Composer */}
       <div className="shrink-0 px-4 sm:px-6 pb-5 pt-2">
         <div className="max-w-3xl mx-auto">
           <div className="rounded-2xl bg-white/75 dark:bg-slate-900/65 backdrop-blur-2xl border border-white/60 dark:border-white/10 shadow-[0_4px_24px_-12px_rgba(15,23,42,0.15)] p-2 flex items-center gap-2 focus-within:border-blue-500/60 focus-within:ring-4 focus-within:ring-blue-500/15 transition-all">
-
             <button
               type="button"
               onClick={resetChat}
@@ -80,7 +88,7 @@ export function AIChat({ chat }: AIChatProps) {
               <input
                 type="text"
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={e => setInput(e.target.value)}
                 placeholder={isSearching ? 'Searching database…' : 'Type a skill or message…'}
                 disabled={isSearching}
                 className="flex-1 px-2 py-2.5 bg-transparent text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none disabled:opacity-60"

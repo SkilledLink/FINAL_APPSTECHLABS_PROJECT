@@ -5,6 +5,7 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
+import { useLocation } from 'react-router-dom';
 import { MessageSquare, ArrowLeft, Sparkles } from 'lucide-react';
 import { AIChat } from './AIChat';
 import { AIBackground } from './AIBackground';
@@ -61,6 +62,21 @@ export function AIFloatingWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const chat = useAIChat();
+  const location = useLocation();
+
+  /* ── Force-close the overlay whenever the route changes. ──
+     The click handler on the recommendation <Link> should also
+     fire, but this is the safety net: navigation → close. No
+     matter what happens with event bubbling, the widget is gone
+     the instant the URL changes. */
+  const lastPathRef = useRef(location.pathname);
+  useEffect(() => {
+    if (lastPathRef.current !== location.pathname) {
+      lastPathRef.current = location.pathname;
+      setIsOpen(false);
+      setShowTooltip(false);
+    }
+  }, [location.pathname]);
 
   /* tooltip timers */
   useEffect(() => {
@@ -214,7 +230,7 @@ export function AIFloatingWidget() {
           </header>
 
           <main className="relative z-10 min-h-0 flex-1">
-            <AIChat chat={chat} />
+            <AIChat chat={chat} onNavigate={handleClose} />
           </main>
         </div>
       ) : (

@@ -1,16 +1,74 @@
-import { Star, MapPin, BadgeCheck, Clock, DollarSign, Briefcase } from 'lucide-react';
+// src/features/ai/components/AIRecommendationCard.tsx
+import { useNavigate } from 'react-router-dom';
+import {
+  Star,
+  MapPin,
+  BadgeCheck,
+  Clock,
+  DollarSign,
+  Briefcase,
+  ArrowRight,
+} from 'lucide-react';
 import type { MatchRecommendation } from '../types/ai.types';
 
-export function AIRecommendationCard({ rec }: { rec: MatchRecommendation }) {
+interface AIRecommendationCardProps {
+  rec: MatchRecommendation;
+  /**
+   * Fired before navigation. The floating widget uses this to close
+   * itself so the destination page is immediately visible.
+   */
+  onClick?: () => void;
+}
+
+export function AIRecommendationCard({
+  rec,
+  onClick,
+}: AIRecommendationCardProps) {
+  const navigate = useNavigate();
   const isJob = rec.type === 'job';
-  const profileHref = `/profile/${rec.id}`;
+
+  // Prefer the user id — that's what /home/profile/:userId expects.
+  const profileUserId = rec.userId ?? rec.id;
+  const profileHref = isJob
+    ? `/jobs/${rec.id}`
+    : `/home/profile/${profileUserId}`;
+
+  const go = () => {
+    // 1. Close the widget FIRST. The state update is queued
+    //    synchronously.
+    onClick?.();
+    // 2. Then navigate. Both updates commit together so the new
+    //    route mounts with the widget already hidden.
+    navigate(profileHref);
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    go();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      go();
+    }
+  };
 
   return (
-    <a href={`#${profileHref}`} className="block group text-left">
+    <div
+      role="link"
+      tabIndex={0}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      className="block group text-left no-underline cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 rounded-2xl"
+      aria-label={`View ${rec.name}'s profile`}
+    >
       <div className="relative overflow-hidden rounded-2xl p-4 transition-all duration-300 bg-white/75 dark:bg-slate-900/65 backdrop-blur-xl border border-white/60 dark:border-white/10 shadow-[0_4px_24px_-12px_rgba(15,23,42,0.15)] hover:shadow-[0_12px_40px_-12px_rgba(37,99,235,0.35)] hover:border-blue-400/50 dark:hover:border-blue-500/40 hover:-translate-y-1">
-
-        {/* gradient sheen */}
-        <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-500/40 to-transparent" />
+        <div
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-500/40 to-transparent"
+        />
 
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex-1 min-w-0">
@@ -58,13 +116,21 @@ export function AIRecommendationCard({ rec }: { rec: MatchRecommendation }) {
                 <span className="font-medium text-slate-700 dark:text-slate-300">
                   {rec.rating}
                 </span>
-                <span className="text-slate-400 dark:text-slate-500">({rec.reviewCount})</span>
+                <span className="text-slate-400 dark:text-slate-500">
+                  ({rec.reviewCount})
+                </span>
               </span>
-              <span className="flex items-center gap-1">
-                <DollarSign className="w-3 h-3 text-slate-400 dark:text-slate-500" />
-                <span className="font-medium text-slate-700 dark:text-slate-300">{rec.hourlyRate}</span>
-                <span className="text-slate-400 dark:text-slate-500">/hr</span>
-              </span>
+              {rec.hourlyRate != null && (
+                <span className="flex items-center gap-1">
+                  <DollarSign className="w-3 h-3 text-slate-400 dark:text-slate-500" />
+                  <span className="font-medium text-slate-700 dark:text-slate-300">
+                    {rec.hourlyRate}
+                  </span>
+                  <span className="text-slate-400 dark:text-slate-500">
+                    /hr
+                  </span>
+                </span>
+              )}
               {rec.isAvailable ? (
                 <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -82,14 +148,19 @@ export function AIRecommendationCard({ rec }: { rec: MatchRecommendation }) {
           {isJob && rec.budget && rec.budget > 0 && (
             <span className="flex items-center gap-1">
               <DollarSign className="w-3 h-3 text-slate-400 dark:text-slate-500" />
-              Budget: <span className="font-medium text-slate-700 dark:text-slate-300">${rec.budget}</span>
+              Budget:{' '}
+              <span className="font-medium text-slate-700 dark:text-slate-300">
+                ${rec.budget}
+              </span>
             </span>
           )}
         </div>
 
-        <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-3">
-          {rec.bio}
-        </p>
+        {rec.bio && (
+          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-3">
+            {rec.bio}
+          </p>
+        )}
 
         {rec.skills && rec.skills.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-3">
@@ -110,10 +181,10 @@ export function AIRecommendationCard({ rec }: { rec: MatchRecommendation }) {
           </span>
           <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 group-hover:translate-x-0.5 transition-transform inline-flex items-center gap-1">
             View &amp; Chat
-            <span aria-hidden>→</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </span>
         </div>
       </div>
-    </a>
+    </div>
   );
 }

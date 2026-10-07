@@ -13,7 +13,7 @@ export interface Profile {
   is_verified: boolean;
   is_available: boolean;
   bio: string;
-  skills: string[]; 
+  skills: string[];
 }
 
 export interface Job {
@@ -30,7 +30,10 @@ export interface Job {
 }
 
 export interface MatchRecommendation {
+  /** Professional id (from professionals.id) */
   id: string;
+  /** User id (from users.id) — used for /home/profile/{userId} */
+  userId?: string;
   name: string;
   trade?: string;
   title?: string;
@@ -45,9 +48,7 @@ export interface MatchRecommendation {
   isAvailable?: boolean;
   skills?: string[];
   description?: string;
-  /** From backend: distance in km when a location search ran */
   distanceKm?: number;
-  /** From backend: profile image URL */
   profileImageUrl?: string;
 }
 
@@ -57,7 +58,6 @@ export interface ActionCard {
   payload?: Record<string, unknown>;
 }
 
-/** Structured image analysis returned by /chat/ when an image was sent */
 export interface ImageAnalysis {
   description: string;
   possible_profession: string | null;
@@ -75,10 +75,7 @@ export interface ChatMessage {
   content: string;
   recommendations?: MatchRecommendation[];
   actionCards?: ActionCard[];
-  /** Deep link to /discovery with search params — present on search responses */
   redirectUrl?: string;
-  /** Structured image analysis — present when user attached an image */
   imageAnalysis?: ImageAnalysis;
-  /** Total result count (may exceed recommendations length) */
   totalResults?: number;
 }
